@@ -1,7 +1,7 @@
 namespace UnityBrain.Core
 {
   /// <summary>
-  /// Request for the API
+  /// Request for the llama.cpp API
   /// </summary>
   public sealed class GenerateRequest
   {
@@ -24,7 +24,7 @@ namespace UnityBrain.Core
   }
 
   /// <summary>
-  /// Options for the API
+  /// Options for the llama.cpp API
   /// </summary>
   public sealed class Options
   {
@@ -36,10 +36,26 @@ namespace UnityBrain.Core
     /// The temperature to use
     /// </summary>
     public float temperature { get; set; } = 0.7f;
+    /// <summary>
+    /// The top-p value for nucleus sampling
+    /// </summary>
+    public float top_p { get; set; } = 0.9f;
+    /// <summary>
+    /// The top-k value for top-k sampling
+    /// </summary>
+    public int top_k { get; set; } = 40;
+    /// <summary>
+    /// The repeat penalty
+    /// </summary>
+    public float repeat_penalty { get; set; } = 1.1f;
+    /// <summary>
+    /// The stop sequences
+    /// </summary>
+    public string[]? stop { get; set; }
   }
 
   /// <summary>
-  /// Response from the API
+  /// Response from the llama.cpp API
   /// </summary>
   public sealed class GenerateResponse
   {
@@ -55,5 +71,13 @@ namespace UnityBrain.Core
     /// Whether the response is done
     /// </summary>
     public bool done { get; set; }
+    /// <summary>
+    /// The number of tokens generated
+    /// </summary>
+    public int context_length { get; set; }
+    /// <summary>
+    /// The number of tokens predicted
+    /// </summary>
+    public int tokens_predicted { get; set; }
   }
 }

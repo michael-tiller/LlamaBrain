@@ -4,12 +4,12 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 
 /// <summary>
-/// API client for the LLM API
+/// API client for the llama.cpp API
 /// </summary>
 namespace UnityBrain.Core
 {
   /// <summary>
-  /// API client for the LLM API
+  /// API client for the llama.cpp API
   /// </summary>
   public sealed class ApiClient
   {
@@ -30,7 +30,7 @@ namespace UnityBrain.Core
     /// <param name="model">The model to use</param>
     public ApiClient(string host, int port, string model)
     {
-      _endpoint = $"http://{host}:{port}/api/generate";
+      _endpoint = $"http://{host}:{port}/v1/completions";
       _model = model;
     }
 

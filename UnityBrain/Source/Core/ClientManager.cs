@@ -48,7 +48,7 @@ namespace UnityBrain.Core
     {
       try
       {
-        var url = $"http://{_config.Host}:{_config.Port}/api/tags";
+        var url = $"http://{_config.Host}:{_config.Port}/v1/models";
         var response = await _httpClient.GetAsync(url, token);
         return response.IsSuccessStatusCode;
       }

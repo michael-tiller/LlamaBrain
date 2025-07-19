@@ -13,12 +13,12 @@ namespace UnityBrainDemo.Runtime.Core
         public string ModelPath;
         public int Port = 5000;
 
-        public LlamaCppProcessConfig ToProcessConfig() =>
-            new LlamaCppProcessConfig
+        public ProcessConfig ToProcessConfig() =>
+            new ProcessConfig
             {
-                ExecutablePath = ExecutablePath,
-                ModelPath = ModelPath,
-                Port = Port
+                Host = "localhost",
+                Port = Port,
+                Model = ModelPath
             };
     }
 }

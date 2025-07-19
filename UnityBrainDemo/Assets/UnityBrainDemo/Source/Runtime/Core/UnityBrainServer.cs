@@ -13,7 +13,7 @@ namespace UnityBrainDemo.Runtime.Core
     {
         public UnityBrainSettings Settings;
 
-        private ServerManager _server;
+        private ClientManager client;
         private CancellationTokenSource _cancellationTokenSource;
 
         private void Awake()
@@ -21,23 +21,23 @@ namespace UnityBrainDemo.Runtime.Core
             var exePath = Path.GetFullPath(Settings.ExecutablePath);
             UnityEngine.Debug.Log($"[LLM] Resolved exePath: {exePath}, Exists: {File.Exists(exePath)}");
 
-            _server = new LlamaCppServerManager(Settings.ToProcessConfig());
+            client = new ClientManager(Settings.ToProcessConfig());
             _cancellationTokenSource = new CancellationTokenSource();
             DontDestroyOnLoad(gameObject);
         }
 
         private async void Start()
         {
-            await _server.StartAsync(_cancellationTokenSource.Token);
+            await client.WaitForAsync(_cancellationTokenSource.Token);
         }
 
         private void OnDestroy()
         {
             _cancellationTokenSource?.Cancel();
             _cancellationTokenSource?.Dispose();
-            _server?.Stop();
+            client?.Dispose();
         }
 
-        public ApiClient CreateClient() => new ApiClient("localhost", Settings.Port);
+        public ApiClient CreateClient() => client.CreateClient();
     }
 }

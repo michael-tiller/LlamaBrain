@@ -7,14 +7,14 @@ using UnityBrainDemo.Runtime.Core;
 
 namespace UnityBrainDemo.Editor
 {
-    [CustomEditor(typeof(LlamaCppSettings))]
+    [CustomEditor(typeof(UnityBrainSettings))]
     public class UnityBrainSettingsEditor : UnityEditor.Editor
     {
         public override void OnInspectorGUI()
         {
-            var settings = (LlamaCppSettings)target;
+            var settings = (UnityBrainSettings)target;
 
-            EditorGUILayout.LabelField("Llama.cpp Backend Settings", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("UnityBrain Settings", EditorStyles.boldLabel);
             EditorGUI.BeginChangeCheck();
 
             settings.ExecutablePath = EditorGUILayout.TextField("Executable Path", settings.ExecutablePath);
