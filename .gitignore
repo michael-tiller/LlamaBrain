@@ -1,0 +1,13 @@
+/UnityBrain/obj
+/UnityBrain/bin
+/UnityBrain/UnityBrain.csproj.DotSettings
+/UnityBrain/.idea
+/UnityBrain/.vs
+/UnityBrainDemo/Backend/model
+/UnityBrainDemo/Logs
+/UnityBrainDemo/Packages
+/UnityBrainDemo/UserSettings
+/UnityBrainDemo/Library
+/UnityBrainDemo/Assets/ThirdParty/Plugins
+/Documentation/doxygen/unitybrain
+/UnityBrainDemo/Backend
