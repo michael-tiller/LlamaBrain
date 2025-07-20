@@ -12,10 +12,18 @@ namespace UnityBrain.Core
     /// <summary>
     /// The port of the process
     /// </summary>
-    public int Port { get; set; } = 11434;
+    public int Port { get; set; } = 5000;
     /// <summary>
     /// The model to use
     /// </summary>
-    public string Model { get; set; } = "llama2";
+    public string Model { get; set; } = "";
+    /// <summary>
+    /// The path to the llama-server executable
+    /// </summary>
+    public string ExecutablePath { get; set; } = "";
+    /// <summary>
+    /// The context size for the model
+    /// </summary>
+    public int ContextSize { get; set; } = 2048;
   }
 }

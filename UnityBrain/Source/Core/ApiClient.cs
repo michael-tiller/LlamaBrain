@@ -30,7 +30,7 @@ namespace UnityBrain.Core
     /// <param name="model">The model to use</param>
     public ApiClient(string host, int port, string model)
     {
-      _endpoint = $"http://{host}:{port}/v1/completions";
+      _endpoint = $"http://{host}:{port}/completion";
       _model = model;
     }
 
@@ -42,15 +42,15 @@ namespace UnityBrain.Core
     /// <param name="temperature">The temperature to use</param>
     public async Task<string> SendPromptAsync(string prompt, int maxTokens = 128, float temperature = 0.7f)
     {
-      var req = new GenerateRequest
+      var req = new CompletionRequest
       {
-        model = _model,
         prompt = prompt,
-        options = new Options
-        {
-          num_predict = maxTokens,
-          temperature = temperature
-        }
+        n_predict = maxTokens,
+        temperature = temperature,
+        top_p = 0.9f,
+        top_k = 40,
+        repeat_penalty = 1.1f,
+        stop = new string[] { "</s>", "Human:", "Assistant:" }
       };
 
       var content = new StringContent(JsonConvert.SerializeObject(req), Encoding.UTF8, "application/json");
@@ -58,8 +58,8 @@ namespace UnityBrain.Core
       var resp = await client.PostAsync(_endpoint, content);
       resp.EnsureSuccessStatusCode();
       var respJson = await resp.Content.ReadAsStringAsync();
-      var response = JsonConvert.DeserializeObject<GenerateResponse>(respJson);
-      return response?.response ?? string.Empty;
+      var response = JsonConvert.DeserializeObject<CompletionResponse>(respJson);
+      return response?.content ?? string.Empty;
     }
   }
 }
