@@ -28,6 +28,22 @@ namespace UnityBrain.Persona
     }
 
     /// <summary>
+    /// Add a memory to the store using a PersonaProfile
+    /// </summary>
+    /// <param name="profile">The persona profile</param>
+    /// <param name="message">The message to add</param>
+    public void AddMemory(PersonaProfile profile, string message)
+    {
+      if (profile == null)
+        throw new ArgumentException("PersonaProfile cannot be null", nameof(profile));
+
+      if (string.IsNullOrEmpty(profile.PersonaId))
+        throw new ArgumentException("PersonaProfile must have a valid PersonaId", nameof(profile));
+
+      AddMemory(profile.PersonaId, message);
+    }
+
+    /// <summary>
     /// Get the memory for a persona
     /// </summary>
     /// <param name="personaId">The ID of the persona</param>
@@ -39,6 +55,22 @@ namespace UnityBrain.Persona
     }
 
     /// <summary>
+    /// Get the memory for a persona using a PersonaProfile
+    /// </summary>
+    /// <param name="profile">The persona profile</param>
+    /// <returns>The memory for the persona</returns>
+    public IReadOnlyList<string> GetMemory(PersonaProfile profile)
+    {
+      if (profile == null)
+        throw new ArgumentException("PersonaProfile cannot be null", nameof(profile));
+
+      if (string.IsNullOrEmpty(profile.PersonaId))
+        throw new ArgumentException("PersonaProfile must have a valid PersonaId", nameof(profile));
+
+      return GetMemory(profile.PersonaId);
+    }
+
+    /// <summary>
     /// Clears the memory of the persona.
     /// </summary>
     /// <param name="personaId">The ID of the persona.</param>
@@ -46,6 +78,21 @@ namespace UnityBrain.Persona
     {
       if (_memories.ContainsKey(personaId))
         _memories[personaId].Clear();
+    }
+
+    /// <summary>
+    /// Clears the memory of the persona using a PersonaProfile.
+    /// </summary>
+    /// <param name="profile">The persona profile.</param>
+    public void ClearMemory(PersonaProfile profile)
+    {
+      if (profile == null)
+        throw new ArgumentException("PersonaProfile cannot be null", nameof(profile));
+
+      if (string.IsNullOrEmpty(profile.PersonaId))
+        throw new ArgumentException("PersonaProfile must have a valid PersonaId", nameof(profile));
+
+      ClearMemory(profile.PersonaId);
     }
   }
 

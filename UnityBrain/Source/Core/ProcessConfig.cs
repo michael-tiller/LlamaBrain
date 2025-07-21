@@ -25,5 +25,9 @@ namespace UnityBrain.Core
     /// The context size for the model
     /// </summary>
     public int ContextSize { get; set; } = 2048;
+    /// <summary>
+    /// The LLM configuration for generation parameters
+    /// </summary>
+    public LlmConfig LlmConfig { get; set; } = new LlmConfig();
   }
 }

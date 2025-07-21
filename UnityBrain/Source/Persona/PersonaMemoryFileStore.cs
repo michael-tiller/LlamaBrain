@@ -37,6 +37,21 @@ namespace UnityBrain.Persona
     }
 
     /// <summary>
+    /// Save the memory to a file using a PersonaProfile
+    /// </summary>
+    /// <param name="profile">The persona profile</param>
+    public void Save(PersonaProfile profile)
+    {
+      if (profile == null)
+        throw new System.ArgumentException("PersonaProfile cannot be null", nameof(profile));
+
+      if (string.IsNullOrEmpty(profile.PersonaId))
+        throw new System.ArgumentException("PersonaProfile must have a valid PersonaId", nameof(profile));
+
+      Save(profile.PersonaId);
+    }
+
+    /// <summary>
     /// Load the memory from a file
     /// </summary>
     /// <param name="personaId">The ID of the persona</param>
@@ -56,6 +71,21 @@ namespace UnityBrain.Persona
           Logger.Warn($"Failed to deserialize memory for persona {personaId} - received null response");
         }
       }
+    }
+
+    /// <summary>
+    /// Load the memory from a file using a PersonaProfile
+    /// </summary>
+    /// <param name="profile">The persona profile</param>
+    public void Load(PersonaProfile profile)
+    {
+      if (profile == null)
+        throw new System.ArgumentException("PersonaProfile cannot be null", nameof(profile));
+
+      if (string.IsNullOrEmpty(profile.PersonaId))
+        throw new System.ArgumentException("PersonaProfile must have a valid PersonaId", nameof(profile));
+
+      Load(profile.PersonaId);
     }
   }
 }

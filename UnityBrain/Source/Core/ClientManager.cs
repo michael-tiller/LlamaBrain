@@ -16,11 +16,11 @@ namespace UnityBrain.Core
     /// <summary>
     /// The configuration for the process
     /// </summary>
-    private readonly ProcessConfig _config;
+    private readonly ProcessConfig config;
     /// <summary>
     /// The HTTP client
     /// </summary>
-    private readonly HttpClient _httpClient;
+    private readonly HttpClient httpClient;
 
     /// <summary>
     /// Constructor
@@ -28,8 +28,8 @@ namespace UnityBrain.Core
     /// <param name="config">The configuration for the process</param>
     public ClientManager(ProcessConfig config)
     {
-      _config = config;
-      _httpClient = new HttpClient();
+      this.config = config;
+      httpClient = new HttpClient();
     }
 
     /// <summary>
@@ -38,7 +38,7 @@ namespace UnityBrain.Core
     /// <returns>The API client</returns>
     public ApiClient CreateClient()
     {
-      return new ApiClient(_config.Host, _config.Port, _config.Model);
+      return new ApiClient(config.Host, config.Port, config.Model, config.LlmConfig);
     }
 
     /// <summary>
@@ -50,7 +50,7 @@ namespace UnityBrain.Core
     {
       try
       {
-        var url = $"http://{_config.Host}:{_config.Port}/completion";
+        var url = $"http://{config.Host}:{config.Port}/completion";
 
         // Send a minimal POST request to test if the server is ready
         var testRequest = new CompletionRequest
@@ -66,7 +66,7 @@ namespace UnityBrain.Core
           "application/json"
         );
 
-        var response = await _httpClient.PostAsync(url, content, token);
+        var response = await httpClient.PostAsync(url, content, token);
         return response.IsSuccessStatusCode;
       }
       catch
@@ -106,7 +106,7 @@ namespace UnityBrain.Core
     /// </summary>
     public void Dispose()
     {
-      _httpClient?.Dispose();
+      httpClient?.Dispose();
     }
   }
 }
