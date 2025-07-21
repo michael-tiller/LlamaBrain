@@ -84,7 +84,7 @@ namespace UnityBrainDemo.Tests.EditMode
       // Assert
       Assert.IsNull(response.content);
       Assert.IsFalse(response.stop);
-      Assert.AreEqual(0, response.timings);
+      Assert.IsNull(response.timings);
       Assert.AreEqual(0, response.tokens_predicted);
       Assert.AreEqual(0, response.tokens_cached);
       Assert.AreEqual(0, response.tokens_evaluated);
@@ -98,7 +98,12 @@ namespace UnityBrainDemo.Tests.EditMode
       {
         content = "Generated response",
         stop = true,
-        timings = 150,
+        timings = new Timings
+        {
+          pred_ms = 100,
+          prompt_ms = 50,
+          total_ms = 150
+        },
         tokens_predicted = 50,
         tokens_cached = 100,
         tokens_evaluated = 200
@@ -107,7 +112,10 @@ namespace UnityBrainDemo.Tests.EditMode
       // Assert
       Assert.AreEqual("Generated response", response.content);
       Assert.IsTrue(response.stop);
-      Assert.AreEqual(150, response.timings);
+      Assert.IsNotNull(response.timings);
+      Assert.AreEqual(100, response.timings.pred_ms);
+      Assert.AreEqual(50, response.timings.prompt_ms);
+      Assert.AreEqual(150, response.timings.total_ms);
       Assert.AreEqual(50, response.tokens_predicted);
       Assert.AreEqual(100, response.tokens_cached);
       Assert.AreEqual(200, response.tokens_evaluated);
@@ -121,6 +129,12 @@ namespace UnityBrainDemo.Tests.EditMode
       {
         content = "Test response",
         stop = true,
+        timings = new Timings
+        {
+          pred_ms = 25,
+          prompt_ms = 10,
+          total_ms = 35
+        },
         tokens_predicted = 25
       };
 
@@ -131,6 +145,10 @@ namespace UnityBrainDemo.Tests.EditMode
       // Assert
       Assert.AreEqual(response.content, deserialized.content);
       Assert.AreEqual(response.stop, deserialized.stop);
+      Assert.IsNotNull(deserialized.timings);
+      Assert.AreEqual(response.timings.pred_ms, deserialized.timings.pred_ms);
+      Assert.AreEqual(response.timings.prompt_ms, deserialized.timings.prompt_ms);
+      Assert.AreEqual(response.timings.total_ms, deserialized.timings.total_ms);
       Assert.AreEqual(response.tokens_predicted, deserialized.tokens_predicted);
     }
   }

@@ -40,6 +40,25 @@ namespace UnityBrain.Core
   }
 
   /// <summary>
+  /// Timing information from the llama.cpp API response
+  /// </summary>
+  public sealed class Timings
+  {
+    /// <summary>
+    /// Prediction time in milliseconds
+    /// </summary>
+    public long pred_ms { get; set; }
+    /// <summary>
+    /// Prompt processing time in milliseconds
+    /// </summary>
+    public long prompt_ms { get; set; }
+    /// <summary>
+    /// Total time in milliseconds
+    /// </summary>
+    public long total_ms { get; set; }
+  }
+
+  /// <summary>
   /// Response from the llama.cpp HTTP server API
   /// </summary>
   public sealed class CompletionResponse
@@ -53,9 +72,9 @@ namespace UnityBrain.Core
     /// </summary>
     public bool stop { get; set; }
     /// <summary>
-    /// The number of tokens generated
+    /// Timing information
     /// </summary>
-    public int timings { get; set; }
+    public Timings? timings { get; set; }
     /// <summary>
     /// The number of tokens predicted
     /// </summary>

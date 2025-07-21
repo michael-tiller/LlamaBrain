@@ -7,6 +7,9 @@ using UnityBrainDemo.Runtime.Core;
 
 namespace UnityBrainDemo.Editor
 {
+    /// <summary>
+    /// Custom editor for the UnityBrainSettings class.
+    /// </summary>
     [CustomEditor(typeof(UnityBrainSettings))]
     public class UnityBrainSettingsEditor : UnityEditor.Editor
     {

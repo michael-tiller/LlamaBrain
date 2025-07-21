@@ -37,6 +37,16 @@ namespace UnityBrain.Persona
       if (_memories.TryGetValue(personaId, out var list)) return list;
       return Array.Empty<string>();
     }
+
+    /// <summary>
+    /// Clears the memory of the persona.
+    /// </summary>
+    /// <param name="personaId">The ID of the persona.</param>
+    public void ClearMemory(string personaId)
+    {
+      if (_memories.ContainsKey(personaId))
+        _memories[personaId].Clear();
+    }
   }
 
 }

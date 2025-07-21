@@ -40,7 +40,7 @@ namespace UnityBrain.Core
     /// <param name="prompt">The prompt to send</param>
     /// <param name="maxTokens">The maximum number of tokens to generate</param>
     /// <param name="temperature">The temperature to use</param>
-    public async Task<string> SendPromptAsync(string prompt, int maxTokens = 128, float temperature = 0.7f)
+    public async Task<string> SendPromptAsync(string prompt, int maxTokens = 64, float temperature = 0.7f)
     {
       var req = new CompletionRequest
       {
@@ -50,7 +50,7 @@ namespace UnityBrain.Core
         top_p = 0.9f,
         top_k = 40,
         repeat_penalty = 1.1f,
-        stop = new string[] { "</s>", "Human:", "Assistant:" }
+        stop = new string[] { "</s>", "Human:", "Assistant:", "Player:", "NPC:", "Step 1:", "Step 2:", "Step 3:", "\n\n", "\nPlayer:", "\nNPC:" }
       };
 
       var content = new StringContent(JsonConvert.SerializeObject(req), Encoding.UTF8, "application/json");

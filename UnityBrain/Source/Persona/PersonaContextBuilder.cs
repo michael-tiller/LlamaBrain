@@ -12,6 +12,7 @@ namespace UnityBrain.Persona
     /// <summary>
     /// Build the context of a persona
     /// </summary>
+    /// <param name="systemPrompt">The system prompt</param>
     /// <param name="personaName">The name of the persona</param>
     /// <param name="description">The description of the persona</param>
     /// <param name="memory">The memory of the persona</param>
@@ -20,6 +21,7 @@ namespace UnityBrain.Persona
     /// <param name="playerInput">The input of the player</param>
     /// <returns>The context of the persona</returns>
     public static string BuildContext(
+      string systemPrompt,
       string personaName,
       string description,
       IReadOnlyList<string> memory,
@@ -28,8 +30,8 @@ namespace UnityBrain.Persona
       string playerInput)
     {
       var sb = new StringBuilder();
-      sb.AppendLine($"NPC: {personaName}");
-      sb.AppendLine($"Description: {description}");
+      sb.AppendLine(systemPrompt);
+      sb.AppendLine($"You are {personaName}. {description}");
       if (memory != null && memory.Count > 0)
       {
         sb.AppendLine("NPC Memory:");
@@ -42,9 +44,8 @@ namespace UnityBrain.Persona
         foreach (var line in dialogueHistory) sb.AppendLine(line);
       }
 
-      sb.AppendLine($"Player: {playerName}");
-      sb.AppendLine($"Player says: {playerInput}");
-      sb.AppendLine("NPC responds:");
+      sb.AppendLine($"{playerName}: {playerInput}");
+      sb.AppendLine($"{personaName}:");
       return sb.ToString();
     }
   }

@@ -46,8 +46,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   PersonaId: 1
-  PersonaName: peanut
-  Description: Devastating in a debate. Shrewd. Casual language. Rude.
+  PersonaName: Paul
+  SystemPrompt: You are roleplaying as an NPC in a game. Respond ONLY with the NPC's
+    dialogue - no reasoning, no explanations, no step-by-step thinking. Keep your
+    response short and natural. Just speak as the character would.
+  Description: Keep it brief. One line responses only. Only speak for Paul.
 --- !u!114 &4541035360694212475
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -63,3 +66,18 @@ MonoBehaviour:
   PlayerName: Adventurer
   agent: {fileID: 6614885023430675433}
   settings: {fileID: 11400000, guid: 1900eeca937303c47a7988e73c9eab08, type: 2}
+  onNpcResponse:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 0}
+        m_TargetAssemblyTypeName: DialoguePanelController, Assembly-CSharp.UnityBrainDemo.Runtime
+        m_MethodName: AddNpcMessage
+        m_Mode: 0
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2

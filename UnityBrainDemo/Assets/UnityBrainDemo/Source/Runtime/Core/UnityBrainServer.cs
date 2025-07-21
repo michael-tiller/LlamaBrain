@@ -9,17 +9,38 @@ using System.Threading.Tasks;
 
 namespace UnityBrainDemo.Runtime.Core
 {
+    /// <summary>
+    /// A UnityBrain server that can be used to interact with a UnityBrain server.
+    /// </summary>
     public class UnityBrainServer : MonoBehaviour
     {
+        /// <summary>
+        /// The settings for the UnityBrain server.
+        /// </summary>
         public UnityBrainSettings Settings;
 
+        /// <summary>
+        /// The server manager for the UnityBrain server.
+        /// </summary>
         private ServerManager serverManager;
+        /// <summary>
+        /// The client manager for the UnityBrain server.
+        /// </summary>
         private ClientManager clientManager;
         private CancellationTokenSource _cancellationTokenSource;
+        /// <summary>
+        /// Whether the UnityBrain server is initialized.
+        /// </summary>
         private bool _isInitialized;
 
+        /// <summary>
+        /// Whether the UnityBrain server is initialized.
+        /// </summary>
         public bool IsInitialized => _isInitialized;
 
+        /// <summary>
+        /// Initializes the UnityBrain server.
+        /// </summary>
         public void Initialize()
         {
             if (_isInitialized)
@@ -64,6 +85,9 @@ namespace UnityBrainDemo.Runtime.Core
             }
         }
 
+        /// <summary>
+        /// Starts the UnityBrain server.
+        /// </summary>
         private async void Start()
         {
             // Auto-initialize if not already done
@@ -101,6 +125,9 @@ namespace UnityBrainDemo.Runtime.Core
             }
         }
 
+        /// <summary>
+        /// Destroys the UnityBrain server.
+        /// </summary>
         private void OnDestroy()
         {
             _cancellationTokenSource?.Cancel();
@@ -109,6 +136,10 @@ namespace UnityBrainDemo.Runtime.Core
             clientManager?.Dispose();
         }
 
+        /// <summary>
+        /// Creates a client for the UnityBrain server.
+        /// </summary>
+        /// <returns>The client for the UnityBrain server.</returns>
         public ApiClient CreateClient()
         {
             if (!_isInitialized || clientManager == null)

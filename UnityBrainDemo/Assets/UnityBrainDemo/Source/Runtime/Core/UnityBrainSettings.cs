@@ -5,7 +5,9 @@ using UnityBrain.Core;
 
 namespace UnityBrainDemo.Runtime.Core
 {
-
+    /// <summary>
+    /// Settings for the UnityBrain server.
+    /// </summary>
     [CreateAssetMenu(menuName = "UnityBrain/UnityBrainSettings")]
     public class UnityBrainSettings : ScriptableObject
     {
