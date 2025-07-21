@@ -1,0 +1,3 @@
+<project outputDir="E:\Personal\LlamaBrain\LlamaBrain\bin\Release\netstandard2.1\Confused" baseDir="E:\Personal\LlamaBrain\LlamaBrain\bin\Release\netstandard2.1" xmlns="http://confuser.codeplex.com">
+  <module path="LlamaBrain.dll" />
+</project>
