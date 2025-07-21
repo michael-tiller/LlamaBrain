@@ -4,6 +4,7 @@ using UnityEngine.TestTools;
 using UnityBrain.Core;
 using System.Collections;
 using System.Threading.Tasks;
+using System;
 
 namespace UnityBrainDemo.Tests.PlayMode
 {
@@ -66,23 +67,21 @@ namespace UnityBrainDemo.Tests.PlayMode
     }
 
     [Test]
-    public void ApiClient_WithNullModel_HandlesCorrectly()
+    public void ApiClient_WithNullModel_ThrowsArgumentException()
     {
-      // Arrange & Act
-      var client = new ApiClient("localhost", 5000, null);
-
-      // Assert
-      Assert.IsNotNull(client);
+      // Arrange & Act & Assert
+      var exception = Assert.Throws<ArgumentException>(() => new ApiClient("localhost", 5000, null));
+      Assert.IsTrue(exception.Message.Contains("Model cannot be null or empty"));
+      Assert.AreEqual("model", exception.ParamName);
     }
 
     [Test]
-    public void ApiClient_WithEmptyModel_HandlesCorrectly()
+    public void ApiClient_WithEmptyModel_ThrowsArgumentException()
     {
-      // Arrange & Act
-      var client = new ApiClient("localhost", 5000, "");
-
-      // Assert
-      Assert.IsNotNull(client);
+      // Arrange & Act & Assert
+      var exception = Assert.Throws<ArgumentException>(() => new ApiClient("localhost", 5000, ""));
+      Assert.IsTrue(exception.Message.Contains("Model cannot be null or empty"));
+      Assert.AreEqual("model", exception.ParamName);
     }
 
     [Test]

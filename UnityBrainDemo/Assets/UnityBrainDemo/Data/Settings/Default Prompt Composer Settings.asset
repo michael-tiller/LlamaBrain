@@ -18,6 +18,7 @@ MonoBehaviour:
   memoryItemTemplate: '- {memory}'
   dialogueHeaderTemplate: 'Dialogue so far:'
   playerTemplate: 'Player: {playerName}'
+  playerName: Adventurer
   playerInputTemplate: 'Player says: {playerInput}'
   responsePromptTemplate: 'NPC responds:'
   includeEmptyMemory: 0
