@@ -64,5 +64,26 @@ namespace UnityBrainDemo.Tests.PlayMode
       // Assert
       Assert.IsNotNull(client);
     }
+
+    [Test]
+    public void ApiClient_Constructor_WithLlmConfig_CreatesCorrectly()
+    {
+      // Arrange
+      var llmConfig = new LlmConfig
+      {
+        MaxTokens = 128,
+        Temperature = 0.8f,
+        TopP = 0.95f,
+        TopK = 50,
+        RepeatPenalty = 1.2f,
+        StopSequences = new string[] { "END", "STOP" }
+      };
+
+      // Act
+      var client = new ApiClient("localhost", 5000, "test-model", llmConfig);
+
+      // Assert
+      Assert.IsNotNull(client);
+    }
   }
 }

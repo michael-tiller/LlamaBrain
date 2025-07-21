@@ -69,6 +69,66 @@ namespace UnityBrainDemo.Tests.EditMode
       Assert.IsNull(settings.ModelPath);
     }
 
+    [Test]
+    public void ToProcessConfig_WithLlmSettings_ReturnsCorrectLlmConfig()
+    {
+      // Arrange
+      settings.MaxTokens = 128;
+      settings.Temperature = 0.8f;
+      settings.TopP = 0.95f;
+      settings.TopK = 50;
+      settings.RepeatPenalty = 1.2f;
+      settings.StopSequences = new string[] { "END", "STOP" };
+
+      // Act
+      var config = settings.ToProcessConfig();
+
+      // Assert
+      Assert.IsNotNull(config.LlmConfig);
+      Assert.AreEqual(128, config.LlmConfig.MaxTokens);
+      Assert.AreEqual(0.8f, config.LlmConfig.Temperature);
+      Assert.AreEqual(0.95f, config.LlmConfig.TopP);
+      Assert.AreEqual(50, config.LlmConfig.TopK);
+      Assert.AreEqual(1.2f, config.LlmConfig.RepeatPenalty);
+      Assert.AreEqual(new string[] { "END", "STOP" }, config.LlmConfig.StopSequences);
+    }
+
+    [Test]
+    public void ToLlmConfig_WithCustomSettings_ReturnsCorrectConfig()
+    {
+      // Arrange
+      settings.MaxTokens = 256;
+      settings.Temperature = 0.5f;
+      settings.TopP = 0.8f;
+      settings.TopK = 30;
+      settings.RepeatPenalty = 1.5f;
+      settings.StopSequences = new string[] { "DONE", "FINISH" };
+
+      // Act
+      var llmConfig = settings.ToLlmConfig();
+
+      // Assert
+      Assert.AreEqual(256, llmConfig.MaxTokens);
+      Assert.AreEqual(0.5f, llmConfig.Temperature);
+      Assert.AreEqual(0.8f, llmConfig.TopP);
+      Assert.AreEqual(30, llmConfig.TopK);
+      Assert.AreEqual(1.5f, llmConfig.RepeatPenalty);
+      Assert.AreEqual(new string[] { "DONE", "FINISH" }, llmConfig.StopSequences);
+    }
+
+    [Test]
+    public void UnityBrainSettings_LlmDefaultValues_AreCorrect()
+    {
+      // Assert
+      Assert.AreEqual(64, settings.MaxTokens);
+      Assert.AreEqual(0.7f, settings.Temperature);
+      Assert.AreEqual(0.9f, settings.TopP);
+      Assert.AreEqual(40, settings.TopK);
+      Assert.AreEqual(1.1f, settings.RepeatPenalty);
+      Assert.IsNotNull(settings.StopSequences);
+      Assert.Greater(settings.StopSequences.Length, 0);
+    }
+
 
   }
 }

@@ -10,8 +10,28 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 466b46ba516814d4698185a25a6e1b4b, type: 3}
-  m_Name: UnityBrain Settings
+  m_Name: Unity Brain Settings
   m_EditorClassIdentifier: 
   ExecutablePath: Backend/llama-server.exe
   ModelPath: Backend/model/stablelm-zephyr-3b.Q4_0.gguf
   Port: 5000
+  ContextSize: 2048
+  MaxTokens: 512
+  Temperature: 1.2
+  TopP: 0.9
+  TopK: 40
+  RepeatPenalty: 1.1
+  StopSequences:
+  - </s>
+  - 'Human:'
+  - 'Assistant:'
+  - 'Player:'
+  - 'NPC:'
+  - 'Step 1:'
+  - 'Step 2:'
+  - 'Step 3:'
+  - 
+  - 
+  - '
+
+    NPC:'

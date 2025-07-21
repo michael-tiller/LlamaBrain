@@ -5,12 +5,8 @@ using UnityEngine.UI;
 using TMPro;
 using UnityEngine.Events;
 using UnityBrainDemo.Runtime.Demo;
-using UnityBrainDemo.Runtime.UI;
 
-/// <summary>
-/// This namespace contains the UI components for the UnityBrainDemo project.
-/// </summary>
-namespace UnityBrainDemo.Runtime.UI
+namespace UnityBrainDemo.Runtime.Demo.UI
 {
     /// <summary>
     /// A controller for the dialogue panel.

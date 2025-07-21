@@ -6,7 +6,7 @@ using TMPro;
 /// <summary>
 /// This namespace contains the UI components for the UnityBrainDemo project.
 /// </summary>
-namespace UnityBrainDemo.Runtime.UI
+namespace UnityBrainDemo.Runtime.Demo.UI
 {
     /// <summary>
     /// A component that displays a message in a dialogue.
