@@ -3,7 +3,7 @@ using System.Collections.Generic;
 namespace UnityBrain.Core
 {
   /// <summary>
-  /// Tracks the conversation history between the player and an NPC.
+  /// Tracks the conversation history between participants, typically a player and an NPC.
   /// </summary>
   public class DialogueSession
   {
@@ -26,12 +26,22 @@ namespace UnityBrain.Core
     }
 
     /// <summary>
+    /// Appends a message to the dialogue history with a generic speaker.
+    /// </summary>
+    /// <param name="speaker">The speaker of the message.</param>
+    /// <param name="text">The message text.</param>
+    public void Append(string speaker, string text)
+    {
+      _history.Add($"{speaker}: {text}");
+    }
+
+    /// <summary>
     /// Appends a player message to the dialogue history.
     /// </summary>
     /// <param name="input">The player message.</param>
     public void AppendPlayer(string input)
     {
-      _history.Add($"Player: {input}");
+      Append("Player", input);
     }
 
     /// <summary>
@@ -40,7 +50,7 @@ namespace UnityBrain.Core
     /// <param name="response">The NPC message.</param>
     public void AppendNpc(string response)
     {
-      _history.Add($"NPC: {response}");
+      Append("NPC", response);
     }
 
     /// <summary>

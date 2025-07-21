@@ -39,9 +39,9 @@ namespace UnityBrainDemo.Runtime.Core
         /// </summary>
         private ApiClient client;
         /// <summary>
-        /// The dialogue history.
+        /// The dialogue session for this agent.
         /// </summary>
-        private DialogueHistory dialogueHistory = new();
+        private DialogueSession dialogueSession;
 
         /// <summary>
         /// The current runtime profile (read-only)
@@ -67,6 +67,9 @@ namespace UnityBrainDemo.Runtime.Core
             {
                 runtimeProfile = PersonaConfig.ToProfile();
             }
+
+            // Initialize dialogue session with persona ID
+            dialogueSession = new DialogueSession(runtimeProfile?.Name ?? "Unknown");
         }
 
         /// <summary>
@@ -132,7 +135,7 @@ namespace UnityBrainDemo.Runtime.Core
                 runtimeProfile?.Name ?? string.Empty,
                 runtimeProfile?.Description ?? string.Empty,
                 memoryProvider.GetMemory(runtimeProfile),
-                dialogueHistory.GetHistory(),
+                dialogueSession.GetHistory(),
                 playerName,
                 input,
                 PromptSettings != null ? new Dictionary<string, object>
@@ -167,8 +170,8 @@ namespace UnityBrainDemo.Runtime.Core
             var response = await client.SendPromptAsync(prompt);
             Debug.Log($"[UnityBrainAgent] Received response: '{response}'");
 
-            dialogueHistory.Append(runtimeProfile?.Name ?? string.Empty, input);
-            dialogueHistory.Append(runtimeProfile?.Name ?? string.Empty, response);
+            dialogueSession.AppendPlayer(input);
+            dialogueSession.AppendNpc(response);
             if (runtimeProfile?.UseMemory ?? false)
             {
                 Debug.Log($"Memories: {Memories}");
@@ -192,7 +195,7 @@ namespace UnityBrainDemo.Runtime.Core
         /// </summary>
         public void ClearDialogueHistory()
         {
-            dialogueHistory.Clear();
+            dialogueSession?.Clear();
         }
     }
 }
