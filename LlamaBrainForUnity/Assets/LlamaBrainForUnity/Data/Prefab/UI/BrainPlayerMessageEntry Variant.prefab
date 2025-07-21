@@ -26,7 +26,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3196464991537534003, guid: fe4d01ca0e04be34c83bf5ba7184e1ae, type: 3}
       propertyPath: m_Name
-      value: UnityBrainPlayerMessageEntry Variant
+      value: BrainPlayerMessageEntry Variant
       objectReference: {fileID: 0}
     - target: {fileID: 4096772991698630590, guid: fe4d01ca0e04be34c83bf5ba7184e1ae, type: 3}
       propertyPath: m_ChildAlignment
@@ -102,7 +102,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6002053901335793265, guid: fe4d01ca0e04be34c83bf5ba7184e1ae, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -14.525
+      value: -14.525024
       objectReference: {fileID: 0}
     - target: {fileID: 6002053901335793265, guid: fe4d01ca0e04be34c83bf5ba7184e1ae, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -126,7 +126,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6996945014244917002, guid: fe4d01ca0e04be34c83bf5ba7184e1ae, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 703
+      value: 683
       objectReference: {fileID: 0}
     - target: {fileID: 6996945014244917002, guid: fe4d01ca0e04be34c83bf5ba7184e1ae, type: 3}
       propertyPath: m_SizeDelta.y
@@ -138,7 +138,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6996945014244917002, guid: fe4d01ca0e04be34c83bf5ba7184e1ae, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -14.525
+      value: -18.525
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
