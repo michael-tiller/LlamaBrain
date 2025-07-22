@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 3260737324326220978}
   - component: {fileID: 8483826580040940482}
   m_Layer: 5
-  m_Name: BrainCanvas
+  m_Name: NpcChatCanvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
