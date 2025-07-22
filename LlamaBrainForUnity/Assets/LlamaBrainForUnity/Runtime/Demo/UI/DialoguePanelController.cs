@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using TMPro;
 using UnityEngine.Events;
 using LlamaBrain.Unity.Runtime.Demo;
+using UnityEngine.SceneManagement;
 
 namespace LlamaBrain.Unity.Runtime.Demo.UI
 {
@@ -111,6 +112,10 @@ namespace LlamaBrain.Unity.Runtime.Demo.UI
 
             var playerMessage = Instantiate(playerMessageTextPrefab, dialogueMessageContainer);
             playerMessage.SetMessage(message);
+        }
+        public void BackToMainMenu()
+        {
+            SceneManager.LoadScene(0, LoadSceneMode.Single);
         }
     }
 }

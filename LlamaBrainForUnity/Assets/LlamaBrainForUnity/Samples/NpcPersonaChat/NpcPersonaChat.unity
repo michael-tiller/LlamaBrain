@@ -378,6 +378,22 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 186542738676684489, guid: 660d6da1a9e2a054a94c696e5b9b1779, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 186542738676684489, guid: 660d6da1a9e2a054a94c696e5b9b1779, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 186542738676684489, guid: 660d6da1a9e2a054a94c696e5b9b1779, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 186542738676684489, guid: 660d6da1a9e2a054a94c696e5b9b1779, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 884831735245251297, guid: 660d6da1a9e2a054a94c696e5b9b1779, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -401,6 +417,46 @@ PrefabInstance:
     - target: {fileID: 884831735245251297, guid: 660d6da1a9e2a054a94c696e5b9b1779, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1132293987235456095, guid: 660d6da1a9e2a054a94c696e5b9b1779, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1132293987235456095, guid: 660d6da1a9e2a054a94c696e5b9b1779, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1132293987235456095, guid: 660d6da1a9e2a054a94c696e5b9b1779, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1132293987235456095, guid: 660d6da1a9e2a054a94c696e5b9b1779, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1569890769774688126, guid: 660d6da1a9e2a054a94c696e5b9b1779, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1569890769774688126, guid: 660d6da1a9e2a054a94c696e5b9b1779, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1569890769774688126, guid: 660d6da1a9e2a054a94c696e5b9b1779, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 700
+      objectReference: {fileID: 0}
+    - target: {fileID: 1569890769774688126, guid: 660d6da1a9e2a054a94c696e5b9b1779, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 58.949997
+      objectReference: {fileID: 0}
+    - target: {fileID: 1569890769774688126, guid: 660d6da1a9e2a054a94c696e5b9b1779, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 360
+      objectReference: {fileID: 0}
+    - target: {fileID: 1569890769774688126, guid: 660d6da1a9e2a054a94c696e5b9b1779, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -33.475
       objectReference: {fileID: 0}
     - target: {fileID: 1688573061634036767, guid: 660d6da1a9e2a054a94c696e5b9b1779, type: 3}
       propertyPath: m_Pivot.x
@@ -498,6 +554,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2853293165275350533, guid: 660d6da1a9e2a054a94c696e5b9b1779, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3040022715458135388, guid: 660d6da1a9e2a054a94c696e5b9b1779, type: 3}
       propertyPath: m_Name
       value: BrainCanvas
@@ -541,6 +601,11 @@ PrefabInstance:
     - target: {fileID: 3233179890952153414, guid: 660d6da1a9e2a054a94c696e5b9b1779, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3991066178036065201, guid: 660d6da1a9e2a054a94c696e5b9b1779, type: 3}
+      propertyPath: m_text
+      value: This scene is an example of a simple chat with a LlamaBrain powered
+        NPC Persona
       objectReference: {fileID: 0}
     - target: {fileID: 4185882971626977482, guid: 660d6da1a9e2a054a94c696e5b9b1779, type: 3}
       propertyPath: m_AnchoredPosition.y

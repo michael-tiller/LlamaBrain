@@ -58,7 +58,7 @@
     "C:\\Users\\metag\\.nuget\\packages\\": {}
   },
   "project": {
-    "version": "1.0.0",
+    "version": "0.1.18",
     "restore": {
       "projectUniqueName": "E:\\Personal\\LlamaBrain\\LlamaBrain\\LlamaBrain.csproj",
       "projectName": "LlamaBrain",

@@ -13,20 +13,20 @@ MonoBehaviour:
   m_Name: Prompt Composer Settings
   m_EditorClassIdentifier: 
   npcTemplate: 'NPC: {personaName}'
-  descriptionTemplate: 'Description: {description}'
-  memoryHeaderTemplate: 'NPC Memory:'
+  descriptionTemplate: '{description}'
+  memoryHeaderTemplate: 'Memory:'
   memoryItemTemplate: '- {memory}'
-  dialogueHeaderTemplate: 'Dialogue so far:'
+  dialogueHeaderTemplate: 'History:'
   playerTemplate: 'Player: {playerName}'
   playerName: Adventurer
-  playerInputTemplate: 'Player says: {playerInput}'
-  responsePromptTemplate: 'NPC responds:'
+  playerInputTemplate: '> {playerInput}'
+  responsePromptTemplate: '{personaName}:'
   includeEmptyMemory: 0
   includeEmptyDialogue: 0
-  maxMemoryItems: 10
-  maxDialogueLines: 20
+  maxMemoryItems: 5
+  maxDialogueLines: 10
   sectionSeparator: '
 
 '
-  compactDialogueFormat: 0
+  compactDialogueFormat: 1
   dialogueLinePrefix: 

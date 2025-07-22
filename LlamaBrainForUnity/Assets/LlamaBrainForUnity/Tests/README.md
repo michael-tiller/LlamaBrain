@@ -6,13 +6,13 @@ This directory contains tests for the LlamaBrain integration using Unity's Test 
 
 ### EditMode Tests
 Tests that run in the Unity Editor without entering Play Mode:
-- **LlamaBrainSettingsTests.cs** - Tests for configuration validation
+- **BrainSettingsTests.cs** - Tests for configuration validation
 - **ProcessConfigTests.cs** - Tests for process configuration
 - **ApiContractsTests.cs** - Tests for API request/response serialization
 
 ### PlayMode Tests
 Tests that run in Play Mode (requires actual server):
-- **LlamaBrainServerTests.cs** - Tests for LlamaBrainServer component
+- **BrainServerTests.cs** - Tests for LlamaBrainServer component
 - **ApiClientTests.cs** - Tests for HTTP client communication
 
 ## Running Tests
