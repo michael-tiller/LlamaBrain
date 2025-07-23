@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.IO;
 using LlamaBrain.Utilities;
 using System.Linq;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace LlamaBrain.Core
 {
@@ -110,7 +112,7 @@ namespace LlamaBrain.Core
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             CreateNoWindow = true,
-            WorkingDirectory = Path.GetDirectoryName(exePath) // Set working directory to executable location
+            WorkingDirectory = Path.GetDirectoryName(exePath)
           }
         };
 
@@ -134,24 +136,11 @@ namespace LlamaBrain.Core
         };
 
         // Start the process
-        if (!_process.Start())
-        {
-          throw new InvalidOperationException("Failed to start llama-server process");
-        }
-
+        _process.Start();
         _process.BeginOutputReadLine();
         _process.BeginErrorReadLine();
 
-        // Wait a bit to see if the process starts successfully
-        if (!_process.WaitForExit(1000) && !_process.HasExited)
-        {
-          Logger.Info($"[Server] llama-server started with PID: {_process.Id}");
-        }
-        else
-        {
-          var exitCode = _process.ExitCode;
-          throw new InvalidOperationException($"llama-server process exited immediately with code: {exitCode}");
-        }
+        Logger.Info($"[Server] llama-server started with PID: {_process.Id}");
       }
       catch (Exception ex)
       {
@@ -167,34 +156,42 @@ namespace LlamaBrain.Core
     public void StopServer()
     {
       if (_disposed)
-        return;
+        throw new ObjectDisposedException(nameof(ServerManager));
 
-      if (_process != null && !_process.HasExited)
+      if (_process == null || _process.HasExited)
       {
-        try
-        {
-          Logger.Info("[Server] Stopping llama-server process");
+        Logger.Info("[Server] llama-server is not running");
+        return;
+      }
 
-          // Try graceful shutdown first
-          _process.CloseMainWindow();
+      try
+      {
+        Logger.Info($"[Server] Stopping llama-server (PID: {_process.Id})");
 
-          if (!_process.WaitForExit(MaxShutdownTimeoutSeconds * 1000))
-          {
-            Logger.Warn("[Server] Graceful shutdown failed, forcing process termination");
-            _process.Kill();
-            _process.WaitForExit(MaxShutdownTimeoutSeconds * 1000);
-          }
+        // Try graceful shutdown first
+        if (!_process.CloseMainWindow())
+        {
+          // Force kill if graceful shutdown fails
+          _process.Kill();
+        }
 
-          Logger.Info("[Server] llama-server process stopped");
-        }
-        catch (Exception ex)
+        // Wait for the process to exit
+        if (!_process.WaitForExit(MaxShutdownTimeoutSeconds * 1000))
         {
-          Logger.Error($"[Server] Error stopping llama-server process: {ex.Message}");
+          Logger.Warn("[Server] Process did not exit within timeout, force killing");
+          _process.Kill();
+          _process.WaitForExit(5000); // Wait a bit more
         }
-        finally
-        {
-          CleanupProcess();
-        }
+
+        Logger.Info("[Server] llama-server stopped successfully");
+      }
+      catch (Exception ex)
+      {
+        Logger.Error($"[Server] Error stopping llama-server: {ex.Message}");
+      }
+      finally
+      {
+        CleanupProcess();
       }
     }
 
@@ -216,6 +213,203 @@ namespace LlamaBrain.Core
         Logger.Warn($"[Server] Error checking process status: {ex.Message}");
         return false;
       }
+    }
+
+    /// <summary>
+    /// Get detailed server status information
+    /// </summary>
+    /// <returns>Server status information</returns>
+    public ServerStatus GetServerStatus()
+    {
+      if (_disposed)
+        throw new ObjectDisposedException(nameof(ServerManager));
+
+      var status = new ServerStatus
+      {
+        IsRunning = false,
+        ProcessId = -1,
+        StartTime = null,
+        MemoryUsage = 0,
+        CpuUsage = 0,
+        ThreadCount = 0,
+        Responding = false,
+        Uptime = TimeSpan.Zero
+      };
+
+      if (_process == null)
+        return status;
+
+      try
+      {
+        status.IsRunning = !_process.HasExited;
+        if (status.IsRunning)
+        {
+          status.ProcessId = _process.Id;
+          status.StartTime = _process.StartTime;
+          status.MemoryUsage = _process.WorkingSet64;
+          status.ThreadCount = _process.Threads.Count;
+          status.Responding = _process.Responding;
+
+          if (status.StartTime.HasValue)
+          {
+            status.Uptime = DateTime.Now - status.StartTime.Value;
+          }
+
+          // Try to get CPU usage (this might not work on all systems)
+          try
+          {
+            // PerformanceCounter is not available in .NET Standard 2.1
+            // CPU usage will remain 0 for compatibility
+          }
+          catch
+          {
+            // CPU usage not available, leave as 0
+          }
+        }
+      }
+      catch (Exception ex)
+      {
+        Logger.Warn($"[Server] Error getting server status: {ex.Message}");
+      }
+
+      return status;
+    }
+
+    /// <summary>
+    /// Wait for the server to be ready
+    /// </summary>
+    /// <param name="timeoutSeconds">Timeout in seconds</param>
+    /// <returns>True if the server is ready, false otherwise</returns>
+    public async Task<bool> WaitForServerReadyAsync(int timeoutSeconds = 30)
+    {
+      if (_disposed)
+        throw new ObjectDisposedException(nameof(ServerManager));
+
+      if (timeoutSeconds <= 0)
+        throw new ArgumentException("Timeout must be positive", nameof(timeoutSeconds));
+
+      try
+      {
+        var startTime = DateTime.UtcNow;
+        var timeout = TimeSpan.FromSeconds(timeoutSeconds);
+
+        while (DateTime.UtcNow - startTime < timeout)
+        {
+          if (IsServerRunning())
+          {
+            // Additional check: try to connect to the server
+            try
+            {
+              using var client = new System.Net.Http.HttpClient();
+              client.Timeout = TimeSpan.FromSeconds(5);
+              var response = await client.GetAsync($"http://localhost:{_config.Port}/health");
+              if (response.IsSuccessStatusCode)
+              {
+                Logger.Info($"[Server] Server is ready and responding on port {_config.Port}");
+                return true;
+              }
+            }
+            catch
+            {
+              // Server might not be ready yet, continue waiting
+            }
+
+            await Task.Delay(1000); // Check every second
+          }
+          else
+          {
+            await Task.Delay(100); // Check more frequently if not running
+          }
+        }
+
+        Logger.Warn($"[Server] Timeout waiting for server to be ready after {timeoutSeconds} seconds");
+        return false;
+      }
+      catch (Exception ex)
+      {
+        Logger.Error($"[Server] Error waiting for server to be ready: {ex.Message}");
+        return false;
+      }
+    }
+
+    /// <summary>
+    /// Validate server configuration with enhanced checks
+    /// </summary>
+    /// <returns>Validation result</returns>
+    public ServerValidationResult ValidateServerConfiguration()
+    {
+      if (_disposed)
+        throw new ObjectDisposedException(nameof(ServerManager));
+
+      var result = new ServerValidationResult
+      {
+        IsValid = true,
+        Errors = new List<string>(),
+        Warnings = new List<string>()
+      };
+
+      try
+      {
+        // Validate executable path
+        if (!ProcessUtils.ValidateProcessConfig(_config.ExecutablePath))
+        {
+          result.IsValid = false;
+          result.Errors.Add("Executable path is invalid or file does not exist");
+        }
+
+        // Validate model path
+        if (string.IsNullOrWhiteSpace(_config.Model) || !File.Exists(_config.Model))
+        {
+          result.IsValid = false;
+          result.Errors.Add("Model path is invalid or file does not exist");
+        }
+
+        // Validate port
+        if (_config.Port <= 0 || _config.Port > 65535)
+        {
+          result.IsValid = false;
+          result.Errors.Add($"Invalid port number: {_config.Port}. Must be between 1 and 65535.");
+        }
+
+        // Check if port is already in use
+        try
+        {
+          var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, _config.Port);
+          listener.Start();
+          listener.Stop();
+        }
+        catch
+        {
+          result.Warnings.Add($"Port {_config.Port} might already be in use");
+        }
+
+        // Validate context size
+        if (_config.ContextSize <= 0 || _config.ContextSize > 32768)
+        {
+          result.IsValid = false;
+          result.Errors.Add($"Invalid context size: {_config.ContextSize}. Must be between 1 and 32768.");
+        }
+
+        // Check available disk space for model
+        if (!string.IsNullOrWhiteSpace(_config.Model) && File.Exists(_config.Model))
+        {
+          var driveInfo = new DriveInfo(Path.GetPathRoot(_config.Model) ?? "");
+          var availableSpace = driveInfo.AvailableFreeSpace;
+          var modelSize = new FileInfo(_config.Model).Length;
+
+          if (availableSpace < modelSize * 2) // Need at least 2x model size for safety
+          {
+            result.Warnings.Add($"Low disk space. Available: {availableSpace / (1024 * 1024)}MB, Model size: {modelSize / (1024 * 1024)}MB");
+          }
+        }
+      }
+      catch (Exception ex)
+      {
+        result.IsValid = false;
+        result.Errors.Add($"Validation error: {ex.Message}");
+      }
+
+      return result;
     }
 
     /// <summary>

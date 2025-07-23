@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 using System;
 using System.Text;
+using System.Collections.Generic;
 
 /// <summary>
 /// This namespace contains utility classes
@@ -242,5 +243,237 @@ namespace LlamaBrain.Utilities
 
       return truncated + "... [truncated]";
     }
+
+    /// <summary>
+    /// Validate JSON schema against a template
+    /// </summary>
+    /// <param name="json">The JSON string to validate</param>
+    /// <param name="requiredProperties">Required property names</param>
+    /// <returns>Validation result</returns>
+    public static JsonValidationResult ValidateJsonSchema(string json, string[] requiredProperties)
+    {
+      var result = new JsonValidationResult
+      {
+        IsValid = true,
+        Errors = new List<string>()
+      };
+
+      if (string.IsNullOrEmpty(json))
+      {
+        result.IsValid = false;
+        result.Errors.Add("JSON string is null or empty");
+        return result;
+      }
+
+      try
+      {
+        var obj = JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
+        if (obj == null)
+        {
+          result.IsValid = false;
+          result.Errors.Add("JSON could not be parsed as an object");
+          return result;
+        }
+
+        // Check required properties
+        foreach (var property in requiredProperties)
+        {
+          if (!obj.ContainsKey(property))
+          {
+            result.IsValid = false;
+            result.Errors.Add($"Missing required property: {property}");
+          }
+        }
+
+        return result;
+      }
+      catch (Exception ex)
+      {
+        result.IsValid = false;
+        result.Errors.Add($"JSON validation error: {ex.Message}");
+        return result;
+      }
+    }
+
+    /// <summary>
+    /// Sanitize JSON string for safe storage
+    /// </summary>
+    /// <param name="json">The JSON string to sanitize</param>
+    /// <returns>Sanitized JSON string</returns>
+    public static string SanitizeJson(string json)
+    {
+      if (string.IsNullOrEmpty(json))
+        return json;
+
+      try
+      {
+        // Parse and re-serialize to remove any potential issues
+        var obj = JsonConvert.DeserializeObject(json);
+        return JsonConvert.SerializeObject(obj);
+      }
+      catch (Exception ex)
+      {
+        Logger.Error($"Error sanitizing JSON: {ex.Message}");
+        return json;
+      }
+    }
+
+    /// <summary>
+    /// Compress JSON by removing unnecessary whitespace
+    /// </summary>
+    /// <param name="json">The JSON string to compress</param>
+    /// <returns>Compressed JSON string</returns>
+    public static string CompressJson(string json)
+    {
+      if (string.IsNullOrEmpty(json))
+        return json;
+
+      try
+      {
+        var obj = JsonConvert.DeserializeObject(json);
+        return JsonConvert.SerializeObject(obj, Formatting.None);
+      }
+      catch (Exception ex)
+      {
+        Logger.Error($"Error compressing JSON: {ex.Message}");
+        return json;
+      }
+    }
+
+    /// <summary>
+    /// Pretty print JSON with proper formatting
+    /// </summary>
+    /// <param name="json">The JSON string to format</param>
+    /// <returns>Formatted JSON string</returns>
+    public static string PrettyPrintJson(string json)
+    {
+      if (string.IsNullOrEmpty(json))
+        return json;
+
+      try
+      {
+        var obj = JsonConvert.DeserializeObject(json);
+        return JsonConvert.SerializeObject(obj, Formatting.Indented);
+      }
+      catch (Exception ex)
+      {
+        Logger.Error($"Error pretty printing JSON: {ex.Message}");
+        return json;
+      }
+    }
+
+    /// <summary>
+    /// Get JSON statistics
+    /// </summary>
+    /// <param name="json">The JSON string</param>
+    /// <returns>JSON statistics</returns>
+    public static JsonStatistics GetJsonStatistics(string json)
+    {
+      var stats = new JsonStatistics
+      {
+        CharacterCount = 0,
+        ByteCount = 0,
+        PropertyCount = 0,
+        ArrayCount = 0,
+        NestingDepth = 0
+      };
+
+      if (string.IsNullOrEmpty(json))
+        return stats;
+
+      try
+      {
+        stats.CharacterCount = json.Length;
+        stats.ByteCount = Encoding.UTF8.GetByteCount(json);
+
+        var obj = JsonConvert.DeserializeObject(json);
+        if (obj != null)
+        {
+          AnalyzeJsonStructure(obj, stats, 0);
+        }
+
+        return stats;
+      }
+      catch (Exception ex)
+      {
+        Logger.Error($"Error getting JSON statistics: {ex.Message}");
+        return stats;
+      }
+    }
+
+    /// <summary>
+    /// Analyze JSON structure recursively
+    /// </summary>
+    /// <param name="obj">The object to analyze</param>
+    /// <param name="stats">Statistics to update</param>
+    /// <param name="depth">Current nesting depth</param>
+    private static void AnalyzeJsonStructure(object obj, JsonStatistics stats, int depth)
+    {
+      stats.NestingDepth = Math.Max(stats.NestingDepth, depth);
+
+      if (obj is Newtonsoft.Json.Linq.JObject jObject)
+      {
+        stats.PropertyCount += jObject.Count;
+        foreach (var property in jObject.Properties())
+        {
+          AnalyzeJsonStructure(property.Value, stats, depth + 1);
+        }
+      }
+      else if (obj is Newtonsoft.Json.Linq.JArray jArray)
+      {
+        stats.ArrayCount++;
+        foreach (var item in jArray)
+        {
+          AnalyzeJsonStructure(item, stats, depth + 1);
+        }
+      }
+    }
+  }
+
+  /// <summary>
+  /// JSON validation result
+  /// </summary>
+  public class JsonValidationResult
+  {
+    /// <summary>
+    /// Whether the JSON is valid
+    /// </summary>
+    public bool IsValid { get; set; }
+
+    /// <summary>
+    /// List of validation errors
+    /// </summary>
+    public List<string> Errors { get; set; } = new List<string>();
+  }
+
+  /// <summary>
+  /// JSON statistics
+  /// </summary>
+  public class JsonStatistics
+  {
+    /// <summary>
+    /// Number of characters
+    /// </summary>
+    public int CharacterCount { get; set; }
+
+    /// <summary>
+    /// Number of bytes
+    /// </summary>
+    public int ByteCount { get; set; }
+
+    /// <summary>
+    /// Number of properties
+    /// </summary>
+    public int PropertyCount { get; set; }
+
+    /// <summary>
+    /// Number of arrays
+    /// </summary>
+    public int ArrayCount { get; set; }
+
+    /// <summary>
+    /// Maximum nesting depth
+    /// </summary>
+    public int NestingDepth { get; set; }
   }
 }

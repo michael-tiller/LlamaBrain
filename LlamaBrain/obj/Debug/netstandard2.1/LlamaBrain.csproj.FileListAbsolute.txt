@@ -1,10 +1,11 @@
-E:\Personal\LlamaBrain\LlamaBrain\bin\Debug\netstandard2.1\LlamaBrain.deps.json
-E:\Personal\LlamaBrain\LlamaBrain\bin\Debug\netstandard2.1\LlamaBrain.dll
-E:\Personal\LlamaBrain\LlamaBrain\bin\Debug\netstandard2.1\LlamaBrain.pdb
 E:\Personal\LlamaBrain\LlamaBrain\obj\Debug\netstandard2.1\LlamaBrain.csproj.AssemblyReference.cache
 E:\Personal\LlamaBrain\LlamaBrain\obj\Debug\netstandard2.1\LlamaBrain.GeneratedMSBuildEditorConfig.editorconfig
 E:\Personal\LlamaBrain\LlamaBrain\obj\Debug\netstandard2.1\LlamaBrain.AssemblyInfoInputs.cache
 E:\Personal\LlamaBrain\LlamaBrain\obj\Debug\netstandard2.1\LlamaBrain.AssemblyInfo.cs
 E:\Personal\LlamaBrain\LlamaBrain\obj\Debug\netstandard2.1\LlamaBrain.csproj.CoreCompileInputs.cache
+E:\Personal\LlamaBrain\LlamaBrain\obj\Debug\netstandard2.1\LlamaBrain.sourcelink.json
+E:\Personal\LlamaBrain\LlamaBrain\bin\Debug\netstandard2.1\LlamaBrain.deps.json
+E:\Personal\LlamaBrain\LlamaBrain\bin\Debug\netstandard2.1\LlamaBrain.dll
+E:\Personal\LlamaBrain\LlamaBrain\bin\Debug\netstandard2.1\LlamaBrain.pdb
 E:\Personal\LlamaBrain\LlamaBrain\obj\Debug\netstandard2.1\LlamaBrain.dll
 E:\Personal\LlamaBrain\LlamaBrain\obj\Debug\netstandard2.1\LlamaBrain.pdb
