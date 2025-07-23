@@ -7,7 +7,7 @@
   "targets": {
     ".NETStandard,Version=v2.1": {},
     ".NETStandard,Version=v2.1/": {
-      "LlamaBrain/0.1.18": {
+      "LlamaBrain/0.1.24": {
         "dependencies": {
           "Newtonsoft.Json": "13.0.3"
         },
@@ -26,7 +26,7 @@
     }
   },
   "libraries": {
-    "LlamaBrain/0.1.18": {
+    "LlamaBrain/0.1.24": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

@@ -106,23 +106,28 @@ Samples/
 **Best for**: Content creators and editors
 
 ### Memory Management (`MemoryManagement/`)
-**Purpose**: Memory and conversation history management demonstration
+**Purpose**: Advanced memory and conversation history management demonstration
 
 **What it shows:**
-- Memory management features (get, clear, add custom memories)
+- Complete memory management system (get, clear, add, categorize memories)
 - Conversation history tracking and management
-- Real-time UI updates for memory and history
-- Interactive memory management controls
+- Real-time UI updates with TextMeshPro integration
+- Interactive memory management controls with categories
 - Memory vs conversation history concepts
+- Agent initialization status monitoring
+- Memory filtering by categories
+- Enhanced debugging and troubleshooting tools
 
 **Key Components:**
-- Enhanced UnityBrainAgent with memory methods
-- MemoryManagerUI component for visualization
-- Memory and history management controls
-- Real-time display updates
-- Custom memory input system
+- Enhanced UnityBrainAgent with comprehensive memory methods
+- Advanced MemoryManagerUI component with TextMeshPro
+- Memory categorization system with dropdown filtering
+- Real-time display updates with initialization checks
+- Custom memory input with category support
+- Agent state debugging and connection monitoring
+- Context menu tools for development
 
-**Best for**: Developers learning memory management and conversation tracking
+**Best for**: Developers building advanced AI memory systems and debugging agent behavior
 
 ## 🛠️ Shared Assets
 

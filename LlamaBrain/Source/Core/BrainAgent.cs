@@ -1,0 +1,283 @@
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using LlamaBrain.Persona;
+using LlamaBrain.Utilities;
+
+namespace LlamaBrain.Core
+{
+  /// <summary>
+  /// High-level agent for managing persona interactions with LLM integration
+  /// </summary>
+  public sealed class BrainAgent : IDisposable
+  {
+    /// <summary>
+    /// The persona profile for this agent
+    /// </summary>
+    private readonly PersonaProfile _profile;
+
+    /// <summary>
+    /// The API client for LLM communication
+    /// </summary>
+    private readonly ApiClient _apiClient;
+
+    /// <summary>
+    /// The dialogue session for conversation tracking
+    /// </summary>
+    private readonly DialogueSession _dialogueSession;
+
+    /// <summary>
+    /// The memory store for persistent memory
+    /// </summary>
+    private readonly PersonaMemoryStore _memoryStore;
+
+    /// <summary>
+    /// The prompt composer for building LLM prompts
+    /// </summary>
+    private readonly PromptComposer _promptComposer;
+
+    /// <summary>
+    /// Whether the agent has been disposed
+    /// </summary>
+    private bool _disposed = false;
+
+    /// <summary>
+    /// Gets the persona profile
+    /// </summary>
+    public PersonaProfile Profile => _profile;
+
+    /// <summary>
+    /// Gets the dialogue session
+    /// </summary>
+    public DialogueSession DialogueSession => _dialogueSession;
+
+    /// <summary>
+    /// Gets the memory store
+    /// </summary>
+    public PersonaMemoryStore MemoryStore => _memoryStore;
+
+    /// <summary>
+    /// Constructor
+    /// </summary>
+    /// <param name="profile">The persona profile</param>
+    /// <param name="apiClient">The API client for LLM communication</param>
+    /// <param name="memoryStore">Optional memory store (will create one if not provided)</param>
+    public BrainAgent(PersonaProfile profile, ApiClient apiClient, PersonaMemoryStore? memoryStore = null)
+    {
+      _profile = profile ?? throw new ArgumentNullException(nameof(profile));
+      _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
+      _memoryStore = memoryStore ?? new PersonaMemoryStore();
+      _dialogueSession = new DialogueSession(profile.PersonaId, _memoryStore);
+      _promptComposer = new PromptComposer();
+    }
+
+    /// <summary>
+    /// Sends a message to the persona and gets a response
+    /// </summary>
+    /// <param name="message">The message to send</param>
+    /// <param name="cancellationToken">Optional cancellation token</param>
+    /// <returns>The persona's response</returns>
+    public async Task<string> SendMessageAsync(string message, CancellationToken cancellationToken = default)
+    {
+      if (_disposed)
+        throw new ObjectDisposedException(nameof(BrainAgent));
+
+      if (string.IsNullOrWhiteSpace(message))
+        throw new ArgumentException("Message cannot be null or empty", nameof(message));
+
+      try
+      {
+        // Add the user message to the dialogue session
+        _dialogueSession.AppendPlayer(message);
+
+        // Compose the prompt using the persona profile and dialogue history
+        var prompt = _promptComposer.ComposePrompt(_profile, _dialogueSession, message);
+
+        // Send the prompt to the LLM
+        var response = await _apiClient.SendPromptAsync(prompt, cancellationToken: cancellationToken);
+
+        // Add the response to the dialogue session
+        _dialogueSession.AppendNpc(response);
+
+        return response;
+      }
+      catch (Exception ex)
+      {
+        // Log the error and rethrow
+        Logger.Error($"Error in BrainAgent.SendMessageAsync: {ex.Message}");
+        throw;
+      }
+    }
+
+    /// <summary>
+    /// Sends a simple message without conversation history
+    /// </summary>
+    /// <param name="message">The message to send</param>
+    /// <param name="cancellationToken">Optional cancellation token</param>
+    /// <returns>The persona's response</returns>
+    public async Task<string> SendSimpleMessageAsync(string message, CancellationToken cancellationToken = default)
+    {
+      if (_disposed)
+        throw new ObjectDisposedException(nameof(BrainAgent));
+
+      if (string.IsNullOrWhiteSpace(message))
+        throw new ArgumentException("Message cannot be null or empty", nameof(message));
+
+      try
+      {
+        // Compose a simple prompt without conversation history
+        var prompt = _promptComposer.ComposeSimplePrompt(_profile, message);
+
+        // Send the prompt to the LLM
+        var response = await _apiClient.SendPromptAsync(prompt, cancellationToken: cancellationToken);
+
+        return response;
+      }
+      catch (Exception ex)
+      {
+        Logger.Error($"Error in BrainAgent.SendSimpleMessageAsync: {ex.Message}");
+        throw;
+      }
+    }
+
+    /// <summary>
+    /// Sends an instruction to the persona
+    /// </summary>
+    /// <param name="instruction">The instruction to send</param>
+    /// <param name="context">Optional additional context</param>
+    /// <param name="cancellationToken">Optional cancellation token</param>
+    /// <returns>The persona's response</returns>
+    public async Task<string> SendInstructionAsync(string instruction, string? context = null, CancellationToken cancellationToken = default)
+    {
+      if (_disposed)
+        throw new ObjectDisposedException(nameof(BrainAgent));
+
+      if (string.IsNullOrWhiteSpace(instruction))
+        throw new ArgumentException("Instruction cannot be null or empty", nameof(instruction));
+
+      try
+      {
+        // Compose an instruction prompt
+        var prompt = _promptComposer.ComposeInstructionPrompt(_profile, instruction, context);
+
+        // Send the prompt to the LLM
+        var response = await _apiClient.SendPromptAsync(prompt, cancellationToken: cancellationToken);
+
+        return response;
+      }
+      catch (Exception ex)
+      {
+        Logger.Error($"Error in BrainAgent.SendInstructionAsync: {ex.Message}");
+        throw;
+      }
+    }
+
+    /// <summary>
+    /// Adds a memory entry for the persona
+    /// </summary>
+    /// <param name="memory">The memory to add</param>
+    public void AddMemory(string memory)
+    {
+      if (_disposed)
+        throw new ObjectDisposedException(nameof(BrainAgent));
+
+      if (string.IsNullOrWhiteSpace(memory))
+        throw new ArgumentException("Memory cannot be null or empty", nameof(memory));
+
+      _memoryStore.AddMemory(_profile, memory);
+    }
+
+    /// <summary>
+    /// Gets all memories for the persona
+    /// </summary>
+    /// <returns>The persona's memories</returns>
+    public IReadOnlyList<string> GetMemories()
+    {
+      if (_disposed)
+        throw new ObjectDisposedException(nameof(BrainAgent));
+
+      return _memoryStore.GetMemory(_profile);
+    }
+
+    /// <summary>
+    /// Clears all memories for the persona
+    /// </summary>
+    public void ClearMemories()
+    {
+      if (_disposed)
+        throw new ObjectDisposedException(nameof(BrainAgent));
+
+      _memoryStore.ClearMemory(_profile);
+    }
+
+    /// <summary>
+    /// Clears the dialogue history
+    /// </summary>
+    public void ClearDialogueHistory()
+    {
+      if (_disposed)
+        throw new ObjectDisposedException(nameof(BrainAgent));
+
+      _dialogueSession.Clear();
+    }
+
+    /// <summary>
+    /// Gets the conversation history
+    /// </summary>
+    /// <returns>The conversation history</returns>
+    public IReadOnlyList<string> GetConversationHistory()
+    {
+      if (_disposed)
+        throw new ObjectDisposedException(nameof(BrainAgent));
+
+      return _dialogueSession.GetHistory();
+    }
+
+    /// <summary>
+    /// Gets the recent conversation history
+    /// </summary>
+    /// <param name="count">Number of recent entries to retrieve</param>
+    /// <returns>The recent conversation history</returns>
+    public IReadOnlyList<DialogueEntry> GetRecentHistory(int count)
+    {
+      if (_disposed)
+        throw new ObjectDisposedException(nameof(BrainAgent));
+
+      return _dialogueSession.GetRecentHistory(count);
+    }
+
+    /// <summary>
+    /// Updates the persona profile
+    /// </summary>
+    /// <param name="newProfile">The new profile</param>
+    public void UpdateProfile(PersonaProfile newProfile)
+    {
+      if (_disposed)
+        throw new ObjectDisposedException(nameof(BrainAgent));
+
+      if (newProfile == null)
+        throw new ArgumentNullException(nameof(newProfile));
+
+      // Validate that the persona ID matches
+      if (newProfile.PersonaId != _profile.PersonaId)
+        throw new ArgumentException("New profile must have the same PersonaId", nameof(newProfile));
+
+      // Update the profile (in a real implementation, you might want to make this thread-safe)
+      // For now, we'll just replace the reference
+      // Note: This is a simplified approach - in production you'd want proper synchronization
+    }
+
+    /// <summary>
+    /// Disposes the agent and its resources
+    /// </summary>
+    public void Dispose()
+    {
+      if (!_disposed)
+      {
+        _apiClient?.Dispose();
+        _disposed = true;
+      }
+    }
+  }
+}

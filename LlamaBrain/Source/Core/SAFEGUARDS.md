@@ -145,8 +145,11 @@ The LlamaBrain codebase has been enhanced with multiple layers of protection acr
 ### File Operations
 | Constant | Value | Purpose |
 |----------|-------|---------|
-| `MaxFileSizeBytes` | 1MB/5MB | Maximum file size (profiles/memory) |
-| `MaxJsonLength` | 500KB/2MB | Maximum JSON length (profiles/memory) |
+| `MaxFileSizeBytes` (Profiles) | 1,048,576 bytes (1MB) | Maximum profile file size |
+| `MaxFileSizeBytes` (Memory) | 5,242,880 bytes (5MB) | Maximum memory file size |
+| `MaxJsonLength` (Profiles) | 500,000 bytes (500KB) | Maximum profile JSON length |
+| `MaxJsonLength` (Memory) | 2,000,000 bytes (2MB) | Maximum memory JSON length |
+| `MaxJsonLength` (JsonUtils) | 1,048,576 bytes (1MB) | Maximum general JSON length |
 | `MaxProfilesToLoad` | 1,000 | Maximum profiles to load |
 | `MaxMemoryEntries` | 10,000 | Maximum memory entries per persona |
 
@@ -161,7 +164,7 @@ The LlamaBrain codebase has been enhanced with multiple layers of protection acr
 ### JSON Operations
 | Constant | Value | Purpose |
 |----------|-------|---------|
-| `MaxJsonLength` | 1MB | Maximum JSON string length |
+| `MaxJsonLength` | 1,048,576 bytes (1MB) | Maximum JSON string length |
 | `MaxDepth` | 64 | Maximum object depth |
 | `MaxProperties` | 1,000 | Maximum properties per object |
 

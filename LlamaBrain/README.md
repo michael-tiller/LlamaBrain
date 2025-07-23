@@ -25,9 +25,15 @@ LlamaBrain is designed to be a production-ready library for AI integration, feat
 - Timeout management (30 seconds)
 
 #### Persona System
-- **PersonaProfile**: Character definitions with traits and behaviors
-- **PersonaMemoryStore**: Persistent memory system for conversations
+- **PersonaProfile**: Character definitions with traits dictionary and behaviors
+- **PersonaMemoryStore**: In-memory storage system for conversations
+- **PersonaMemoryFileStore**: File-based persistent storage system
 - **PersonaProfileManager**: File-based profile management with safeguards
+
+#### Conversation Management
+- **DialogueSession**: Structured conversation tracking with timestamps
+- **PromptComposer**: Intelligent prompt building from personas and context
+- **BrainAgent**: High-level interface for persona interactions
 
 #### Process Management
 - **ServerManager**: Safe llama.cpp server process control
@@ -68,6 +74,37 @@ var response = await client.SendPromptAsync("Hello, how are you?");
 client.Dispose();
 ```
 
+### Brain Agent Usage
+
+```csharp
+using LlamaBrain.Core;
+using LlamaBrain.Persona;
+
+// Create a persona profile
+var profile = PersonaProfile.Create("assistant", "AI Assistant");
+profile.Description = "A helpful AI assistant";
+profile.SetTrait("helpful", "Always tries to be helpful and informative");
+profile.SetTrait("friendly", "Speaks in a friendly and approachable manner");
+
+// Create API client
+var client = new ApiClient("localhost", 8080, "llama-2-7b.gguf");
+
+// Create brain agent
+using var agent = new BrainAgent(profile, client);
+
+// Send a message and get response
+var response = await agent.SendMessageAsync("What's the weather like today?");
+
+// Send an instruction
+var instructionResponse = await agent.SendInstructionAsync("Write a short poem about coding");
+
+// Get conversation history
+var history = agent.GetConversationHistory();
+
+// Add a memory
+agent.AddMemory("User prefers technical explanations");
+```
+
 ### Persona Management
 
 ```csharp
@@ -77,10 +114,11 @@ using LlamaBrain.Persona;
 var manager = new PersonaProfileManager("C:/Personas");
 
 // Create a new persona
-var profile = PersonaProfile.Create("wizard", "Gandalf the Grey");
+var profile = PersonaProfile.Create("wizard", "Gorblaf the Grey-Green");
 profile.Description = "A wise and powerful wizard";
-profile.Traits.Add("wise", "Very knowledgeable about magic and history");
-profile.Traits.Add("helpful", "Always willing to guide others");
+profile.SetTrait("wise", "Very knowledgeable about magic and history");
+profile.SetTrait("helpful", "Always willing to guide others");
+profile.SystemPrompt = "You are a wise wizard who helps travelers with magical advice.";
 
 // Save persona
 manager.SaveProfile(profile);
@@ -111,12 +149,12 @@ var config = new ProcessConfig
 
 // Start server
 var server = new ServerManager(config);
-await server.StartServerAsync();
+server.StartServer();
 
 // Use server...
 
 // Stop server
-await server.StopServerAsync();
+server.StopServer();
 ```
 
 ## 🔧 Configuration
@@ -177,17 +215,18 @@ LlamaBrain/
 │   ├── Core/                    # Core API and server management
 │   │   ├── ApiClient.cs        # HTTP client for llama.cpp
 │   │   ├── ApiContracts.cs     # Request/response models
+│   │   ├── BrainAgent.cs       # High-level persona interaction interface
 │   │   ├── ClientManager.cs    # Client lifecycle management
-│   │   ├── DialogueSession.cs  # Conversation management
+│   │   ├── DialogueSession.cs  # Conversation management with memory
 │   │   ├── LlmConfig.cs        # LLM parameters
 │   │   ├── ProcessConfig.cs    # Server configuration
-│   │   ├── PromptComposer.cs   # Prompt building utilities
+│   │   ├── PromptComposer.cs   # Intelligent prompt building
 │   │   ├── ServerManager.cs    # Process management
 │   │   └── SAFEGUARDS.md       # Security documentation
 │   ├── Persona/                # Character and memory system
 │   │   ├── PersonaMemoryFileStore.cs
 │   │   ├── PersonaMemoryStore.cs
-│   │   ├── PersonaProfile.cs
+│   │   ├── PersonaProfile.cs   # Character profiles with traits
 │   │   └── PersonaProfileManager.cs
 │   └── Utilities/              # Helper utilities
 │       ├── JsonUtils.cs
@@ -219,21 +258,9 @@ The library includes comprehensive unit tests covering:
 
 Run tests using your preferred .NET test runner.
 
-## 📝 Logging
-
-LlamaBrain includes a structured logging system:
-
-```csharp
-using LlamaBrain.Utilities;
-
-Logger.LogInfo("Starting LlamaBrain client");
-Logger.LogWarning("Rate limit approaching");
-Logger.LogError("Failed to connect to server", exception);
-```
-
 ## 📄 License
 
-[Add your license information here]
+This asset is licensed under the Unity Asset Store Standard End User License Agreement. One license per seat is required. See: https://unity.com/legal/as-terms
 
 ## 🆘 Support
 

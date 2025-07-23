@@ -1,309 +1,342 @@
+using System;
+using System.Text;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using LlamaBrain.Persona;
 
 namespace LlamaBrain.Core
 {
   /// <summary>
-  /// Utility for assembling LLM prompts with persona and session context.
+  /// Composes prompts for LLM interactions using persona profiles and dialogue context
   /// </summary>
-  public static class PromptComposer
+  public sealed class PromptComposer
   {
     /// <summary>
-    /// Compose a prompt for an LLM with persona and session context using default settings.
+    /// Maximum context length in characters
     /// </summary>
-    /// <param name="personaName">The name of the persona.</param>
-    /// <param name="description">The description of the persona.</param>
-    /// <param name="memory">The memory of the persona.</param>
-    /// <param name="dialogueHistory">The dialogue history.</param>
-    /// <param name="playerName">The name of the player.</param>
-    /// <param name="playerInput">The input from the player.</param>
-    public static string Compose(
-        string personaName,
-        string description,
-        IReadOnlyList<string> memory,
-        IReadOnlyList<string> dialogueHistory,
-        string playerName,
-        string playerInput)
-    {
-      return Compose(personaName, description, memory, dialogueHistory, playerName, playerInput, null);
-    }
+    private const int MaxContextLength = 8000;
 
     /// <summary>
-    /// Compose a prompt for an LLM with persona and session context using a dictionary of settings.
+    /// Maximum history entries to include
     /// </summary>
-    /// <param name="personaName">The name of the persona.</param>
-    /// <param name="description">The description of the persona.</param>
-    /// <param name="memory">The memory of the persona.</param>
-    /// <param name="dialogueHistory">The dialogue history.</param>
-    /// <param name="playerName">The name of the player.</param>
-    /// <param name="playerInput">The input from the player.</param>
-    /// <param name="settings">Custom settings as a dictionary.</param>
-    public static string ComposeWithSettings(
-        string personaName,
-        string description,
-        IReadOnlyList<string> memory,
-        IReadOnlyList<string> dialogueHistory,
-        string playerName,
-        string playerInput,
-        Dictionary<string, object> settings)
-    {
-      var sb = new StringBuilder();
-
-      // Use default settings if none provided
-      var npcTemplate = "NPC: {personaName}";
-      var descriptionTemplate = "Description: {description}";
-      var memoryHeaderTemplate = "NPC Memory:";
-      var memoryItemTemplate = "- {memory}";
-      var dialogueHeaderTemplate = "Dialogue so far:";
-      var playerTemplate = "Player: {playerName}";
-      var playerInputTemplate = "Player says: {playerInput}";
-      var responsePromptTemplate = "NPC responds:";
-      var includeEmptyMemory = false;
-      var includeEmptyDialogue = false;
-      var maxMemoryItems = 10;
-      var maxDialogueLines = 20;
-      var sectionSeparator = "\n";
-      var compactDialogueFormat = false;
-      var dialogueLinePrefix = "";
-
-      // Apply custom settings if provided
-      if (settings != null)
-      {
-        npcTemplate = settings.TryGetValue("npcTemplate", out var npc) && npc is string npcStr ? npcStr : npcTemplate;
-        descriptionTemplate = settings.TryGetValue("descriptionTemplate", out var desc) && desc is string descStr ? descStr : descriptionTemplate;
-        memoryHeaderTemplate = settings.TryGetValue("memoryHeaderTemplate", out var memHeader) && memHeader is string memHeaderStr ? memHeaderStr : memoryHeaderTemplate;
-        memoryItemTemplate = settings.TryGetValue("memoryItemTemplate", out var memItem) && memItem is string memItemStr ? memItemStr : memoryItemTemplate;
-        dialogueHeaderTemplate = settings.TryGetValue("dialogueHeaderTemplate", out var dialogueHeader) && dialogueHeader is string dialogueHeaderStr ? dialogueHeaderStr : dialogueHeaderTemplate;
-        playerTemplate = settings.TryGetValue("playerTemplate", out var player) && player is string playerStr ? playerStr : playerTemplate;
-        playerInputTemplate = settings.TryGetValue("playerInputTemplate", out var playerInputSetting) && playerInputSetting is string playerInputSettingStr ? playerInputSettingStr : playerInputTemplate;
-        responsePromptTemplate = settings.TryGetValue("responsePromptTemplate", out var response) && response is string responseStr ? responseStr : responsePromptTemplate;
-        includeEmptyMemory = settings.TryGetValue("includeEmptyMemory", out var emptyMem) && emptyMem is bool emptyMemBool ? emptyMemBool : includeEmptyMemory;
-        includeEmptyDialogue = settings.TryGetValue("includeEmptyDialogue", out var emptyDialogue) && emptyDialogue is bool emptyDialogueBool ? emptyDialogueBool : includeEmptyDialogue;
-        maxMemoryItems = settings.TryGetValue("maxMemoryItems", out var maxMem) && maxMem is int maxMemInt ? maxMemInt : maxMemoryItems;
-        maxDialogueLines = settings.TryGetValue("maxDialogueLines", out var maxDialogue) && maxDialogue is int maxDialogueInt ? maxDialogueInt : maxDialogueLines;
-        sectionSeparator = settings.TryGetValue("sectionSeparator", out var separator) && separator is string separatorStr ? separatorStr : sectionSeparator;
-        compactDialogueFormat = settings.TryGetValue("compactDialogueFormat", out var compact) && compact is bool compactBool ? compactBool : compactDialogueFormat;
-        dialogueLinePrefix = settings.TryGetValue("dialogueLinePrefix", out var prefix) && prefix is string prefixStr ? prefixStr : dialogueLinePrefix;
-
-        // Use player name from settings if available, otherwise fall back to parameter
-        if (settings.TryGetValue("playerName", out var settingsPlayerName) && settingsPlayerName is string settingsPlayerNameStr && !string.IsNullOrEmpty(settingsPlayerNameStr))
-        {
-          playerName = settingsPlayerNameStr;
-        }
-      }
-
-      // Build the prompt using the templates
-      sb.AppendLine(FormatTemplate(npcTemplate, new { personaName }));
-      sb.AppendLine(FormatTemplate(descriptionTemplate, new { description }));
-
-      // Add memory section
-      if (memory != null && memory.Count > 0)
-      {
-        sb.AppendLine(memoryHeaderTemplate);
-        var memoryToInclude = memory.Count > maxMemoryItems ? memory.Skip(memory.Count - maxMemoryItems).Take(maxMemoryItems) : memory;
-        foreach (var m in memoryToInclude)
-        {
-          sb.AppendLine(FormatTemplate(memoryItemTemplate, new { memory = m }));
-        }
-      }
-      else if (includeEmptyMemory)
-      {
-        sb.AppendLine(memoryHeaderTemplate);
-      }
-
-      // Add dialogue history section
-      if (dialogueHistory != null && dialogueHistory.Count > 0)
-      {
-        sb.AppendLine(dialogueHeaderTemplate);
-        var historyToInclude = dialogueHistory.Count > maxDialogueLines ? dialogueHistory.Skip(dialogueHistory.Count - maxDialogueLines).Take(maxDialogueLines) : dialogueHistory;
-        foreach (var line in historyToInclude)
-        {
-          if (compactDialogueFormat)
-          {
-            sb.AppendLine(dialogueLinePrefix + line);
-          }
-          else
-          {
-            sb.AppendLine(line);
-          }
-        }
-      }
-      else if (includeEmptyDialogue)
-      {
-        sb.AppendLine(dialogueHeaderTemplate);
-      }
-
-      sb.AppendLine(FormatTemplate(playerTemplate, new { playerName }));
-      sb.AppendLine(FormatTemplate(playerInputTemplate, new { playerInput }));
-      sb.AppendLine(FormatTemplate(responsePromptTemplate, new { personaName }));
-
-      return sb.ToString();
-    }
+    private const int MaxHistoryEntries = 10;
 
     /// <summary>
-    /// Compose a prompt for an LLM with persona and session context using custom settings.
+    /// Composes a complete prompt from a persona profile and dialogue session
     /// </summary>
-    /// <param name="personaName">The name of the persona.</param>
-    /// <param name="description">The description of the persona.</param>
-    /// <param name="memory">The memory of the persona.</param>
-    /// <param name="dialogueHistory">The dialogue history.</param>
-    /// <param name="playerName">The name of the player.</param>
-    /// <param name="playerInput">The input from the player.</param>
-    /// <param name="settings">Custom settings for prompt composition (optional).</param>
-    public static string Compose(
-        string personaName,
-        string description,
-        IReadOnlyList<string> memory,
-        IReadOnlyList<string> dialogueHistory,
-        string playerName,
-        string playerInput,
-        object? settings)
+    /// <param name="profile">The persona profile to use</param>
+    /// <param name="session">The dialogue session with conversation history</param>
+    /// <param name="userInput">The current user input</param>
+    /// <returns>A formatted prompt ready for the LLM</returns>
+    public string ComposePrompt(PersonaProfile profile, DialogueSession session, string userInput)
     {
-      var sb = new StringBuilder();
+      if (profile == null)
+        throw new ArgumentNullException(nameof(profile));
 
-      // Use default settings if none provided
-      var npcTemplate = "NPC: {personaName}";
-      var descriptionTemplate = "Description: {description}";
-      var memoryHeaderTemplate = "NPC Memory:";
-      var memoryItemTemplate = "- {memory}";
-      var dialogueHeaderTemplate = "Dialogue so far:";
-      var playerTemplate = "Player: {playerName}";
-      var playerInputTemplate = "Player says: {playerInput}";
-      var responsePromptTemplate = "NPC responds:";
-      var includeEmptyMemory = false;
-      var includeEmptyDialogue = false;
-      var maxMemoryItems = 10;
-      var maxDialogueLines = 20;
-      var sectionSeparator = "\n";
-      var compactDialogueFormat = false;
-      var dialogueLinePrefix = "";
+      if (session == null)
+        throw new ArgumentNullException(nameof(session));
 
-      // Apply custom settings if provided
-      if (settings != null)
+      if (string.IsNullOrWhiteSpace(userInput))
+        throw new ArgumentException("User input cannot be null or empty", nameof(userInput));
+
+      var prompt = new StringBuilder();
+
+      // Add system prompt
+      if (!string.IsNullOrWhiteSpace(profile.SystemPrompt))
       {
-        var settingsType = settings.GetType();
+        prompt.AppendLine($"System: {profile.SystemPrompt}");
+        prompt.AppendLine();
+      }
 
-        // Try to get properties from the settings object using reflection
-        npcTemplate = GetPropertyValue(settings, "npcTemplate", npcTemplate);
-        descriptionTemplate = GetPropertyValue(settings, "descriptionTemplate", descriptionTemplate);
-        memoryHeaderTemplate = GetPropertyValue(settings, "memoryHeaderTemplate", memoryHeaderTemplate);
-        memoryItemTemplate = GetPropertyValue(settings, "memoryItemTemplate", memoryItemTemplate);
-        dialogueHeaderTemplate = GetPropertyValue(settings, "dialogueHeaderTemplate", dialogueHeaderTemplate);
-        playerTemplate = GetPropertyValue(settings, "playerTemplate", playerTemplate);
-        playerInputTemplate = GetPropertyValue(settings, "playerInputTemplate", playerInputTemplate);
-        responsePromptTemplate = GetPropertyValue(settings, "responsePromptTemplate", responsePromptTemplate);
-        includeEmptyMemory = GetPropertyValue(settings, "includeEmptyMemory", includeEmptyMemory);
-        includeEmptyDialogue = GetPropertyValue(settings, "includeEmptyDialogue", includeEmptyDialogue);
-        maxMemoryItems = GetPropertyValue(settings, "maxMemoryItems", maxMemoryItems);
-        maxDialogueLines = GetPropertyValue(settings, "maxDialogueLines", maxDialogueLines);
-        sectionSeparator = GetPropertyValue(settings, "sectionSeparator", sectionSeparator);
-        compactDialogueFormat = GetPropertyValue(settings, "compactDialogueFormat", compactDialogueFormat);
-        dialogueLinePrefix = GetPropertyValue(settings, "dialogueLinePrefix", dialogueLinePrefix);
+      // Add persona description
+      if (!string.IsNullOrWhiteSpace(profile.Description))
+      {
+        prompt.AppendLine($"You are {profile.Name}, {profile.Description}");
+        prompt.AppendLine();
+      }
 
-        // Use player name from settings if available, otherwise fall back to parameter
-        var settingsPlayerName = GetPropertyValue(settings, "playerName", "");
-        if (!string.IsNullOrEmpty(settingsPlayerName))
+      // Add personality traits
+      if (profile.Traits.Count > 0)
+      {
+        prompt.AppendLine("Your personality traits:");
+        foreach (var trait in profile.Traits)
         {
-          playerName = settingsPlayerName;
+          prompt.AppendLine($"- {trait.Key}: {trait.Value}");
         }
+        prompt.AppendLine();
       }
 
-      // Build the prompt using the templates
-      sb.AppendLine(FormatTemplate(npcTemplate, new { personaName }));
-      sb.AppendLine(FormatTemplate(descriptionTemplate, new { description }));
-
-      // Add memory section
-      if (memory != null && memory.Count > 0)
+      // Add background story
+      if (!string.IsNullOrWhiteSpace(profile.Background))
       {
-        sb.AppendLine(memoryHeaderTemplate);
-        var memoryToInclude = memory.Count > maxMemoryItems ? memory.Skip(memory.Count - maxMemoryItems).Take(maxMemoryItems) : memory;
-        foreach (var m in memoryToInclude)
+        prompt.AppendLine($"Background: {profile.Background}");
+        prompt.AppendLine();
+      }
+
+      // Add conversation history
+      var history = session.GetHistory();
+      if (history.Count > 0)
+      {
+        prompt.AppendLine("Conversation history:");
+
+        // Take the last N entries to stay within context limits
+        var recentHistory = history.Count > MaxHistoryEntries
+          ? history.Skip(history.Count - MaxHistoryEntries).Take(MaxHistoryEntries)
+          : history;
+
+        foreach (var entry in recentHistory)
         {
-          sb.AppendLine(FormatTemplate(memoryItemTemplate, new { memory = m }));
+          prompt.AppendLine(entry);
         }
-      }
-      else if (includeEmptyMemory)
-      {
-        sb.AppendLine(memoryHeaderTemplate);
+        prompt.AppendLine();
       }
 
-      // Add dialogue history section
-      if (dialogueHistory != null && dialogueHistory.Count > 0)
+      // Add current user input
+      prompt.AppendLine($"Player: {userInput}");
+      prompt.AppendLine($"{profile.Name}:");
+
+      // Truncate if too long
+      var result = prompt.ToString();
+      if (result.Length > MaxContextLength)
       {
-        sb.AppendLine(dialogueHeaderTemplate);
-        var historyToInclude = dialogueHistory.Count > maxDialogueLines ? dialogueHistory.Skip(dialogueHistory.Count - maxDialogueLines).Take(maxDialogueLines) : dialogueHistory;
-        foreach (var line in historyToInclude)
-        {
-          if (compactDialogueFormat)
-          {
-            sb.AppendLine(dialogueLinePrefix + line);
-          }
-          else
-          {
-            sb.AppendLine(line);
-          }
-        }
-      }
-      else if (includeEmptyDialogue)
-      {
-        sb.AppendLine(dialogueHeaderTemplate);
-      }
-
-      sb.AppendLine(FormatTemplate(playerTemplate, new { playerName }));
-      sb.AppendLine(FormatTemplate(playerInputTemplate, new { playerInput }));
-      sb.AppendLine(FormatTemplate(responsePromptTemplate, new { personaName }));
-
-      return sb.ToString();
-    }
-
-    /// <summary>
-    /// Format a template string by replacing placeholders with values from an anonymous object.
-    /// </summary>
-    private static string FormatTemplate(string template, object values)
-    {
-      var result = template;
-      var properties = values.GetType().GetProperties();
-
-      foreach (var property in properties)
-      {
-        var placeholder = "{" + property.Name + "}";
-        var value = property.GetValue(values)?.ToString() ?? "";
-        result = result.Replace(placeholder, value);
+        result = result.Substring(0, MaxContextLength) + "...";
       }
 
       return result;
     }
 
     /// <summary>
-    /// Get a property value from an object using reflection, with a fallback default value.
+    /// Composes a simple prompt from just a persona profile and user input
     /// </summary>
-    private static T GetPropertyValue<T>(object obj, string propertyName, T defaultValue)
+    /// <param name="profile">The persona profile to use</param>
+    /// <param name="userInput">The current user input</param>
+    /// <returns>A formatted prompt ready for the LLM</returns>
+    public string ComposeSimplePrompt(PersonaProfile profile, string userInput)
     {
-      try
+      if (profile == null)
+        throw new ArgumentNullException(nameof(profile));
+
+      if (string.IsNullOrWhiteSpace(userInput))
+        throw new ArgumentException("User input cannot be null or empty", nameof(userInput));
+
+      var prompt = new StringBuilder();
+
+      // Add system prompt if available
+      if (!string.IsNullOrWhiteSpace(profile.SystemPrompt))
       {
-        var property = obj.GetType().GetProperty(propertyName);
-        if (property != null && property.CanRead)
-        {
-          var value = property.GetValue(obj);
-          if (value is T typedValue)
-          {
-            return typedValue;
-          }
-        }
-        else
-        {
-          // Debug: Log when property is not found or not readable
-          System.Diagnostics.Debug.WriteLine($"Property '{propertyName}' not found or not readable on type {obj.GetType().Name}");
-        }
-      }
-      catch (System.Exception ex)
-      {
-        // Debug: Log reflection errors
-        System.Diagnostics.Debug.WriteLine($"Reflection error for property '{propertyName}': {ex.Message}");
+        prompt.AppendLine($"System: {profile.SystemPrompt}");
+        prompt.AppendLine();
       }
 
+      // Add persona description
+      if (!string.IsNullOrWhiteSpace(profile.Description))
+      {
+        prompt.AppendLine($"You are {profile.Name}, {profile.Description}");
+        prompt.AppendLine();
+      }
+
+      // Add personality traits
+      if (profile.Traits.Count > 0)
+      {
+        prompt.AppendLine("Your personality traits:");
+        foreach (var trait in profile.Traits)
+        {
+          prompt.AppendLine($"- {trait.Key}: {trait.Value}");
+        }
+        prompt.AppendLine();
+      }
+
+      // Add user input
+      prompt.AppendLine($"Player: {userInput}");
+      prompt.AppendLine($"{profile.Name}:");
+
+      var result = prompt.ToString();
+      if (result.Length > MaxContextLength)
+      {
+        result = result.Substring(0, MaxContextLength) + "...";
+      }
+
+      return result;
+    }
+
+    /// <summary>
+    /// Static method to compose a prompt with custom settings
+    /// </summary>
+    /// <param name="personaName">The name of the persona</param>
+    /// <param name="description">The description of the persona</param>
+    /// <param name="memory">The memory items for the persona</param>
+    /// <param name="dialogueHistory">The dialogue history</param>
+    /// <param name="playerName">The name of the player (will be overridden by settings if provided)</param>
+    /// <param name="playerInput">The player's input</param>
+    /// <param name="settings">Optional custom settings dictionary</param>
+    /// <returns>A formatted prompt ready for the LLM</returns>
+    public static string ComposeWithSettings(string personaName, string description, IReadOnlyList<string> memory,
+        IReadOnlyList<string> dialogueHistory, string playerName, string playerInput, Dictionary<string, object>? settings = null)
+    {
+      var prompt = new StringBuilder();
+
+      // Get settings with defaults
+      var npcTemplate = GetSettingValue(settings, "npcTemplate", "NPC: {personaName}");
+      var descriptionTemplate = GetSettingValue(settings, "descriptionTemplate", "Description: {description}");
+      var memoryHeaderTemplate = GetSettingValue(settings, "memoryHeaderTemplate", "NPC Memory:");
+      var memoryItemTemplate = GetSettingValue(settings, "memoryItemTemplate", "- {memory}");
+      var dialogueHeaderTemplate = GetSettingValue(settings, "dialogueHeaderTemplate", "Dialogue so far:");
+      var playerTemplate = GetSettingValue(settings, "playerTemplate", "Player: {playerName}");
+      var playerInputTemplate = GetSettingValue(settings, "playerInputTemplate", "Player says: {playerInput}");
+      var responsePromptTemplate = GetSettingValue(settings, "responsePromptTemplate", "NPC responds:");
+      var includeEmptyMemory = GetSettingValue(settings, "includeEmptyMemory", false);
+      var includeEmptyDialogue = GetSettingValue(settings, "includeEmptyDialogue", false);
+      var maxMemoryItems = GetSettingValue(settings, "maxMemoryItems", 10);
+      var maxDialogueLines = GetSettingValue(settings, "maxDialogueLines", 10);
+      var sectionSeparator = GetSettingValue(settings, "sectionSeparator", "\n");
+      var compactDialogueFormat = GetSettingValue(settings, "compactDialogueFormat", false);
+      var dialogueLinePrefix = GetSettingValue(settings, "dialogueLinePrefix", "> ");
+
+      // Use player name from settings if available, otherwise use the parameter
+      var effectivePlayerName = GetSettingValue(settings, "playerName", playerName);
+
+      // Add NPC section
+      prompt.AppendLine(npcTemplate.Replace("{personaName}", personaName));
+      prompt.AppendLine();
+
+      // Add description
+      if (!string.IsNullOrWhiteSpace(description))
+      {
+        prompt.AppendLine(descriptionTemplate.Replace("{description}", description));
+        prompt.AppendLine();
+      }
+
+      // Add memory section
+      if (memory.Count > 0 || includeEmptyMemory)
+      {
+        prompt.AppendLine(memoryHeaderTemplate);
+        if (memory.Count > 0)
+        {
+          var memoryToInclude = memory.Count > maxMemoryItems
+            ? memory.Skip(memory.Count - maxMemoryItems).Take(maxMemoryItems)
+            : memory;
+          foreach (var memoryItem in memoryToInclude)
+          {
+            prompt.AppendLine(memoryItemTemplate.Replace("{memory}", memoryItem));
+          }
+        }
+        prompt.AppendLine();
+      }
+
+      // Add dialogue history
+      if (dialogueHistory.Count > 0 || includeEmptyDialogue)
+      {
+        prompt.AppendLine(dialogueHeaderTemplate);
+        if (dialogueHistory.Count > 0)
+        {
+          var historyToInclude = dialogueHistory.Count > maxDialogueLines
+            ? dialogueHistory.Skip(dialogueHistory.Count - maxDialogueLines).Take(maxDialogueLines)
+            : dialogueHistory;
+          foreach (var dialogueLine in historyToInclude)
+          {
+            if (compactDialogueFormat)
+            {
+              prompt.AppendLine(dialogueLinePrefix + dialogueLine);
+            }
+            else
+            {
+              prompt.AppendLine(dialogueLine);
+            }
+          }
+        }
+        prompt.AppendLine();
+      }
+
+      // Add player section
+      prompt.AppendLine(playerTemplate.Replace("{playerName}", effectivePlayerName));
+      prompt.AppendLine();
+
+      // Add player input
+      prompt.AppendLine(playerInputTemplate.Replace("{playerInput}", playerInput));
+      prompt.AppendLine();
+
+      // Add response prompt
+      prompt.AppendLine(responsePromptTemplate.Replace("{personaName}", personaName));
+
+      return prompt.ToString();
+    }
+
+    /// <summary>
+    /// Helper method to get setting values with defaults
+    /// </summary>
+    private static T GetSettingValue<T>(Dictionary<string, object>? settings, string key, T defaultValue)
+    {
+      if (settings != null && settings.TryGetValue(key, out var value))
+      {
+        if (value is T typedValue)
+        {
+          return typedValue;
+        }
+      }
       return defaultValue;
+    }
+
+    /// <summary>
+    /// Composes a prompt for a specific task or instruction
+    /// </summary>
+    /// <param name="profile">The persona profile to use</param>
+    /// <param name="instruction">The specific instruction or task</param>
+    /// <param name="context">Optional additional context</param>
+    /// <returns>A formatted prompt ready for the LLM</returns>
+    public string ComposeInstructionPrompt(PersonaProfile profile, string instruction, string? context = null)
+    {
+      if (profile == null)
+        throw new ArgumentNullException(nameof(profile));
+
+      if (string.IsNullOrWhiteSpace(instruction))
+        throw new ArgumentException("Instruction cannot be null or empty", nameof(instruction));
+
+      var prompt = new StringBuilder();
+
+      // Add system prompt if available
+      if (!string.IsNullOrWhiteSpace(profile.SystemPrompt))
+      {
+        prompt.AppendLine($"System: {profile.SystemPrompt}");
+        prompt.AppendLine();
+      }
+
+      // Add persona description
+      if (!string.IsNullOrWhiteSpace(profile.Description))
+      {
+        prompt.AppendLine($"You are {profile.Name}, {profile.Description}");
+        prompt.AppendLine();
+      }
+
+      // Add personality traits
+      if (profile.Traits.Count > 0)
+      {
+        prompt.AppendLine("Your personality traits:");
+        foreach (var trait in profile.Traits)
+        {
+          prompt.AppendLine($"- {trait.Key}: {trait.Value}");
+        }
+        prompt.AppendLine();
+      }
+
+      // Add instruction
+      prompt.AppendLine($"Instruction: {instruction}");
+
+      // Add context if provided
+      if (!string.IsNullOrWhiteSpace(context))
+      {
+        prompt.AppendLine($"Context: {context}");
+      }
+
+      prompt.AppendLine();
+      prompt.AppendLine($"{profile.Name}:");
+
+      var result = prompt.ToString();
+      if (result.Length > MaxContextLength)
+      {
+        result = result.Substring(0, MaxContextLength) + "...";
+      }
+
+      return result;
     }
   }
 }

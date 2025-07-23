@@ -27,10 +27,12 @@ namespace LlamaBrain.Persona
     /// </summary>
     public string SystemPrompt { get; set; } = string.Empty;
 
+
+
     /// <summary>
-    /// The personality traits of the persona
+    /// The personality traits dictionary of the persona
     /// </summary>
-    public string PersonalityTraits { get; set; } = string.Empty;
+    public Dictionary<string, string> Traits { get; set; } = new Dictionary<string, string>();
 
     /// <summary>
     /// The background story of the persona
@@ -59,6 +61,7 @@ namespace LlamaBrain.Persona
       {
         PersonaId = personaId,
         Name = name,
+        Traits = new Dictionary<string, string>(),
         Metadata = new Dictionary<string, string>()
       };
     }
@@ -91,6 +94,53 @@ namespace LlamaBrain.Persona
     public bool RemoveMetadata(string key)
     {
       return Metadata.Remove(key);
+    }
+
+    /// <summary>
+    /// Gets a trait value by key
+    /// </summary>
+    /// <param name="key">The trait key</param>
+    /// <returns>The trait value, or null if not found</returns>
+    public string? GetTrait(string key)
+    {
+      return Traits.TryGetValue(key, out var value) ? value : null;
+    }
+
+    /// <summary>
+    /// Sets a trait value
+    /// </summary>
+    /// <param name="key">The trait key</param>
+    /// <param name="value">The trait value</param>
+    public void SetTrait(string key, string value)
+    {
+      Traits[key] = value;
+    }
+
+    /// <summary>
+    /// Removes a trait entry
+    /// </summary>
+    /// <param name="key">The trait key to remove</param>
+    /// <returns>True if the trait was removed, false if it didn't exist</returns>
+    public bool RemoveTrait(string key)
+    {
+      return Traits.Remove(key);
+    }
+
+    /// <summary>
+    /// Converts the traits dictionary to a formatted string (for backward compatibility)
+    /// </summary>
+    /// <returns>A formatted string representation of all traits</returns>
+    public string GetTraitsAsString()
+    {
+      if (Traits.Count == 0)
+        return string.Empty;
+
+      var traitStrings = new List<string>();
+      foreach (var trait in Traits)
+      {
+        traitStrings.Add($"{trait.Key}: {trait.Value}");
+      }
+      return string.Join("; ", traitStrings);
     }
   }
 }
