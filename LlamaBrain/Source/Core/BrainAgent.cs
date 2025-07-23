@@ -263,9 +263,46 @@ namespace LlamaBrain.Core
       if (newProfile.PersonaId != _profile.PersonaId)
         throw new ArgumentException("New profile must have the same PersonaId", nameof(newProfile));
 
-      // Update the profile (in a real implementation, you might want to make this thread-safe)
-      // For now, we'll just replace the reference
-      // Note: This is a simplified approach - in production you'd want proper synchronization
+      // Validate the new profile
+      if (string.IsNullOrWhiteSpace(newProfile.Name))
+        throw new ArgumentException("Profile name cannot be null or empty", nameof(newProfile));
+
+      if (string.IsNullOrWhiteSpace(newProfile.PersonaId))
+        throw new ArgumentException("Profile PersonaId cannot be null or empty", nameof(newProfile));
+
+      // Update the profile properties directly
+      // Note: In a production environment, you'd want proper thread synchronization
+      lock (this)
+      {
+        var oldName = _profile.Name;
+
+        // Update the profile properties
+        _profile.Name = newProfile.Name;
+        _profile.Description = newProfile.Description;
+        _profile.Background = newProfile.Background;
+        _profile.SystemPrompt = newProfile.SystemPrompt;
+        _profile.UseMemory = newProfile.UseMemory;
+
+        // Update traits
+        _profile.Traits.Clear();
+        foreach (var trait in newProfile.Traits)
+        {
+          _profile.Traits[trait.Key] = trait.Value;
+        }
+
+        // Update metadata
+        _profile.Metadata.Clear();
+        foreach (var metadata in newProfile.Metadata)
+        {
+          _profile.Metadata[metadata.Key] = metadata.Value;
+        }
+
+        // Log the update
+        Logger.Info($"Updated profile for persona {_profile.PersonaId}: {oldName} -> {_profile.Name}");
+
+        // Optionally, you could trigger events or notifications here
+        // OnProfileUpdated?.Invoke(oldProfile, _profile);
+      }
     }
 
     /// <summary>
