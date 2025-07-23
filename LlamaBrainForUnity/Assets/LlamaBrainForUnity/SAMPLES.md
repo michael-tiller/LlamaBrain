@@ -218,7 +218,7 @@ Use the samples as starting points for your own implementations.
 
 ### Getting Help
 - Check the main README for detailed setup instructions
-- Review the SAFEGUARDS.md for security information
+- Review the [SAFEGUARDS.md](../LlamaBrain/Source/Core/SAFEGUARDS.md) for security information
 - Test with the provided sample configurations
 - Ensure your llama.cpp server is running correctly
 
@@ -227,7 +227,7 @@ Use the samples as starting points for your own implementations.
 After exploring the samples:
 1. Read the main README for detailed documentation
 2. Check the API documentation for advanced usage
-3. Review the SAFEGUARDS.md for security considerations
+3. Review the [SAFEGUARDS.md](../LlamaBrain/Source/Core/SAFEGUARDS.md) for security considerations
 4. Start building your own implementation
 
 ---

@@ -15,14 +15,14 @@ LlamaBrain consists of two main components:
 LlamaBrain/
 ├── README.md                     # This file - Project overview
 ├── LlamaBrain/                   # Core .NET library
-│   ├── README.md                # Core library documentation
-│   ├── Source/                  # Source code
+│   ├── LLAMABRAIN.md             # Core library documentation
+│   ├── Source/                 # Source code
 │   │   ├── Core/               # API client, server management, etc.
 │   │   ├── Persona/            # Character and memory system
 │   │   └── Utilities/          # Helper utilities
 │   └── SAFEGUARDS.md           # Security documentation
 └── LlamaBrainForUnity/          # Unity package
-    ├── README.md               # Unity package documentation
+    ├── LLAMABRAINFORUNITY.md   # Unity package documentation
     ├── SAMPLES.md              # Sample scenes guide
     ├── TROUBLESHOOTING.md      # Troubleshooting guide
     ├── Runtime/                # Unity runtime scripts
@@ -36,7 +36,7 @@ LlamaBrain/
 ### For Unity Developers
 1. **Import the Unity Package**
    - Import `LlamaBrainForUnity` into your Unity project
-   - See [LlamaBrain for Unity README](LlamaBrainForUnity/README.md) for detailed setup
+   - See [LlamaBrain for Unity README](LlamaBrainForUnity/Assets/LlamaBrainForUnity/LLAMABRAINFORUNITY.md) for detailed setup
 
 2. **Set Up Your Server**
    - Download llama.cpp server executable
@@ -91,14 +91,14 @@ LlamaBrain/
 ## 📚 Documentation
 
 ### Core Library
-- **[Core README](LlamaBrain/README.md)** - Complete library documentation
+- **[Core README](LlamaBrain/LLAMABRAIN.md)** - Complete library documentation
 - **[Security Guide](LlamaBrain/Source/Core/SAFEGUARDS.md)** - Security measures and safeguards
 
 ### Unity Package
-- **[Unity README](LlamaBrainForUnity/README.md)** - Unity integration guide
-- **[Samples Guide](LlamaBrainForUnity/SAMPLES.md)** - Sample scenes and examples
-- **[Troubleshooting](LlamaBrainForUnity/TROUBLESHOOTING.md)** - Common issues and solutions
-- **[Tests README](LlamaBrainForUnity/Tests/README.md)** - Testing documentation
+- **[Unity README](LlamaBrainForUnity/Assets/LlamaBrainForUnity/LLAMABRAINFORUNITY.md)** - Unity integration guide
+- **[Samples Guide](LlamaBrainForUnity/Assets/LlamaBrainForUnity/SAMPLES.md)** - Sample scenes and examples
+- **[Troubleshooting](LlamaBrainForUnity/Assets/LlamaBrainForUnity/TROUBLESHOOTING.md)** - Common issues and solutions
+- **[Tests README](LlamaBrainForUnity/Assets/LlamaBrainForUnity/Tests/TESTS.md)** - Testing documentation
 
 ## 🛠️ Requirements
 
@@ -201,7 +201,7 @@ The core library supports:
 ### Unity Package
 1. Download the LlamaBrainForUnity package
 2. Import into your Unity project
-3. Follow the [Unity README](LlamaBrainForUnity/README.md) for setup
+3. Follow the [Unity README](LlamaBrainForUnity/Assets/LlamaBrainForUnity/LLAMABRAINFORUNITY.md) for setup
 
 ### Core Library
 ```bash
@@ -231,14 +231,6 @@ When reporting issues, include:
 
 This project is licensed under the Unity Asset Store Standard End User License Agreement. One license per seat is required. See: https://unity.com/legal/as-terms
 
-## 🤝 Contributing
-
-Contributions are welcome! Please:
-1. Review existing documentation
-2. Test with provided samples
-3. Follow security guidelines
-4. Include appropriate tests
-
 ## 📈 Roadmap
 
 ### Planned Features
@@ -247,8 +239,6 @@ Contributions are welcome! Please:
 - **Advanced Prompting**: More sophisticated prompt composition
 - **Performance Optimization**: Improved response times
 - **Additional Platforms**: Support for more .NET platforms
-
-### Community Requests
 - **Voice Integration**: Text-to-speech and speech-to-text
 - **Animation Integration**: Character animation triggers
 - **Save System Integration**: Persistent conversation storage
@@ -259,5 +249,5 @@ Contributions are welcome! Please:
 **Note**: LlamaBrain requires a running llama.cpp server. Ensure you have the appropriate llama.cpp executable and compatible model file before use.
 
 For detailed information, see the specific README files for each component:
-- [Core Library](LlamaBrain/README.md)
-- [Unity Package](LlamaBrainForUnity/README.md)
+- [Core Library](LlamaBrain/LLAMABRAIN.md)
+- [Unity Package](LlamaBrainForUnity/Assets/LlamaBrainForUnity/LLAMABRAINFORUNITY.md)

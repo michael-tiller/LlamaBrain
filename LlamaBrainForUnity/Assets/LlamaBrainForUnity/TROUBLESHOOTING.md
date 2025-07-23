@@ -343,7 +343,7 @@ tasklist | findstr llama-server
 
 ## 📚 Additional Resources
 
-- [Main README](README.md) - Complete documentation
+- [Main README](LLAMABRAINFORUNITY.md) - Complete documentation
 - [Samples Guide](SAMPLES.md) - Sample scene explanations
 - [Security Guide](../LlamaBrain/Source/Core/SAFEGUARDS.md) - Security information
 - [llama.cpp Documentation](https://github.com/ggerganov/llama.cpp) - Server documentation

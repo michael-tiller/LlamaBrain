@@ -468,7 +468,7 @@ Run tests through Unity's Test Runner window.
 
 ## 📚 Additional Resources
 
-- [LlamaBrain Core Documentation](../LlamaBrain/README.md)
+- [LlamaBrain Core Documentation](../LlamaBrain/LLAMABRAIN.md)
 - [Security Safeguards](../LlamaBrain/Source/Core/SAFEGUARDS.md)
 - [Unity Documentation](https://docs.unity3d.com/)
 - [llama.cpp Documentation](https://github.com/ggerganov/llama.cpp)

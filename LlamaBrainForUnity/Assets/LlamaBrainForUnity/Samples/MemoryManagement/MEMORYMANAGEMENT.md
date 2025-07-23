@@ -218,7 +218,6 @@ An advanced UI component that provides:
 - **UI References**: All TMP components properly assigned
 
 ## 📚 Related Documentation
-- [Main README](../README.md) - General LlamaBrain for Unity documentation
+- [Main README](../LLAMABRAINFORUNITY.md) - General LlamaBrain for Unity documentation
 - [SAMPLES.md](../SAMPLES.md) - Overview of all samples
-- [API Documentation](../../Documenation/api/) - Detailed API reference
 - [Troubleshooting](../../TROUBLESHOOTING.md) - Common issues and solutions 
