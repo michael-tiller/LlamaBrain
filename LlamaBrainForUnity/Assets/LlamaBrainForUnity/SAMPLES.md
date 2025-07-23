@@ -15,7 +15,8 @@ Samples/
 ├── JournalWriter/                # AI-powered writing assistant
 ├── FlavorText/                   # Dynamic text generation
 ├── ThemedRewrite/                # Content rewriting with themes
-└── MemoryManagement/             # Memory and conversation history management
+├── MemoryManagement/             # Memory and conversation history management
+└── ClientManagement/             # Server connection monitoring and control
 ```
 
 ## 🎮 Sample Scenes
@@ -128,6 +129,27 @@ Samples/
 - Context menu tools for development
 
 **Best for**: Developers building advanced AI memory systems and debugging agent behavior
+
+### Client Management (`ClientManagement/`)
+**Purpose**: Server connection monitoring and control demonstration
+
+**What it shows:**
+- Server health monitoring and status checking
+- Connection management with timeout handling
+- Server restart and control capabilities
+- Real-time status monitoring with visual indicators
+- Error handling and troubleshooting tools
+- Server startup time and connection attempt tracking
+
+**Key Components:**
+- Enhanced BrainServer with client management methods
+- ClientManagerUI component with TextMeshPro integration
+- Real-time status monitoring and visual indicators
+- Interactive server control buttons
+- Configurable timeout settings
+- Debug tools and context menu functionality
+
+**Best for**: Developers needing server monitoring and connection management
 
 ## 🛠️ Shared Assets
 

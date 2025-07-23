@@ -39,6 +39,31 @@ namespace LlamaBrain.Unity.Runtime.Core
         public bool IsInitialized => _isInitialized;
 
         /// <summary>
+        /// Whether the server is currently running and ready
+        /// </summary>
+        public bool IsServerRunning { get; private set; }
+
+        /// <summary>
+        /// The current connection status
+        /// </summary>
+        public string ConnectionStatus { get; private set; } = "Not Initialized";
+
+        /// <summary>
+        /// Last error message from server operations
+        /// </summary>
+        public string LastErrorMessage { get; private set; } = "";
+
+        /// <summary>
+        /// Server startup time in seconds
+        /// </summary>
+        public float ServerStartupTime { get; private set; } = 0f;
+
+        /// <summary>
+        /// Number of connection attempts made
+        /// </summary>
+        public int ConnectionAttempts { get; private set; } = 0;
+
+        /// <summary>
         /// Initializes the LlamaBrain server.
         /// </summary>
         public void Initialize()
@@ -148,6 +173,154 @@ namespace LlamaBrain.Unity.Runtime.Core
                 return null;
             }
             return clientManager.CreateClient();
+        }
+
+        /// <summary>
+        /// Check if the server is currently running and ready
+        /// </summary>
+        /// <returns>True if the server is running, false otherwise</returns>
+        public async Task<bool> IsServerRunningAsync()
+        {
+            if (!_isInitialized || clientManager == null)
+            {
+                ConnectionStatus = "Not Initialized";
+                return false;
+            }
+
+            try
+            {
+                ConnectionStatus = "Checking Server Status...";
+                var isRunning = await clientManager.IsRunningAsync(_cancellationTokenSource?.Token ?? CancellationToken.None);
+                IsServerRunning = isRunning;
+                ConnectionStatus = isRunning ? "Connected" : "Server Not Responding";
+                return isRunning;
+            }
+            catch (Exception ex)
+            {
+                LastErrorMessage = ex.Message;
+                ConnectionStatus = "Connection Error";
+                IsServerRunning = false;
+                UnityEngine.Debug.LogError($"[LLM] Error checking server status: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Wait for the server to be ready with timeout
+        /// </summary>
+        /// <param name="timeoutSeconds">Timeout in seconds (default: 30)</param>
+        /// <returns>True if server became ready, false if timeout</returns>
+        public async Task<bool> WaitForServerAsync(int timeoutSeconds = 30)
+        {
+            if (!_isInitialized || clientManager == null)
+            {
+                ConnectionStatus = "Not Initialized";
+                return false;
+            }
+
+            var startTime = Time.time;
+            try
+            {
+                ConnectionStatus = "Waiting for Server...";
+                ConnectionAttempts = 0;
+
+                using (var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds)))
+                using (var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                    timeoutCts.Token,
+                    _cancellationTokenSource?.Token ?? CancellationToken.None))
+                {
+                    await clientManager.WaitForAsync(combinedCts.Token);
+
+                    ServerStartupTime = Time.time - startTime;
+                    IsServerRunning = true;
+                    ConnectionStatus = "Connected";
+                    LastErrorMessage = "";
+                    UnityEngine.Debug.Log($"[LLM] Server ready after {ServerStartupTime:F1} seconds");
+                    return true;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                ServerStartupTime = Time.time - startTime;
+                ConnectionStatus = "Timeout";
+                LastErrorMessage = $"Server startup timed out after {timeoutSeconds} seconds";
+                IsServerRunning = false;
+                UnityEngine.Debug.LogWarning($"[LLM] {LastErrorMessage}");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                ServerStartupTime = Time.time - startTime;
+                LastErrorMessage = ex.Message;
+                ConnectionStatus = "Connection Failed";
+                IsServerRunning = false;
+                UnityEngine.Debug.LogError($"[LLM] Error waiting for server: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Manually check server health and update status
+        /// </summary>
+        public async void CheckServerHealth()
+        {
+            await IsServerRunningAsync();
+        }
+
+        /// <summary>
+        /// Get detailed server status information
+        /// </summary>
+        /// <returns>Formatted status string</returns>
+        public string GetServerStatus()
+        {
+            if (!_isInitialized)
+                return "Server not initialized";
+
+            var status = new System.Text.StringBuilder();
+            status.AppendLine($"Status: {ConnectionStatus}");
+            status.AppendLine($"Running: {IsServerRunning}");
+            status.AppendLine($"Startup Time: {ServerStartupTime:F1}s");
+            status.AppendLine($"Connection Attempts: {ConnectionAttempts}");
+
+            if (!string.IsNullOrEmpty(LastErrorMessage))
+                status.AppendLine($"Last Error: {LastErrorMessage}");
+
+            return status.ToString();
+        }
+
+        /// <summary>
+        /// Force a server restart
+        /// </summary>
+        public async void RestartServer()
+        {
+            if (!_isInitialized || serverManager == null)
+            {
+                UnityEngine.Debug.LogWarning("[LLM] Cannot restart server: not initialized");
+                return;
+            }
+
+            try
+            {
+                ConnectionStatus = "Restarting Server...";
+                UnityEngine.Debug.Log("[LLM] Restarting server...");
+
+                // Stop current server
+                serverManager.StopServer();
+                await Task.Delay(1000); // Give it time to stop
+
+                // Start server again
+                serverManager.StartServer();
+                await Task.Delay(2000); // Give it time to start
+
+                // Wait for it to be ready
+                await WaitForServerAsync();
+            }
+            catch (Exception ex)
+            {
+                LastErrorMessage = ex.Message;
+                ConnectionStatus = "Restart Failed";
+                UnityEngine.Debug.LogError($"[LLM] Server restart failed: {ex.Message}");
+            }
         }
     }
 }
