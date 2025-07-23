@@ -20,4 +20,10 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/LlamaBrainForUnity/Samples/ThemedRewrite/ThemedRewrite.unity
     guid: cb2cbe62a47ac4241b2561f1e5f34034
+  - enabled: 1
+    path: Assets/LlamaBrainForUnity/Samples/MemoryManagement/MemoryManagement.unity
+    guid: c81d5500ca85e0d4887f3ae07795a179
+  - enabled: 1
+    path: Assets/LlamaBrainForUnity/Samples/ClientManagement/ClientManagement.unity
+    guid: 084d8095691bb4c4baeaa2aba506854a
   m_configObjects: {}
