@@ -10,7 +10,7 @@ LlamaBrain for Unity brings the power of local AI to Unity games and application
 - **Dynamic Dialogue Systems**: Natural conversations that adapt to player interactions
 - **Easy Unity Integration**: Simple setup with ScriptableObject-based configuration
 - **Real-time AI Processing**: Local llama.cpp server integration for privacy and performance
-- **Comprehensive UI**: Built-in dialogue interface and management tools
+- **Basic UI Components**: Simple dialogue interface for testing and prototyping
 
 ## 🏗️ Architecture
 
@@ -22,21 +22,23 @@ LlamaBrain for Unity brings the power of local AI to Unity games and application
 - Provides connection management for multiple clients
 - Automatic error recovery and restart capabilities
 
-#### BrainAgent (`BrainAgent.cs`)
-- Represents individual AI characters/NPCs
+#### UnityBrainAgent (`UnityBrainAgent.cs`)
+- Represents individual AI characters/NPCs as Unity MonoBehaviour components
 - Manages persona profiles and memory
 - Handles conversation state and context
-- Provides easy-to-use dialogue methods
+- Provides dialogue methods using `SendPlayerInputAsync()`
+- Integrates with Unity's component system
 
 #### Configuration System
 - **BrainSettings**: Server and LLM configuration
 - **PersonaConfig**: Character personality and behavior settings
 - **PromptComposerSettings**: Custom prompt building rules
+- **PersonaTrait**: Reusable personality trait definitions
 
 #### UI Components
-- **DialoguePanelController**: Main dialogue interface
-- **DialogueMessage**: Individual message display
-- **BrainCanvas**: Complete dialogue UI system
+- **DialoguePanelController**: Basic dialogue interface
+- **DialogueMessage**: Individual message display component
+- **NpcChatCanvas**: Complete dialogue UI prefab
 
 ## 📦 Installation
 
@@ -48,7 +50,7 @@ LlamaBrain for Unity brings the power of local AI to Unity games and application
 
 ### Setup
 1. Import the LlamaBrainForUnity package into your Unity project
-2. Ensure the LlamaBrain.dll is in the Plugins folder
+2. Ensure the LlamaBrain.dll is in the Runtime folder
 3. Configure your BrainSettings asset
 4. Set up your llama.cpp server and model
 
@@ -64,50 +66,84 @@ Create a BrainSettings asset:
    - **Port**: Server port (default: 5000)
    - **Context Size**: Model context window size
 
-### 2. Create a Persona
+### 2. Create Trait Assets (Optional but Recommended)
+
+Create reusable trait definitions:
+1. Right-click → Create → LlamaBrain → Persona Trait
+2. Define the trait:
+   - **Display Name**: Trait name (e.g., "Wise", "Helpful", "Friendly")
+   - **Category**: Organization category (e.g., "Personality", "Skills")
+   - **Description**: What this trait means
+   - **Default Value**: Default description for this trait
+   - **Include in Prompts**: Whether to include in AI prompts
+
+### 3. Create a Persona
 
 Create a PersonaConfig asset:
 1. Right-click → Create → LlamaBrain → PersonaConfig
 2. Define the character:
    - **Name**: Character name
    - **Description**: Character background and personality
-   - **Traits**: Key personality traits and behaviors
+   - **Trait Assignments**: Add traits from your trait assets
+   - **System Prompt**: AI behavior instructions
+   - **Background**: Character backstory
    - **Memory**: Persistent memory settings
 
-### 3. Set Up an NPC
+### 4. Set Up an NPC
 
 ```csharp
 using LlamaBrain.Unity.Runtime.Core;
-using LlamaBrain.Unity.Runtime.Demo;
+using LlamaBrain.Core;
+using LlamaBrain.Persona;
 
 public class MyNPC : MonoBehaviour
 {
     [SerializeField] private BrainSettings brainSettings;
     [SerializeField] private PersonaConfig personaConfig;
     
-    private BrainAgent brainAgent;
+    private UnityBrainAgent brainAgent;
+    private BrainServer brainServer;
+    private ApiClient client;
+    private PersonaMemoryStore memoryProvider;
     
-    void Start()
+    async void Start()
     {
+        // Set up the brain server
+        brainServer = FindObjectOfType<BrainServer>();
+        if (brainServer == null)
+        {
+            var serverObj = new GameObject("BrainServer");
+            brainServer = serverObj.AddComponent<BrainServer>();
+            brainServer.Settings = brainSettings;
+        }
+        
         // Initialize the brain agent
-        brainAgent = new BrainAgent(brainSettings, personaConfig);
+        brainAgent = GetComponent<UnityBrainAgent>();
+        brainAgent.PersonaConfig = personaConfig;
+        
+        // Create client and memory provider
+        client = brainServer.CreateClient();
+        memoryProvider = new PersonaMemoryFileStore();
+        
+        // Initialize the agent
+        brainAgent.Initialize(client, memoryProvider);
     }
     
     public async void StartConversation(string playerMessage)
     {
         // Get AI response
-        string response = await brainAgent.SendMessageAsync(playerMessage);
+        string response = await brainAgent.SendPlayerInputAsync(playerMessage);
         Debug.Log($"NPC: {response}");
     }
     
     void OnDestroy()
     {
-        brainAgent?.Dispose();
+        // UnityBrainAgent is a MonoBehaviour, so it's automatically cleaned up
     }
 }
 ```
 
-### 4. Use the Built-in UI
+### 5. Use the Built-in UI
 
 ```csharp
 using LlamaBrain.Unity.Runtime.Demo.UI;
@@ -115,11 +151,15 @@ using LlamaBrain.Unity.Runtime.Demo.UI;
 public class DialogueManager : MonoBehaviour
 {
     [SerializeField] private DialoguePanelController dialoguePanel;
-    [SerializeField] private BrainAgent brainAgent;
+    [SerializeField] private UnityBrainAgent brainAgent;
     
-    public void ShowDialogue()
+    void Start()
     {
-        dialoguePanel.ShowDialogue(brainAgent);
+        // Set up the dialogue panel to handle player messages
+        dialoguePanel.onPlayerMessageSubmitted.AddListener(async (message) => {
+            string response = await brainAgent.SendPlayerInputAsync(message);
+            dialoguePanel.AddNpcMessage(response);
+        });
     }
 }
 ```
@@ -146,9 +186,24 @@ public class DialogueManager : MonoBehaviour
 |---------|-------------|
 | **Name** | Character name |
 | **Description** | Character background |
-| **Traits** | Personality traits dictionary |
+| **System Prompt** | AI behavior instructions |
+| **Background** | Character backstory |
+| **Trait Assignments** | Assigned personality traits |
 | **Memory Enabled** | Enable persistent memory |
-| **Memory Capacity** | Maximum memory entries |
+| **Custom Metadata** | Additional key-value pairs |
+
+### Trait System
+
+The trait system allows you to create reusable personality traits:
+
+| Trait Setting | Description |
+|---------------|-------------|
+| **Display Name** | Trait name (e.g., "Wise", "Helpful") |
+| **Category** | Organization category |
+| **Description** | What this trait means |
+| **Default Value** | Default description for the trait |
+| **Include in Prompts** | Whether to include in AI prompts |
+| **Display Order** | Order in lists (lower = first) |
 
 ## 🎮 Usage Examples
 
@@ -160,19 +215,39 @@ public class SimpleNPC : MonoBehaviour
     [SerializeField] private BrainSettings settings;
     [SerializeField] private PersonaConfig persona;
     
-    private BrainAgent agent;
+    private UnityBrainAgent agent;
+    private BrainServer server;
+    private ApiClient client;
+    private PersonaMemoryStore memory;
     
     async void Start()
     {
-        agent = new BrainAgent(settings, persona);
-        await agent.InitializeAsync();
+        // Set up server
+        var serverObj = new GameObject("BrainServer");
+        server = serverObj.AddComponent<BrainServer>();
+        server.Settings = settings;
+        
+        // Set up agent
+        agent = GetComponent<UnityBrainAgent>();
+        agent.PersonaConfig = persona;
+        
+        // Initialize
+        client = server.CreateClient();
+        memory = new PersonaMemoryFileStore();
+        agent.Initialize(client, memory);
     }
     
     public async void TalkToPlayer(string playerInput)
     {
-        string response = await agent.SendMessageAsync(playerInput);
+        string response = await agent.SendPlayerInputAsync(playerInput);
         // Handle the response (display in UI, play audio, etc.)
         DisplayResponse(response);
+    }
+    
+    private void DisplayResponse(string response)
+    {
+        Debug.Log($"NPC Response: {response}");
+        // Add your UI display logic here
     }
 }
 ```
@@ -182,21 +257,22 @@ public class SimpleNPC : MonoBehaviour
 ```csharp
 public class AdvancedDialogue : MonoBehaviour
 {
-    [SerializeField] private BrainAgent agent;
+    [SerializeField] private UnityBrainAgent agent;
     [SerializeField] private DialoguePanelController ui;
     
-    private DialogueSession session;
-    
-    async void Start()
+    void Start()
     {
-        session = new DialogueSession(agent);
-        await session.StartAsync();
-        
         // Set up UI callbacks
-        ui.OnMessageSent += async (message) => {
-            var response = await session.SendMessageAsync(message);
-            ui.AddMessage(response, MessageType.NPC);
-        };
+        ui.onPlayerMessageSubmitted.AddListener(async (message) => {
+            var response = await agent.SendPlayerInputAsync(message);
+            ui.AddNpcMessage(response);
+        });
+    }
+    
+    public void ClearConversation()
+    {
+        agent.ClearDialogueHistory();
+        // Clear UI messages here
     }
 }
 ```
@@ -209,14 +285,27 @@ public class NPCManager : MonoBehaviour
     [SerializeField] private BrainSettings settings;
     [SerializeField] private PersonaConfig[] personas;
     
-    private Dictionary<string, BrainAgent> npcs = new();
+    private Dictionary<string, UnityBrainAgent> npcs = new();
+    private BrainServer server;
+    private ApiClient client;
+    private PersonaMemoryStore memory;
     
     async void Start()
     {
+        // Set up shared server
+        var serverObj = new GameObject("BrainServer");
+        server = serverObj.AddComponent<BrainServer>();
+        server.Settings = settings;
+        
+        client = server.CreateClient();
+        memory = new PersonaMemoryFileStore();
+        
+        // Create NPCs
         foreach (var persona in personas)
         {
-            var agent = new BrainAgent(settings, persona);
-            await agent.InitializeAsync();
+            var agent = GetComponent<UnityBrainAgent>();
+            agent.PersonaConfig = persona;
+            agent.Initialize(client, memory);
             npcs[persona.Name] = agent;
         }
     }
@@ -225,7 +314,7 @@ public class NPCManager : MonoBehaviour
     {
         if (npcs.TryGetValue(npcName, out var agent))
         {
-            return await agent.SendMessageAsync(message);
+            return await agent.SendPlayerInputAsync(message);
         }
         return "NPC not found";
     }
@@ -239,16 +328,16 @@ public class NPCManager : MonoBehaviour
 The built-in dialogue panel provides:
 - Message history display
 - Input field for player messages
-- Send button with keyboard shortcuts
+- Send button
 - Message type indicators (Player/NPC)
-- Auto-scrolling conversation view
+- Basic conversation view
 
 ### Custom UI Integration
 
 ```csharp
 public class CustomDialogueUI : MonoBehaviour
 {
-    [SerializeField] private BrainAgent agent;
+    [SerializeField] private UnityBrainAgent agent;
     [SerializeField] private TMP_InputField inputField;
     [SerializeField] private Text responseText;
     
@@ -260,7 +349,7 @@ public class CustomDialogueUI : MonoBehaviour
         inputField.text = "";
         responseText.text = "Thinking...";
         
-        string response = await agent.SendMessageAsync(message);
+        string response = await agent.SendPlayerInputAsync(message);
         responseText.text = response;
     }
 }
@@ -270,27 +359,33 @@ public class CustomDialogueUI : MonoBehaviour
 
 ```
 LlamaBrainForUnity/
-├── Data/
-│   ├── Prefab/              # Unity prefabs
-│   │   ├── BrainAgent.prefab
-│   │   ├── BrainServer.prefab
-│   │   └── UI/              # UI prefabs
-│   │       ├── BrainCanvas.prefab
-│   │       ├── DialogueMessage.prefab
-│   │       └── ...
-│   ├── Scenes/              # Sample scenes
-│   └── Settings/            # Configuration assets
-│       ├── Brain Settings.asset
-│       ├── PersonaConfig.asset
-│       └── ...
-├── Plugins/                 # Core library
-│   └── LlamaBrain.dll
-└── Source/
-    ├── Editor/              # Editor scripts
-    ├── Runtime/             # Runtime scripts
-    │   ├── Core/            # Core components
-    │   └── Demo/            # Example implementations
-    └── Tests/               # Unit tests
+├── Runtime/                 # Runtime scripts and DLL
+│   ├── LlamaBrain.dll      # Core library
+│   ├── Core/               # Core components
+│   │   ├── UnityBrainAgent.cs
+│   │   ├── BrainServer.cs
+│   │   ├── BrainSettings.cs
+│   │   ├── PersonaConfig.cs
+│   │   ├── PersonaTrait.cs
+│   │   └── PromptComposerSettings.cs
+│   └── Demo/               # Example implementations
+│       ├── UI/             # UI components
+│       │   ├── DialoguePanelController.cs
+│       │   └── DialogueMessage.cs
+│       └── NpcAgentExample.cs
+├── Editor/                 # Editor scripts
+│   ├── BrainSettingsEditor.cs
+│   ├── PersonaConfigEditor.cs
+│   └── PromptComposerSettingsEditor.cs
+├── Samples/                # Sample scenes and assets
+│   ├── Shared/             # Shared assets
+│   │   ├── Prefabs/        # Unity prefabs
+│   │   │   ├── BrainAgent.prefab
+│   │   │   ├── BrainServer.prefab
+│   │   │   └── UI/         # UI prefabs
+│   │   └── Settings/       # Configuration assets
+│   └── [Sample Scenes]/    # Example scenes
+└── Tests/                  # Unit tests
 ```
 
 ## 🔄 Integration
@@ -371,13 +466,6 @@ Run tests through Unity's Test Runner window.
 - Monitor file sizes
 - Use appropriate memory settings
 
-### Debug Mode
-
-Enable debug logging:
-```csharp
-LlamaBrain.Utilities.Logger.LogLevel = LogLevel.Debug;
-```
-
 ## 📚 Additional Resources
 
 - [LlamaBrain Core Documentation](../LlamaBrain/README.md)
@@ -387,7 +475,7 @@ LlamaBrain.Utilities.Logger.LogLevel = LogLevel.Debug;
 
 ## 📄 License
 
-[Add your license information here]
+This asset is licensed under the Unity Asset Store Standard End User License Agreement. One license per seat is required. See: https://unity.com/legal/as-terms
 
 ## 🆘 Support
 

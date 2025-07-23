@@ -16,7 +16,7 @@ namespace LlamaBrain.Unity.Runtime.Demo
     /// <summary>
     /// A demo component that shows how to use the LlamaBrainAgent component.
     /// </summary>
-    [RequireComponent(typeof(BrainAgent))]
+    [RequireComponent(typeof(UnityBrainAgent))]
     public class NpcAgentExample : MonoBehaviour
     {
         /// <summary>
@@ -32,7 +32,7 @@ namespace LlamaBrain.Unity.Runtime.Demo
         /// The agent for the LlamaBrain server.
         /// </summary>
         [SerializeField]
-        private BrainAgent agent;
+        public UnityBrainAgent agent;
         /// <summary>
         /// The settings for the LlamaBrain server.
         /// </summary>
@@ -45,6 +45,11 @@ namespace LlamaBrain.Unity.Runtime.Demo
         private PersonaProfileManager profileManager;
 
         /// <summary>
+        /// Whether the agent initialization is complete
+        /// </summary>
+        public bool IsInitializationComplete { get; private set; } = false;
+
+        /// <summary>
         /// The event that is triggered when the NPC responds.
         /// </summary>
         [Header("Events")]
@@ -55,7 +60,7 @@ namespace LlamaBrain.Unity.Runtime.Demo
         /// </summary>
         private void Reset()
         {
-            agent = GetComponent<BrainAgent>();
+            agent = GetComponent<UnityBrainAgent>();
         }
 
         /// <summary>
@@ -63,23 +68,85 @@ namespace LlamaBrain.Unity.Runtime.Demo
         /// </summary>
         private void Start()
         {
-            if (agent == null)
+            Debug.Log("[NpcAgentExample] Starting initialization...");
+            InitializeAgentAsync().Forget();
+        }
+
+        /// <summary>
+        /// Initializes the agent asynchronously
+        /// </summary>
+        private async UniTaskVoid InitializeAgentAsync()
+        {
+            try
             {
-                agent = GetComponent<BrainAgent>();
-            }
+                if (agent == null)
+                {
+                    agent = GetComponent<UnityBrainAgent>();
+                    Debug.Log("[NpcAgentExample] Found UnityBrainAgent component");
+                }
 
-            if (client == null)
+                if (agent == null)
+                {
+                    Debug.LogError("[NpcAgentExample] No UnityBrainAgent component found on this GameObject");
+                    return;
+                }
+
+                if (settings == null)
+                {
+                    Debug.LogError("[NpcAgentExample] BrainSettings is null. Please assign a BrainSettings asset.");
+                    return;
+                }
+
+                if (client == null)
+                {
+                    Debug.Log("[NpcAgentExample] Creating ClientManager...");
+                    var config = settings.ToProcessConfig();
+                    if (config == null)
+                    {
+                        Debug.LogError("[NpcAgentExample] Failed to create ProcessConfig from settings");
+                        return;
+                    }
+                    client = new ClientManager(config);
+                    Debug.Log("[NpcAgentExample] ClientManager created successfully");
+                }
+
+                // Initialize profile manager
+                Debug.Log("[NpcAgentExample] Initializing profile manager...");
+                profileManager = new PersonaProfileManager(Application.persistentDataPath + "/PersonaProfiles");
+
+                // Try to load existing profile, or create a default one
+                LoadOrCreateProfile();
+
+                Debug.Log("[NpcAgentExample] Creating API client and initializing agent...");
+                var apiClient = client.CreateClient();
+                if (apiClient == null)
+                {
+                    Debug.LogError("[NpcAgentExample] Failed to create API client from ClientManager");
+                    return;
+                }
+
+                agent.Initialize(apiClient, MemoryProvider);
+
+                // Wait a frame to ensure initialization is complete
+                await UniTask.Yield();
+
+                Debug.Log("[NpcAgentExample] Agent initialization completed");
+
+                // Verify the agent is accessible
+                if (agent != null && agent.IsInitialized)
+                {
+                    Debug.Log($"[NpcAgentExample] Agent is properly initialized and accessible. IsInitialized: {agent.IsInitialized}");
+                    IsInitializationComplete = true;
+                }
+                else
+                {
+                    Debug.LogWarning("[NpcAgentExample] Agent initialization may have failed or agent is not accessible");
+                }
+            }
+            catch (System.Exception ex)
             {
-                client = new ClientManager(settings.ToProcessConfig());
+                Debug.LogError($"[NpcAgentExample] InitializeAgentAsync() failed with exception: {ex.Message}\nStackTrace: {ex.StackTrace}");
             }
-
-            // Initialize profile manager
-            profileManager = new PersonaProfileManager(Application.persistentDataPath + "/PersonaProfiles");
-
-            // Try to load existing profile, or create a default one
-            LoadOrCreateProfile();
-
-            agent.Initialize(client.CreateClient(), MemoryProvider);
         }
 
         /// <summary>
@@ -100,14 +167,15 @@ namespace LlamaBrain.Unity.Runtime.Demo
             var defaultProfile = PersonaProfile.Create("default-persona", "Default NPC");
             defaultProfile.Description = "A helpful NPC";
             defaultProfile.SystemPrompt = "You are a helpful NPC.";
-            defaultProfile.PersonalityTraits = "Friendly, helpful, knowledgeable";
+            defaultProfile.SetTrait("Personality", "Friendly, helpful, knowledgeable");
             defaultProfile.Background = "A wise NPC who helps adventurers on their journey";
 
             profileManager.SaveProfile(defaultProfile);
             Debug.Log($"Created default profile for {defaultProfile.Name ?? "Unknown"}");
 
-            // Note: The agent will need to be manually configured with a PersonaConfig
-            // or the runtime profile will need to be set programmatically
+            // Set the runtime profile directly on the agent
+            agent.RuntimeProfile = defaultProfile;
+            Debug.Log($"[NpcAgentExample] Set runtime profile to: {defaultProfile.Name}");
         }
 
         /// <summary>
@@ -151,7 +219,12 @@ namespace LlamaBrain.Unity.Runtime.Demo
 
                 runtimeProfile.Description = profile.Description;
                 runtimeProfile.SystemPrompt = profile.SystemPrompt;
-                runtimeProfile.PersonalityTraits = profile.PersonalityTraits;
+                // Copy traits
+                runtimeProfile.Traits.Clear();
+                foreach (var kvp in profile.Traits)
+                {
+                    runtimeProfile.SetTrait(kvp.Key, kvp.Value);
+                }
                 runtimeProfile.Background = profile.Background;
 
                 // Copy metadata
@@ -176,6 +249,38 @@ namespace LlamaBrain.Unity.Runtime.Demo
         public List<string> GetAvailableProfiles()
         {
             return profileManager.GetAvailableProfileIds();
+        }
+
+        /// <summary>
+        /// Gets the UnityBrainAgent component for external access
+        /// </summary>
+        /// <returns>The UnityBrainAgent component</returns>
+        public UnityBrainAgent GetBrainAgent()
+        {
+            return agent;
+        }
+
+        /// <summary>
+        /// Debug method to check the agent's initialization status
+        /// </summary>
+        [ContextMenu("Debug Agent Status")]
+        public void DebugAgentStatus()
+        {
+            if (agent == null)
+            {
+                Debug.LogError("[NpcAgentExample] Agent is null!");
+                return;
+            }
+
+            Debug.Log($"[NpcAgentExample] Agent Debug Status:");
+            Debug.Log($"  - Agent Name: {agent.name}");
+            Debug.Log($"  - WasInitializationAttempted: {agent.WasInitializationAttempted}");
+            Debug.Log($"  - IsInitialized: {agent.IsInitialized}");
+            Debug.Log($"  - IsConnected: {agent.IsConnected}");
+            Debug.Log($"  - ConnectionStatus: {agent.ConnectionStatus}");
+
+            // Call the agent's own debug method
+            agent.DebugAgentState();
         }
     }
 }

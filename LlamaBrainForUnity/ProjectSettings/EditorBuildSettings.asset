@@ -6,7 +6,7 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/LlamaBrainForUnity/Samples/Launcher.unity
+    path: Assets/LlamaBrainForUnity/Samples/GettingStarted.unity
     guid: c44ef41cd518f21418d39ed9c4c503db
   - enabled: 1
     path: Assets/LlamaBrainForUnity/Samples/NpcPersonaChat/NpcPersonaChat.unity

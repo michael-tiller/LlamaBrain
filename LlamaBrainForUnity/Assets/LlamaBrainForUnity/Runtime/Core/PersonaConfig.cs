@@ -8,7 +8,7 @@ namespace LlamaBrain.Unity.Runtime.Core
   /// <summary>
   /// Unity ScriptableObject configuration for a persona - easy to configure in Inspector
   /// </summary>
-  [CreateAssetMenu(fileName = "New Persona Config", menuName = "Llama Brain/Persona Config")]
+  [CreateAssetMenu(fileName = "New Persona Config", menuName = "LlamaBrain/Persona Config")]
   public sealed class PersonaConfig : ScriptableObject
   {
     /// <summary>
@@ -35,11 +35,7 @@ namespace LlamaBrain.Unity.Runtime.Core
     [TextArea(3, 8)]
     public string SystemPrompt;
 
-    /// <summary>
-    /// The personality traits of the persona
-    /// </summary>
-    [TextArea(2, 4)]
-    public string PersonalityTraits;
+
 
     /// <summary>
     /// The background story of the persona
@@ -51,6 +47,12 @@ namespace LlamaBrain.Unity.Runtime.Core
     /// Whether to use memory for the persona
     /// </summary>
     public bool UseMemory;
+
+    /// <summary>
+    /// Trait assignments for this persona
+    /// </summary>
+    [Header("Trait Assignments")]
+    public List<PersonaTraitAssignment> TraitAssignments = new List<PersonaTraitAssignment>();
 
     /// <summary>
     /// Custom metadata for the persona
@@ -78,9 +80,22 @@ namespace LlamaBrain.Unity.Runtime.Core
       var profile = PersonaProfile.Create(PersonaId, Name);
       profile.Description = Description;
       profile.SystemPrompt = SystemPrompt;
-      profile.PersonalityTraits = PersonalityTraits;
       profile.Background = Background;
       profile.UseMemory = UseMemory;
+
+      // Convert trait assignments to traits dictionary
+      foreach (var assignment in TraitAssignments)
+      {
+        if (assignment.ShouldIncludeInPrompts())
+        {
+          var kvp = assignment.ToKeyValuePair();
+          if (!string.IsNullOrEmpty(kvp.Key))
+          {
+            profile.SetTrait(kvp.Key, kvp.Value);
+          }
+        }
+      }
+
       // Convert metadata entries to dictionary
       foreach (var entry in Metadata)
       {
@@ -105,9 +120,21 @@ namespace LlamaBrain.Unity.Runtime.Core
       Name = profile.Name;
       Description = profile.Description;
       SystemPrompt = profile.SystemPrompt;
-      PersonalityTraits = profile.PersonalityTraits;
       Background = profile.Background;
       UseMemory = profile.UseMemory;
+
+      // Convert traits dictionary to trait assignments
+      TraitAssignments.Clear();
+      foreach (var kvp in profile.Traits)
+      {
+        var assignment = new PersonaTraitAssignment
+        {
+          CustomValue = kvp.Value,
+          IsEnabled = true
+        };
+        TraitAssignments.Add(assignment);
+      }
+
       // Convert dictionary to metadata entries
       Metadata.Clear();
       foreach (var kvp in profile.Metadata)

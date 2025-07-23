@@ -9,6 +9,8 @@ Tests that run in the Unity Editor without entering Play Mode:
 - **BrainSettingsTests.cs** - Tests for configuration validation
 - **ProcessConfigTests.cs** - Tests for process configuration
 - **ApiContractsTests.cs** - Tests for API request/response serialization
+- **PersonaProfileTests.cs** - Tests for persona profile system
+- **PromptComposerTests.cs** - Tests for prompt composition and formatting
 
 ### PlayMode Tests
 Tests that run in Play Mode (requires actual server):

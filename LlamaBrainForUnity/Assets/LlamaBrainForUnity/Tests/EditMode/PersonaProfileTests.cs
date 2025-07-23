@@ -36,7 +36,7 @@ namespace LlamaBrain.Unity.Tests.EditMode
       profile.Name = "Test Name";
       profile.Description = "Test Description";
       profile.SystemPrompt = "Test System Prompt";
-      profile.PersonalityTraits = "Friendly, Helpful";
+      profile.SetTrait("Personality", "Friendly, Helpful");
       profile.Background = "Test Background";
       profile.Metadata = new Dictionary<string, string> { { "key", "value" } };
 
@@ -45,7 +45,7 @@ namespace LlamaBrain.Unity.Tests.EditMode
       Assert.AreEqual("Test Name", profile.Name);
       Assert.AreEqual("Test Description", profile.Description);
       Assert.AreEqual("Test System Prompt", profile.SystemPrompt);
-      Assert.AreEqual("Friendly, Helpful", profile.PersonalityTraits);
+      Assert.AreEqual("Friendly, Helpful", profile.GetTrait("Personality"));
       Assert.AreEqual("Test Background", profile.Background);
       Assert.IsNotNull(profile.Metadata);
       Assert.AreEqual(1, profile.Metadata.Count);
