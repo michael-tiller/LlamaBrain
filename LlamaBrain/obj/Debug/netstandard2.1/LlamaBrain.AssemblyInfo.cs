@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LlamaBrain")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("0.1.24.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.1.24+e7d746451066be4bf19f6d3faf075fe85a6b1420")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("0.1.24+0b3961118980b8505d3c067de0aca304a1b044dc")]
 [assembly: System.Reflection.AssemblyProductAttribute("LlamaBrain")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LlamaBrain")]
 [assembly: System.Reflection.AssemblyVersionAttribute("0.1.24.0")]
