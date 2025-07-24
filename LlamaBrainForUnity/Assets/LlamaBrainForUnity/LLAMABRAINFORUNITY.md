@@ -470,6 +470,11 @@ Run tests through Unity's Test Runner window.
 - Use appropriate response lengths for your UI
 - Consider voice synthesis for immersive experiences
 
+### Building
+- Include the LlamaBrain.DLL, your model, and your backend server in your build.
+- It is helpful to keep a folder of deployables in the same structure as is specified in your config.
+- I highly recommend automating this process!
+
 ## 🐛 Troubleshooting
 
 ### Common Issues
@@ -494,10 +499,13 @@ Run tests through Unity's Test Runner window.
 
 ## 📚 Additional Resources
 
-- [LlamaBrain Core Documentation](../LlamaBrain/LLAMABRAIN.md)
-- [Security Safeguards](../LlamaBrain/Source/Core/SAFEGUARDS.md)
+- [LlamaBrain Core Documentation](../../../LlamaBrain/LLAMABRAIN.md)
+- [Security Safeguards](../../../LlamaBrain/Source/Core/SAFEGUARDS.md)
 - [Unity Documentation](https://docs.unity3d.com/)
-- [llama.cpp Documentation](https://github.com/ggerganov/llama.cpp)
+- [llama.cpp](https://github.com/ggerganov/llama.cpp)
+- [UniTask](https://github.com/Cysharp/UniTask)
+- [Newtonsoft.Json](https://www.nuget.org/packages/Newtonsoft.Json/)
+- [Stability Zephyr 3b Model](https://huggingface.co/stabilityai/stablelm-zephyr-3b)
 
 ## 📄 License
 

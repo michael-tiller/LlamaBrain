@@ -23,4 +23,9 @@ public class SceneLoader : MonoBehaviour
         Application.Quit();
 #endif
     }
+
+    public void OpenDiscord()
+    {
+        Application.OpenURL("https://discord.gg/9ruBad4nrN");
+    }
 }
