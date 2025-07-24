@@ -1,6 +1,6 @@
 {
   "name": "com.llamabrain.unity",
-  "version": "0.2.01",
+  "version": "1.0.0",
   "displayName": "LlamaBrain for Unity",
   "description": "AI integration solution for Unity with local llama.cpp server support. Create intelligent NPCs, dialogue systems, and AI-powered game interactions.",
   "unity": "2022.3",

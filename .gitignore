@@ -30,3 +30,5 @@
 /LlamaBrain/.vs
 /LlamaBrainForUnity/Assets/LlamaBrainForUnity/Documenation
 /*.unitypackage
+/Files
+*.unitypackage

@@ -203,6 +203,9 @@ The core library supports:
 
 ## 📦 Installation
 
+### Quick Start
+If you have questions you can review the video quick start on [Youtube].(https://youtu.be/1EtU6qu7O5Q)
+
 ### Unity Package
 1. Download the LlamaBrainForUnity package
 2. Import into your Unity project

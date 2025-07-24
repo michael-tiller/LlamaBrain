@@ -5,7 +5,7 @@ All notable changes to LlamaBrain for Unity will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.01] - UNRELEASED
+## [1.0.0] - 2025-7-24
 
 ### Added
 - Initial release of LlamaBrain for Unity
@@ -58,7 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Version History
 
 ### Previous Versions
-- **0.2.01**: Initial Unity integration
+- **1.0.0**: Initial Unity integration
 
 ---
 

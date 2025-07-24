@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 
-public class VersionText : MonoBehaviour
+namespace LlamaBrainForUnity.Demo.UI
 {
-    [SerializeField] private TMP_Text versionText;
-    // Start is called before the first frame update
-    void Start()
+    public class VersionText : MonoBehaviour
     {
-        versionText.text = $"v{Application.version}";
+        [SerializeField] private TMP_Text versionText;
+        // Start is called before the first frame update
+        void Start()
+        {
+            versionText.text = $"v{Application.version}";
+        }
     }
 }

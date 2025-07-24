@@ -348,12 +348,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_UiScaleMode: 0
+  m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
-  m_ReferenceResolution: {x: 800, y: 600}
+  m_ReferenceResolution: {x: 2560, y: 1440}
   m_ScreenMatchMode: 0
-  m_MatchWidthOrHeight: 0
+  m_MatchWidthOrHeight: 0.51
   m_PhysicalUnit: 3
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
@@ -897,7 +897,8 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 89482179833530025, guid: 6c9f2d62ec33868438d65ad29e7f93ce, type: 3}
       propertyPath: m_text
-      value: This chat will create flavor text and lore given a topic.
+      value: This chat will summarize a conversation and present it as a written
+        journal.
       objectReference: {fileID: 0}
     - target: {fileID: 1280734365480346397, guid: 6c9f2d62ec33868438d65ad29e7f93ce, type: 3}
       propertyPath: m_SizeDelta.y
@@ -917,7 +918,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2564700262854513254, guid: 6c9f2d62ec33868438d65ad29e7f93ce, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 29.05
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2564700262854513254, guid: 6c9f2d62ec33868438d65ad29e7f93ce, type: 3}
       propertyPath: m_AnchoredPosition.x
@@ -925,7 +926,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2564700262854513254, guid: 6c9f2d62ec33868438d65ad29e7f93ce, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -18.525
+      value: -33.475
       objectReference: {fileID: 0}
     - target: {fileID: 3803362158677226449, guid: 6c9f2d62ec33868438d65ad29e7f93ce, type: 3}
       propertyPath: m_Pivot.x

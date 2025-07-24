@@ -25,6 +25,11 @@ This project uses Cysharp UniTask, which is licensed under the MIT License.
 - License: https://github.com/Cysharp/UniTask/blob/master/LICENSE
 - Source: https://github.com/Cysharp/UniTask
 
+### Text Mesh Pro
+This project uses Text Mesh Pro, which is licensed under the Unity Companion License.
+- License: https://unity.com/legal/companion-license
+- Source: https://docs.unity3d.com/Packages/com.unity.textmeshpro@latest/index.html
+
 ## Attribution
 
 - **llama.cpp**: Copyright (c) 2023 Georgi Gerganov
