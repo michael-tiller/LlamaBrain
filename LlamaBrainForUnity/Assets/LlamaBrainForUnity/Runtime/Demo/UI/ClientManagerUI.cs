@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using Cysharp.Threading.Tasks;
 using LlamaBrain.Unity.Runtime.Core;
+using UnityEngine.SceneManagement;
 
 namespace LlamaBrain.Unity.Runtime.Demo.UI
 {
@@ -44,6 +45,13 @@ namespace LlamaBrain.Unity.Runtime.Demo.UI
 
     private void Start()
     {
+      StartAsync().Forget();
+    }
+
+    private async UniTask StartAsync()
+    {
+      await UniTask.Delay(1000);
+
       // Auto-find brain server if not assigned
       if (brainServer == null)
       {
@@ -66,6 +74,8 @@ namespace LlamaBrain.Unity.Runtime.Demo.UI
 
       // Initial update
       UpdateUI();
+
+      CheckServerHealth();
     }
 
     private void Update()
@@ -313,6 +323,10 @@ namespace LlamaBrain.Unity.Runtime.Demo.UI
     {
       autoUpdate = !autoUpdate;
       Debug.Log($"[ClientManagerUI] Auto-update {(autoUpdate ? "enabled" : "disabled")}");
+    }
+    public void BackToMainMenu()
+    {
+      SceneManager.LoadScene(0, LoadSceneMode.Single);
     }
   }
 }

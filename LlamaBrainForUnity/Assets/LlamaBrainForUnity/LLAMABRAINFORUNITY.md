@@ -45,6 +45,7 @@ LlamaBrain for Unity brings the power of local AI to Unity games and application
 ### Requirements
 - Unity 2022.3 LTS or higher
 - .NET Standard 2.1 support
+- Text Mesh Pro package (for UI components)
 - llama.cpp server executable
 - Compatible GGUF model file
 
@@ -506,6 +507,8 @@ Run tests through Unity's Test Runner window.
 - [UniTask](https://github.com/Cysharp/UniTask)
 - [Newtonsoft.Json](https://www.nuget.org/packages/Newtonsoft.Json/)
 - [Stability Zephyr 3b Model](https://huggingface.co/stabilityai/stablelm-zephyr-3b)
+- [LlamaBrain Discord](https://discord.gg/9ruBad4nrN)
+- [Quick Start Guide](https://youtu.be/1EtU6qu7O5Q)
 
 ## 📄 License
 
