@@ -224,6 +224,7 @@ dotnet add package LlamaBrain
 2. **Review Samples**: Explore the provided examples
 3. **Troubleshooting**: Check the troubleshooting guide
 4. **Security**: Review the safeguards documentation
+5. **Discord**: You can always join the [LlamaBrain Discord](https://discord.gg/9ruBad4nrN) for deep questions.
 
 ### Reporting Issues
 When reporting issues, include:
