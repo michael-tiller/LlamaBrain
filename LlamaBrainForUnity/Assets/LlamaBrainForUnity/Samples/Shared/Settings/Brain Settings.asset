@@ -16,8 +16,8 @@ MonoBehaviour:
   ModelPath: Backend/model/stablelm-zephyr-3b.Q4_0.gguf
   Port: 5000
   ContextSize: 2048
-  MaxTokens: 512
-  Temperature: 1.2
+  MaxTokens: 64
+  Temperature: 0.7
   TopP: 0.9
   TopK: 40
   RepeatPenalty: 1.1
@@ -30,8 +30,13 @@ MonoBehaviour:
   - 'Step 1:'
   - 'Step 2:'
   - 'Step 3:'
-  - 
-  - 
+  - '
+
+
+'
+  - '
+
+    Player:'
   - '
 
     NPC:'

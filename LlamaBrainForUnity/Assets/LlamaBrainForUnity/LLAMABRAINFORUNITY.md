@@ -205,6 +205,32 @@ The trait system allows you to create reusable personality traits:
 | **Include in Prompts** | Whether to include in AI prompts |
 | **Display Order** | Order in lists (lower = first) |
 
+### Prompt Composer Settings
+
+The PromptComposerSettings asset controls how prompts are built and formatted:
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| **NPC Template** | Template for NPC section | `NPC: {personaName}` |
+| **Description Template** | Template for description section | `{description}` |
+| **Memory Header Template** | Template for memory section header | `Memory:` |
+| **Memory Item Template** | Template for individual memory items | `- {memory}` |
+| **Dialogue Header Template** | Template for dialogue history header | `History:` |
+| **Player Template** | Template for player section | `Player: {playerName}` |
+| **Player Input Template** | Template for player input | `> {playerInput}` |
+| **Response Prompt Template** | Template for NPC response prompt | `{personaName}:` |
+| **Player Name** | Default player name | `Adventurer` |
+| **Include Empty Memory** | Include memory section even if empty | `false` |
+| **Include Empty Dialogue** | Include dialogue section even if empty | `false` |
+| **Max Memory Items** | Maximum memory items to include | `5` |
+| **Max Dialogue Lines** | Maximum dialogue history lines | `10` |
+| **Section Separator** | Separator between sections | `\n` |
+| **Compact Dialogue Format** | Use compact dialogue format | `true` |
+| **Dialogue Line Prefix** | Prefix for dialogue lines | `""` |
+| **Include Personality Traits** | Include personality traits in prompts | `true` |
+
+> **Note**: The **Include Personality Traits** setting controls whether personality traits are included in prompts sent to the LLM. When enabled, traits are included for context but the AI is instructed not to mention them in responses. When disabled, traits are completely excluded from prompts.
+
 ## 🎮 Usage Examples
 
 ### Basic NPC Interaction

@@ -1,0 +1,75 @@
+{
+  "name": "com.llamabrain.unity",
+  "version": "0.2.01",
+  "displayName": "LlamaBrain for Unity",
+  "description": "AI integration solution for Unity with local llama.cpp server support. Create intelligent NPCs, dialogue systems, and AI-powered game interactions.",
+  "unity": "2022.3",
+  "dependencies": {
+    "com.unity.textmeshpro": "3.0.0"
+  },
+  "keywords": [
+    "ai",
+    "llm",
+    "npc",
+    "dialogue",
+    "llama",
+    "chatbot",
+    "conversation",
+    "persona",
+    "memory"
+  ],
+  "author": {
+    "name": "LlamaBrain Team",
+    "email": "support@llamabrain.com",
+    "url": "https://github.com/your-repo/llamabrain"
+  },
+  "license": "See LICENSE.md file",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-repo/llamabrain.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-repo/llamabrain/issues"
+  },
+  "homepage": "https://github.com/your-repo/llamabrain#readme",
+  "documentationUrl": "https://github.com/your-repo/llamabrain/blob/main/LlamaBrainForUnity/LLAMABRAINFORUNITY.md",
+  "changelogUrl": "https://github.com/your-repo/llamabrain/blob/main/CHANGELOG.md",
+  "licensesUrl": "https://github.com/your-repo/llamabrain/blob/main/LICENSE.md",
+  "samples": [
+    {
+      "displayName": "Getting Started",
+      "description": "Basic setup and configuration demonstration",
+      "path": "Samples/GettingStarted"
+    },
+    {
+      "displayName": "NPC Persona Chat",
+      "description": "Advanced NPC conversation system with multiple personalities",
+      "path": "Samples/NpcPersonaChat"
+    },
+    {
+      "displayName": "Journal Writer",
+      "description": "AI-powered writing assistant with specialized persona",
+      "path": "Samples/JournalWriter"
+    },
+    {
+      "displayName": "Flavor Text",
+      "description": "Dynamic text generation for games and storytelling",
+      "path": "Samples/FlavorText"
+    },
+    {
+      "displayName": "Themed Rewrite",
+      "description": "Content rewriting with different themes and styles",
+      "path": "Samples/ThemedRewrite"
+    },
+    {
+      "displayName": "Memory Management",
+      "description": "Advanced memory and conversation history management",
+      "path": "Samples/MemoryManagement"
+    },
+    {
+      "displayName": "Client Management",
+      "description": "Server connection monitoring and control demonstration",
+      "path": "Samples/ClientManagement"
+    }
+  ]
+}
