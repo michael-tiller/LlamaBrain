@@ -137,7 +137,7 @@ var config = new ProcessConfig
 {
     ExecutablePath = "C:/llama-server.exe",
     Model = "C:/models/llama-2-7b.gguf",
-    Port = 8080,
+    Port = 5000,
     ContextSize = 2048,
     LlmConfig = new LlmConfig
     {
@@ -173,7 +173,7 @@ server.StopServer();
 
 | Parameter | Range | Default | Description |
 |-----------|-------|---------|-------------|
-| `Port` | 1-65535 | 8080 | Server port |
+| `Port` | 1-65535 | 5000 | Server port |
 | `ContextSize` | 512-32768 | 2048 | Context window size |
 | `ExecutablePath` | - | - | Path to llama.cpp server |
 | `Model` | - | - | Path to GGUF model file |

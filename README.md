@@ -20,7 +20,7 @@ LlamaBrain/
 │   │   ├── Core/                 # API client, server management, etc.
 │   │   ├── Persona/              # Character and memory system
 │   │   └── Utilities/            # Helper utilities
-│   └── SAFEGUARDS.md             # Security documentation
+│   └── Source/Core/SAFEGUARDS.md # Security documentation
 └── LlamaBrainForUnity/           # Unity package
     ├── LLAMABRAINFORUNITY.md     # Unity package documentation
     ├── SAMPLES.md                # Sample scenes guide
@@ -36,7 +36,7 @@ LlamaBrain/
 ### For Unity Developers
 1. **Import the Unity Package**
    - Import `LlamaBrainForUnity` into your Unity project
-   - See [LlamaBrain for Unity README](LlamaBrainForUnity/Assets/LlamaBrainForUnity/LLAMABRAINFORUNITY.md) for detailed setup
+   - See [LlamaBrain for Unity README](LlamaBrainForUnity/LLAMABRAINFORUNITY.md) for detailed setup
 
 2. **Set Up Your Server**
    - Download llama.cpp server executable
@@ -51,7 +51,7 @@ LlamaBrain/
 ### For .NET Developers
 1. **Install the Core Library**
    ```xml
-   <PackageReference Include="LlamaBrain" Version="1.0.0" />
+   <PackageReference Include="LlamaBrain" Version="0.2.01" />
    ```
 
 2. **Basic Usage**
@@ -98,7 +98,7 @@ LlamaBrain/
 - **[Unity README](LlamaBrainForUnity/Assets/LlamaBrainForUnity/LLAMABRAINFORUNITY.md)** - Unity integration guide
 - **[Samples Guide](LlamaBrainForUnity/Assets/LlamaBrainForUnity/SAMPLES.md)** - Sample scenes and examples
 - **[Troubleshooting](LlamaBrainForUnity/Assets/LlamaBrainForUnity/TROUBLESHOOTING.md)** - Common issues and solutions
-- **[Tests README](LlamaBrainForUnity/Assets/LlamaBrainForUnity/Tests/TESTS.md)** - Testing documentation
+- **[Tests Documentation](LlamaBrainForUnity/Assets/LlamaBrainForUnity/Tests/TESTS.md)** - Testing documentation
 
 ## 🛠️ Requirements
 
@@ -131,7 +131,7 @@ var config = new ProcessConfig
 {
     ExecutablePath = "C:/llama-server.exe",
     Model = "C:/models/llama-2-7b.gguf",
-    Port = 8080,
+    Port = 5000,
     ContextSize = 2048
 };
 
@@ -209,8 +209,13 @@ The core library supports:
 3. Follow the [Unity README](LlamaBrainForUnity/Assets/LlamaBrainForUnity/LLAMABRAINFORUNITY.md) for setup
 
 ### Core Library
-1. Import DLL into your project
-2. Follow the [Core README](LlamaBrain/LLAMABRAIN.md) for setup
+```bash
+# NuGet (when available)
+dotnet add package LlamaBrain
+
+# Or include the source directly
+# Copy LlamaBrain/Source/ to your project
+```
 
 ## 🆘 Support
 
@@ -231,6 +236,8 @@ When reporting issues, include:
 
 This project is licensed under the Unity Asset Store Standard End User License Agreement. One license per seat is required. See: https://unity.com/legal/as-terms
 
+For more inforamtion please see [License](LlamaBrainForUnity/Assets/LlamaBrainForUnity/LICENSE.md)
+
 ## 📈 Roadmap
 
 ### Planned Features
@@ -250,4 +257,4 @@ This project is licensed under the Unity Asset Store Standard End User License A
 
 For detailed information, see the specific README files for each component:
 - [Core Library](LlamaBrain/LLAMABRAIN.md)
-- [Unity Package](LlamaBrainForUnity/Assets/LlamaBrainForUnity/LLAMABRAINFORUNITY.md)
+- [Unity Package](LlamaBrainForUnity/Assets/LlamaBrainForUnity/LLAMABRAINFORUNITY.md) 
