@@ -154,6 +154,30 @@ This guide helps you resolve common issues when using LlamaBrain for Unity.
    - Ensure BrainServer is running
    ```
 
+#### NPC Responses Include Personality Traits
+**Symptoms**: NPC responses include trait information like "Your personality traits: - Knowledgeable: Has extensive knowledge..."
+
+**Solutions:**
+1. **Disable Trait Inclusion**
+   ```
+   - Set PromptComposerSettings.includePersonalityTraits = false
+   - This completely removes traits from prompts
+   ```
+
+2. **Use Trait Instructions**
+   ```
+   - Keep includePersonalityTraits = true
+   - The system automatically adds instructions to prevent trait mention
+   - This provides context while preventing pollution
+   ```
+
+3. **Check Trait Configuration**
+   ```
+   - Verify PersonaTrait.IncludeInPrompts settings
+   - Review PersonaTraitAssignment.ShouldIncludeInPrompts()
+   - Ensure traits are properly configured
+   ```
+
 #### UI Issues
 **Symptoms**: Dialogue panel not working or displaying incorrectly
 

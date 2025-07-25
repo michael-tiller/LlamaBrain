@@ -30,3 +30,4 @@ MonoBehaviour:
 '
   compactDialogueFormat: 1
   dialogueLinePrefix: 
+  includePersonalityTraits: 0

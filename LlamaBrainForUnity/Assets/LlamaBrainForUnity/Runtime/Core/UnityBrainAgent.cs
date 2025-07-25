@@ -189,12 +189,27 @@ namespace LlamaBrain.Unity.Runtime.Core
 
             // Use PromptComposer for consistent prompt formatting
             var promptComposer = new PromptComposer();
-            var prompt = promptComposer.ComposePrompt(runtimeProfile, dialogueSession, input);
+            var includeTraits = PromptSettings?.includePersonalityTraits ?? true; // Default to true if no settings
+            var prompt = promptComposer.ComposePrompt(runtimeProfile, dialogueSession, input, includeTraits);
 
             // Prepend system prompt if provided
             if (!string.IsNullOrEmpty(runtimeProfile?.SystemPrompt))
             {
-                prompt = runtimeProfile.SystemPrompt + "\n\n" + prompt;
+                var systemPrompt = runtimeProfile.SystemPrompt;
+
+                // Add instructions to not include trait information in responses if traits are included
+                if (includeTraits && runtimeProfile.Traits.Count > 0)
+                {
+                    systemPrompt += "\n\nIMPORTANT: Your personality traits are provided for context only. Do NOT include them in your responses. Respond naturally as your character would, without mentioning or listing your traits.";
+                }
+
+                prompt = systemPrompt + "\n\n" + prompt;
+            }
+            else if (includeTraits && runtimeProfile?.Traits.Count > 0)
+            {
+                // Add instructions to not include trait information in responses if no system prompt exists
+                var traitInstructions = "IMPORTANT: Your personality traits are provided for context only. Do NOT include them in your responses. Respond naturally as your character would, without mentioning or listing your traits.\n\n";
+                prompt = traitInstructions + prompt;
             }
 
             Debug.Log($"[UnityBrainAgent] Built prompt:\n{prompt}");

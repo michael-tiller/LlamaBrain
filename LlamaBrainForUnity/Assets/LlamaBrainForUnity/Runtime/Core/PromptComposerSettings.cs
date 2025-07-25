@@ -123,6 +123,12 @@ namespace LlamaBrain.Unity.Runtime.Core
     public string dialogueLinePrefix = "";
 
     /// <summary>
+    /// Whether to include personality traits in prompts sent to the LLM.
+    /// </summary>
+    [Tooltip("Whether to include personality traits in prompts sent to the LLM. Disable to prevent trait information from appearing in responses.")]
+    public bool includePersonalityTraits = true;
+
+    /// <summary>
     /// Creates a default PromptComposerSettings instance.
     /// </summary>
     public static PromptComposerSettings CreateDefault()
@@ -156,6 +162,7 @@ namespace LlamaBrain.Unity.Runtime.Core
       settings.sectionSeparator = "\n";
       settings.compactDialogueFormat = true;
       settings.dialogueLinePrefix = "";
+      settings.includePersonalityTraits = false;
 
       return settings;
     }
@@ -184,6 +191,7 @@ namespace LlamaBrain.Unity.Runtime.Core
       settings.sectionSeparator = "\n\n";
       settings.compactDialogueFormat = false;
       settings.dialogueLinePrefix = "";
+      settings.includePersonalityTraits = true;
 
       return settings;
     }
