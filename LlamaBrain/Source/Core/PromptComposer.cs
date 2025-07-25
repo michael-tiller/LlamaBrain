@@ -27,8 +27,9 @@ namespace LlamaBrain.Core
     /// <param name="profile">The persona profile to use</param>
     /// <param name="session">The dialogue session with conversation history</param>
     /// <param name="userInput">The current user input</param>
+    /// <param name="includeTraits">Whether to include personality traits in the prompt (default: true)</param>
     /// <returns>A formatted prompt ready for the LLM</returns>
-    public string ComposePrompt(PersonaProfile profile, DialogueSession session, string userInput)
+    public string ComposePrompt(PersonaProfile profile, DialogueSession session, string userInput, bool includeTraits = true)
     {
       if (profile == null)
         throw new ArgumentNullException(nameof(profile));
@@ -55,8 +56,8 @@ namespace LlamaBrain.Core
         prompt.AppendLine();
       }
 
-      // Add personality traits
-      if (profile.Traits.Count > 0)
+      // Add personality traits (only if requested)
+      if (includeTraits && profile.Traits.Count > 0)
       {
         prompt.AppendLine("Your personality traits:");
         foreach (var trait in profile.Traits)
@@ -110,8 +111,9 @@ namespace LlamaBrain.Core
     /// </summary>
     /// <param name="profile">The persona profile to use</param>
     /// <param name="userInput">The current user input</param>
+    /// <param name="includeTraits">Whether to include personality traits in the prompt (default: true)</param>
     /// <returns>A formatted prompt ready for the LLM</returns>
-    public string ComposeSimplePrompt(PersonaProfile profile, string userInput)
+    public string ComposeSimplePrompt(PersonaProfile profile, string userInput, bool includeTraits = true)
     {
       if (profile == null)
         throw new ArgumentNullException(nameof(profile));
@@ -135,8 +137,8 @@ namespace LlamaBrain.Core
         prompt.AppendLine();
       }
 
-      // Add personality traits
-      if (profile.Traits.Count > 0)
+      // Add personality traits (only if requested)
+      if (includeTraits && profile.Traits.Count > 0)
       {
         prompt.AppendLine("Your personality traits:");
         foreach (var trait in profile.Traits)
@@ -330,6 +332,176 @@ namespace LlamaBrain.Core
       prompt.AppendLine();
       prompt.AppendLine($"{profile.Name}:");
 
+      var result = prompt.ToString();
+      if (result.Length > MaxContextLength)
+      {
+        result = result.Substring(0, MaxContextLength) + "...";
+      }
+
+      return result;
+    }
+
+    /// <summary>
+    /// Composes a prompt for structured JSON output with schema validation
+    /// </summary>
+    /// <param name="profile">The persona profile to use</param>
+    /// <param name="instruction">The specific instruction or task</param>
+    /// <param name="jsonSchema">The JSON schema to follow</param>
+    /// <param name="context">Optional additional context</param>
+    /// <returns>A formatted prompt ready for the LLM with JSON structure requirements</returns>
+    public string ComposeStructuredJsonPrompt(PersonaProfile profile, string instruction, string jsonSchema, string? context = null)
+    {
+      if (profile == null)
+        throw new ArgumentNullException(nameof(profile));
+
+      if (string.IsNullOrWhiteSpace(instruction))
+        throw new ArgumentException("Instruction cannot be null or empty", nameof(instruction));
+
+      if (string.IsNullOrWhiteSpace(jsonSchema))
+        throw new ArgumentException("JSON schema cannot be null or empty", nameof(jsonSchema));
+
+      var prompt = new StringBuilder();
+
+      // Add system prompt if available
+      if (!string.IsNullOrWhiteSpace(profile.SystemPrompt))
+      {
+        prompt.AppendLine($"System: {profile.SystemPrompt}");
+        prompt.AppendLine();
+      }
+
+      // Add structured output instructions
+      prompt.AppendLine("IMPORTANT: You must respond with valid JSON only. Do not include any text before or after the JSON.");
+      prompt.AppendLine("Your response must be a single JSON object that follows this exact schema:");
+      prompt.AppendLine();
+      prompt.AppendLine(jsonSchema);
+      prompt.AppendLine();
+
+      // Add persona description
+      if (!string.IsNullOrWhiteSpace(profile.Description))
+      {
+        prompt.AppendLine($"You are {profile.Name}, {profile.Description}");
+        prompt.AppendLine();
+      }
+
+      // Add personality traits
+      if (profile.Traits.Count > 0)
+      {
+        prompt.AppendLine("Your personality traits:");
+        foreach (var trait in profile.Traits)
+        {
+          prompt.AppendLine($"- {trait.Key}: {trait.Value}");
+        }
+        prompt.AppendLine();
+      }
+
+      // Add instruction
+      prompt.AppendLine($"Task: {instruction}");
+
+      // Add context if provided
+      if (!string.IsNullOrWhiteSpace(context))
+      {
+        prompt.AppendLine($"Context: {context}");
+      }
+
+      prompt.AppendLine();
+      prompt.AppendLine("Respond with JSON only:");
+
+      var result = prompt.ToString();
+      if (result.Length > MaxContextLength)
+      {
+        result = result.Substring(0, MaxContextLength) + "...";
+      }
+
+      return result;
+    }
+
+    /// <summary>
+    /// Composes a prompt for structured JSON output with conversation context
+    /// </summary>
+    /// <param name="profile">The persona profile to use</param>
+    /// <param name="session">The dialogue session with conversation history</param>
+    /// <param name="userInput">The current user input</param>
+    /// <param name="jsonSchema">The JSON schema to follow</param>
+    /// <returns>A formatted prompt ready for the LLM with JSON structure requirements</returns>
+    public string ComposeStructuredJsonConversationPrompt(PersonaProfile profile, DialogueSession session, string userInput, string jsonSchema)
+    {
+      if (profile == null)
+        throw new ArgumentNullException(nameof(profile));
+
+      if (session == null)
+        throw new ArgumentNullException(nameof(session));
+
+      if (string.IsNullOrWhiteSpace(userInput))
+        throw new ArgumentException("User input cannot be null or empty", nameof(userInput));
+
+      if (string.IsNullOrWhiteSpace(jsonSchema))
+        throw new ArgumentException("JSON schema cannot be null or empty", nameof(jsonSchema));
+
+      var prompt = new StringBuilder();
+
+      // Add system prompt
+      if (!string.IsNullOrWhiteSpace(profile.SystemPrompt))
+      {
+        prompt.AppendLine($"System: {profile.SystemPrompt}");
+        prompt.AppendLine();
+      }
+
+      // Add structured output instructions
+      prompt.AppendLine("IMPORTANT: You must respond with valid JSON only. Do not include any text before or after the JSON.");
+      prompt.AppendLine("Your response must be a single JSON object that follows this exact schema:");
+      prompt.AppendLine();
+      prompt.AppendLine(jsonSchema);
+      prompt.AppendLine();
+
+      // Add persona description
+      if (!string.IsNullOrWhiteSpace(profile.Description))
+      {
+        prompt.AppendLine($"You are {profile.Name}, {profile.Description}");
+        prompt.AppendLine();
+      }
+
+      // Add personality traits
+      if (profile.Traits.Count > 0)
+      {
+        prompt.AppendLine("Your personality traits:");
+        foreach (var trait in profile.Traits)
+        {
+          prompt.AppendLine($"- {trait.Key}: {trait.Value}");
+        }
+        prompt.AppendLine();
+      }
+
+      // Add background story
+      if (!string.IsNullOrWhiteSpace(profile.Background))
+      {
+        prompt.AppendLine($"Background: {profile.Background}");
+        prompt.AppendLine();
+      }
+
+      // Add conversation history
+      var history = session.GetHistory();
+      if (history.Count > 0)
+      {
+        prompt.AppendLine("Conversation history:");
+
+        // Take the last N entries to stay within context limits
+        var recentHistory = history.Count > MaxHistoryEntries
+          ? history.Skip(history.Count - MaxHistoryEntries).Take(MaxHistoryEntries)
+          : history;
+
+        foreach (var entry in recentHistory)
+        {
+          prompt.AppendLine(entry);
+        }
+        prompt.AppendLine();
+      }
+
+      // Add current user input
+      prompt.AppendLine($"Player: {userInput}");
+      prompt.AppendLine();
+      prompt.AppendLine("Respond with JSON only:");
+
+      // Truncate if too long
       var result = prompt.ToString();
       if (result.Length > MaxContextLength)
       {

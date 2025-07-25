@@ -51,7 +51,7 @@ LlamaBrain/
 ### For .NET Developers
 1. **Install the Core Library**
    ```xml
-   <PackageReference Include="LlamaBrain" Version="1.0.0" />
+   <PackageReference Include="LlamaBrain" Version="0.2.01" />
    ```
 
 2. **Basic Usage**
@@ -95,10 +95,10 @@ LlamaBrain/
 - **[Security Guide](LlamaBrain/Source/Core/SAFEGUARDS.md)** - Security measures and safeguards
 
 ### Unity Package
-- **[Unity README](LlamaBrainForUnity/LLAMABRAINFORUNITY.md)** - Unity integration guide
-- **[Samples Guide](LlamaBrainForUnity/SAMPLES.md)** - Sample scenes and examples
-- **[Troubleshooting](LlamaBrainForUnity/TROUBLESHOOTING.md)** - Common issues and solutions
-- **[Tests README](LlamaBrainForUnity/Tests/README.md)** - Testing documentation
+- **[Unity README](LlamaBrainForUnity/Assets/LlamaBrainForUnity/LLAMABRAINFORUNITY.md)** - Unity integration guide
+- **[Samples Guide](LlamaBrainForUnity/Assets/LlamaBrainForUnity/SAMPLES.md)** - Sample scenes and examples
+- **[Troubleshooting](LlamaBrainForUnity/Assets/LlamaBrainForUnity/TROUBLESHOOTING.md)** - Common issues and solutions
+- **[Tests Documentation](LlamaBrainForUnity/Assets/LlamaBrainForUnity/Tests/TESTS.md)** - Testing documentation
 
 ## 🛠️ Requirements
 
@@ -131,7 +131,7 @@ var config = new ProcessConfig
 {
     ExecutablePath = "C:/llama-server.exe",
     Model = "C:/models/llama-2-7b.gguf",
-    Port = 8080,
+    Port = 5000,
     ContextSize = 2048
 };
 
@@ -206,7 +206,7 @@ The core library supports:
 ### Unity Package
 1. Download the LlamaBrainForUnity package
 2. Import into your Unity project
-3. Follow the [Unity README](LlamaBrainForUnity/LLAMABRAINFORUNITY.md) for setup
+3. Follow the [Unity README](LlamaBrainForUnity/Assets/LlamaBrainForUnity/LLAMABRAINFORUNITY.md) for setup
 
 ### Core Library
 ```bash
@@ -236,6 +236,8 @@ When reporting issues, include:
 
 This project is licensed under the Unity Asset Store Standard End User License Agreement. One license per seat is required. See: https://unity.com/legal/as-terms
 
+For more inforamtion please see [License](LlamaBrainForUnity/Assets/LlamaBrainForUnity/LICENSE.md)
+
 ## 📈 Roadmap
 
 ### Planned Features
@@ -257,4 +259,4 @@ This project is licensed under the Unity Asset Store Standard End User License A
 
 For detailed information, see the specific README files for each component:
 - [Core Library](LlamaBrain/LLAMABRAIN.md)
-- [Unity Package](LlamaBrainForUnity/LLAMABRAINFORUNITY.md) 
+- [Unity Package](LlamaBrainForUnity/Assets/LlamaBrainForUnity/LLAMABRAINFORUNITY.md) 
