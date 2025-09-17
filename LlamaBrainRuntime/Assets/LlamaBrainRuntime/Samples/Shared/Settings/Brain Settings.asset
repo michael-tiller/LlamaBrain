@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 466b46ba516814d4698185a25a6e1b4b, type: 3}
+  m_Name: Brain Settings
+  m_EditorClassIdentifier: 
+  ExecutablePath: Backend/llama-server.exe
+  ModelPath: Backend/model/stablelm-zephyr-3b.Q4_0.gguf
+  Port: 5000
+  ContextSize: 2048
+  MaxTokens: 64
+  Temperature: 0.7
+  TopP: 0.9
+  TopK: 40
+  RepeatPenalty: 1.1
+  StopSequences:
+  - </s>
+  - 'Human:'
+  - 'Assistant:'
+  - 'Player:'
+  - 'NPC:'
+  - 'Step 1:'
+  - 'Step 2:'
+  - 'Step 3:'
+  - '
+
+
+'
+  - '
+
+    Player:'
+  - '
+
+    NPC:'
