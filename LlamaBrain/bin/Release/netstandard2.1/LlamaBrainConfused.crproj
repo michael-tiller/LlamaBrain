@@ -1,3 +1,11 @@
-<project outputDir="E:\Personal\LlamaBrain\LlamaBrain\bin\Release\netstandard2.1\Confused" baseDir="E:\Personal\LlamaBrain\LlamaBrain\bin\Release\netstandard2.1" xmlns="http://confuser.codeplex.com">
+<?xml version="1.0" encoding="utf-8" ?>
+<project outputDir="E:\Personal\LlamaBrain\LlamaBrain\bin\Release\netstandard2.1\Confused"
+         baseDir="E:\Personal\LlamaBrain\LlamaBrain\bin\Release\netstandard2.1"
+         xmlns="http://confuser.codeplex.com">
+
+  <rule pattern="true" inherit="true">
+    <protection id="rename" />
+  </rule>
+
   <module path="LlamaBrain.dll" />
 </project>
