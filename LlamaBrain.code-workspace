@@ -1,11 +1,14 @@
 {
-	"folders": [
-		{
-			"path": "LlamaBrain"
-		},
-		{
-			"path": "LlamaBrainForUnity/Assets/LlamaBrainForUnity"
-		}
-	],
-	"settings": {}
+  "folders": [
+    {
+      "path": "LlamaBrain"
+    },
+    {
+      "path": "LlamaBrainForUnity/Assets/LlamaBrainForUnity"
+    },
+    {
+      "path": "../LlamaBrain-Overview"
+    }
+  ],
+  "settings": {}
 }
