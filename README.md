@@ -238,9 +238,9 @@ When reporting issues, include:
 
 ## 📄 License
 
-This project is licensed under the Unity Asset Store Standard End User License Agreement. One license per seat is required. See: https://unity.com/legal/as-terms
+This repository is provided privately for code review and evaluation purposes only.
 
-For more inforamtion please see [License](LlamaBrainForUnity/Assets/LlamaBrainForUnity/LICENSE.md)
+All rights reserved. No part of this codebase may be copied, redistributed, or used in any product or service without explicit written permission from Michael Tiller.
 
 ## 📈 Roadmap
 
