@@ -8,6 +8,9 @@
     },
     {
       "path": "../LlamaBrain-Overview"
+    },
+    {
+      "path": "LlamaBrainRuntime/Assets/LlamaBrainRuntime"
     }
   ],
   "settings": {}
