@@ -7,6 +7,8 @@ using System.Diagnostics;
 using Newtonsoft.Json;
 using System;
 using System.Linq;
+using System.Collections.Generic;
+using LlamaBrain.Utilities;
 
 /// <summary>
 /// API client for the llama.cpp API
@@ -18,6 +20,11 @@ namespace LlamaBrain.Core
   /// </summary>
   public sealed class ApiClient : IDisposable
   {
+    /// <summary>
+    /// Event raised when performance metrics are available (for Unity/DLL integration)
+    /// </summary>
+    public event Action<CompletionMetrics>? OnMetricsAvailable;
+
     /// <summary>
     /// The endpoint of the API
     /// </summary>
@@ -85,19 +92,240 @@ namespace LlamaBrain.Core
       // Sanitize host input
       host = SanitizeHost(host);
 
-      endpoint = $"http://{host}:{port}/completion";
+      // Use 127.0.0.1 instead of localhost to avoid DNS resolution delays on Windows
+      var resolvedHost = host.Equals("localhost", StringComparison.OrdinalIgnoreCase) ? "127.0.0.1" : host;
+      endpoint = $"http://{resolvedHost}:{port}/completion";
       this.model = model;
       this.config = ValidateAndSanitizeConfig(config ?? new LlmConfig());
 
-      // Initialize HTTP client with timeout
-      httpClient = new HttpClient
+      // Initialize HTTP client with optimized settings for low latency
+      // Key optimizations:
+      // 1. Disable proxy detection (major source of delays on Windows)
+      // 2. Disable Expect: 100-continue header (avoids round-trip delay)
+      // 3. Enable connection keep-alive for reuse
+      var handler = new HttpClientHandler
+      {
+        UseProxy = false  // Disable proxy detection - major latency improvement
+        // Note: Setting Proxy = null explicitly causes issues in Unity Mono runtime
+      };
+
+      httpClient = new HttpClient(handler)
       {
         Timeout = TimeSpan.FromSeconds(RequestTimeoutSeconds)
       };
 
+      // Disable Expect: 100-continue which causes an extra round-trip
+      httpClient.DefaultRequestHeaders.ExpectContinue = false;
+
       // Initialize rate limiting
       rateLimiter = new SemaphoreSlim(1, 1);
       requestHistory = new ConcurrentQueue<DateTime>();
+    }
+
+    /// <summary>
+    /// Send a prompt to the API and return detailed metrics
+    /// </summary>
+    /// <param name="prompt">The prompt to send</param>
+    /// <param name="maxTokens">The maximum number of tokens to generate (overrides config if specified)</param>
+    /// <param name="temperature">The temperature to use (overrides config if specified)</param>
+    /// <param name="cachePrompt">Whether to cache the prompt for KV cache reuse</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Detailed completion metrics</returns>
+    public async Task<CompletionMetrics> SendPromptWithMetricsAsync(string prompt, int? maxTokens = null, float? temperature = null, bool cachePrompt = false, CancellationToken cancellationToken = default)
+    {
+      // Check if disposed
+      if (disposed)
+        throw new ObjectDisposedException(nameof(ApiClient));
+
+      try
+      {
+        // Input validation
+        if (string.IsNullOrWhiteSpace(prompt))
+          return new CompletionMetrics { Content = "Error: Prompt cannot be null or empty" };
+
+        if (prompt.Length > MaxPromptLength)
+          return new CompletionMetrics { Content = $"Error: Prompt too long. Maximum length is {MaxPromptLength} characters" };
+
+        // Rate limiting
+        await EnforceRateLimitAsync();
+
+        // Validate and sanitize parameters
+        var validatedMaxTokens = ValidateMaxTokens(maxTokens ?? config.MaxTokens);
+        var validatedTemperature = ValidateTemperature(temperature ?? config.Temperature);
+
+        // Build stop sequences - primarily to enforce single-line constraint
+        var stopSequences = new List<string> { "</s>" };
+
+        // NOTE: We removed newline stop sequences (\n, \r\n) because they were causing
+        // the model to stop immediately when the prompt ends with a newline (common in
+        // dialogue formats). Instead, we rely on:
+        // 1. Post-processing to extract the first line only (ValidateAndCleanResponse)
+        // 2. Token limits to prevent overly long responses
+        // 3. Validation to reject multi-line outputs
+        // This allows the model to generate naturally while still enforcing single-line output.
+
+        var req = new CompletionRequest
+        {
+          prompt = SanitizePrompt(prompt),
+          n_predict = validatedMaxTokens,
+          temperature = validatedTemperature,
+          top_p = config.TopP,
+          top_k = config.TopK,
+          repeat_penalty = config.RepeatPenalty,
+          stop = stopSequences.ToArray(),
+          cache_prompt = cachePrompt
+        };
+
+        var content = new StringContent(JsonConvert.SerializeObject(req), Encoding.UTF8, "application/json");
+
+        // Add request to history for rate limiting
+        requestHistory.Enqueue(DateTime.UtcNow);
+
+        // Clean old requests from history
+        CleanupRequestHistory();
+
+        // Measure timings at the boundary (before/after the actual API call)
+        var t0 = DateTime.UtcNow;
+        var tBeforePost = DateTime.UtcNow;
+        var resp = await httpClient.PostAsync(endpoint, content, cancellationToken);
+        var tAfterPost = DateTime.UtcNow;
+        var tBeforeRead = DateTime.UtcNow;
+        var respJson = await resp.Content.ReadAsStringAsync();
+        var tAfterRead = DateTime.UtcNow;
+        var tDone = DateTime.UtcNow;
+        var totalWallTimeMs = (long)(tDone - t0).TotalMilliseconds;
+
+        // Debug: Log detailed timing breakdown
+        try
+        {
+          var postTime = (tAfterPost - tBeforePost).TotalMilliseconds;
+          var readTime = (tAfterRead - tBeforeRead).TotalMilliseconds;
+          var otherTime = totalWallTimeMs - postTime - readTime;
+          Logger.Info($"[ApiClient] Timing breakdown: PostAsync={postTime:F0}ms, ReadAsString={readTime:F0}ms, Other={otherTime:F0}ms, Total={totalWallTimeMs}ms");
+        }
+        catch { /* Logger may not be available */ }
+
+        if (!resp.IsSuccessStatusCode)
+        {
+          return new CompletionMetrics { Content = $"Error: HTTP {resp.StatusCode} - {respJson}", TotalTimeMs = totalWallTimeMs };
+        }
+
+        if (string.IsNullOrEmpty(respJson))
+          return new CompletionMetrics { Content = "Error: Empty response from server", TotalTimeMs = totalWallTimeMs };
+
+        var response = JsonConvert.DeserializeObject<CompletionResponse>(respJson);
+
+        if (response?.content == null)
+          return new CompletionMetrics { Content = "Error: Invalid response format from server", TotalTimeMs = totalWallTimeMs };
+
+        // Extract detailed metrics - use wall time as ground truth
+        var metrics = new CompletionMetrics
+        {
+          Content = response.content,
+          CachedTokenCount = response.tokens_cached,
+          TotalTimeMs = totalWallTimeMs // Always use measured wall time
+        };
+
+        // Parse llama.cpp timing data if available
+        // Field names match llama.cpp server JSON: prompt_ms, predicted_ms, prompt_n, predicted_n
+        if (response.timings != null)
+        {
+          // Prefill time (prompt evaluation) - llama.cpp uses prompt_ms
+          metrics.PrefillTimeMs = (long)response.timings.prompt_ms;
+
+          // Decode time (token generation) - llama.cpp uses predicted_ms
+          metrics.DecodeTimeMs = (long)response.timings.predicted_ms;
+
+          // Token counts - llama.cpp uses prompt_n and predicted_n
+          metrics.PromptTokenCount = response.timings.prompt_n > 0
+            ? response.timings.prompt_n
+            : (response.tokens_evaluated > 0 ? response.tokens_evaluated : 0);
+
+          metrics.GeneratedTokenCount = response.timings.predicted_n > 0
+            ? response.timings.predicted_n
+            : (response.tokens_predicted > 0 ? response.tokens_predicted : 0);
+
+          // TTFT is approximately prefill time (time until first token starts generating)
+          metrics.TtftMs = metrics.PrefillTimeMs;
+
+          // Sanity check: if decode time is 0 but we have generated tokens, fall back to wall time
+          if (metrics.DecodeTimeMs == 0 && metrics.GeneratedTokenCount > 0)
+          {
+            // Estimate: if we have prefill time, decode is the remainder
+            if (metrics.PrefillTimeMs > 0 && metrics.PrefillTimeMs < totalWallTimeMs)
+            {
+              metrics.DecodeTimeMs = totalWallTimeMs - metrics.PrefillTimeMs;
+            }
+            else
+            {
+              // Rough heuristic: 70% decode, 30% prefill
+              metrics.DecodeTimeMs = (long)(totalWallTimeMs * 0.7);
+              metrics.PrefillTimeMs = (long)(totalWallTimeMs * 0.3);
+              metrics.TtftMs = metrics.PrefillTimeMs;
+            }
+          }
+        }
+        else
+        {
+          // No timing data from llama.cpp - estimate from wall time
+          // Rough heuristic: 30% prefill, 70% decode
+          metrics.PrefillTimeMs = (long)(totalWallTimeMs * 0.3);
+          metrics.DecodeTimeMs = (long)(totalWallTimeMs * 0.7);
+          metrics.TtftMs = metrics.PrefillTimeMs;
+
+          // Estimate tokens (rough: ~4 chars per token)
+          metrics.GeneratedTokenCount = response.content.Length / 4;
+          metrics.PromptTokenCount = prompt.Length / 4;
+        }
+
+        // Validate response length
+        if (metrics.Content.Length > MaxResponseLength)
+        {
+          metrics.Content = metrics.Content.Substring(0, MaxResponseLength) + "... [truncated]";
+        }
+
+        // Log detailed metrics (optional, for non-DLL contexts)
+        try
+        {
+          Logger.Info($"[ApiClient] Generation metrics: " +
+            $"Prompt={metrics.PromptTokenCount} tokens, " +
+            $"Prefill={metrics.PrefillTimeMs}ms, " +
+            $"Decode={metrics.DecodeTimeMs}ms, " +
+            $"TTFT={metrics.TtftMs}ms, " +
+            $"Generated={metrics.GeneratedTokenCount} tokens, " +
+            $"Cached={metrics.CachedTokenCount} tokens, " +
+            $"Speed={metrics.TokensPerSecond:F1} tokens/sec");
+        }
+        catch
+        {
+          // Logger may not be available in DLL context, ignore
+        }
+
+        // Raise event for Unity/DLL subscribers
+        OnMetricsAvailable?.Invoke(metrics);
+
+        return metrics;
+      }
+      catch (TaskCanceledException) when (cancellationToken.IsCancellationRequested)
+      {
+        return new CompletionMetrics { Content = "Error: Request was cancelled" };
+      }
+      catch (TaskCanceledException)
+      {
+        return new CompletionMetrics { Content = "Error: Request timed out" };
+      }
+      catch (HttpRequestException ex)
+      {
+        return new CompletionMetrics { Content = $"Error: Network error - {ex.Message}" };
+      }
+      catch (JsonException ex)
+      {
+        return new CompletionMetrics { Content = $"Error: Invalid JSON response - {ex.Message}" };
+      }
+      catch (System.Exception ex)
+      {
+        return new CompletionMetrics { Content = $"Error: Unexpected error - {ex.Message}" };
+      }
     }
 
     /// <summary>
@@ -137,7 +365,8 @@ namespace LlamaBrain.Core
           top_p = config.TopP,
           top_k = config.TopK,
           repeat_penalty = config.RepeatPenalty,
-          stop = new string[] { "</s>" } // Only keep the most basic stop sequence
+          stop = new string[] { "</s>" }, // Only keep the most basic stop sequence
+          cache_prompt = false // Default to false for backward compatibility
         };
 
         var content = new StringContent(JsonConvert.SerializeObject(req), Encoding.UTF8, "application/json");
@@ -165,6 +394,35 @@ namespace LlamaBrain.Core
 
         if (response?.content == null)
           return "Error: Invalid response format from server";
+
+        // Log detailed timing information if available (optional, for non-DLL contexts)
+        // Field names match llama.cpp server JSON: prompt_ms, predicted_ms, prompt_n, predicted_n
+        if (response.timings != null)
+        {
+          var prefillMs = (long)response.timings.prompt_ms;
+          var decodeMs = (long)response.timings.predicted_ms;
+          var promptTokens = response.timings.prompt_n > 0 ? response.timings.prompt_n : response.tokens_evaluated;
+          var generatedTokens = response.timings.predicted_n > 0 ? response.timings.predicted_n : response.tokens_predicted;
+          var ttftMs = prefillMs; // TTFT is approximately prefill time for first token
+
+          // Try to log via Logger (works in non-DLL contexts)
+          try
+          {
+            var speed = decodeMs > 0 ? (generatedTokens * 1000.0 / decodeMs) : 0.0;
+            Logger.Info($"[ApiClient] Generation metrics: " +
+              $"Prompt={promptTokens} tokens, " +
+              $"Prefill={prefillMs}ms, " +
+              $"Decode={decodeMs}ms, " +
+              $"TTFT={ttftMs}ms, " +
+              $"Generated={generatedTokens} tokens, " +
+              $"Cached={response.tokens_cached} tokens, " +
+              $"Speed={speed:F1} tokens/sec");
+          }
+          catch
+          {
+            // Logger may not be available in DLL context, ignore
+          }
+        }
 
         // Validate response length
         if (response.content.Length > MaxResponseLength)

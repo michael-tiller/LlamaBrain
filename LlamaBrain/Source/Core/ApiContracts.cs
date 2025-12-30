@@ -37,25 +37,53 @@ namespace LlamaBrain.Core
     /// Whether to stream the response
     /// </summary>
     public bool stream { get; set; } = false;
+    /// <summary>
+    /// Cache the prompt to reuse KV cache (for prefix caching)
+    /// </summary>
+    public bool cache_prompt { get; set; } = false;
   }
 
   /// <summary>
   /// Timing information from the llama.cpp API response
+  /// Field names match llama.cpp server JSON output format
   /// </summary>
   public sealed class Timings
   {
+    // --- Prompt evaluation (prefill) ---
     /// <summary>
-    /// Prediction time in milliseconds
+    /// Number of tokens in the prompt
     /// </summary>
-    public long pred_ms { get; set; }
+    public int prompt_n { get; set; }
     /// <summary>
-    /// Prompt processing time in milliseconds
+    /// Prompt processing time in milliseconds (prefill time)
     /// </summary>
-    public long prompt_ms { get; set; }
+    public double prompt_ms { get; set; }
     /// <summary>
-    /// Total time in milliseconds
+    /// Prompt processing time per token in milliseconds
     /// </summary>
-    public long total_ms { get; set; }
+    public double prompt_per_token_ms { get; set; }
+    /// <summary>
+    /// Prompt processing speed (tokens per second)
+    /// </summary>
+    public double prompt_per_second { get; set; }
+
+    // --- Token generation (decode) ---
+    /// <summary>
+    /// Number of tokens generated
+    /// </summary>
+    public int predicted_n { get; set; }
+    /// <summary>
+    /// Token generation time in milliseconds (decode time)
+    /// </summary>
+    public double predicted_ms { get; set; }
+    /// <summary>
+    /// Token generation time per token in milliseconds
+    /// </summary>
+    public double predicted_per_token_ms { get; set; }
+    /// <summary>
+    /// Token generation speed (tokens per second)
+    /// </summary>
+    public double predicted_per_second { get; set; }
   }
 
   /// <summary>
@@ -87,5 +115,48 @@ namespace LlamaBrain.Core
     /// The number of tokens evaluated
     /// </summary>
     public int tokens_evaluated { get; set; }
+  }
+
+  /// <summary>
+  /// Detailed performance metrics from a completion request
+  /// </summary>
+  public sealed class CompletionMetrics
+  {
+    /// <summary>
+    /// The generated response content
+    /// </summary>
+    public string Content { get; set; } = string.Empty;
+    /// <summary>
+    /// Number of tokens in the prompt
+    /// </summary>
+    public int PromptTokenCount { get; set; }
+    /// <summary>
+    /// Prefill time in milliseconds (prompt evaluation)
+    /// </summary>
+    public long PrefillTimeMs { get; set; }
+    /// <summary>
+    /// Decode time in milliseconds (token generation)
+    /// </summary>
+    public long DecodeTimeMs { get; set; }
+    /// <summary>
+    /// Time to first token (TTFT) in milliseconds
+    /// </summary>
+    public long TtftMs { get; set; }
+    /// <summary>
+    /// Number of tokens generated
+    /// </summary>
+    public int GeneratedTokenCount { get; set; }
+    /// <summary>
+    /// Number of tokens cached (from KV cache reuse)
+    /// </summary>
+    public int CachedTokenCount { get; set; }
+    /// <summary>
+    /// Total time in milliseconds
+    /// </summary>
+    public long TotalTimeMs { get; set; }
+    /// <summary>
+    /// Tokens per second (decode speed)
+    /// </summary>
+    public double TokensPerSecond => DecodeTimeMs > 0 ? (GeneratedTokenCount * 1000.0) / DecodeTimeMs : 0;
   }
 }

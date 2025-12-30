@@ -26,6 +26,35 @@ namespace LlamaBrain.Core
     /// </summary>
     public int ContextSize { get; set; } = 2048;
     /// <summary>
+    /// Number of GPU layers to offload (0 = CPU only, 35+ = full GPU)
+    /// </summary>
+    public int GpuLayers { get; set; } = 35;
+    /// <summary>
+    /// Number of CPU threads (0 = auto-detect)
+    /// </summary>
+    public int Threads { get; set; } = 0;
+    /// <summary>
+    /// Batch size for prompt processing
+    /// </summary>
+    public int BatchSize { get; set; } = 512;
+    /// <summary>
+    /// Micro-batch size for generation
+    /// </summary>
+    public int UBatchSize { get; set; } = 128;
+    /// <summary>
+    /// Whether to lock model in RAM
+    /// </summary>
+    public bool UseMlock { get; set; } = true;
+    /// <summary>
+    /// Number of parallel request slots (1 = lowest latency, higher = more throughput)
+    /// Default to 1 for game NPCs where latency matters more than throughput
+    /// </summary>
+    public int ParallelSlots { get; set; } = 1;
+    /// <summary>
+    /// Whether to use continuous batching (helps with multiple concurrent requests)
+    /// </summary>
+    public bool UseContinuousBatching { get; set; } = false;
+    /// <summary>
     /// The LLM configuration for generation parameters
     /// </summary>
     public LlmConfig LlmConfig { get; set; } = new LlmConfig();

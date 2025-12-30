@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using System.Diagnostics;
 using LlamaBrain.Core;
 using LlamaBrain.Utilities;
 using Cysharp.Threading.Tasks;
@@ -23,7 +24,12 @@ namespace LlamaBrain.Runtime.Core
     /// <returns>The structured JSON response as a string</returns>
     public static async UniTask<string> SendStructuredMessageAsync(this BrainAgent brainAgent, string message, string jsonSchema, CancellationToken cancellationToken = default)
     {
-      return await brainAgent.SendStructuredMessageAsync(message, jsonSchema, cancellationToken).AsUniTask();
+      var stopwatch = Stopwatch.StartNew();
+      var result = await brainAgent.SendStructuredMessageAsync(message, jsonSchema, cancellationToken).AsUniTask();
+      stopwatch.Stop();
+      // Note: Detailed metrics are logged via ApiClient.OnMetricsAvailable event
+      UnityEngine.Debug.Log($"[BrainAgentExtensions] Structured message generation completed in {stopwatch.ElapsedMilliseconds}ms");
+      return result;
     }
 
     /// <summary>
@@ -37,7 +43,12 @@ namespace LlamaBrain.Runtime.Core
     /// <returns>The structured JSON response as a string</returns>
     public static async UniTask<string> SendStructuredInstructionAsync(this BrainAgent brainAgent, string instruction, string jsonSchema, string? context = null, CancellationToken cancellationToken = default)
     {
-      return await brainAgent.SendStructuredInstructionAsync(instruction, jsonSchema, context, cancellationToken).AsUniTask();
+      var stopwatch = Stopwatch.StartNew();
+      var result = await brainAgent.SendStructuredInstructionAsync(instruction, jsonSchema, context, cancellationToken).AsUniTask();
+      stopwatch.Stop();
+      // Note: Detailed metrics are logged via ApiClient.OnMetricsAvailable event
+      UnityEngine.Debug.Log($"[BrainAgentExtensions] Structured instruction generation completed in {stopwatch.ElapsedMilliseconds}ms");
+      return result;
     }
 
     /// <summary>
@@ -51,7 +62,12 @@ namespace LlamaBrain.Runtime.Core
     /// <returns>The deserialized response object</returns>
     public static async UniTask<T?> SendStructuredMessageAsync<T>(this BrainAgent brainAgent, string message, string jsonSchema, CancellationToken cancellationToken = default) where T : class
     {
-      return await brainAgent.SendStructuredMessageAsync<T>(message, jsonSchema, cancellationToken).AsUniTask();
+      var stopwatch = Stopwatch.StartNew();
+      var result = await brainAgent.SendStructuredMessageAsync<T>(message, jsonSchema, cancellationToken).AsUniTask();
+      stopwatch.Stop();
+      // Note: Detailed metrics are logged via ApiClient.OnMetricsAvailable event
+      UnityEngine.Debug.Log($"[BrainAgentExtensions] Structured message generation (typed) completed in {stopwatch.ElapsedMilliseconds}ms");
+      return result;
     }
 
     /// <summary>
@@ -66,7 +82,12 @@ namespace LlamaBrain.Runtime.Core
     /// <returns>The deserialized response object</returns>
     public static async UniTask<T?> SendStructuredInstructionAsync<T>(this BrainAgent brainAgent, string instruction, string jsonSchema, string? context = null, CancellationToken cancellationToken = default) where T : class
     {
-      return await brainAgent.SendStructuredInstructionAsync<T>(instruction, jsonSchema, context, cancellationToken).AsUniTask();
+      var stopwatch = Stopwatch.StartNew();
+      var result = await brainAgent.SendStructuredInstructionAsync<T>(instruction, jsonSchema, context, cancellationToken).AsUniTask();
+      stopwatch.Stop();
+      // Note: Detailed metrics are logged via ApiClient.OnMetricsAvailable event
+      UnityEngine.Debug.Log($"[BrainAgentExtensions] Structured instruction generation (typed) completed in {stopwatch.ElapsedMilliseconds}ms");
+      return result;
     }
 
     /// <summary>
@@ -78,7 +99,12 @@ namespace LlamaBrain.Runtime.Core
     /// <returns>The persona's response</returns>
     public static async UniTask<string> SendMessageAsync(this BrainAgent brainAgent, string message, CancellationToken cancellationToken = default)
     {
-      return await brainAgent.SendMessageAsync(message, cancellationToken).AsUniTask();
+      var stopwatch = Stopwatch.StartNew();
+      var result = await brainAgent.SendMessageAsync(message, cancellationToken).AsUniTask();
+      stopwatch.Stop();
+      // Note: Detailed metrics are logged via ApiClient.OnMetricsAvailable event
+      UnityEngine.Debug.Log($"[BrainAgentExtensions] Message generation completed in {stopwatch.ElapsedMilliseconds}ms");
+      return result;
     }
 
     /// <summary>
@@ -90,7 +116,12 @@ namespace LlamaBrain.Runtime.Core
     /// <returns>The persona's response</returns>
     public static async UniTask<string> SendSimpleMessageAsync(this BrainAgent brainAgent, string message, CancellationToken cancellationToken = default)
     {
-      return await brainAgent.SendSimpleMessageAsync(message, cancellationToken).AsUniTask();
+      var stopwatch = Stopwatch.StartNew();
+      var result = await brainAgent.SendSimpleMessageAsync(message, cancellationToken).AsUniTask();
+      stopwatch.Stop();
+      // Note: Detailed metrics are logged via ApiClient.OnMetricsAvailable event
+      UnityEngine.Debug.Log($"[BrainAgentExtensions] Simple message generation completed in {stopwatch.ElapsedMilliseconds}ms");
+      return result;
     }
 
     /// <summary>
@@ -103,7 +134,12 @@ namespace LlamaBrain.Runtime.Core
     /// <returns>The persona's response</returns>
     public static async UniTask<string> SendInstructionAsync(this BrainAgent brainAgent, string instruction, string? context = null, CancellationToken cancellationToken = default)
     {
-      return await brainAgent.SendInstructionAsync(instruction, context, cancellationToken).AsUniTask();
+      var stopwatch = Stopwatch.StartNew();
+      var result = await brainAgent.SendInstructionAsync(instruction, context, cancellationToken).AsUniTask();
+      stopwatch.Stop();
+      // Note: Detailed metrics are logged via ApiClient.OnMetricsAvailable event
+      UnityEngine.Debug.Log($"[BrainAgentExtensions] Instruction generation completed in {stopwatch.ElapsedMilliseconds}ms");
+      return result;
     }
   }
 }

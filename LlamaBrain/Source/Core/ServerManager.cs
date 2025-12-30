@@ -26,6 +26,10 @@ namespace LlamaBrain.Core
     /// </summary>
     private bool _disposed = false;
     /// <summary>
+    /// The last arguments used to start the server
+    /// </summary>
+    private string _lastArguments = "";
+    /// <summary>
     /// Maximum process startup timeout in seconds
     /// </summary>
     private const int MaxStartupTimeoutSeconds = 30;
@@ -45,6 +49,21 @@ namespace LlamaBrain.Core
     /// Maximum arguments length
     /// </summary>
     private const int MaxArgumentsLength = 1000;
+
+    /// <summary>
+    /// Gets the last arguments used to start the server
+    /// </summary>
+    public string LastStartupArguments => _lastArguments;
+
+    /// <summary>
+    /// Event fired when the server outputs a log message (stdout)
+    /// </summary>
+    public event Action<string>? OnServerOutput;
+
+    /// <summary>
+    /// Event fired when the server outputs an error message (stderr)
+    /// </summary>
+    public event Action<string>? OnServerError;
 
     /// <summary>
     /// Constructor
@@ -99,6 +118,9 @@ namespace LlamaBrain.Core
         // Validate and sanitize arguments
         var arguments = BuildAndValidateArguments(modelPath);
 
+        // Store arguments for external access (e.g., Unity logging)
+        _lastArguments = arguments;
+
         Logger.Info($"[Server] Starting llama-server: {exePath}");
         Logger.Info($"[Server] Arguments: {arguments}");
 
@@ -122,7 +144,14 @@ namespace LlamaBrain.Core
           if (!string.IsNullOrEmpty(e.Data))
           {
             var sanitizedOutput = SanitizeProcessOutput(e.Data);
-            Logger.Info($"[llama-server] {sanitizedOutput}");
+
+            // Filter out verbose/unnecessary messages
+            if (!ShouldFilterServerLog(sanitizedOutput))
+            {
+              Logger.Info($"[llama-server] {sanitizedOutput}");
+              // Fire event for external subscribers (e.g., Unity)
+              OnServerOutput?.Invoke(sanitizedOutput);
+            }
           }
         };
 
@@ -131,7 +160,14 @@ namespace LlamaBrain.Core
           if (!string.IsNullOrEmpty(e.Data))
           {
             var sanitizedError = SanitizeProcessOutput(e.Data);
-            Logger.Error($"[llama-server] {sanitizedError}");
+
+            // Filter out verbose/unnecessary messages (errors are usually important, but some are just verbose)
+            if (!ShouldFilterServerLog(sanitizedError))
+            {
+              Logger.Error($"[llama-server] {sanitizedError}");
+              // Fire event for external subscribers (e.g., Unity)
+              OnServerError?.Invoke(sanitizedError);
+            }
           }
         };
 
@@ -499,7 +535,54 @@ namespace LlamaBrain.Core
     /// </summary>
     private string BuildAndValidateArguments(string modelPath)
     {
-      var arguments = $"--port {_config.Port} -m \"{modelPath}\" --ctx-size {_config.ContextSize}";
+      var argsList = new List<string>
+      {
+        $"--port {_config.Port}",
+        $"-m \"{modelPath}\"",
+        $"--ctx-size {_config.ContextSize}"
+      };
+
+      // GPU offload (critical for performance)
+      if (_config.GpuLayers > 0)
+      {
+        argsList.Add($"-ngl {_config.GpuLayers}");
+      }
+
+      // CPU threads
+      if (_config.Threads > 0)
+      {
+        argsList.Add($"-t {_config.Threads}");
+      }
+
+      // Batch sizes
+      if (_config.BatchSize > 0)
+      {
+        argsList.Add($"-b {_config.BatchSize}");
+      }
+
+      if (_config.UBatchSize > 0)
+      {
+        argsList.Add($"--ubatch-size {_config.UBatchSize}");
+      }
+
+      // Memory locking
+      if (_config.UseMlock)
+      {
+        argsList.Add("--mlock");
+      }
+
+      // Parallel slots (default to 1 for lowest latency, higher for throughput)
+      // Using 1 slot reduces scheduling overhead significantly
+      var parallelSlots = _config.ParallelSlots > 0 ? _config.ParallelSlots : 1;
+      argsList.Add($"--parallel {parallelSlots}");
+
+      // Continuous batching can help with multi-request scenarios
+      if (_config.UseContinuousBatching)
+      {
+        argsList.Add("--cont-batching");
+      }
+
+      var arguments = string.Join(" ", argsList);
 
       if (arguments.Length > MaxArgumentsLength)
         throw new ArgumentException($"Arguments too long: {arguments.Length} characters (max: {MaxArgumentsLength})");
@@ -510,6 +593,110 @@ namespace LlamaBrain.Core
         throw new ArgumentException("Arguments contain dangerous characters");
 
       return arguments;
+    }
+
+    /// <summary>
+    /// Check if a server log line should be filtered out (verbose/unnecessary messages)
+    /// </summary>
+    private bool ShouldFilterServerLog(string line)
+    {
+      if (string.IsNullOrWhiteSpace(line))
+        return true;
+
+      // Filter out verbose tensor loading messages
+      if (line.Contains("llama_model_loader: - tensor") ||
+          line.Contains("llama_model_loader: - type") ||
+          line.Contains("llama_model_loader: - kv") ||
+          line.Contains("llama_model_loader: Dumping metadata"))
+        return true;
+
+      // Filter out verbose model info dumps
+      if (line.Contains("print_info:") && (
+          line.Contains("arch") ||
+          line.Contains("vocab_only") ||
+          line.Contains("n_ctx_train") ||
+          line.Contains("n_embd") ||
+          line.Contains("n_layer") ||
+          line.Contains("n_head") ||
+          line.Contains("n_rot") ||
+          line.Contains("n_ff") ||
+          line.Contains("f_norm") ||
+          line.Contains("rope") ||
+          line.Contains("causal attn") ||
+          line.Contains("pooling type") ||
+          line.Contains("model type") ||
+          line.Contains("model params") ||
+          line.Contains("vocab type") ||
+          line.Contains("n_vocab") ||
+          line.Contains("n_merges") ||
+          line.Contains("token") && line.Contains("token")))
+        return true;
+
+      // Filter out chat template dumps
+      if (line.Contains("load_model: chat template") ||
+          line.Contains("chat_template:") ||
+          line.Contains("example_format:"))
+        return true;
+
+      // Filter out verbose loading progress (keep important ones)
+      if (line.Contains("load_tensors: loading model tensors") ||
+          line.Contains("load_tensors: - tensor") ||
+          line.Contains("llama_context: constructing") ||
+          line.Contains("llama_context: n_") ||
+          line.Contains("llama_context: causal_attn") ||
+          line.Contains("llama_context: flash_attn") ||
+          line.Contains("llama_context: kv_unified") ||
+          line.Contains("llama_context: freq_") ||
+          line.Contains("llama_kv_cache: size =") ||
+          line.Contains("llama_kv_cache:      CUDA") ||
+          line.Contains("llama_context:      CUDA") ||
+          line.Contains("llama_context: graph nodes") ||
+          line.Contains("llama_context: graph splits") ||
+          line.Contains("slot   load_model: id") ||
+          line.Contains("slot   launch_slot_") ||
+          line.Contains("slot   update_slots:") ||
+          line.Contains("slot   print_timing:") ||
+          line.Contains("slot      release:") ||
+          line.Contains("slot get_availabl:") ||
+          line.Contains("slot launch_slot_:") ||
+          line.Contains("slot update_slots:") ||
+          line.Contains("slot print_timing:") ||
+          line.Contains("srv  update_slots:") ||
+          line.Contains("srv  get_availabl:") ||
+          line.Contains("srv   prompt_save:") ||
+          line.Contains("srv          load:") ||
+          line.Contains("srv        update:") ||
+          line.Contains("srv  log_server_r:"))
+        return true;
+
+      // Filter out verbose system info dumps
+      if (line.Contains("system_info:") && (
+          line.Contains("n_threads =") ||
+          line.Contains("CUDA : ARCHS") ||
+          line.Contains("CPU : SSE") ||
+          line.Contains("USE_GRAPHS") ||
+          line.Contains("PEER_MAX")))
+        return true;
+
+      // Filter out tiny internal eval timing lines (not real requests)
+      // These are internal llama.cpp events with <= 2 tokens or 0.00ms eval time
+      if (line.Contains("eval time =") || line.Contains("prompt eval time =") || line.Contains("total time ="))
+      {
+        // Extract token count from timing line (e.g., "eval time = 0.00 ms / 1 tokens" or "total time = 0.41 ms / 2 tokens")
+        var tokenMatch = System.Text.RegularExpressions.Regex.Match(line, @"/\s+(\d+)\s+tokens");
+        if (tokenMatch.Success && int.TryParse(tokenMatch.Groups[1].Value, out int tokenCount))
+        {
+          if (tokenCount <= 2)
+            return true; // Tiny internal event, not a real request
+        }
+
+        // Filter lines with 0.00 ms eval time (internal events)
+        if (line.Contains("eval time =       0.00 ms") || line.Contains("eval time = 0.00 ms"))
+          return true;
+      }
+
+      // Keep important messages
+      return false;
     }
 
     /// <summary>

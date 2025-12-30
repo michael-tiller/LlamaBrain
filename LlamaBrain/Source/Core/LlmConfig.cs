@@ -9,7 +9,7 @@ namespace LlamaBrain.Core
   /// </summary>
   public class LlmConfig
   {
-    private int maxTokens = 64;
+    private int maxTokens = 32; // Default to 32 tokens for snappy NPC responses (24-32 token range)
     private float temperature = 0.7f;
     private float topP = 0.9f;
     private int topK = 40;

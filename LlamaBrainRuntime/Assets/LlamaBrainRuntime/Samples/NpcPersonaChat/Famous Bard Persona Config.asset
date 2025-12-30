@@ -19,7 +19,7 @@ MonoBehaviour:
   SystemPrompt: You are roleplaying as an Bard character for a game. Respond ONLY
     with the dialog content - no additional actions, no reasoning, no explanations,
     no step-by-step thinking, no future. Keep your response simple, short and natural.
-    Single paragraph only.
+    Respond with one line only.
   Background: 
   UseMemory: 1
   TraitAssignments:
