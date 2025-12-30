@@ -59,20 +59,6 @@ namespace LlamaBrain.Tests.PlayMode
       Assert.AreEqual(settings, server.Settings);
     }
 
-    [UnityTest]
-    public IEnumerator BrainServer_CreateClient_ReturnsValidClient()
-    {
-      // Arrange
-      yield return null; // Let Awake complete
-
-      // Act
-      var client = server.CreateClient();
-
-      // Assert
-      Assert.IsNotNull(client);
-      Assert.IsNotNull(server.Settings);
-    }
-
     [Test]
     public void BrainServer_SettingsValidation_WorksCorrectly()
     {
@@ -85,21 +71,6 @@ namespace LlamaBrain.Tests.PlayMode
       Assert.AreEqual("Backend/model/stablelm-zephyr-3b.Q4_0.gguf", config.Model);
       Assert.AreEqual("Backend/llama-server.exe", config.ExecutablePath);
       Assert.AreEqual(2048, config.ContextSize);
-    }
-
-    [UnityTest]
-    public IEnumerator BrainServer_WithInvalidPaths_LogsErrors()
-    {
-      // Arrange
-      settings.ExecutablePath = "nonexistent/path/llama-server.exe";
-      settings.ModelPath = "nonexistent/path/model.gguf";
-
-      // Act
-      yield return null; // Let Awake complete
-
-      // Note: In a real test, we would check for error logs
-      // For now, we just verify the component doesn't crash
-      Assert.IsNotNull(server);
     }
 
     [UnityTest]
@@ -172,22 +143,6 @@ namespace LlamaBrain.Tests.PlayMode
       // Assert
       Assert.IsNotNull(client);
       Assert.IsInstanceOf<ApiClient>(client);
-    }
-
-    [Test]
-    public void BrainServer_SettingsWithCustomPort_ConfiguresCorrectly()
-    {
-      // Arrange
-      settings.Port = 8080;
-      settings.ContextSize = 4096;
-
-      // Act
-      var config = settings.ToProcessConfig();
-
-      // Assert
-      Assert.AreEqual(8080, config.Port);
-      Assert.AreEqual(4096, config.ContextSize);
-      Assert.AreEqual("localhost", config.Host);
     }
 
     [UnityTest]

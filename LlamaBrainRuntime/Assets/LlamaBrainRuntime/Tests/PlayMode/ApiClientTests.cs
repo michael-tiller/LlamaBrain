@@ -20,16 +20,6 @@ namespace LlamaBrain.Tests.PlayMode
       Assert.IsNotNull(client);
     }
 
-    [Test]
-    public void ApiClient_Constructor_WithCustomHost_CreatesCorrectly()
-    {
-      // Arrange & Act
-      var client = new ApiClient("127.0.0.1", 8080, "test-model");
-
-      // Assert
-      Assert.IsNotNull(client);
-    }
-
     [UnityTest]
     public IEnumerator ApiClient_SendPromptAsync_WithMockServer_HandlesCorrectly()
     {

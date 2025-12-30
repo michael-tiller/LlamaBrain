@@ -3,6 +3,8 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.UI;
+using LlamaBrain.Runtime.Demo;
+using LlamaBrain.Runtime.RedRoom.Interaction;
 
 namespace LlamaBrain.Runtime.RedRoom.AI
 {
@@ -11,11 +13,23 @@ namespace LlamaBrain.Runtime.RedRoom.AI
   /// NPC follower component that uses NavMeshAgent for pathfinding and CharacterController for movement.
   /// Follows a target transform while maintaining a desired follow distance, with automatic recovery from stuck states,
   /// off-mesh link traversal, and embedded geometry detection. Includes comprehensive debug visualization and stuck state diagnostics.
+  /// This is the main "NPC" component - it owns the brain (NpcAgentExample) and tracks the current dialogue trigger.
   /// </summary>
   [RequireComponent(typeof(NavMeshAgent))]
   [RequireComponent(typeof(CharacterController))]
+  [RequireComponent(typeof(NpcAgentExample))]
   public sealed class NpcFollowerExample : MonoBehaviour
   {
+    /// <summary>
+    /// The NPC's brain/dialogue component. Cached on Awake.
+    /// </summary>
+    public NpcAgentExample Agent { get; private set; }
+
+    /// <summary>
+    /// The dialogue trigger this NPC is currently inside (set by NpcDialogueTrigger on enter/exit).
+    /// </summary>
+    public NpcDialogueTrigger CurrentDialogueTrigger { get; set; }
+
     /// <summary>
     /// Enumeration of possible causes for the NPC being stuck or unable to move.
     /// Used for diagnostic logging and recovery decision-making.
@@ -196,6 +210,10 @@ namespace LlamaBrain.Runtime.RedRoom.AI
     // Cached path for validation (reused to avoid allocations)
     private NavMeshPath _path;
 
+    /// <summary>Whether the prompt indicator is currently showing.</summary>
+    private bool isShowingPromptIndicator = false;
+    public bool IsShowingPromptIndicator => isShowingPromptIndicator;
+
     /// <summary>
     /// Initializes the component, configures NavMeshAgent and CharacterController,
     /// validates required settings, and attempts to recover if spawned off the NavMesh.
@@ -204,6 +222,7 @@ namespace LlamaBrain.Runtime.RedRoom.AI
     {
       _agent = GetComponent<NavMeshAgent>();
       _cc = GetComponent<CharacterController>();
+      Agent = GetComponent<NpcAgentExample>();
 
       // Required: agent steers only, CC moves only
       _agent.updatePosition = false;
@@ -2024,6 +2043,7 @@ namespace LlamaBrain.Runtime.RedRoom.AI
       if (promptIndicator == null || promptIndicatorText == null) return;
       promptIndicator.SetActive(true);
       promptIndicatorText.text = text;
+      isShowingPromptIndicator = true;
     }
 
     /// <summary>
@@ -2034,6 +2054,7 @@ namespace LlamaBrain.Runtime.RedRoom.AI
       Debug.LogFormat("{0}: {1}", nameof(NpcFollowerExample), nameof(HidePromptIndicator));
       if (promptIndicator == null) return;
       promptIndicator.SetActive(false);
+      isShowingPromptIndicator = false;
     }
   }
 }

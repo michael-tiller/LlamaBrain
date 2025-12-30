@@ -101,6 +101,16 @@ namespace LlamaBrain.Runtime.Core
     /// The memories of the persona.
     /// </summary>
     public string Memories => Application.isPlaying ? string.Join("\n", memoryProvider.GetMemory(runtimeProfile)) : string.Empty;
+    
+    /// <summary>
+    /// The last completion metrics from the most recent request (for metrics collection).
+    /// </summary>
+    public CompletionMetrics LastMetrics { get; private set; }
+    
+    /// <summary>
+    /// Gets the maximum response tokens setting (for metrics collection).
+    /// </summary>
+    public int MaxResponseTokens => maxResponseTokens;
 
     /// <summary>
     /// Initializes the LlamaBrain agent.
@@ -212,6 +222,16 @@ namespace LlamaBrain.Runtime.Core
       if (runtimeProfile == null && PersonaConfig != null)
       {
         runtimeProfile = PersonaConfig.ToProfile();
+      }
+
+      // Create a default profile if still null (fallback for uninitialized agents)
+      if (runtimeProfile == null)
+      {
+        var defaultPersonaId = gameObject.name + "-persona";
+        runtimeProfile = PersonaProfile.Create(defaultPersonaId, gameObject.name);
+        runtimeProfile.Description = "A helpful NPC";
+        runtimeProfile.SystemPrompt = "You are a helpful NPC.";
+        UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] RuntimeProfile was null, created default profile: {runtimeProfile.Name}");
       }
 
       // Ensure dialogue session is initialized (lazy initialization if Initialize() wasn't called)
@@ -1330,6 +1350,8 @@ namespace LlamaBrain.Runtime.Core
     /// <param name="metrics">The performance metrics</param>
     private void OnPerformanceMetricsReceived(CompletionMetrics metrics)
     {
+      // Store last metrics for external access
+      LastMetrics = metrics;
       // Extract model name from path
       var modelName = !string.IsNullOrEmpty(modelPath)
         ? System.IO.Path.GetFileName(modelPath)

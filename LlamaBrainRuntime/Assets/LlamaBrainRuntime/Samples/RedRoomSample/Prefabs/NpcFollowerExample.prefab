@@ -428,6 +428,8 @@ GameObject:
   - component: {fileID: 8042160653347692951}
   - component: {fileID: 7210526107106145127}
   - component: {fileID: 2910925531202130103}
+  - component: {fileID: 4789795164934960474}
+  - component: {fileID: 4982463300328223418}
   m_Layer: 7
   m_Name: NpcFollowerExample
   m_TagString: NPC
@@ -607,7 +609,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   collider: {fileID: 5100800789138776379}
-  triggerTag: Trigger
   onCollisionEnterTrigger:
     m_PersistentCalls:
       m_Calls:
@@ -692,6 +693,41 @@ CapsuleCollider:
   m_Height: 1.8
   m_Direction: 1
   m_Center: {x: 0, y: 0.93, z: 0}
+--- !u!114 &4789795164934960474
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1493670011543699365}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9636d82dc8a638940a6496451ca5f06b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  PersonaConfig: {fileID: 11400000, guid: f41df21f884db6e419a5a31912eab0bb, type: 2}
+  PromptSettings: {fileID: 11400000, guid: 12345678901234567890123456789012, type: 2}
+  MemoryCategoryManager: {fileID: 11400000, guid: 683654e303f426f4abb8ce4fd1d55d68, type: 2}
+  maxConversationHistoryEntries: 20
+  storeConversationHistory: 1
+  maxResponseTokens: 24
+--- !u!114 &4982463300328223418
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1493670011543699365}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5548d8a803618a94996aef557d9a2204, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  agent: {fileID: 0}
+  settings: {fileID: 11400000, guid: b2b791071362bfc47a36efc1617d8a00, type: 2}
+  onNpcResponse:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &1613776009843425315
 GameObject:
   m_ObjectHideFlags: 0
@@ -1800,7 +1836,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   head: {fileID: 6835035142095136229}
-  offset: {x: 0, y: 2.5, z: 0}
+  offset: {x: 0, y: 2, z: 0}
   cam: {fileID: 0}
 --- !u!1 &3922249289105112282
 GameObject:
@@ -2397,7 +2433,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 60, y: 60}
+  m_SizeDelta: {x: 48, y: 48}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &7331728494708498177
 CanvasRenderer:
