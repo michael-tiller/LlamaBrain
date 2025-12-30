@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "e:\\Personal\\LlamaBrain\\LlamaBrain\\LlamaBrain.csproj": {}
+    "E:\\Personal\\LlamaBrain\\LlamaBrain\\LlamaBrain.csproj": {}
   },
   "projects": {
-    "e:\\Personal\\LlamaBrain\\LlamaBrain\\LlamaBrain.csproj": {
+    "E:\\Personal\\LlamaBrain\\LlamaBrain\\LlamaBrain.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "e:\\Personal\\LlamaBrain\\LlamaBrain\\LlamaBrain.csproj",
+        "projectUniqueName": "E:\\Personal\\LlamaBrain\\LlamaBrain\\LlamaBrain.csproj",
         "projectName": "LlamaBrain",
-        "projectPath": "e:\\Personal\\LlamaBrain\\LlamaBrain\\LlamaBrain.csproj",
+        "projectPath": "E:\\Personal\\LlamaBrain\\LlamaBrain\\LlamaBrain.csproj",
         "packagesPath": "C:\\Users\\metag\\.nuget\\packages\\",
-        "outputPath": "e:\\Personal\\LlamaBrain\\LlamaBrain\\obj\\",
+        "outputPath": "E:\\Personal\\LlamaBrain\\LlamaBrain\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

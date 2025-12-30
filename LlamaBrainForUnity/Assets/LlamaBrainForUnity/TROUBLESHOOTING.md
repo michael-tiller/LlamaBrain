@@ -232,24 +232,135 @@ This guide helps you resolve common issues when using LlamaBrain for Unity.
 **Symptoms**: Slow response times or frame drops
 
 **Solutions:**
-1. **Optimize Model Settings**
+1. **Enable GPU Acceleration (CRITICAL)**
    ```
-   - Use smaller models for real-time applications
-   - Reduce context size
-   - Lower max tokens
-   - Adjust temperature and top-p
+   - Set GpuLayers to 35+ in BrainSettings (requires CUDA-enabled llama.cpp)
+   - Without GPU: Expect 5-10 tokens/sec (very slow)
+   - With GPU (RTX 4070 Ti): Expect 100-200 tokens/sec (fast)
+   - Check Unity Console for "[llama-server] load_tensors: offloaded X/X layers to GPU"
    ```
 
-2. **Implement Caching**
+2. **Optimize HttpClient Configuration**
+   ```
+   - The system automatically uses optimized settings:
+     * UseProxy = false (disables Windows proxy detection - saves 2+ seconds!)
+     * ExpectContinue = false (removes HTTP round-trip delay)
+     * Uses 127.0.0.1 instead of localhost (avoids DNS resolution)
+   - These optimizations reduce latency from ~2200ms to ~200ms
+   ```
+
+3. **Configure llama.cpp Server Settings**
+   ```
+   - Parallel Slots: Set to 1 for lowest latency (default)
+     * 1 slot = ~200ms latency (best for single NPC)
+     * 4 slots = ~2000ms latency (better for multiple concurrent NPCs)
+   - Batch Size: 512 (default, good for most GPUs)
+   - UBatch Size: 128 (default, good for token generation)
+   - Use Mlock: Enabled (prevents swapping, improves stability)
+   ```
+
+4. **Optimize Model Settings**
+   ```
+   - Use smaller models for real-time applications (3B-7B parameters)
+   - Reduce context size (384-1024 for NPCs, 2048-4096 for complex dialogue)
+   - Set appropriate max tokens:
+     * Barks: 8-12 tokens (~50-100ms with GPU)
+     * Normal replies: 20-30 tokens (~150-250ms with GPU)
+     * Dialogue screen: 30-50 tokens (~250-400ms with GPU)
+   - Adjust temperature and top-p for faster generation
+   ```
+
+5. **Monitor Performance Metrics**
+   ```
+   - Check Unity Console for performance logs:
+     * TTFT (Time To First Token): Should be <50ms with GPU
+     * Decode Speed: Should be 100-200 tps with GPU, <10 tps indicates CPU-only
+     * Total Wall Time: Should be <300ms for typical NPC responses
+   - Warning logs appear if decode speed <50 tps (suggests GPU not being used)
+   ```
+
+6. **Implement Caching**
    ```csharp
    // Cache common responses
    private Dictionary<string, string> responseCache = new();
    ```
 
-3. **Use Async Operations**
+7. **Use Async Operations**
    ```csharp
    // Don't block the main thread
    var response = await brainAgent.SendPlayerInputAsync(message);
+   ```
+
+#### High Latency (>2 seconds per request)
+**Symptoms**: Requests take 2+ seconds even with GPU acceleration
+
+**Possible Causes:**
+- Windows proxy detection enabled (adds 2+ second delay)
+- Too many parallel slots (scheduling overhead)
+- CPU-only inference (GPU not being used)
+- Network/DNS resolution delays
+
+**Solutions:**
+1. **Verify HttpClient Optimizations**
+   ```
+   - Check that UseProxy = false is set (automatic in latest version)
+   - Verify 127.0.0.1 is used instead of localhost (automatic)
+   - Ensure ExpectContinue = false (automatic)
+   ```
+
+2. **Check GPU Usage**
+   ```
+   - Look for "[llama-server] load_tensors: offloaded X/X layers to GPU" in logs
+   - If you see "CPU only" or decode speed <50 tps, GPU is not being used
+   - Verify CUDA-enabled llama.cpp build
+   - Check GpuLayers setting (should be 35+)
+   ```
+
+3. **Reduce Parallel Slots**
+   ```
+   - Set ParallelSlots = 1 in BrainSettings (default)
+   - Only increase if you need multiple concurrent NPCs
+   ```
+
+4. **Test Direct Server Access**
+   ```powershell
+   # Test if server itself is fast (should be <100ms)
+   $body = @{ prompt = "Hello"; n_predict = 10 } | ConvertTo-Json
+   Measure-Command { Invoke-RestMethod -Uri "http://127.0.0.1:5000/completion" -Method POST -Body $body -ContentType "application/json" }
+   ```
+   - If PowerShell test is fast (<100ms) but Unity is slow (>2000ms), check HttpClient configuration
+   - If PowerShell test is also slow, check llama.cpp server settings
+
+#### Low Decode Speed (<50 tokens/sec)
+**Symptoms**: Performance metrics show low decode speed despite GPU
+
+**Solutions:**
+1. **Verify GPU Offload**
+   ```
+   - Check server startup logs for "offloaded X/X layers to GPU"
+   - Ensure GpuLayers = 35+ (or -1 for all layers)
+   - Verify CUDA-enabled llama.cpp build
+   ```
+
+2. **Check Model Quantization**
+   ```
+   - Q4_0 or Q4_K_M quantizations are good balance of speed/quality
+   - Q8_0 or F16 are slower but higher quality
+   - Use Q4_0 for real-time NPC dialogue
+   ```
+
+3. **Optimize Batch Sizes**
+   ```
+   - BatchSize: 512 (good default for most GPUs)
+   - UBatchSize: 128 (good default for token generation)
+   - Lower values = less VRAM usage but potentially slower
+   ```
+
+4. **Check System Resources**
+   ```
+   - Ensure GPU has sufficient VRAM (3B model needs ~2GB, 7B needs ~4GB)
+   - Close other GPU-intensive applications
+   - Check GPU temperature/throttling
    ```
 
 ### Configuration Issues

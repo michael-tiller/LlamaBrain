@@ -16,11 +16,18 @@ MonoBehaviour:
   ModelPath: Backend/model/stablelm-zephyr-3b.Q4_0.gguf
   Port: 5000
   ContextSize: 2048
+  GpuLayers: 35
+  Threads: 0
+  BatchSize: 512
+  UBatchSize: 128
+  UseMlock: 1
+  ParallelSlots: 1
+  UseContinuousBatching: 0
   MaxTokens: 64
-  Temperature: 0.7
+  Temperature: 0.9
   TopP: 0.9
   TopK: 40
-  RepeatPenalty: 1.1
+  RepeatPenalty: 1.378
   StopSequences:
   - </s>
   - 'Human:'

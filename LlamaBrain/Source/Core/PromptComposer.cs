@@ -510,5 +510,103 @@ namespace LlamaBrain.Core
 
       return result;
     }
+
+    /// <summary>
+    /// Composes a prompt split into static prefix (for KV cache) and dynamic suffix
+    /// </summary>
+    /// <param name="profile">The persona profile to use</param>
+    /// <param name="session">The dialogue session with conversation history</param>
+    /// <param name="userInput">The current user input</param>
+    /// <param name="includeTraits">Whether to include personality traits in the prompt (default: true)</param>
+    /// <returns>Tuple of (prefix, suffix) where prefix is static and can be cached</returns>
+    public (string prefix, string suffix) ComposePromptWithPrefix(PersonaProfile profile, DialogueSession session, string userInput, bool includeTraits = true)
+    {
+      if (profile == null)
+        throw new ArgumentNullException(nameof(profile));
+
+      if (session == null)
+        throw new ArgumentNullException(nameof(session));
+
+      if (string.IsNullOrWhiteSpace(userInput))
+        throw new ArgumentException("User input cannot be null or empty", nameof(userInput));
+
+      var prefixBuilder = new StringBuilder();
+      var suffixBuilder = new StringBuilder();
+
+      // Static prefix: system prompt, persona description, traits, background
+      // This part rarely changes and can be cached
+      if (!string.IsNullOrWhiteSpace(profile.SystemPrompt))
+      {
+        prefixBuilder.AppendLine($"System: {profile.SystemPrompt}");
+        prefixBuilder.AppendLine();
+      }
+
+      if (!string.IsNullOrWhiteSpace(profile.Description))
+      {
+        prefixBuilder.AppendLine($"You are {profile.Name}, {profile.Description}");
+        prefixBuilder.AppendLine();
+      }
+
+      if (includeTraits && profile.Traits.Count > 0)
+      {
+        prefixBuilder.AppendLine("Your personality traits:");
+        foreach (var trait in profile.Traits)
+        {
+          prefixBuilder.AppendLine($"- {trait.Key}: {trait.Value}");
+        }
+        prefixBuilder.AppendLine();
+      }
+
+      if (!string.IsNullOrWhiteSpace(profile.Background))
+      {
+        prefixBuilder.AppendLine($"Background: {profile.Background}");
+        prefixBuilder.AppendLine();
+      }
+
+      // Dynamic suffix: conversation history + current input
+      // This changes every request
+      var history = session.GetHistory();
+      if (history.Count > 0)
+      {
+        suffixBuilder.AppendLine("Conversation history:");
+
+        var recentHistory = history.Count > MaxHistoryEntries
+          ? history.Skip(history.Count - MaxHistoryEntries).Take(MaxHistoryEntries)
+          : history;
+
+        foreach (var entry in recentHistory)
+        {
+          suffixBuilder.AppendLine(entry);
+        }
+        suffixBuilder.AppendLine();
+      }
+
+      suffixBuilder.AppendLine($"Player: {userInput}");
+      suffixBuilder.AppendLine($"{profile.Name}:");
+
+      var prefix = prefixBuilder.ToString();
+      var suffix = suffixBuilder.ToString();
+
+      // Truncate if too long
+      var totalLength = prefix.Length + suffix.Length;
+      if (totalLength > MaxContextLength)
+      {
+        var availableForSuffix = MaxContextLength - prefix.Length;
+        if (availableForSuffix > 0)
+        {
+          suffix = suffix.Length > availableForSuffix
+            ? suffix.Substring(0, availableForSuffix) + "..."
+            : suffix;
+        }
+        else
+        {
+          // Prefix itself is too long, truncate it
+          prefix = prefix.Substring(0, MaxContextLength) + "...";
+          suffix = string.Empty;
+        }
+      }
+
+      return (prefix, suffix);
+    }
   }
 }

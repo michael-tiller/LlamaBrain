@@ -100,9 +100,10 @@ namespace LlamaBrain.Tests.EditMode
         stop = true,
         timings = new Timings
         {
-          pred_ms = 100,
-          prompt_ms = 50,
-          total_ms = 150
+          predicted_ms = 100.0,
+          prompt_ms = 50.0,
+          predicted_n = 20,
+          prompt_n = 100
         },
         tokens_predicted = 50,
         tokens_cached = 100,
@@ -113,9 +114,10 @@ namespace LlamaBrain.Tests.EditMode
       Assert.AreEqual("Generated response", response.content);
       Assert.IsTrue(response.stop);
       Assert.IsNotNull(response.timings);
-      Assert.AreEqual(100, response.timings.pred_ms);
-      Assert.AreEqual(50, response.timings.prompt_ms);
-      Assert.AreEqual(150, response.timings.total_ms);
+      Assert.AreEqual(100.0, response.timings.predicted_ms);
+      Assert.AreEqual(50.0, response.timings.prompt_ms);
+      Assert.AreEqual(20, response.timings.predicted_n);
+      Assert.AreEqual(100, response.timings.prompt_n);
       Assert.AreEqual(50, response.tokens_predicted);
       Assert.AreEqual(100, response.tokens_cached);
       Assert.AreEqual(200, response.tokens_evaluated);
@@ -131,9 +133,10 @@ namespace LlamaBrain.Tests.EditMode
         stop = true,
         timings = new Timings
         {
-          pred_ms = 25,
-          prompt_ms = 10,
-          total_ms = 35
+          predicted_ms = 25.0,
+          prompt_ms = 10.0,
+          predicted_n = 10,
+          prompt_n = 50
         },
         tokens_predicted = 25
       };
@@ -146,9 +149,10 @@ namespace LlamaBrain.Tests.EditMode
       Assert.AreEqual(response.content, deserialized.content);
       Assert.AreEqual(response.stop, deserialized.stop);
       Assert.IsNotNull(deserialized.timings);
-      Assert.AreEqual(response.timings.pred_ms, deserialized.timings.pred_ms);
+      Assert.AreEqual(response.timings.predicted_ms, deserialized.timings.predicted_ms);
       Assert.AreEqual(response.timings.prompt_ms, deserialized.timings.prompt_ms);
-      Assert.AreEqual(response.timings.total_ms, deserialized.timings.total_ms);
+      Assert.AreEqual(response.timings.predicted_n, deserialized.timings.predicted_n);
+      Assert.AreEqual(response.timings.prompt_n, deserialized.timings.prompt_n);
       Assert.AreEqual(response.tokens_predicted, deserialized.tokens_predicted);
     }
   }

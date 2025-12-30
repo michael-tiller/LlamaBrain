@@ -25,6 +25,10 @@ namespace LlamaBrain.Editor
         /// Whether to show the stop sequences section
         /// </summary>
         private bool _showStopSequences = true;
+        /// <summary>
+        /// Whether to show the performance settings section
+        /// </summary>
+        private bool _showPerformanceSettings = true;
 
         /// <summary>
         /// Draws the inspector GUI
@@ -48,6 +52,59 @@ namespace LlamaBrain.Editor
                 settings.ModelPath = EditorGUILayout.TextField("Model Path", settings.ModelPath);
                 settings.Port = EditorGUILayout.IntField("Port", settings.Port);
                 settings.ContextSize = EditorGUILayout.IntField("Context Size", settings.ContextSize);
+                
+                EditorGUI.indentLevel--;
+                EditorGUILayout.Space();
+            }
+
+            // Performance Settings Section
+            _showPerformanceSettings = EditorGUILayout.Foldout(_showPerformanceSettings, "Performance Settings", true);
+            if (_showPerformanceSettings)
+            {
+                EditorGUI.indentLevel++;
+                
+                EditorGUILayout.HelpBox("Configure llama.cpp performance parameters. GPU offload provides 6-12x speedup over CPU-only.", MessageType.Info);
+                
+                settings.GpuLayers = EditorGUILayout.IntSlider("GPU Layers", settings.GpuLayers, 0, 100);
+                if (settings.GpuLayers == 0)
+                {
+                    EditorGUILayout.HelpBox("GPU Layers: 0 (CPU only - slow). Set to 35+ for GPU acceleration.", MessageType.Warning);
+                }
+                else if (settings.GpuLayers < 20)
+                {
+                    EditorGUILayout.HelpBox($"GPU Layers: {settings.GpuLayers} (partial offload - moderate speed).", MessageType.Info);
+                }
+                else
+                {
+                    EditorGUILayout.HelpBox($"GPU Layers: {settings.GpuLayers} (full offload - fastest). Requires CUDA-enabled llama.cpp.", MessageType.Info);
+                }
+                
+                settings.Threads = EditorGUILayout.IntSlider("CPU Threads", settings.Threads, 0, 32);
+                EditorGUILayout.HelpBox($"Threads: {(settings.Threads == 0 ? "Auto-detect (recommended)" : $"{settings.Threads} threads")}", MessageType.None);
+                
+                settings.BatchSize = EditorGUILayout.IntSlider("Batch Size", settings.BatchSize, 128, 2048);
+                EditorGUILayout.HelpBox($"Batch Size: {settings.BatchSize} (higher = faster prompt processing, more VRAM)", MessageType.None);
+                
+                settings.UBatchSize = EditorGUILayout.IntSlider("Micro-Batch Size", settings.UBatchSize, 32, 512);
+                EditorGUILayout.HelpBox($"Micro-Batch: {settings.UBatchSize} (for token generation)", MessageType.None);
+                
+                settings.UseMlock = EditorGUILayout.Toggle("Use Mlock", settings.UseMlock);
+                EditorGUILayout.HelpBox($"Mlock: {(settings.UseMlock ? "Enabled - locks model in RAM (recommended)" : "Disabled - model may be swapped to disk")}", MessageType.None);
+                
+                // Performance estimate
+                EditorGUILayout.Space();
+                if (settings.GpuLayers >= 35)
+                {
+                    EditorGUILayout.HelpBox("Expected Performance: 40-80 tokens/sec (GPU accelerated)\n14 tokens ≈ 0.2-0.4s", MessageType.Info);
+                }
+                else if (settings.GpuLayers > 0)
+                {
+                    EditorGUILayout.HelpBox("Expected Performance: 15-30 tokens/sec (partial GPU)\n14 tokens ≈ 0.5-1.0s", MessageType.Info);
+                }
+                else
+                {
+                    EditorGUILayout.HelpBox("Expected Performance: 5-10 tokens/sec (CPU only)\n14 tokens ≈ 1.4-2.8s", MessageType.Warning);
+                }
                 
                 EditorGUI.indentLevel--;
                 EditorGUILayout.Space();
@@ -187,6 +244,19 @@ namespace LlamaBrain.Editor
             if (settings.MaxTokens <= 0)
             {
                 warnings.Add("Max Tokens must be greater than 0");
+                hasWarnings = true;
+            }
+
+            // Performance settings warnings
+            if (settings.GpuLayers == 0 && settings.Threads == 0)
+            {
+                warnings.Add("Performance: CPU-only mode with auto threads. Consider enabling GPU offload for 6-12x speedup.");
+                hasWarnings = true;
+            }
+
+            if (settings.BatchSize < 128)
+            {
+                warnings.Add("Batch Size is very low. Recommended: 512 for best performance.");
                 hasWarnings = true;
             }
 
