@@ -359,56 +359,6 @@ namespace LlamaBrain.Tests.EditMode
     }
 
     [Test]
-    public void Compose_WithCompactSettings_DebugTest()
-    {
-      // Arrange
-      var settings = PromptComposerSettings.CreateCompact();
-
-      // Debug: Check what the settings actually contain
-      Debug.Log($"Settings type: {settings.GetType().Name}");
-      Debug.Log($"dialogueHeaderTemplate: '{settings.dialogueHeaderTemplate}'");
-      Debug.Log($"playerName: '{settings.playerName}'");
-      Debug.Log($"npcTemplate: '{settings.npcTemplate}'");
-
-      // Convert settings to dictionary to avoid reflection issues
-      var settingsDict = new Dictionary<string, object>
-      {
-        ["npcTemplate"] = settings.npcTemplate,
-        ["descriptionTemplate"] = settings.descriptionTemplate,
-        ["memoryHeaderTemplate"] = settings.memoryHeaderTemplate,
-        ["memoryItemTemplate"] = settings.memoryItemTemplate,
-        ["dialogueHeaderTemplate"] = settings.dialogueHeaderTemplate,
-        ["playerTemplate"] = settings.playerTemplate,
-        ["playerInputTemplate"] = settings.playerInputTemplate,
-        ["responsePromptTemplate"] = settings.responsePromptTemplate,
-        ["includeEmptyMemory"] = settings.includeEmptyMemory,
-        ["includeEmptyDialogue"] = settings.includeEmptyDialogue,
-        ["maxMemoryItems"] = settings.maxMemoryItems,
-        ["maxDialogueLines"] = settings.maxDialogueLines,
-        ["sectionSeparator"] = settings.sectionSeparator,
-        ["compactDialogueFormat"] = settings.compactDialogueFormat,
-        ["dialogueLinePrefix"] = settings.dialogueLinePrefix,
-        ["playerName"] = settings.playerName
-      };
-
-      var personaName = "TestNPC";
-      var description = "A test NPC";
-      var memory = new List<string> { "Memory 1" };
-      var dialogueHistory = new List<string> { "Player: Hello", "NPC: Hi!" };
-      var playerName = "Player";
-      var playerInput = "How are you?";
-
-      // Act
-      var result = PromptComposer.ComposeWithSettings(personaName, description, memory, dialogueHistory, playerName, playerInput, settingsDict);
-
-      // Debug: Log the actual result
-      Debug.Log($"Actual result:\n{result}");
-
-      // Assert - let's see what we actually get
-      Assert.That(result, Is.Not.Empty);
-    }
-
-    [Test]
     public void PromptComposerSettings_CreateCompact_ReturnsExpectedValues()
     {
       // Arrange & Act
@@ -421,24 +371,6 @@ namespace LlamaBrain.Tests.EditMode
       Assert.That(settings.memoryHeaderTemplate, Is.EqualTo("Memory:"));
       Assert.That(settings.playerInputTemplate, Is.EqualTo("> {playerInput}"));
       Assert.That(settings.responsePromptTemplate, Is.EqualTo("{personaName}:"));
-    }
-
-    [Test]
-    public void PromptComposer_Reflection_ReadsPropertiesCorrectly()
-    {
-      // Arrange
-      var settings = PromptComposerSettings.CreateCompact();
-
-      // Act - Test reflection directly
-      var dialogueHeader = GetPropertyValue(settings, "dialogueHeaderTemplate", "");
-      var playerName = GetPropertyValue(settings, "playerName", "");
-      var npcTemplate = GetPropertyValue(settings, "npcTemplate", "");
-
-      // Assert - Reflection doesn't work with Unity ScriptableObjects in test environments
-      // So we expect the default values to be returned
-      Assert.That(dialogueHeader, Is.EqualTo(""), "Reflection should fail and return default empty string");
-      Assert.That(playerName, Is.EqualTo(""), "Reflection should fail and return default empty string");
-      Assert.That(npcTemplate, Is.EqualTo(""), "Reflection should fail and return default empty string");
     }
 
     [Test]

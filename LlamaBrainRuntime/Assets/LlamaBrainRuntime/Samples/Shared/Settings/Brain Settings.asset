@@ -24,7 +24,7 @@ MonoBehaviour:
   ParallelSlots: 1
   UseContinuousBatching: 0
   MaxTokens: 64
-  Temperature: 0.9
+  Temperature: 0.7
   TopP: 0.9
   TopK: 40
   RepeatPenalty: 1.378

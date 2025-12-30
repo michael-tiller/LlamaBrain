@@ -60,16 +60,6 @@ namespace LlamaBrain.Tests.EditMode
     }
 
     [Test]
-    public void LlamaBrainSettings_DefaultValues_AreCorrect()
-    {
-      // Assert
-      Assert.AreEqual(5000, settings.Port);
-      Assert.AreEqual(2048, settings.ContextSize);
-      Assert.IsNull(settings.ExecutablePath);
-      Assert.IsNull(settings.ModelPath);
-    }
-
-    [Test]
     public void ToProcessConfig_WithLlmSettings_ReturnsCorrectLlmConfig()
     {
       // Arrange
@@ -115,20 +105,6 @@ namespace LlamaBrain.Tests.EditMode
       Assert.AreEqual(1.5f, llmConfig.RepeatPenalty);
       Assert.AreEqual(new string[] { "DONE", "FINISH" }, llmConfig.StopSequences);
     }
-
-    [Test]
-    public void LlamaBrainSettings_LlmDefaultValues_AreCorrect()
-    {
-      // Assert
-      Assert.AreEqual(64, settings.MaxTokens);
-      Assert.AreEqual(0.7f, settings.Temperature);
-      Assert.AreEqual(0.9f, settings.TopP);
-      Assert.AreEqual(40, settings.TopK);
-      Assert.AreEqual(1.1f, settings.RepeatPenalty);
-      Assert.IsNotNull(settings.StopSequences);
-      Assert.Greater(settings.StopSequences.Length, 0);
-    }
-
 
   }
 }

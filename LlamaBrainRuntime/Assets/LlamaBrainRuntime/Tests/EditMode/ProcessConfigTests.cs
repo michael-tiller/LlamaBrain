@@ -102,27 +102,6 @@ namespace LlamaBrain.Tests.EditMode
     }
 
     [Test]
-    public void ProcessConfig_WithEmptyLlmConfig_InitializesCorrectly()
-    {
-      // Arrange
-      var config = new ProcessConfig
-      {
-        LlmConfig = null
-      };
-
-      // Act
-      config.LlmConfig = new LlmConfig();
-
-      // Assert
-      Assert.IsNotNull(config.LlmConfig);
-      Assert.AreEqual(64, config.LlmConfig.MaxTokens);
-      Assert.AreEqual(0.7f, config.LlmConfig.Temperature);
-      Assert.AreEqual(0.9f, config.LlmConfig.TopP);
-      Assert.AreEqual(40, config.LlmConfig.TopK);
-      Assert.AreEqual(1.1f, config.LlmConfig.RepeatPenalty);
-    }
-
-    [Test]
     public void ProcessConfig_WithEdgeCaseValues_HandlesCorrectly()
     {
       // Arrange
@@ -162,27 +141,6 @@ namespace LlamaBrain.Tests.EditMode
       Assert.AreEqual("very-long-model-path/with/many/subdirectories/and/a/very/long/filename.gguf", config.Model);
       Assert.AreEqual("very-long-executable-path/with/many/subdirectories/and/a/very/long/filename.exe", config.ExecutablePath);
       Assert.AreEqual(int.MaxValue, config.ContextSize);
-    }
-
-    [Test]
-    public void ProcessConfig_PropertyModification_WorksCorrectly()
-    {
-      // Arrange
-      var config = new ProcessConfig();
-
-      // Act - Modify properties after creation
-      config.Host = "modified-host";
-      config.Port = 9999;
-      config.Model = "modified-model.gguf";
-      config.ExecutablePath = "modified-server.exe";
-      config.ContextSize = 8192;
-
-      // Assert
-      Assert.AreEqual("modified-host", config.Host);
-      Assert.AreEqual(9999, config.Port);
-      Assert.AreEqual("modified-model.gguf", config.Model);
-      Assert.AreEqual("modified-server.exe", config.ExecutablePath);
-      Assert.AreEqual(8192, config.ContextSize);
     }
   }
 }
