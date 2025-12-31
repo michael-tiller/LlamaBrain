@@ -28,7 +28,7 @@ This directory contains default memory categories for LlamaBrain for Unity that 
 - **Patterns**: Extracts player names, character backgrounds, and personal details
 
 ### Preferences
-- **Color**: Yellow (#FFCC33)
+- **Color**: Yellow (FFCC33)
 - **Priority**: 8
 - **Importance**: 0.7
 - **Max Entries**: 12
@@ -46,7 +46,7 @@ This directory contains default memory categories for LlamaBrain for Unity that 
 - **Patterns**: Extracts world locations, place names, and environmental information
 
 ### WorldEvents
-- **Color**: Red (#CC4D4D)
+- **Color**: Red (CC4D4D)
 - **Priority**: 7
 - **Importance**: 0.8
 - **Max Entries**: 15
@@ -55,7 +55,7 @@ This directory contains default memory categories for LlamaBrain for Unity that 
 - **Patterns**: Extracts world events, incidents, and important happenings
 
 ### Relationships
-- **Color**: Purple (#CC33CC)
+- **Color**: Purple (CC33CC)
 - **Priority**: 9
 - **Importance**: 0.8
 - **Max Entries**: 12
@@ -64,7 +64,7 @@ This directory contains default memory categories for LlamaBrain for Unity that 
 - **Patterns**: Extracts relationship information with NPCs and other characters
 
 ### Quests
-- **Color**: Orange (#FF9900)
+- **Color**: Orange (FF9900)
 - **Priority**: 5
 - **Importance**: 0.9
 - **Max Entries**: 10
@@ -165,5 +165,4 @@ The categories use regex patterns to automatically extract information:
 
 ## 🔗 Related Documentation
 - [Memory Management Sample](../../MemoryManagement/MEMORYMANAGEMENT.md)
-- [Main README](../../LLAMABRAIN.md)
-- [Troubleshooting](../../../TROUBLESHOOTING.md) 
+- [Troubleshooting](../../../Documenation/TROUBLESHOOTING.md) 

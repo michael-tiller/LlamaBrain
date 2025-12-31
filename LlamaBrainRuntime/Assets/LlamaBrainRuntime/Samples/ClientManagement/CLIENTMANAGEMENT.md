@@ -170,7 +170,5 @@ An advanced UI component that provides:
 - **Network Access**: Access to the server port and host
 
 ## 📚 Related Documentation
-- [Main README](../README.md) - General LlamaBrain for Unity documentation
-- [SAMPLES.md](../SAMPLES.md) - Overview of all samples
-- [API Documentation](../../Documenation/api/) - Detailed API reference
-- [Troubleshooting](../../TROUBLESHOOTING.md) - Common issues and solutions 
+- [SAMPLES.md](../../Documenation/SAMPLES.md) - Overview of all samples
+- [Troubleshooting](../../Documenation/TROUBLESHOOTING.md) - Common issues and solutions 

@@ -113,6 +113,9 @@ namespace LlamaBrain.Runtime.Demo.UI
             var playerMessage = Instantiate(playerMessageTextPrefab, dialogueMessageContainer);
             playerMessage.SetMessage(message);
         }
+        /// <summary>
+        /// Returns to the main menu by loading scene 0.
+        /// </summary>
         public void BackToMainMenu()
         {
             SceneManager.LoadScene(0, LoadSceneMode.Single);

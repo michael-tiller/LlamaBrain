@@ -18,7 +18,7 @@ namespace LlamaBrain.Core
   /// <summary>
   /// API client for the llama.cpp API
   /// </summary>
-  public sealed class ApiClient : IDisposable
+  public sealed class ApiClient : IApiClient, IDisposable
   {
     /// <summary>
     /// Event raised when performance metrics are available (for Unity/DLL integration)
@@ -62,9 +62,13 @@ namespace LlamaBrain.Core
     /// </summary>
     private const int MaxResponseLength = 50000;
     /// <summary>
+    /// Default request timeout in seconds
+    /// </summary>
+    private const int DefaultRequestTimeoutSeconds = 30;
+    /// <summary>
     /// Request timeout in seconds
     /// </summary>
-    private const int RequestTimeoutSeconds = 30;
+    private readonly int requestTimeoutSeconds;
     /// <summary>
     /// Whether the client has been disposed
     /// </summary>
@@ -77,7 +81,8 @@ namespace LlamaBrain.Core
     /// <param name="port">The port of the API</param>
     /// <param name="model">The model to use</param>
     /// <param name="config">The LLM configuration (optional)</param>
-    public ApiClient(string host, int port, string model, LlmConfig? config = null)
+    /// <param name="requestTimeoutSeconds">Request timeout in seconds (default: 30)</param>
+    public ApiClient(string host, int port, string model, LlmConfig? config = null, int requestTimeoutSeconds = DefaultRequestTimeoutSeconds)
     {
       // Input validation
       if (string.IsNullOrWhiteSpace(host))
@@ -97,6 +102,7 @@ namespace LlamaBrain.Core
       endpoint = $"http://{resolvedHost}:{port}/completion";
       this.model = model;
       this.config = ValidateAndSanitizeConfig(config ?? new LlmConfig());
+      this.requestTimeoutSeconds = requestTimeoutSeconds > 0 ? requestTimeoutSeconds : DefaultRequestTimeoutSeconds;
 
       // Initialize HTTP client with optimized settings for low latency
       // Key optimizations:
@@ -111,7 +117,7 @@ namespace LlamaBrain.Core
 
       httpClient = new HttpClient(handler)
       {
-        Timeout = TimeSpan.FromSeconds(RequestTimeoutSeconds)
+        Timeout = TimeSpan.FromSeconds(this.requestTimeoutSeconds)
       };
 
       // Disable Expect: 100-continue which causes an extra round-trip
@@ -335,6 +341,7 @@ namespace LlamaBrain.Core
     /// <param name="maxTokens">The maximum number of tokens to generate (overrides config if specified)</param>
     /// <param name="temperature">The temperature to use (overrides config if specified)</param>
     /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the generated response text.</returns>
     public async Task<string> SendPromptAsync(string prompt, int? maxTokens = null, float? temperature = null, CancellationToken cancellationToken = default)
     {
       // Check if disposed

@@ -324,6 +324,9 @@ namespace LlamaBrain.Runtime.Demo.UI
       autoUpdate = !autoUpdate;
       Debug.Log($"[ClientManagerUI] Auto-update {(autoUpdate ? "enabled" : "disabled")}");
     }
+    /// <summary>
+    /// Returns to the main menu by loading scene 0.
+    /// </summary>
     public void BackToMainMenu()
     {
       SceneManager.LoadScene(0, LoadSceneMode.Single);

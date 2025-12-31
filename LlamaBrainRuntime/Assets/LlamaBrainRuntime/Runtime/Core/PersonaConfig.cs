@@ -147,10 +147,19 @@ namespace LlamaBrain.Runtime.Core
   /// <summary>
   /// A key-value pair for persona metadata in Unity Inspector
   /// </summary>
+  /// <summary>
+  /// Represents a key-value metadata entry for persona configuration.
+  /// </summary>
   [System.Serializable]
   public class PersonaMetadataEntry
   {
+    /// <summary>
+    /// The metadata key.
+    /// </summary>
     public string Key;
+    /// <summary>
+    /// The metadata value.
+    /// </summary>
     public string Value;
   }
 }

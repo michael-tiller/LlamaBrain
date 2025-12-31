@@ -261,8 +261,9 @@ namespace LlamaBrain.Runtime.Core
     }
 
     /// <summary>
-    /// Get server configuration info for logging
+    /// Configures an agent with the server settings.
     /// </summary>
+    /// <param name="agent">The agent to configure with server settings</param>
     public void ConfigureAgent(LlamaBrainAgent agent)
     {
       if (agent == null || Settings == null)
@@ -290,8 +291,9 @@ namespace LlamaBrain.Runtime.Core
     }
 
     /// <summary>
-    /// Unregister an agent (call when agent is destroyed)
+    /// Unregister an agent (call when agent is destroyed).
     /// </summary>
+    /// <param name="agent">The agent to unregister</param>
     public void UnregisterAgent(LlamaBrainAgent agent)
     {
       if (agent != null)

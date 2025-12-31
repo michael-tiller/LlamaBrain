@@ -5,6 +5,7 @@ using UnityEngine.Events;
 
 using Cysharp.Threading.Tasks;
 using LlamaBrain.Runtime.Core;
+using LlamaBrain.Core.Expectancy;
 using LlamaBrain.Persona;
 using LlamaBrain.Core;
 using System.Threading.Tasks;
@@ -185,6 +186,7 @@ namespace LlamaBrain.Runtime.Demo
     /// </summary>
     /// <param name="input">The input to say to the NPC.</param>
     /// <param name="cancellationToken">Cancellation token (currently not supported by underlying method).</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the NPC's response.</returns>
     public async Task<string> SayToNpc(string input, CancellationToken cancellationToken = default)
     {
       // Note: SendPlayerInputAsync doesn't support CancellationToken, so we ignore it for now
@@ -192,7 +194,21 @@ namespace LlamaBrain.Runtime.Demo
       onNpcResponse?.Invoke(response);
       return response;
     }
-    
+
+    /// <summary>
+    /// Sends a message to the NPC with explicit interaction context.
+    /// This allows triggers to pass their context for expectancy rule evaluation.
+    /// </summary>
+    /// <param name="input">The input/prompt to say to the NPC.</param>
+    /// <param name="context">The interaction context with trigger information.</param>
+    /// <param name="cancellationToken">Cancellation token (currently not supported by underlying method).</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the NPC's response.</returns>
+    public async Task<string> SayToNpcWithContext(string input, InteractionContext context, CancellationToken cancellationToken = default)
+    {
+      var response = await agent.SendPlayerInputWithContextAsync(input, context);
+      onNpcResponse?.Invoke(response);
+      return response;
+    }
 
     /// <summary>
     /// Saves the current persona profile

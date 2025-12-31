@@ -2,7 +2,7 @@ namespace LlamaBrain.Core
 {
   /// <summary>
   /// Configuration for the process
-  /// </summary>`
+  /// </summary>
   public sealed class ProcessConfig
   {
     /// <summary>

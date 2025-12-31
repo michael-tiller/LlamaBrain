@@ -18,6 +18,11 @@ namespace LlamaBrain.Persona
     private readonly string _profilesDir;
 
     /// <summary>
+    /// The file system abstraction
+    /// </summary>
+    private readonly IFileSystem _fileSystem;
+
+    /// <summary>
     /// Maximum file size in bytes (1MB)
     /// </summary>
     private const long MaxFileSizeBytes = 1024 * 1024;
@@ -36,17 +41,28 @@ namespace LlamaBrain.Persona
     /// Constructor
     /// </summary>
     /// <param name="profilesDir">The directory to save profiles</param>
-    public PersonaProfileManager(string profilesDir)
+    public PersonaProfileManager(string profilesDir) : this(profilesDir, new FileSystem())
+    {
+    }
+
+    /// <summary>
+    /// Constructor with file system injection for testing
+    /// </summary>
+    /// <param name="profilesDir">The directory to save profiles</param>
+    /// <param name="fileSystem">The file system abstraction</param>
+    public PersonaProfileManager(string profilesDir, IFileSystem fileSystem)
     {
       if (string.IsNullOrWhiteSpace(profilesDir))
         throw new ArgumentException("Profiles directory cannot be null or empty", nameof(profilesDir));
+
+      _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
 
       // Validate and sanitize the path
       _profilesDir = ValidateAndSanitizePath(profilesDir);
 
       try
       {
-        Directory.CreateDirectory(_profilesDir);
+        _fileSystem.CreateDirectory(_profilesDir);
       }
       catch (Exception ex)
       {
@@ -79,27 +95,27 @@ namespace LlamaBrain.Persona
           throw new InvalidOperationException($"Profile JSON too large: {json.Length} characters (max: {MaxJsonLength})");
         }
 
-        var filePath = Path.Combine(_profilesDir, $"{safePersonaId}.profile.json");
+        var filePath = _fileSystem.CombinePath(_profilesDir, $"{safePersonaId}.profile.json");
 
         // Validate final file path
         ValidateFilePath(filePath);
 
         // Write to temporary file first, then move to final location
         var tempPath = filePath + ".tmp";
-        File.WriteAllText(tempPath, json);
+        _fileSystem.WriteAllText(tempPath, json);
 
         // Verify the written file size
-        var fileInfo = new FileInfo(tempPath);
+        var fileInfo = _fileSystem.GetFileInfo(tempPath);
         if (fileInfo.Length > MaxFileSizeBytes)
         {
-          File.Delete(tempPath);
+          _fileSystem.DeleteFile(tempPath);
           throw new InvalidOperationException($"Profile file too large: {fileInfo.Length} bytes (max: {MaxFileSizeBytes})");
         }
 
         // Move to final location
-        if (File.Exists(filePath))
-          File.Delete(filePath);
-        File.Move(tempPath, filePath);
+        if (_fileSystem.FileExists(filePath))
+          _fileSystem.DeleteFile(filePath);
+        _fileSystem.MoveFile(tempPath, filePath);
 
         Logger.Info($"Successfully saved profile for persona: {safePersonaId}");
       }
@@ -121,25 +137,25 @@ namespace LlamaBrain.Persona
         return null;
 
       var safePersonaId = ValidateAndSanitizePersonaId(personaId);
-      var filePath = Path.Combine(_profilesDir, $"{safePersonaId}.profile.json");
+      var filePath = _fileSystem.CombinePath(_profilesDir, $"{safePersonaId}.profile.json");
 
       try
       {
         // Validate file path
         ValidateFilePath(filePath);
 
-        if (!File.Exists(filePath))
+        if (!_fileSystem.FileExists(filePath))
           return null;
 
         // Check file size before reading
-        var fileInfo = new FileInfo(filePath);
+        var fileInfo = _fileSystem.GetFileInfo(filePath);
         if (fileInfo.Length > MaxFileSizeBytes)
         {
           Logger.Error($"Profile file too large for persona {safePersonaId}: {fileInfo.Length} bytes (max: {MaxFileSizeBytes})");
           return null;
         }
 
-        var json = File.ReadAllText(filePath);
+        var json = _fileSystem.ReadAllText(filePath);
 
         // Validate JSON length
         if (json.Length > MaxJsonLength)
@@ -181,7 +197,7 @@ namespace LlamaBrain.Persona
 
       try
       {
-        var files = Directory.GetFiles(_profilesDir, "*.profile.json");
+        var files = _fileSystem.GetFiles(_profilesDir, "*.profile.json");
 
         // Limit the number of files processed
         if (files.Length > MaxProfilesToLoad)
@@ -197,7 +213,7 @@ namespace LlamaBrain.Persona
             // Validate file path
             ValidateFilePath(file);
 
-            var fileName = Path.GetFileNameWithoutExtension(file);
+            var fileName = _fileSystem.GetFileNameWithoutExtension(file);
             if (fileName.EndsWith(".profile"))
             {
               var personaId = fileName.Substring(0, fileName.Length - 8); // Remove ".profile"
@@ -266,16 +282,16 @@ namespace LlamaBrain.Persona
         return false;
 
       var safePersonaId = ValidateAndSanitizePersonaId(personaId);
-      var filePath = Path.Combine(_profilesDir, $"{safePersonaId}.profile.json");
+      var filePath = _fileSystem.CombinePath(_profilesDir, $"{safePersonaId}.profile.json");
 
       try
       {
         // Validate file path
         ValidateFilePath(filePath);
 
-        if (File.Exists(filePath))
+        if (_fileSystem.FileExists(filePath))
         {
-          File.Delete(filePath);
+          _fileSystem.DeleteFile(filePath);
           Logger.Info($"Successfully deleted profile for persona: {safePersonaId}");
           return true;
         }
@@ -297,7 +313,7 @@ namespace LlamaBrain.Persona
         throw new ArgumentException("Path cannot be null or empty", nameof(path));
 
       // Get the full path to resolve any relative paths
-      var fullPath = Path.GetFullPath(path);
+      var fullPath = _fileSystem.GetFullPath(path);
 
       // Check for path traversal attempts
       if (fullPath.Contains("..") || fullPath.Contains("//"))
@@ -315,8 +331,8 @@ namespace LlamaBrain.Persona
         throw new ArgumentException("File path cannot be null or empty");
 
       // Ensure the file path is within the profiles directory
-      var fullPath = Path.GetFullPath(filePath);
-      var profilesDirFullPath = Path.GetFullPath(_profilesDir);
+      var fullPath = _fileSystem.GetFullPath(filePath);
+      var profilesDirFullPath = _fileSystem.GetFullPath(_profilesDir);
 
       if (!fullPath.StartsWith(profilesDirFullPath, StringComparison.OrdinalIgnoreCase))
         throw new ArgumentException("File path is outside the profiles directory");

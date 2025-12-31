@@ -20,7 +20,7 @@ namespace LlamaBrain.Core
     /// <summary>
     /// The API client for LLM communication
     /// </summary>
-    private readonly ApiClient _apiClient;
+    private readonly IApiClient _apiClient;
 
     /// <summary>
     /// The dialogue session for conversation tracking
@@ -63,7 +63,7 @@ namespace LlamaBrain.Core
     /// <param name="profile">The persona profile</param>
     /// <param name="apiClient">The API client for LLM communication</param>
     /// <param name="memoryStore">Optional memory store (will create one if not provided)</param>
-    public BrainAgent(PersonaProfile profile, ApiClient apiClient, PersonaMemoryStore? memoryStore = null)
+    public BrainAgent(PersonaProfile profile, IApiClient apiClient, PersonaMemoryStore? memoryStore = null)
     {
       _profile = profile ?? throw new ArgumentNullException(nameof(profile));
       _apiClient = apiClient ?? throw new ArgumentNullException(nameof(apiClient));
@@ -188,15 +188,15 @@ namespace LlamaBrain.Core
     }
 
     /// <summary>
-    /// Gets all memories for the persona
+    /// Gets all episodic memories for the persona (raw content without formatting prefixes)
     /// </summary>
-    /// <returns>The persona's memories</returns>
+    /// <returns>The persona's episodic memories</returns>
     public IReadOnlyList<string> GetMemories()
     {
       if (_disposed)
         throw new ObjectDisposedException(nameof(BrainAgent));
 
-      return _memoryStore.GetMemory(_profile);
+      return _memoryStore.GetEpisodicMemories(_profile);
     }
 
     /// <summary>
@@ -258,16 +258,16 @@ namespace LlamaBrain.Core
       if (newProfile == null)
         throw new ArgumentNullException(nameof(newProfile));
 
-      // Validate that the persona ID matches
-      if (newProfile.PersonaId != _profile.PersonaId)
-        throw new ArgumentException("New profile must have the same PersonaId", nameof(newProfile));
-
       // Validate the new profile
       if (string.IsNullOrWhiteSpace(newProfile.Name))
         throw new ArgumentException("Profile name cannot be null or empty", nameof(newProfile));
 
       if (string.IsNullOrWhiteSpace(newProfile.PersonaId))
         throw new ArgumentException("Profile PersonaId cannot be null or empty", nameof(newProfile));
+
+      // Validate that the persona ID matches
+      if (newProfile.PersonaId != _profile.PersonaId)
+        throw new ArgumentException("New profile must have the same PersonaId", nameof(newProfile));
 
       // Update the profile properties directly
       // Note: In a production environment, you'd want proper thread synchronization
@@ -487,7 +487,8 @@ namespace LlamaBrain.Core
     {
       if (!_disposed)
       {
-        _apiClient?.Dispose();
+        if (_apiClient is IDisposable disposable)
+          disposable.Dispose();
         _disposed = true;
       }
     }

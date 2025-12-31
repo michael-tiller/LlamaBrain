@@ -5,6 +5,9 @@ using TMPro;
 
 namespace LlamaBrain.Runtime.Demo.UI
 {
+    /// <summary>
+    /// Displays the application version number in a TextMeshPro text component.
+    /// </summary>
     public class VersionText : MonoBehaviour
     {
         [SerializeField] private TMP_Text versionText;

@@ -1,9 +1,19 @@
+#nullable enable
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
 using LlamaBrain.Core;
+using LlamaBrain.Core.Expectancy;
+using LlamaBrain.Core.Metrics;
 using LlamaBrain.Persona;
+using LlamaBrain.Persona.MemoryTypes;
+using LlamaBrain.Runtime.Core.Expectancy;
+using LlamaBrain.Runtime.Core.Inference;
+using LlamaBrain.Runtime.Core.Validation;
+using LlamaBrain.Core.Inference;
+using LlamaBrain.Core.Validation;
 using System.Linq;
 using System.Diagnostics;
 
@@ -11,45 +21,77 @@ namespace LlamaBrain.Runtime.Core
 {
   /// <summary>
   /// A LlamaBrain agent that lives in Unity that can be used to interact with a LlamaBrain server.
+  /// Implements IAgentMetrics for metrics collection.
   /// </summary>
-  public class LlamaBrainAgent : MonoBehaviour
+  public class LlamaBrainAgent : MonoBehaviour, IAgentMetrics
   {
     /// <summary>
     /// The persona configuration for this agent (Unity ScriptableObject).
     /// </summary>
     [Header("Persona Configuration")]
-    public PersonaConfig PersonaConfig;
+    public PersonaConfig? PersonaConfig;
 
     /// <summary>
     /// The runtime persona profile (converted from config).
     /// </summary>
     [Header("Runtime Profile")]
-    [SerializeField] private PersonaProfile runtimeProfile;
+    [SerializeField] private PersonaProfile? runtimeProfile;
 
     /// <summary>
     /// The prompt composer settings for this agent.
     /// </summary>
     [Header("Prompt Settings")]
-    public PromptComposerSettings PromptSettings;
+    public PromptComposerSettings? PromptSettings;
 
     /// <summary>
     /// The memory category manager for this agent.
     /// </summary>
     [Header("Memory Settings")]
-    public MemoryCategoryManager MemoryCategoryManager;
+    public MemoryCategoryManager? MemoryCategoryManager;
+
+    /// <summary>
+    /// Optional expectancy configuration for constraint-based behavior.
+    /// If set, rules will be evaluated and constraints injected into prompts.
+    /// </summary>
+    [Header("Expectancy (Determinism Layer)")]
+    [Tooltip("Optional NPC-specific expectancy rules. If set, constraints will be evaluated and injected into prompts.")]
+    public NpcExpectancyConfig? ExpectancyConfig;
+
+    /// <summary>
+    /// Optional fallback configuration for author-controlled fallback responses.
+    /// If not set, uses default fallback configuration.
+    /// </summary>
+    [Header("Fallback System")]
+    [Tooltip("Optional fallback configuration. Leave empty for defaults.")]
+    [SerializeField] private FallbackConfigAsset? fallbackConfig;
+
+    /// <summary>
+    /// The last evaluated constraint set (for debugging/metrics).
+    /// </summary>
+    public ConstraintSet? LastConstraints { get; private set; }
+
+    /// <summary>
+    /// The last state snapshot used for inference (for debugging/metrics).
+    /// </summary>
+    public StateSnapshot? LastSnapshot { get; private set; }
+
+    /// <summary>
+    /// The last inference result (for debugging/metrics).
+    /// </summary>
+    public InferenceResultWithRetries? LastInferenceResult { get; private set; }
 
     /// <summary>
     /// The memory provider for the persona.
     /// </summary>
-    private PersonaMemoryStore memoryProvider;
+    private PersonaMemoryStore? memoryProvider;
     /// <summary>
     /// The client for the LlamaBrain server.
     /// </summary>
-    private ApiClient client;
+    private ApiClient? client;
     /// <summary>
     /// The dialogue session for this agent.
     /// </summary>
-    private DialogueSession dialogueSession;
+    private DialogueSession? dialogueSession;
 
     /// <summary>
     /// Separate storage for conversation history (not mixed with memory)
@@ -77,6 +119,84 @@ namespace LlamaBrain.Runtime.Core
     [SerializeField] private int maxResponseTokens = 24;
 
     /// <summary>
+    /// Enable automatic memory decay (episodic memories fade over time)
+    /// </summary>
+    [Header("Memory Decay Settings")]
+    [Tooltip("Enable automatic memory decay. Memories will fade over time.")]
+    [SerializeField] private bool enableAutoDecay = false;
+
+    /// <summary>
+    /// Optional prompt assembler settings (ScriptableObject).
+    /// If not set, uses default settings.
+    /// </summary>
+    [Header("Prompt Assembly")]
+    [Tooltip("Optional prompt assembler settings. Leave empty for defaults.")]
+    [SerializeField] private PromptAssemblerSettings? promptAssemblerSettings;
+
+    /// <summary>
+    /// The response validator for constraint checking.
+    /// </summary>
+    private ResponseValidator? responseValidator;
+
+    /// <summary>
+    /// The prompt assembler for building inference prompts.
+    /// </summary>
+    private PromptAssembler? promptAssembler;
+
+    /// <summary>
+    /// The output parser for structured output extraction.
+    /// </summary>
+    private OutputParser? outputParser;
+
+    /// <summary>
+    /// The validation gate for constraint and canonical fact checking.
+    /// </summary>
+    private ValidationGate? validationGate;
+
+    /// <summary>
+    /// The last assembled prompt (for debugging/metrics).
+    /// </summary>
+    public AssembledPrompt? LastAssembledPrompt { get; private set; }
+
+    /// <summary>
+    /// The last parsed output (for debugging/metrics).
+    /// </summary>
+    public ParsedOutput? LastParsedOutput { get; private set; }
+
+    /// <summary>
+    /// The last gate result (for debugging/metrics).
+    /// </summary>
+    public GateResult? LastGateResult { get; private set; }
+
+    /// <summary>
+    /// The last mutation batch result (for debugging/metrics).
+    /// </summary>
+    public MutationBatchResult? LastMutationBatchResult { get; private set; }
+
+    /// <summary>
+    /// The retry policy for inference.
+    /// </summary>
+    private RetryPolicy? retryPolicy;
+
+    /// <summary>
+    /// The fallback system for when inference fails after all retries.
+    /// </summary>
+    private AuthorControlledFallback? fallbackSystem;
+
+    /// <summary>
+    /// The mutation controller for executing validated memory mutations.
+    /// </summary>
+    private MemoryMutationController? mutationController;
+
+    /// <summary>
+    /// Interval in seconds between memory decay applications
+    /// </summary>
+    [Tooltip("Interval in seconds between memory decay applications (default: 300 = 5 minutes)")]
+    [SerializeField] private float decayIntervalSeconds = 300f;
+
+    private float lastDecayTime = 0f;
+
+    /// <summary>
     /// Server configuration info for detailed logging
     /// </summary>
     private string modelPath = "";
@@ -90,7 +210,7 @@ namespace LlamaBrain.Runtime.Core
     /// <summary>
     /// The current runtime profile
     /// </summary>
-    public PersonaProfile RuntimeProfile
+    public PersonaProfile? RuntimeProfile
     {
       get => runtimeProfile;
       set => runtimeProfile = value;
@@ -100,12 +220,22 @@ namespace LlamaBrain.Runtime.Core
     /// <summary>
     /// The memories of the persona.
     /// </summary>
-    public string Memories => Application.isPlaying ? string.Join("\n", memoryProvider.GetMemory(runtimeProfile)) : string.Empty;
+    public string Memories
+    {
+      get
+      {
+        if (!Application.isPlaying || runtimeProfile == null || memoryProvider == null)
+          return string.Empty;
+
+        var memorySystem = memoryProvider.GetOrCreateSystem(runtimeProfile.PersonaId);
+        return string.Join("\n", memorySystem.GetAllMemoriesForPrompt(maxEpisodic: 20));
+      }
+    }
     
     /// <summary>
     /// The last completion metrics from the most recent request (for metrics collection).
     /// </summary>
-    public CompletionMetrics LastMetrics { get; private set; }
+    public CompletionMetrics? LastMetrics { get; private set; }
     
     /// <summary>
     /// Gets the maximum response tokens setting (for metrics collection).
@@ -115,6 +245,8 @@ namespace LlamaBrain.Runtime.Core
     /// <summary>
     /// Initializes the LlamaBrain agent.
     /// </summary>
+    /// <param name="client">The API client to use for LLM communication</param>
+    /// <param name="memoryProvider">The memory store provider for persona memories</param>
     public void Initialize(ApiClient client, PersonaMemoryStore memoryProvider)
     {
       initializationAttempted = true;
@@ -156,6 +288,45 @@ namespace LlamaBrain.Runtime.Core
         var personaId = runtimeProfile?.PersonaId ?? runtimeProfile?.Name ?? "Unknown";
         dialogueSession = new DialogueSession(personaId, memoryProvider);
         UnityEngine.Debug.Log($"[LlamaBrainAgent] Dialogue session initialized with persona ID: {personaId}");
+
+        // Auto-detect ExpectancyConfig if not set
+        if (ExpectancyConfig == null)
+        {
+          ExpectancyConfig = GetComponentInParent<NpcExpectancyConfig>();
+          if (ExpectancyConfig != null)
+          {
+            UnityEngine.Debug.Log($"[LlamaBrainAgent] Auto-detected NpcExpectancyConfig on {ExpectancyConfig.gameObject.name}");
+          }
+        }
+
+        // Initialize response validator and retry policy
+        responseValidator = new ResponseValidator();
+        retryPolicy = RetryPolicy.Default;
+        UnityEngine.Debug.Log($"[LlamaBrainAgent] Response validator and retry policy initialized (max retries: {retryPolicy.MaxRetries})");
+
+        // Initialize prompt assembler
+        var assemblerConfig = promptAssemblerSettings != null
+          ? promptAssemblerSettings.ToConfig()
+          : PromptAssemblerConfig.Default;
+        promptAssembler = new PromptAssembler(assemblerConfig);
+        UnityEngine.Debug.Log($"[LlamaBrainAgent] Prompt assembler initialized (max tokens: {assemblerConfig.MaxPromptTokens})");
+
+        // Initialize output parser and validation gate
+        outputParser = new OutputParser();
+        validationGate = new ValidationGate();
+        mutationController = new MemoryMutationController();
+        mutationController.OnLog = msg => UnityEngine.Debug.Log(msg);
+        UnityEngine.Debug.Log($"[LlamaBrainAgent] Output parser, validation gate, and mutation controller initialized");
+
+        // Initialize fallback system
+        var fallbackConfigInstance = fallbackConfig != null 
+          ? fallbackConfig.ToFallbackConfig() 
+          : new AuthorControlledFallback.FallbackConfig();
+        fallbackSystem = new AuthorControlledFallback(fallbackConfigInstance);
+        UnityEngine.Debug.Log($"[LlamaBrainAgent] Fallback system initialized{(fallbackConfig != null ? " with custom config" : " with default config")}");
+
+        // Initialize canonical facts if PersonaConfig has them
+        InitializeCanonicalFacts();
 
         UnityEngine.Debug.Log($"[LlamaBrainAgent] Initialization complete. IsInitialized: {IsInitialized}");
         UnityEngine.Debug.Log($"[LlamaBrainAgent] Final state - Client: {(client != null ? "Set" : "Null")}, MemoryProvider: {(memoryProvider != null ? "Set" : "Null")}, RuntimeProfile: {(runtimeProfile != null ? $"Set ({runtimeProfile.Name})" : "Null")}");
@@ -199,12 +370,480 @@ namespace LlamaBrain.Runtime.Core
     }
 
     /// <summary>
+    /// The current interaction context (set when using SendPlayerInputWithContextAsync).
+    /// Used by the expectancy system to evaluate context-aware rules.
+    /// </summary>
+    private InteractionContext? currentInteractionContext;
+
+    /// <summary>
+    /// Temporary trigger rules for the current interaction (set by triggers).
+    /// Cleared after evaluation.
+    /// </summary>
+    private System.Collections.Generic.IEnumerable<LlamaBrain.Runtime.Core.Expectancy.ExpectancyRuleAsset>? currentTriggerRules;
+
+    /// <summary>
+    /// Temporary trigger fallbacks for the current interaction (set by triggers).
+    /// Cleared after evaluation.
+    /// </summary>
+    private System.Collections.Generic.IReadOnlyList<string>? currentTriggerFallbacks;
+
+    /// <summary>
+    /// Sends a player input with explicit interaction context.
+    /// This allows triggers to pass context for expectancy rule evaluation.
+    /// </summary>
+    /// <param name="input">The input from the player/trigger.</param>
+    /// <param name="context">The interaction context with trigger/scene information.</param>
+    /// <returns>The response from the LlamaBrain server.</returns>
+    public async UniTask<string> SendPlayerInputWithContextAsync(string input, InteractionContext context)
+    {
+      return await SendPlayerInputWithContextAsync(input, context, null, null);
+    }
+
+    /// <summary>
+    /// Sends a player input with explicit interaction context and trigger rules.
+    /// This allows triggers to pass both context and trigger-specific rules for expectancy rule evaluation.
+    /// </summary>
+    /// <param name="input">The input from the player/trigger.</param>
+    /// <param name="context">The interaction context with trigger/scene information.</param>
+    /// <param name="triggerRules">Trigger-specific rules to evaluate.</param>
+    /// <returns>The response from the LlamaBrain server.</returns>
+    public async UniTask<string> SendPlayerInputWithContextAsync(string input, InteractionContext context, System.Collections.Generic.IEnumerable<LlamaBrain.Runtime.Core.Expectancy.ExpectancyRuleAsset>? triggerRules)
+    {
+      return await SendPlayerInputWithContextAsync(input, context, triggerRules, null);
+    }
+
+    /// <summary>
+    /// Sends a player input with explicit interaction context, trigger rules, and trigger fallbacks.
+    /// This allows triggers to pass context, trigger-specific rules, and trigger-specific fallbacks.
+    /// </summary>
+    /// <param name="input">The input from the player/trigger.</param>
+    /// <param name="context">The interaction context with trigger/scene information.</param>
+    /// <param name="triggerRules">Trigger-specific rules to evaluate.</param>
+    /// <param name="triggerFallbacks">Trigger-specific fallback responses to use if inference fails.</param>
+    /// <returns>The response from the LlamaBrain server.</returns>
+    public async UniTask<string> SendPlayerInputWithContextAsync(string input, InteractionContext context, System.Collections.Generic.IEnumerable<LlamaBrain.Runtime.Core.Expectancy.ExpectancyRuleAsset>? triggerRules, System.Collections.Generic.IReadOnlyList<string>? triggerFallbacks)
+    {
+      currentInteractionContext = context;
+      currentTriggerRules = triggerRules;
+      currentTriggerFallbacks = triggerFallbacks;
+      try
+      {
+        return await SendPlayerInputAsync(null, input);
+      }
+      finally
+      {
+        currentInteractionContext = null;
+        currentTriggerRules = null;
+        currentTriggerFallbacks = null;
+      }
+    }
+
+    /// <summary>
+    /// Sends a player input using the StateSnapshot-based inference pipeline with retry logic.
+    /// This is the new inference method that captures deterministic state and validates responses.
+    /// </summary>
+    /// <param name="input">The input from the player.</param>
+    /// <returns>The inference result including response and retry information.</returns>
+    public async UniTask<InferenceResultWithRetries> SendWithSnapshotAsync(string input)
+    {
+      if (client == null)
+      {
+        throw new InvalidOperationException("Cannot send prompt: Client is null. Make sure the agent is properly initialized.");
+      }
+
+      // Ensure runtime profile exists
+      if (runtimeProfile == null && PersonaConfig != null)
+      {
+        runtimeProfile = PersonaConfig.ToProfile();
+      }
+      if (runtimeProfile == null)
+      {
+        runtimeProfile = PersonaProfile.Create(gameObject.name + "-persona", gameObject.name);
+        runtimeProfile.SystemPrompt = "You are a helpful NPC.";
+      }
+
+      // Initialize validator if needed
+      if (responseValidator == null)
+      {
+        responseValidator = new ResponseValidator();
+      }
+      if (retryPolicy == null)
+      {
+        retryPolicy = RetryPolicy.Default;
+      }
+      if (promptAssembler == null)
+      {
+        var assemblerConfig = promptAssemblerSettings != null
+          ? promptAssemblerSettings.ToConfig()
+          : PromptAssemblerConfig.Default;
+        promptAssembler = new PromptAssembler(assemblerConfig);
+      }
+
+      // Build initial snapshot
+      var snapshot = BuildStateSnapshot(input);
+      LastSnapshot = snapshot;
+
+      UnityEngine.Debug.Log($"[LlamaBrainAgent] Built state snapshot: {snapshot}");
+
+      // Execute inference with retry loop
+      var attempts = new List<InferenceResult>();
+      var totalStopwatch = Stopwatch.StartNew();
+
+      while (attempts.Count < retryPolicy.MaxAttempts)
+      {
+        var attemptStopwatch = Stopwatch.StartNew();
+
+        try
+        {
+          // Build prompt using PromptAssembler with ephemeral working memory
+          string? retryFeedback = null;
+          if (snapshot.AttemptNumber > 0 && LastInferenceResult != null && LastInferenceResult.AllAttempts.Count > 0)
+          {
+            var lastAttempt = LastInferenceResult.AllAttempts[LastInferenceResult.AllAttempts.Count - 1];
+            retryFeedback = retryPolicy.GenerateRetryFeedback(lastAttempt);
+          }
+
+          var wmConfig = promptAssemblerSettings != null
+            ? promptAssemblerSettings.ToWorkingMemoryConfig()
+            : WorkingMemoryConfig.Default;
+
+          var assembledPrompt = promptAssembler.AssembleFromSnapshot(
+            snapshot,
+            npcName: runtimeProfile?.Name,
+            retryFeedback: retryFeedback,
+            workingMemoryConfig: wmConfig
+          );
+
+          LastAssembledPrompt = assembledPrompt;
+          var prompt = assembledPrompt.Text;
+
+          UnityEngine.Debug.Log($"[LlamaBrainAgent] {assembledPrompt}");
+
+          // Determine max tokens
+          var isSingleLine = (runtimeProfile?.SystemPrompt ?? "").Contains("one line");
+          var effectiveMaxTokens = isSingleLine ? System.Math.Min(maxResponseTokens, 24) : maxResponseTokens;
+
+          // Send to LLM
+          var metrics = await client.SendPromptWithMetricsAsync(prompt, maxTokens: effectiveMaxTokens);
+          attemptStopwatch.Stop();
+
+          // Check if truncated
+          var wasTruncated = metrics.GeneratedTokenCount >= effectiveMaxTokens;
+
+          // Step 1: Parse the output using OutputParser
+          if (outputParser == null) outputParser = new OutputParser();
+          var parsedOutput = outputParser.Parse(metrics.Content, wasTruncated);
+          LastParsedOutput = parsedOutput;
+
+          // Step 2: Validate through ValidationGate
+          if (validationGate == null) validationGate = new ValidationGate();
+          var validationContext = new ValidationContext
+          {
+            Constraints = snapshot.Constraints,
+            MemorySystem = memoryProvider?.GetOrCreateSystem(runtimeProfile?.PersonaId ?? ""),
+            Snapshot = snapshot
+          };
+          var gateResult = validationGate.Validate(parsedOutput, validationContext);
+          LastGateResult = gateResult;
+
+          // Also run the constraint validator for backwards compatibility
+          var constraintResult = responseValidator.Validate(parsedOutput.DialogueText, snapshot);
+
+          InferenceResult result;
+          if (gateResult.Passed && constraintResult.IsValid)
+          {
+            result = InferenceResult.Succeeded(
+              response: parsedOutput.DialogueText,
+              snapshot: snapshot,
+              elapsedMs: attemptStopwatch.ElapsedMilliseconds,
+              tokenUsage: new TokenUsage
+              {
+                PromptTokens = metrics.PromptTokenCount,
+                CompletionTokens = metrics.GeneratedTokenCount
+              }
+            );
+            attempts.Add(result);
+
+            // Step 3: Execute approved mutations from the validation gate
+            if (mutationController != null && validationContext.MemorySystem != null)
+            {
+              var mutationResult = mutationController.ExecuteMutations(
+                gateResult,
+                validationContext.MemorySystem,
+                runtimeProfile?.PersonaId
+              );
+              LastMutationBatchResult = mutationResult;
+
+              if (mutationResult.TotalAttempted > 0)
+              {
+                UnityEngine.Debug.Log($"[LlamaBrainAgent] Executed mutations: {mutationResult}");
+              }
+            }
+
+            UnityEngine.Debug.Log($"[LlamaBrainAgent] Inference succeeded on attempt {attempts.Count}: '{parsedOutput.DialogueText}'");
+            break;
+          }
+          else
+          {
+            // Combine failures from both validation paths
+            var outcome = constraintResult.IsValid ? ValidationOutcome.InvalidFormat : constraintResult.Outcome;
+            if (gateResult.HasCriticalFailure)
+            {
+              outcome = ValidationOutcome.ProhibitionViolated;
+            }
+
+            result = InferenceResult.FailedValidation(
+              response: parsedOutput.Success ? parsedOutput.DialogueText : metrics.Content,
+              outcome: outcome,
+              violations: constraintResult.Violations,
+              snapshot: snapshot,
+              elapsedMs: attemptStopwatch.ElapsedMilliseconds,
+              tokenUsage: new TokenUsage
+              {
+                PromptTokens = metrics.PromptTokenCount,
+                CompletionTokens = metrics.GeneratedTokenCount
+              }
+            );
+            attempts.Add(result);
+
+            var failureCount = gateResult.Failures.Count + constraintResult.Violations.Count;
+            UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Inference failed validation on attempt {attempts.Count}: {failureCount} total failures (gate: {gateResult.Failures.Count}, constraints: {constraintResult.Violations.Count})");
+
+            // Check if we should use fallback (critical failure) or retry
+            if (gateResult.HasCriticalFailure)
+            {
+              UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Critical failure detected - will use fallback");
+              // Don't retry on critical failures
+            }
+            else if (snapshot.CanRetry)
+            {
+              // Generate additional constraints for retry
+              var additionalConstraints = retryPolicy.GenerateRetryConstraints(constraintResult.Violations, snapshot.AttemptNumber);
+              snapshot = snapshot.ForRetry(additionalConstraints);
+              LastSnapshot = snapshot;
+
+              retryPolicy.OnRetry?.Invoke(attempts.Count, result);
+
+              if (retryPolicy.RetryDelayMs > 0)
+              {
+                await UniTask.Delay(retryPolicy.RetryDelayMs);
+              }
+            }
+          }
+        }
+        catch (System.Exception ex)
+        {
+          attemptStopwatch.Stop();
+          var errorResult = InferenceResult.FailedError(
+            errorMessage: ex.Message,
+            snapshot: snapshot,
+            elapsedMs: attemptStopwatch.ElapsedMilliseconds
+          );
+          attempts.Add(errorResult);
+
+          UnityEngine.Debug.LogError($"[LlamaBrainAgent] Inference error on attempt {attempts.Count}: {ex.Message}");
+
+          // For errors, check if we can retry
+          if (snapshot.CanRetry)
+          {
+            snapshot = snapshot.ForRetry();
+            LastSnapshot = snapshot;
+          }
+        }
+        finally
+        {
+          // Dispose working memory after each attempt (ephemeral - not persisted)
+          if (LastAssembledPrompt?.WorkingMemory != null)
+          {
+            LastAssembledPrompt.WorkingMemory.Dispose();
+          }
+        }
+
+        // Check total time limit
+        if (totalStopwatch.ElapsedMilliseconds > retryPolicy.MaxTotalTimeMs)
+        {
+          UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Exceeded max total time ({retryPolicy.MaxTotalTimeMs}ms), stopping retries");
+          break;
+        }
+      }
+
+      totalStopwatch.Stop();
+
+      var finalResult = new InferenceResultWithRetries(
+        finalResult: attempts[attempts.Count - 1],
+        allAttempts: attempts,
+        totalElapsedMs: totalStopwatch.ElapsedMilliseconds
+      );
+
+      LastInferenceResult = finalResult;
+
+      // If all retries failed, use fallback system
+      if (!finalResult.Success)
+      {
+        // Initialize fallback if needed
+        if (fallbackSystem == null)
+        {
+          var fallbackConfigInstance = fallbackConfig != null 
+            ? fallbackConfig.ToFallbackConfig() 
+            : new AuthorControlledFallback.FallbackConfig();
+          fallbackSystem = new AuthorControlledFallback(fallbackConfigInstance);
+        }
+
+        // Get interaction context from snapshot
+        var context = snapshot.Context;
+        var failureReason = BuildFailureReason(finalResult);
+        
+        // Get fallback response (use trigger fallbacks if available)
+        var fallbackResponse = fallbackSystem.GetFallbackResponse(context, failureReason, finalResult, currentTriggerFallbacks);
+        
+        UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] All retries exhausted ({finalResult.AttemptCount} attempts). Using fallback: '{fallbackResponse}'");
+
+        // Create a successful result with the fallback response
+        var fallbackResult = InferenceResult.Succeeded(
+          response: fallbackResponse,
+          snapshot: snapshot,
+          elapsedMs: totalStopwatch.ElapsedMilliseconds,
+          tokenUsage: finalResult.GetTotalTokenUsage()
+        );
+
+        // Replace final result with fallback
+        finalResult = new InferenceResultWithRetries(
+          finalResult: fallbackResult,
+          allAttempts: finalResult.AllAttempts,
+          totalElapsedMs: totalStopwatch.ElapsedMilliseconds
+        );
+
+        LastInferenceResult = finalResult;
+      }
+
+      // Store dialogue history if successful (including fallback responses)
+      if (finalResult.Success && storeConversationHistory && memoryProvider != null && runtimeProfile != null)
+      {
+        var memorySystem = memoryProvider.GetOrCreateSystem(runtimeProfile.PersonaId);
+        memorySystem.AddDialogue("Player", input, significance: 0.5f, MutationSource.ValidatedOutput);
+        memorySystem.AddDialogue("NPC", finalResult.FinalResult.Response, significance: 0.7f, MutationSource.ValidatedOutput);
+
+        dialogueSession?.AppendPlayer(input);
+        dialogueSession?.AppendNpc(finalResult.FinalResult.Response);
+      }
+
+      UnityEngine.Debug.Log($"[LlamaBrainAgent] Inference complete: {finalResult}");
+
+      return finalResult;
+    }
+
+    /// <summary>
+    /// Builds a StateSnapshot for the current interaction.
+    /// </summary>
+    private StateSnapshot BuildStateSnapshot(string playerInput)
+    {
+      // Get dialogue history
+      var dialogueHistory = GetConversationHistory();
+
+      // If we have ExpectancyConfig and memory provider, use the full builder
+      if (ExpectancyConfig != null && memoryProvider != null && runtimeProfile != null)
+      {
+        var memorySystem = memoryProvider.GetOrCreateSystem(runtimeProfile.PersonaId);
+        return UnityStateSnapshotBuilder.BuildForNpcDialogue(
+          npcConfig: ExpectancyConfig,
+          memorySystem: memorySystem,
+          playerInput: playerInput,
+          systemPrompt: runtimeProfile.SystemPrompt ?? "",
+          dialogueHistory: dialogueHistory
+        );
+      }
+
+      // Fallback to minimal snapshot
+      var context = currentInteractionContext ?? new InteractionContext
+      {
+        TriggerReason = TriggerReason.PlayerUtterance,
+        PlayerInput = playerInput,
+        GameTime = Time.time
+      };
+
+      // Evaluate constraints if we have ExpectancyConfig
+      ConstraintSet constraints = ConstraintSet.Empty;
+      if (ExpectancyConfig != null)
+      {
+        constraints = ExpectancyConfig.Evaluate(context, currentTriggerRules);
+        LastConstraints = constraints;
+      }
+
+      return new StateSnapshotBuilder()
+        .WithContext(context)
+        .WithConstraints(constraints)
+        .WithSystemPrompt(runtimeProfile?.SystemPrompt ?? "")
+        .WithPlayerInput(playerInput)
+        .WithDialogueHistory(dialogueHistory)
+        .WithMaxAttempts(retryPolicy?.MaxAttempts ?? 3)
+        .WithMetadata("game_time", Time.time.ToString("F2"))
+        .Build();
+    }
+
+    /// <summary>
+    /// Builds a prompt string from a StateSnapshot.
+    /// </summary>
+    private string BuildPromptFromSnapshot(StateSnapshot snapshot)
+    {
+      var parts = new List<string>();
+
+      // System prompt
+      if (!string.IsNullOrEmpty(snapshot.SystemPrompt))
+      {
+        parts.Add($"System: {snapshot.SystemPrompt}");
+      }
+
+      // Memory context
+      var memories = snapshot.GetAllMemoryForPrompt().ToList();
+      if (memories.Count > 0)
+      {
+        parts.Add("\n[Context]");
+        parts.AddRange(memories);
+      }
+
+      // Constraints
+      if (snapshot.Constraints.HasConstraints)
+      {
+        parts.Add(snapshot.Constraints.ToPromptInjection());
+      }
+
+      // Retry feedback if this is a retry
+      if (snapshot.AttemptNumber > 0 && LastInferenceResult != null)
+      {
+        var lastAttempt = LastInferenceResult.AllAttempts.LastOrDefault();
+        if (lastAttempt != null && retryPolicy != null)
+        {
+          parts.Add(retryPolicy.GenerateRetryFeedback(lastAttempt));
+        }
+      }
+
+      // Dialogue history
+      if (snapshot.DialogueHistory.Count > 0)
+      {
+        parts.Add("\n[Conversation]");
+        foreach (var line in snapshot.DialogueHistory)
+        {
+          parts.Add(line);
+        }
+      }
+
+      // Player input
+      parts.Add($"\nPlayer: {snapshot.PlayerInput}");
+
+      // NPC turn
+      var npcName = runtimeProfile?.Name ?? "NPC";
+      parts.Add($"{npcName}:");
+
+      return string.Join("\n", parts);
+    }
+
+    /// <summary>
     /// Sends a player input to the LlamaBrain server.
     /// </summary>
     /// <param name="playerName">The name of the player (optional, will use settings if not provided).</param>
     /// <param name="input">The input from the player.</param>
     /// <returns>The response from the LlamaBrain server.</returns>
-    public async UniTask<string> SendPlayerInputAsync(string playerName, string input)
+    public async UniTask<string> SendPlayerInputAsync(string? playerName, string input)
     {
       // Use player name from settings if not provided or empty
       if (string.IsNullOrEmpty(playerName) && PromptSettings != null)
@@ -246,6 +885,14 @@ namespace LlamaBrain.Runtime.Core
       // Note: PromptComposer already includes the system prompt with "System:" prefix
       var promptComposer = new PromptComposer();
       var includeTraits = PromptSettings?.includePersonalityTraits ?? true; // Default to true if no settings
+      if (runtimeProfile == null)
+      {
+        throw new InvalidOperationException("RuntimeProfile is null. Cannot compose prompt.");
+      }
+      if (dialogueSession == null)
+      {
+        throw new InvalidOperationException("DialogueSession is null. Cannot compose prompt.");
+      }
       var prompt = promptComposer.ComposePrompt(runtimeProfile, dialogueSession, input, includeTraits);
 
       // Remove duplicate system prompt if it appears twice (raw + "System:" version)
@@ -284,6 +931,37 @@ namespace LlamaBrain.Runtime.Core
       {
         var traitInstructions = "\n\nIMPORTANT: Your personality traits are provided for context only. Do NOT include them in your responses. Respond naturally as your character would, without mentioning or listing your traits.";
         prompt = prompt + traitInstructions;
+      }
+
+      // Evaluate expectancy rules and inject constraints (if config is set)
+      if (ExpectancyConfig != null)
+      {
+        // Use the provided context if available (from SendPlayerInputWithContextAsync),
+        // otherwise create a default player utterance context
+        var context = currentInteractionContext ?? ExpectancyConfig.CreatePlayerUtteranceContext(input);
+        // Include trigger rules if provided
+        LastConstraints = ExpectancyConfig.Evaluate(context, currentTriggerRules);
+
+        if (LastConstraints.HasConstraints)
+        {
+          // Insert constraints before the "Player:" line to ensure they're in the context
+          var constraintText = LastConstraints.ToPromptInjection();
+          var playerLineIndex = prompt.LastIndexOf("\nPlayer:");
+          if (playerLineIndex > 0)
+          {
+            prompt = prompt.Insert(playerLineIndex, constraintText);
+          }
+          else
+          {
+            // Fallback: append before the end (less ideal but still works)
+            prompt = constraintText + "\n" + prompt;
+          }
+          UnityEngine.Debug.Log($"[LlamaBrainAgent] Injected {LastConstraints.Count} constraints from Expectancy Engine (context: {context.TriggerReason})");
+        }
+      }
+      else
+      {
+        LastConstraints = ConstraintSet.Empty;
       }
 
       // NOTE: We removed the explicit constraint addition here because adding instructions
@@ -379,7 +1057,11 @@ namespace LlamaBrain.Runtime.Core
           UnityEngine.Debug.Log($"[LlamaBrainAgent] Raw response before validation (escaped): '{rawResponseEscaped}' (length={response?.Length ?? 0}, tokens={metrics.GeneratedTokenCount})");
 
           // Validate and clean response with retry logic
-          var validationResult = ValidateAndCleanResponse(response, runtimeProfile, wasTruncated);
+          if (runtimeProfile == null)
+          {
+            throw new InvalidOperationException("RuntimeProfile is null. Cannot validate response.");
+          }
+          var validationResult = ValidateAndCleanResponse(response ?? "", runtimeProfile, wasTruncated);
 
           // If validation failed and we haven't retried, retry once with tighter constraints
           if (!validationResult.IsValid && !validationResult.WasRetry)
@@ -453,11 +1135,12 @@ namespace LlamaBrain.Runtime.Core
 
         UnityEngine.Debug.Log($"[LlamaBrainAgent] Received response: '{response}'");
 
-        // Store conversation history separately from memory
-        if (storeConversationHistory)
+        // Store conversation history using structured memory system
+        if (storeConversationHistory && memoryProvider != null && runtimeProfile != null)
         {
-          AddToConversationHistory("Player", input);
-          AddToConversationHistory("NPC", response);
+          var memorySystem = memoryProvider.GetOrCreateSystem(runtimeProfile.PersonaId);
+          memorySystem.AddDialogue("Player", input, significance: 0.5f, MutationSource.ValidatedOutput);
+          memorySystem.AddDialogue("NPC", response, significance: 0.7f, MutationSource.ValidatedOutput);
         }
 
         // Keep DialogueSession for prompt composition but don't store history there
@@ -492,7 +1175,11 @@ namespace LlamaBrain.Runtime.Core
       }
 
       UnityEngine.Debug.Log($"Adding memory: {memoryEntry}");
-      memoryProvider.AddMemory(runtimeProfile, memoryEntry);
+      
+      // Use structured memory system - store as episodic memory with default significance
+      var memorySystem = memoryProvider.GetOrCreateSystem(runtimeProfile.PersonaId);
+      var entry = EpisodicMemoryEntry.FromLearnedInfo(memoryEntry, "Player", significance: 0.5f);
+      memorySystem.AddEpisodicMemory(entry, MutationSource.ValidatedOutput);
     }
 
     /// <summary>
@@ -508,9 +1195,33 @@ namespace LlamaBrain.Runtime.Core
         return;
       }
 
-      var categorizedMemory = $"[{category}] {memoryEntry}";
-      UnityEngine.Debug.Log($"Adding categorized memory: {categorizedMemory}");
-      memoryProvider.AddMemory(runtimeProfile, categorizedMemory);
+      // Use structured memory system
+      var memorySystem = memoryProvider.GetOrCreateSystem(runtimeProfile.PersonaId);
+      var categoryLower = category.ToLower();
+      
+      // Categorize based on memory type
+      if (categoryLower.Contains("belief") || categoryLower.Contains("opinion") || categoryLower.Contains("relationship"))
+      {
+        // Store as Belief
+        var belief = new BeliefMemoryEntry("Player", memoryEntry);
+        var beliefId = $"player_{category}_{Guid.NewGuid().ToString("N")[..8]}";
+        memorySystem.SetBelief(beliefId, belief, MutationSource.ValidatedOutput);
+        UnityEngine.Debug.Log($"[LlamaBrainAgent] Stored categorized belief '{category}': {memoryEntry}");
+      }
+      else if (categoryLower.Contains("fact") || categoryLower.Contains("world"))
+      {
+        // Store as World State (not canonical - those are designer-only)
+        var stateKey = $"player_{category}";
+        memorySystem.SetWorldState(stateKey, memoryEntry, MutationSource.ValidatedOutput);
+        UnityEngine.Debug.Log($"[LlamaBrainAgent] Stored categorized world state '{category}': {memoryEntry}");
+      }
+      else
+      {
+        // Store as Episodic Memory
+        var entry = EpisodicMemoryEntry.FromLearnedInfo(memoryEntry, "Player", 0.5f);
+        memorySystem.AddEpisodicMemory(entry, MutationSource.ValidatedOutput);
+        UnityEngine.Debug.Log($"[LlamaBrainAgent] Stored categorized episodic memory '{category}': {memoryEntry}");
+      }
     }
 
     /// <summary>
@@ -593,8 +1304,17 @@ namespace LlamaBrain.Runtime.Core
     private void ExtractUsingScriptableObjectCategories(string playerInput, string npcResponse)
     {
       // Only extract from player input, not NPC responses (to avoid junk)
+      if (MemoryCategoryManager == null)
+        return;
+      
       var playerExtractions = MemoryCategoryManager.ExtractInformationFromText(playerInput);
 
+      // Use structured memory system
+      if (memoryProvider == null || runtimeProfile == null)
+        return;
+
+      var memorySystem = memoryProvider.GetOrCreateSystem(runtimeProfile.PersonaId);
+      
       foreach (var kvp in playerExtractions)
       {
         var category = MemoryCategoryManager.GetCategory(kvp.Key);
@@ -605,9 +1325,32 @@ namespace LlamaBrain.Runtime.Core
             // Check if this memory already exists to avoid duplicates
             if (!MemoryExists(category, extractedInfo))
             {
-              var memoryEntry = category.FormatMemoryEntry(extractedInfo);
-              AddMemory(memoryEntry);
-              UnityEngine.Debug.Log($"[LlamaBrainAgent] Extracted important memory using category '{category.DisplayName}': {extractedInfo}");
+              // Categorize based on memory type
+              var categoryName = category.CategoryName.ToLower();
+              var significance = category.Importance;
+              
+              if (categoryName.Contains("belief") || categoryName.Contains("opinion") || categoryName.Contains("relationship"))
+              {
+                // Store as Belief
+                var belief = new BeliefMemoryEntry("Player", extractedInfo);
+                var beliefId = $"player_{category.CategoryName}_{Guid.NewGuid().ToString("N")[..8]}";
+                memorySystem.SetBelief(beliefId, belief, MutationSource.ValidatedOutput);
+                UnityEngine.Debug.Log($"[LlamaBrainAgent] Stored belief using category '{category.DisplayName}': {extractedInfo}");
+              }
+              else if (categoryName.Contains("fact") || categoryName.Contains("world"))
+              {
+                // Store as World State (not canonical - those are designer-only)
+                var stateKey = $"player_{category.CategoryName}";
+                memorySystem.SetWorldState(stateKey, extractedInfo, MutationSource.ValidatedOutput);
+                UnityEngine.Debug.Log($"[LlamaBrainAgent] Stored world state using category '{category.DisplayName}': {extractedInfo}");
+              }
+              else
+              {
+                // Store as Episodic Memory
+                var entry = EpisodicMemoryEntry.FromLearnedInfo(extractedInfo, "Player", significance);
+                memorySystem.AddEpisodicMemory(entry, MutationSource.ValidatedOutput);
+                UnityEngine.Debug.Log($"[LlamaBrainAgent] Stored episodic memory using category '{category.DisplayName}': {extractedInfo}");
+              }
             }
           }
         }
@@ -867,7 +1610,8 @@ namespace LlamaBrain.Runtime.Core
       if (runtimeProfile == null || memoryProvider == null)
         return new List<string>();
 
-      return memoryProvider.GetMemory(runtimeProfile);
+      var memorySystem = memoryProvider.GetOrCreateSystem(runtimeProfile.PersonaId);
+      return memorySystem.GetAllMemoriesForPrompt(maxEpisodic: 20).ToList();
     }
 
     /// <summary>
@@ -1000,8 +1744,8 @@ namespace LlamaBrain.Runtime.Core
     private class ValidationResult
     {
       public bool IsValid { get; set; }
-      public string CleanedResponse { get; set; }
-      public string Reason { get; set; }
+      public string CleanedResponse { get; set; } = "";
+      public string Reason { get; set; } = "";
       public bool WasRetry { get; set; }
     }
 
@@ -1013,6 +1757,7 @@ namespace LlamaBrain.Runtime.Core
     /// <param name="wasTruncated">Whether the response hit the token cap</param>
     /// <param name="wasRetry">Whether this is a retry attempt</param>
     /// <returns>Validation result with cleaned response</returns>
+    /// \cond INTERNAL
     private ValidationResult ValidateAndCleanResponse(string response, PersonaProfile profile, bool wasTruncated, bool wasRetry = false)
     {
       var result = new ValidationResult
@@ -1039,7 +1784,7 @@ namespace LlamaBrain.Runtime.Core
       {
         var lines = response.Split(new[] { '\n', '\r' }, System.StringSplitOptions.None);
         // Find first non-empty, non-whitespace-only line
-        string firstNonEmptyLine = null;
+        string? firstNonEmptyLine = null;
         foreach (var line in lines)
         {
           var trimmed = line.Trim();
@@ -1256,28 +2001,101 @@ namespace LlamaBrain.Runtime.Core
       result.Reason = "Valid";
       return result;
     }
+    /// \endcond
+
+    /// <summary>
+    /// Builds a failure reason string from the inference result.
+    /// </summary>
+    private string BuildFailureReason(InferenceResultWithRetries result)
+    {
+      var reasons = new List<string>();
+
+      if (!result.Success)
+      {
+        var final = result.FinalResult;
+        
+        if (!string.IsNullOrEmpty(final.ErrorMessage))
+        {
+          reasons.Add($"API Error: {final.ErrorMessage}");
+        }
+        else if (final.Violations.Count > 0)
+        {
+          reasons.Add($"Validation Failed: {final.Outcome} ({final.Violations.Count} violations)");
+        }
+        else
+        {
+          reasons.Add($"Validation Failed: {final.Outcome}");
+        }
+
+        reasons.Add($"After {result.AttemptCount} attempts");
+      }
+
+      return string.Join("; ", reasons);
+    }
 
     /// <summary>
     /// Generate a context-appropriate fallback response when validation fails
+    /// (Legacy method - now uses AuthorControlledFallback internally)
     /// </summary>
     private string GenerateFallbackResponse(string playerInput)
     {
-      if (string.IsNullOrWhiteSpace(playerInput))
-        return "Hello there!";
+      // Initialize fallback if needed
+      if (fallbackSystem == null)
+      {
+        var fallbackConfigInstance = fallbackConfig != null 
+          ? fallbackConfig.ToFallbackConfig() 
+          : new AuthorControlledFallback.FallbackConfig();
+        fallbackSystem = new AuthorControlledFallback(fallbackConfigInstance);
+      }
 
-      var inputLower = playerInput.ToLowerInvariant().Trim();
+      // Use context from current interaction if available
+      var context = currentInteractionContext ?? new InteractionContext
+      {
+        TriggerReason = TriggerReason.PlayerUtterance,
+        PlayerInput = playerInput,
+        GameTime = Time.time
+      };
 
-      // Greeting responses
-      if (inputLower == "hi" || inputLower == "hello" || inputLower == "hey")
-        return "Hello there!";
+      return fallbackSystem.GetFallbackResponse(context, "Legacy fallback triggered", null, currentTriggerFallbacks);
+    }
 
-      // Question responses
-      if (inputLower.EndsWith("?") || inputLower.StartsWith("what") || inputLower.StartsWith("how") ||
-          inputLower.StartsWith("why") || inputLower.StartsWith("when") || inputLower.StartsWith("where"))
-        return "That's an interesting question.";
+    /// <summary>
+    /// Gets the fallback system statistics (for metrics/debugging).
+    /// </summary>
+    IFallbackStats? IAgentMetrics.FallbackStats => fallbackSystem?.Stats;
 
-      // Statement responses
-      return "I see.";
+    /// <summary>
+    /// Gets the fallback system statistics (for direct access).
+    /// </summary>
+    public AuthorControlledFallback.FallbackStats? FallbackStats => fallbackSystem?.Stats;
+
+    /// <summary>
+    /// Gets the mutation controller statistics (for metrics/debugging).
+    /// </summary>
+    public MutationStatistics? MutationStats => mutationController?.Statistics;
+
+    /// <summary>
+    /// Hooks a WorldIntentDispatcher to receive world intents from this agent.
+    /// </summary>
+    /// <param name="dispatcher">The dispatcher to hook.</param>
+    public void HookIntentDispatcher(LlamaBrainRuntime.Core.WorldIntentDispatcher dispatcher)
+    {
+      if (mutationController != null && dispatcher != null)
+      {
+        dispatcher.HookToController(mutationController);
+      }
+    }
+
+    /// <summary>
+    /// Unhooks a WorldIntentDispatcher from this agent.
+    /// </summary>
+    /// <param name="dispatcher">The dispatcher to unhook.</param>
+    public void UnhookIntentDispatcher(LlamaBrainRuntime.Core.WorldIntentDispatcher dispatcher)
+    {
+      if (mutationController != null && dispatcher != null)
+      {
+        dispatcher.UnhookFromController(mutationController);
+      }
     }
 
     /// <summary>
@@ -1431,6 +2249,61 @@ namespace LlamaBrain.Runtime.Core
       UnityEngine.Debug.Log($"  - PersonaConfig: {(PersonaConfig != null ? $"Set ({PersonaConfig.Name})" : "Null")}");
       UnityEngine.Debug.Log($"  - DialogueSession: {(dialogueSession != null ? "Set" : "Null")}");
       UnityEngine.Debug.Log($"  - ConnectionStatus: {ConnectionStatus}");
+    }
+
+    /// <summary>
+    /// Update method for automatic memory decay
+    /// </summary>
+    private void Update()
+    {
+      if (enableAutoDecay && Application.isPlaying && IsInitialized && memoryProvider != null && runtimeProfile != null)
+      {
+        if (Time.time - lastDecayTime >= decayIntervalSeconds)
+        {
+          memoryProvider.ApplyDecay(runtimeProfile.PersonaId);
+          lastDecayTime = Time.time;
+          UnityEngine.Debug.Log($"[LlamaBrainAgent] Applied memory decay for {runtimeProfile.PersonaId}");
+        }
+      }
+    }
+
+    /// <summary>
+    /// Initialize canonical facts from PersonaConfig if available
+    /// </summary>
+    private void InitializeCanonicalFacts()
+    {
+      if (!IsInitialized || runtimeProfile == null || memoryProvider == null)
+        return;
+
+      // For now, this is a placeholder - canonical facts can be added via public method
+      // In the future, PersonaConfig could have a CanonicalFacts list
+      // Example usage:
+      // agent.InitializeCanonicalFact("world_rule_1", "Magic is real", "world_lore");
+    }
+
+    /// <summary>
+    /// Initialize a canonical fact for this NPC (designer-defined immutable truth)
+    /// </summary>
+    /// <param name="factId">Unique identifier for the fact</param>
+    /// <param name="fact">The immutable fact content</param>
+    /// <param name="domain">Optional domain/category (e.g., "world", "character", "lore")</param>
+    public void InitializeCanonicalFact(string factId, string fact, string? domain = null)
+    {
+      if (!IsInitialized || runtimeProfile == null || memoryProvider == null)
+      {
+        UnityEngine.Debug.LogWarning("[LlamaBrainAgent] Cannot initialize canonical fact: Agent not initialized");
+        return;
+      }
+
+      var result = memoryProvider.AddCanonicalFact(runtimeProfile.PersonaId, factId, fact, domain);
+      if (result.Success)
+      {
+        UnityEngine.Debug.Log($"[LlamaBrainAgent] Initialized canonical fact: {factId} = '{fact}'");
+      }
+      else
+      {
+        UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Failed to initialize canonical fact {factId}: {result.FailureReason}");
+      }
     }
   }
 }

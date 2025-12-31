@@ -21,22 +21,28 @@ LlamaBrain/
 │   │   ├── Persona/              # Character and memory system
 │   │   └── Utilities/            # Helper utilities
 │   └── Source/Core/SAFEGUARDS.md # Security documentation
-└── LlamaBrainForUnity/           # Unity package
-    ├── LLAMABRAINFORUNITY.md     # Unity package documentation
-    ├── SAMPLES.md                # Sample scenes guide
-    ├── TROUBLESHOOTING.md        # Troubleshooting guide
-    ├── Runtime/                  # Unity runtime scripts
-    ├── Editor/                   # Unity editor scripts
-    ├── Samples/                  # Example scenes and assets
-    └── Tests/                    # Unit tests
+└── LlamaBrainRuntime/            # Unity package
+    ├── Assets/LlamaBrainRuntime/
+    │   ├── Runtime/              # Unity runtime scripts
+    │   │   ├── Core/             # Core Unity components
+    │   │   ├── Demo/             # Demo components and UI
+    │   │   └── RedRoom/          # In-game LLM testing suite
+    │   │       ├── AI/           # NPC follower and AI components
+    │   │       ├── Interaction/   # Dialogue triggers and metrics
+    │   │       ├── UI/           # Player interaction UI
+    │   │       └── README.md     # RedRoom documentation
+    │   ├── Editor/               # Unity editor scripts
+    │   ├── Samples/              # Example scenes and assets
+    │   └── Tests/                # Unit tests
+    └── Documentation/            # Additional documentation
 ```
 
 ## 🚀 Quick Start
 
 ### For Unity Developers
 1. **Import the Unity Package**
-   - Import `LlamaBrainForUnity` into your Unity project
-   - See [LlamaBrain for Unity README](LlamaBrainForUnity/LLAMABRAINFORUNITY.md) for detailed setup
+   - Import `LlamaBrainRuntime` into your Unity project
+   - See the Unity package documentation for detailed setup
 
 2. **Set Up Your Server**
    - Download llama.cpp server executable
@@ -45,8 +51,14 @@ LlamaBrain/
 
 3. **Create Your First NPC**
    - Create a PersonaConfig asset
-   - Add UnityBrainAgent to a GameObject
+   - Add LlamaBrainAgent to a GameObject
    - Start building AI-powered characters
+
+4. **Test LLM Performance (Optional)**
+   - Use the RedRoom testing suite for comprehensive LLM evaluation
+   - Set up multiple trigger zones with different prompts
+   - Collect and analyze metrics automatically
+   - See the RedRoom testing suite documentation for details
 
 ### For .NET Developers
 1. **Install the Core Library**
@@ -87,18 +99,21 @@ LlamaBrain/
 - **Built-in UI Components**: Ready-to-use dialogue interfaces
 - **Editor Tools**: Custom inspectors and configuration tools
 - **Sample Scenes**: Complete examples for different use cases
+- **RedRoom Testing Suite**: Comprehensive in-game LLM testing framework
+  - Multiple trigger zones for testing different conversational seeds
+  - Real-time metrics collection and export
+  - Rolling file system for data management
+  - NPC follower system with LLM dialogue
+  - Player interaction system with visual feedback
 
 ## 📚 Documentation
 
 ### Core Library
-- **[Core README](LlamaBrain/LLAMABRAIN.md)** - Complete library documentation
-- **[Security Guide](LlamaBrain/Source/Core/SAFEGUARDS.md)** - Security measures and safeguards
+- **[Core README](LlamaBrain/README.md)** - Complete library documentation
+- **[Security Guide](Documentation/SAFEGUARDS.md)** - Security measures and safeguards
 
 ### Unity Package
-- **[Unity README](LlamaBrainForUnity/Assets/LlamaBrainForUnity/LLAMABRAINFORUNITY.md)** - Unity integration guide
-- **[Samples Guide](LlamaBrainForUnity/Assets/LlamaBrainForUnity/SAMPLES.md)** - Sample scenes and examples
-- **[Troubleshooting](LlamaBrainForUnity/Assets/LlamaBrainForUnity/TROUBLESHOOTING.md)** - Common issues and solutions
-- **[Tests Documentation](LlamaBrainForUnity/Assets/LlamaBrainForUnity/Tests/TESTS.md)** - Testing documentation
+Unity package documentation is available in the LlamaBrainRuntime project.
 
 ## 🛠️ Requirements
 
@@ -146,6 +161,11 @@ var config = new ProcessConfig
 - **Dynamic Dialogue**: Context-aware conversations
 - **Procedural Content**: AI-generated quests and stories
 - **Character Personalities**: Unique AI personalities for each NPC
+- **LLM Testing & QA**: Comprehensive testing framework for evaluating LLM performance in-game
+  - Test multiple conversational scenarios simultaneously
+  - Collect detailed performance metrics (response times, token usage)
+  - Export data for analysis and comparison
+  - Validate LLM behavior across different prompts and contexts
 
 ### Content Creation
 - **Writing Assistants**: AI-powered writing tools
@@ -169,7 +189,7 @@ LlamaBrain implements comprehensive security measures:
 - **Process Security**: Safe server execution
 - **Resource Limits**: File size and memory constraints
 
-See [SAFEGUARDS.md](LlamaBrain/Source/Core/SAFEGUARDS.md) for detailed security information.
+See [SAFEGUARDS.md](Documentation/SAFEGUARDS.md) for detailed security information.
 
 ## 🧪 Testing
 
@@ -184,6 +204,11 @@ See [SAFEGUARDS.md](LlamaBrain/Source/Core/SAFEGUARDS.md) for detailed security 
 - PlayMode tests for runtime functionality
 - Sample scene validation
 - UI component tests
+- **RedRoom Testing Suite**: In-game LLM testing framework
+  - Automated metrics collection
+  - Rolling file system for data management
+  - Multiple test scenarios with trigger zones
+  - CSV/JSON export for analysis
 
 ## 🔄 Integration
 
@@ -207,9 +232,10 @@ The core library supports:
 If you have questions you can review the video quick start on [Youtube].(https://youtu.be/1EtU6qu7O5Q)
 
 ### Unity Package
-1. Download the LlamaBrainForUnity package
+1. Download the LlamaBrainRuntime package
 2. Import into your Unity project
-3. Follow the [Unity README](LlamaBrainForUnity/Assets/LlamaBrainForUnity/LLAMABRAINFORUNITY.md) for setup
+3. Follow the Unity package documentation for setup
+4. For LLM testing, see the RedRoom testing suite documentation
 
 ### Core Library
 ```bash
@@ -244,21 +270,94 @@ All rights reserved. No part of this codebase may be copied, redistributed, or u
 
 ## 📈 Roadmap
 
-### Planned Features
-- **Enhanced Memory Systems**: More sophisticated memory management
+**See [ROADMAP.md](Documentation/ROADMAP.md) for detailed implementation plan and progress tracking.**
+
+### Current Status: ~60% Complete
+
+**Current Phase**: Phase 2 - Structured Memory System ✅ Complete
+
+**Next Priority**: Phase 3 - State Snapshot & Context Retrieval 🎯
+
+### Current Features (v0.2+)
+- ✅ **RedRoom Testing Suite**: Comprehensive in-game LLM testing framework
+- ✅ **Metrics Collection**: Detailed performance and quality metrics with rolling files
+- ✅ **Multiple Test Scenarios**: Support for testing multiple conversational seeds
+- ✅ **NPC Follower System**: AI-powered NPCs with LLM dialogue
+- ✅ **Stateless LLM Core**: Clean separation of inference from state
+- ✅ **Expectancy Engine**: Constraint-based behavior control for NPCs
+  - Engine-agnostic core (works with Unity, Unreal, Godot)
+  - Rule types: Prohibition, Requirement, Permission
+  - ScriptableObject-based declarative rules
+  - Context-aware constraint evaluation
+  - 50 unit tests passing
+- ✅ **Structured Memory System**: Authority-based memory management
+  - Four memory types: Canonical Facts, World State, Episodic, Beliefs
+  - Authority hierarchy prevents unauthorized modifications
+  - Episodic memory with decay and significance
+  - Belief contradiction detection against canonical facts
+  - ~65 unit tests passing
+
+### In Development (Architectural Pattern Implementation)
+
+**Phase 1: Determinism Layer** ✅ Complete
+- Expectancy Engine for constraint generation
+- Rule-based control over LLM behavior
+- Per-NPC and global constraint configuration
+- Full test coverage (50 tests)
+
+**Phase 2: Structured Memory System** ✅ Complete
+- Canonical Facts (immutable, Designer-only)
+- World State (validated mutations, GameSystem+ authority)
+- Episodic Memory (decay-enabled, significance-weighted)
+- Belief/Relationship Memory (can be wrong, contradiction detection)
+- Full test coverage (~65 tests)
+
+**Phase 3: State Snapshot & Retry Logic** (Not Started)
+- Authoritative state snapshots before inference
+- Context retrieval with relevance weighting
+- Retry logic with stricter constraints (max 3 attempts)
+
+**Phase 4: Ephemeral Working Memory** (Not Started)
+- Bounded working memory for current inference
+- Token-aware prompt assembly
+- Explicit memory lifecycle management
+
+**Phase 5: Output Validation System** (Not Started)
+- Output parser for structured extraction
+- Validation gate with constraint checking
+- Automatic retry on validation failure
+
+**Phase 6: Controlled Memory Mutation** (Not Started)
+- Validated outputs only for memory writes
+- Canonical fact protection enforcement
+- World intent emission system
+
+**Phase 7: Enhanced Fallback System** (Not Started)
+- Author-controlled fallback hierarchy
+- Context-aware emergency responses
+- Failure reason logging
+
+**Phase 8: RedRoom Integration** (40% Complete)
+- Validation metrics and export
+- Architectural pattern testing
+- End-to-end validation scenarios
+
+**Phase 9: Documentation** (30% Complete)
+- Architecture documentation with diagrams
+- Setup tutorials for new components
+- API reference for all layers
+
+### Future Features (Post-Architecture)
 - **Multi-Modal Support**: Image and audio integration
-- **Advanced Prompting**: More sophisticated prompt composition
-- **Performance Optimization**: Improved response times
-- **Additional Platforms**: Support for more .NET platforms
+- **Performance Optimization**: Layer-specific optimizations
 - **Voice Integration**: Text-to-speech and speech-to-text
 - **Animation Integration**: Character animation triggers
-- **Save System Integration**: Persistent conversation storage
-- **Multi-Player Support**: Shared AI experiences
+- **Multi-Player Support**: Shared world state with validation
+- **Advanced Analytics**: Validation and constraint visualization
 
 ---
 
 **Note**: LlamaBrain requires a running llama.cpp server. Ensure you have the appropriate llama.cpp executable and compatible model file before use.
 
 For detailed information, see the specific README files for each component:
-- [Core Library](LlamaBrain/LLAMABRAIN.md)
-- [Unity Package](LlamaBrainForUnity/Assets/LlamaBrainForUnity/LLAMABRAINFORUNITY.md) 
+- [Core Library](LlamaBrain/README.md) 

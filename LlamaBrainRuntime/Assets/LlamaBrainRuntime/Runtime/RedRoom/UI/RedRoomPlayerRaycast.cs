@@ -4,6 +4,10 @@ using LlamaBrain.Runtime.RedRoom.AI;
 
 namespace LlamaBrain.Runtime.RedRoom.UI
 {
+  /// <summary>
+  /// Handles player raycast interactions with NPCs in the Red Room demo.
+  /// Detects when the player's camera raycast hits an NPC and triggers appropriate events.
+  /// </summary>
   [RequireComponent(typeof(Camera))]
   public class RedRoomPlayerRaycast : MonoBehaviour
   {
@@ -14,7 +18,13 @@ namespace LlamaBrain.Runtime.RedRoom.UI
 
     private GameObject _previousHitObject;
 
+    /// <summary>
+    /// Event invoked when the raycast hits an NPC.
+    /// </summary>
     public UnityEvent<RaycastHit> OnRaycastHit;
+    /// <summary>
+    /// Event invoked when the raycast misses or no longer hits an NPC.
+    /// </summary>
     public UnityEvent OnRaycastMiss;
 
     private void Awake()

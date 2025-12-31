@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -5,6 +6,7 @@ using System.Linq;
 using System.Text;
 using UnityEngine;
 using LlamaBrain.Core;
+using LlamaBrain.Core.Metrics;
 
 namespace LlamaBrain.Runtime.RedRoom.Interaction
 {
@@ -13,7 +15,7 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
   /// </summary>
   public class DialogueMetricsCollector : MonoBehaviour
   {
-    private DialogueMetricsCollection currentSession;
+    private DialogueMetricsCollection? currentSession;
     private int currentFileIndex = 0;
     
     [Header("Export Settings")]
@@ -36,7 +38,10 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
     [Tooltip("Maximum number of files to keep. Oldest files are deleted when exceeded (0 = keep all)")]
     [SerializeField] private int maxFilesToKeep = 50;
     
-    public static DialogueMetricsCollector Instance { get; private set; }
+    /// <summary>
+    /// Gets the singleton instance of the DialogueMetricsCollector.
+    /// </summary>
+    public static DialogueMetricsCollector? Instance { get; private set; }
     
     private void Awake()
     {
@@ -69,13 +74,35 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
     }
     
     /// <summary>
-    /// Records a dialogue interaction with metrics
+    /// Records a dialogue interaction with metrics.
     /// </summary>
+    /// <param name="metrics">The completion metrics from the LLM response</param>
+    /// <param name="trigger">The trigger that initiated this interaction</param>
+    /// <param name="npcName">The name of the NPC</param>
+    /// <param name="wasTruncated">Whether the response was truncated</param>
     public void RecordInteraction(
       CompletionMetrics metrics,
       NpcDialogueTrigger trigger,
       string npcName,
       bool wasTruncated = false)
+    {
+      RecordInteraction(metrics, trigger, npcName, wasTruncated, null);
+    }
+
+    /// <summary>
+    /// Records a dialogue interaction with metrics and architectural data.
+    /// </summary>
+    /// <param name="metrics">The completion metrics from the LLM response</param>
+    /// <param name="trigger">The trigger that initiated this interaction</param>
+    /// <param name="npcName">The name of the NPC</param>
+    /// <param name="wasTruncated">Whether the response was truncated</param>
+    /// <param name="agent">The LlamaBrainAgent that performed the inference (optional, for architectural metrics)</param>
+    public void RecordInteraction(
+      CompletionMetrics metrics,
+      NpcDialogueTrigger trigger,
+      string npcName,
+      bool wasTruncated,
+      LlamaBrain.Runtime.Core.LlamaBrainAgent? agent)
     {
       if (currentSession == null)
       {
@@ -84,15 +111,30 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
       
       var interaction = DialogueInteraction.FromMetrics(metrics, trigger, npcName);
       interaction.WasTruncated = wasTruncated;
-      currentSession.AddInteraction(interaction);
       
-      Debug.Log($"[DialogueMetricsCollector] Recorded interaction #{currentSession.TotalInteractions} " +
-                $"from trigger '{trigger.GetTriggerName()}' - " +
-                $"TTFT: {metrics.TtftMs}ms, Tokens: {metrics.GeneratedTokenCount}, " +
-                $"Speed: {metrics.TokensPerSecond:F1} tps");
+      // Populate architectural metrics if agent is provided
+      if (agent != null)
+      {
+        interaction.PopulateArchitecturalMetrics(agent);
+      }
+      
+      if (currentSession != null)
+      {
+        currentSession.AddInteraction(interaction);
+        
+        var validationStatus = interaction.ValidationPassed ? "PASS" : "FAIL";
+        var retryInfo = interaction.RetryCount > 0 ? $" ({interaction.RetryCount} retries)" : "";
+        var fallbackInfo = interaction.FallbackUsed ? " [FALLBACK]" : "";
+        
+        Debug.Log($"[DialogueMetricsCollector] Recorded interaction #{currentSession.TotalInteractions} " +
+                  $"from trigger '{trigger.GetTriggerName()}' - " +
+                  $"TTFT: {metrics.TtftMs}ms, Tokens: {metrics.GeneratedTokenCount}, " +
+                  $"Speed: {metrics.TokensPerSecond:F1} tps, " +
+                  $"Validation: {validationStatus}{retryInfo}{fallbackInfo}");
+      }
       
       // Check if we need to roll over to a new file
-      if (enableRollingFiles && ShouldRollFile())
+      if (enableRollingFiles && currentSession != null && ShouldRollFile())
       {
         Debug.Log($"[DialogueMetricsCollector] Rolling to new file. Current: {currentSession.TotalInteractions} interactions");
         RollToNewFile();
@@ -203,9 +245,17 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
       string jsonPath = Path.Combine(basePath, $"{baseFileName}.json");
       ExportToJson(session, jsonPath);
       
+      // Export validation statistics
+      ExportValidationStatistics(session, fileIndex);
+      
+      // Export constraint violations
+      ExportConstraintViolations(session, fileIndex);
+      
       Debug.Log($"[DialogueMetricsCollector] Exported session with {session.TotalInteractions} interactions (file #{fileIndex}):");
       Debug.Log($"  CSV: {csvPath}");
       Debug.Log($"  JSON: {jsonPath}");
+      Debug.Log($"  Validation Statistics: {Path.Combine(basePath, $"ValidationStats_{session.SessionId}_{DateTime.Now:yyyyMMdd_HHmmss}{(fileIndex > 0 ? $"_part{fileIndex:D3}" : "")}.csv")}");
+      Debug.Log($"  Constraint Violations: {Path.Combine(basePath, $"ConstraintViolations_{session.SessionId}_{DateTime.Now:yyyyMMdd_HHmmss}{(fileIndex > 0 ? $"_part{fileIndex:D3}" : "")}.csv")}");
     }
     
     /// <summary>
@@ -276,7 +326,10 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
       // Header
       csv.AppendLine("InteractionId,Timestamp,TriggerId,TriggerName,PromptText,PromptCount,NpcName," +
                      "ResponseText,ResponseLength,TtftMs,PrefillTimeMs,DecodeTimeMs,TotalTimeMs," +
-                     "PromptTokenCount,GeneratedTokenCount,CachedTokenCount,TokensPerSecond,WasTruncated");
+                     "PromptTokenCount,GeneratedTokenCount,CachedTokenCount,TokensPerSecond,WasTruncated," +
+                     "ValidationPassed,ValidationFailureCount,ConstraintViolationTypes,HasCriticalFailure," +
+                     "RetryCount,TotalAttempts,FallbackUsed,FallbackTriggerReason," +
+                     "ConstraintCount,ProhibitionCount,RequirementCount,PermissionCount");
       
       // Data rows
       foreach (var interaction in session.Interactions)
@@ -302,7 +355,19 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
                       $"{interaction.GeneratedTokenCount}," +
                       $"{interaction.CachedTokenCount}," +
                       $"{interaction.TokensPerSecond:F2}," +
-                      $"{interaction.WasTruncated}");
+                      $"{interaction.WasTruncated}," +
+                      $"{interaction.ValidationPassed}," +
+                      $"{interaction.ValidationFailureCount}," +
+                      $"\"{EscapeCsvField(interaction.ConstraintViolationTypes)}\"," +
+                      $"{interaction.HasCriticalFailure}," +
+                      $"{interaction.RetryCount}," +
+                      $"{interaction.TotalAttempts}," +
+                      $"{interaction.FallbackUsed}," +
+                      $"\"{EscapeCsvField(interaction.FallbackTriggerReason)}\"," +
+                      $"{interaction.ConstraintCount}," +
+                      $"{interaction.ProhibitionCount}," +
+                      $"{interaction.RequirementCount}," +
+                      $"{interaction.PermissionCount}");
       }
       
       File.WriteAllText(filePath, csv.ToString());
@@ -342,7 +407,19 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
         json.AppendLine($"      \"GeneratedTokenCount\": {interaction.GeneratedTokenCount},");
         json.AppendLine($"      \"CachedTokenCount\": {interaction.CachedTokenCount},");
         json.AppendLine($"      \"TokensPerSecond\": {interaction.TokensPerSecond:F2},");
-        json.AppendLine($"      \"WasTruncated\": {interaction.WasTruncated.ToString().ToLower()}");
+        json.AppendLine($"      \"WasTruncated\": {interaction.WasTruncated.ToString().ToLower()},");
+        json.AppendLine($"      \"ValidationPassed\": {interaction.ValidationPassed.ToString().ToLower()},");
+        json.AppendLine($"      \"ValidationFailureCount\": {interaction.ValidationFailureCount},");
+        json.AppendLine($"      \"ConstraintViolationTypes\": \"{EscapeJsonString(interaction.ConstraintViolationTypes)}\",");
+        json.AppendLine($"      \"HasCriticalFailure\": {interaction.HasCriticalFailure.ToString().ToLower()},");
+        json.AppendLine($"      \"RetryCount\": {interaction.RetryCount},");
+        json.AppendLine($"      \"TotalAttempts\": {interaction.TotalAttempts},");
+        json.AppendLine($"      \"FallbackUsed\": {interaction.FallbackUsed.ToString().ToLower()},");
+        json.AppendLine($"      \"FallbackTriggerReason\": \"{EscapeJsonString(interaction.FallbackTriggerReason)}\",");
+        json.AppendLine($"      \"ConstraintCount\": {interaction.ConstraintCount},");
+        json.AppendLine($"      \"ProhibitionCount\": {interaction.ProhibitionCount},");
+        json.AppendLine($"      \"RequirementCount\": {interaction.RequirementCount},");
+        json.AppendLine($"      \"PermissionCount\": {interaction.PermissionCount}");
         json.Append(i < session.Interactions.Count - 1 ? "    }," : "    }");
       }
       
@@ -376,6 +453,10 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
     /// <summary>
     /// Gets summary statistics for the current session
     /// </summary>
+    /// <summary>
+    /// Gets a formatted summary of the current session metrics.
+    /// </summary>
+    /// <returns>A formatted string containing session statistics</returns>
     public string GetSessionSummary()
     {
       if (currentSession == null || currentSession.TotalInteractions == 0)
@@ -401,6 +482,24 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
       summary.AppendLine($"Average Tokens/Second: {avgTps:F1}");
       summary.AppendLine($"Truncated Responses: {truncatedCount}/{currentSession.TotalInteractions}");
       
+      // Architectural pattern metrics
+      var validationPassedCount = interactions.Count(i => i.ValidationPassed);
+      var validationPassRate = currentSession.TotalInteractions > 0 
+        ? (double)validationPassedCount / currentSession.TotalInteractions * 100.0 
+        : 0.0;
+      var fallbackUsedCount = interactions.Count(i => i.FallbackUsed);
+      var fallbackRate = currentSession.TotalInteractions > 0 
+        ? (double)fallbackUsedCount / currentSession.TotalInteractions * 100.0 
+        : 0.0;
+      var avgRetries = interactions.Average(i => i.RetryCount);
+      var criticalFailureCount = interactions.Count(i => i.HasCriticalFailure);
+      
+      summary.AppendLine("\nArchitectural Pattern Metrics:");
+      summary.AppendLine($"  Validation Pass Rate: {validationPassRate:F1}% ({validationPassedCount}/{currentSession.TotalInteractions})");
+      summary.AppendLine($"  Average Retries per Interaction: {avgRetries:F2}");
+      summary.AppendLine($"  Fallback Usage Rate: {fallbackRate:F1}% ({fallbackUsedCount}/{currentSession.TotalInteractions})");
+      summary.AppendLine($"  Critical Failures: {criticalFailureCount}");
+      
       // Per-trigger statistics
       var triggerGroups = interactions.GroupBy(i => i.TriggerName);
       summary.AppendLine("\nPer-Trigger Statistics:");
@@ -410,6 +509,111 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
       }
       
       return summary.ToString();
+    }
+
+    /// <summary>
+    /// Exports validation statistics to a separate CSV file.
+    /// </summary>
+    /// <param name="session">The session to export statistics for</param>
+    /// <param name="fileIndex">The file index for rolling files</param>
+    public void ExportValidationStatistics(DialogueMetricsCollection session, int fileIndex = 0)
+    {
+      string basePath = Path.Combine(Application.persistentDataPath, exportDirectory);
+      if (!Directory.Exists(basePath))
+      {
+        Directory.CreateDirectory(basePath);
+      }
+
+      string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+      string baseFileName = fileIndex > 0 
+        ? $"ValidationStats_{session.SessionId}_{timestamp}_part{fileIndex:D3}"
+        : $"ValidationStats_{session.SessionId}_{timestamp}";
+      
+      string csvPath = Path.Combine(basePath, $"{baseFileName}.csv");
+      
+      var csv = new StringBuilder();
+      csv.AppendLine("ValidationPassed,ValidationFailureCount,ConstraintViolationTypes,HasCriticalFailure," +
+                     "RetryCount,TotalAttempts,FallbackUsed,ConstraintCount,ProhibitionCount,RequirementCount,PermissionCount," +
+                     "InteractionId,TriggerName,NpcName");
+      
+      foreach (var interaction in session.Interactions)
+      {
+        csv.AppendLine($"{interaction.ValidationPassed}," +
+                      $"{interaction.ValidationFailureCount}," +
+                      $"\"{EscapeCsvField(interaction.ConstraintViolationTypes)}\"," +
+                      $"{interaction.HasCriticalFailure}," +
+                      $"{interaction.RetryCount}," +
+                      $"{interaction.TotalAttempts}," +
+                      $"{interaction.FallbackUsed}," +
+                      $"{interaction.ConstraintCount}," +
+                      $"{interaction.ProhibitionCount}," +
+                      $"{interaction.RequirementCount}," +
+                      $"{interaction.PermissionCount}," +
+                      $"{interaction.InteractionId}," +
+                      $"{EscapeCsvField(interaction.TriggerName)}," +
+                      $"{EscapeCsvField(interaction.NpcName)}");
+      }
+      
+      File.WriteAllText(csvPath, csv.ToString());
+      Debug.Log($"[DialogueMetricsCollector] Exported validation statistics to: {csvPath}");
+    }
+
+    /// <summary>
+    /// Exports constraint violation details to a separate CSV file.
+    /// </summary>
+    /// <param name="session">The session to export violations for</param>
+    /// <param name="fileIndex">The file index for rolling files</param>
+    public void ExportConstraintViolations(DialogueMetricsCollection session, int fileIndex = 0)
+    {
+      // Filter to only interactions with violations
+      var violations = session.Interactions
+        .Where(i => !i.ValidationPassed && !string.IsNullOrEmpty(i.ConstraintViolationTypes))
+        .ToList();
+      
+      if (violations.Count == 0)
+      {
+        Debug.Log("[DialogueMetricsCollector] No constraint violations to export");
+        return;
+      }
+
+      string basePath = Path.Combine(Application.persistentDataPath, exportDirectory);
+      if (!Directory.Exists(basePath))
+      {
+        Directory.CreateDirectory(basePath);
+      }
+
+      string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+      string baseFileName = fileIndex > 0 
+        ? $"ConstraintViolations_{session.SessionId}_{timestamp}_part{fileIndex:D3}"
+        : $"ConstraintViolations_{session.SessionId}_{timestamp}";
+      
+      string csvPath = Path.Combine(basePath, $"{baseFileName}.csv");
+      
+      var csv = new StringBuilder();
+      csv.AppendLine("InteractionId,Timestamp,TriggerName,NpcName,ConstraintViolationTypes," +
+                     "ValidationFailureCount,HasCriticalFailure,RetryCount,TotalAttempts," +
+                     "ConstraintCount,ProhibitionCount,RequirementCount,PermissionCount,ResponseText");
+      
+      foreach (var interaction in violations)
+      {
+        csv.AppendLine($"{interaction.InteractionId}," +
+                      $"{interaction.Timestamp:yyyy-MM-dd HH:mm:ss.fff}," +
+                      $"{EscapeCsvField(interaction.TriggerName)}," +
+                      $"{EscapeCsvField(interaction.NpcName)}," +
+                      $"\"{EscapeCsvField(interaction.ConstraintViolationTypes)}\"," +
+                      $"{interaction.ValidationFailureCount}," +
+                      $"{interaction.HasCriticalFailure}," +
+                      $"{interaction.RetryCount}," +
+                      $"{interaction.TotalAttempts}," +
+                      $"{interaction.ConstraintCount}," +
+                      $"{interaction.ProhibitionCount}," +
+                      $"{interaction.RequirementCount}," +
+                      $"{interaction.PermissionCount}," +
+                      $"\"{EscapeCsvField(interaction.ResponseText)}\"");
+      }
+      
+      File.WriteAllText(csvPath, csv.ToString());
+      Debug.Log($"[DialogueMetricsCollector] Exported {violations.Count} constraint violations to: {csvPath}");
     }
     
     private void OnApplicationQuit()
