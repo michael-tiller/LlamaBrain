@@ -34,3 +34,13 @@
 *.unitypackage
 /LlamaBrainRuntime/Assets/LLamaBrainForUnity_1.0.0.unitypackage.meta
 /Documentation/doxygen/doxygen-awesome-css-2.4.1
+/LlamaBrain/LlamaBrain.Tests/bin
+/LlamaBrain/LlamaBrain.Tests/obj
+/LlamaBrain/TestResults
+/LlamaBrain/bin
+/LlamaBrain/obj
+LlamaBrain/LlamaBrain.sln.DotSettings.user
+/LlamaBrain/.claude
+/LlamaBrainRuntime/Assets/LlamaBrainRuntime/LlamaBrain.dll
+*.code-workspace
+/*.code-workspace

@@ -409,6 +409,345 @@ var summary = collector.GetSessionSummary();
 var session = collector.currentSession; // Access raw data
 ```
 
+## Architectural Pattern: Determinism Layer
+
+LlamaBrain uses a "determinism layer" architecture that wraps the stateless LLM to provide consistent, controllable NPC behavior. This section documents the key systems that RedRoom can test.
+
+### Core Concept
+
+![Architectural Diagram](../../../../../Documentation/architectural_diagram.png)
+
+**"Continuity Emerges from Deterministic State Reconstruction Around a Stateless Generator"**
+
+The LLM (Component 6) has no memory between calls - all continuity comes from reconstructing the full context before each inference. The 9-component pipeline ensures predictable, author-controlled behavior:
+
+| Phase | Component | Purpose |
+|-------|-----------|---------|
+| 1 | Untrusted Observation | Trigger (player utterance, action, NPC, quest, time) |
+| 2 | Determinism Layer | Expectancy Engine outputs constraints |
+| 3 | External Authoritative Memory | Canonical Facts, World State, Episodes, Beliefs |
+| 4 | Authoritative State Snapshot | Context Retrieval Layer reads memory |
+| 5 | Ephemeral Working Memory | Prompt Assembler creates bounded prompt |
+| 6 | Stateless Inference Core | LLM - pure function, no memory/authority |
+| 7 | Output Parsing & Validation | Output Parser + Validation Gate |
+| 8 | Memory Mutation + World Effects | Only validated outputs mutate memory |
+| 9 | Result | Dynamic but predictable text |
+
+### Expectancy Engine (Component 2)
+
+The Expectancy Engine generates dynamic constraints based on current game state. It defines what the NPC **must** do (requirements) and **must not** do (prohibitions).
+
+#### Constraint Types
+
+| Type | Description | Example |
+|------|-------------|---------|
+| Prohibition | Must NOT appear in output | "Do not mention the secret door" |
+| Requirement | MUST appear in output | "Always greet the player by name" |
+
+#### Constraint Severity
+
+| Severity | Behavior |
+|----------|----------|
+| Critical | Immediate fallback, no retry |
+| Hard | Retry with different generation |
+| Soft | Log warning, allow output |
+
+#### Accessing Constraints from RedRoom
+
+```csharp
+// In NpcDialogueTrigger or custom test code
+var agent = GetComponent<LlamaBrainAgent>();
+var context = agent.GetValidationContext();
+if (context?.Constraints != null)
+{
+    foreach (var constraint in context.Constraints.All)
+    {
+        Debug.Log($"{constraint.Type}: {constraint.Pattern}");
+    }
+}
+```
+
+### Validation System (Component 7)
+
+The Validation Gate checks all LLM outputs before they can affect game state. Untrusted `TextOut` from the LLM must pass validation before becoming `Validated Output`.
+
+#### Validation Gates (in order)
+
+1. **Constraint Validation** - Checks expectancy rules (prohibitions/requirements)
+2. **Canonical Fact Check** - Detects contradictions to author-defined truths
+3. **Knowledge Boundary Check** - Ensures NPC doesn't reveal forbidden knowledge
+4. **Mutation Validation** - Validates proposed memory changes
+5. **Custom Rules** - User-defined pattern or logic checks
+
+#### Failure Reasons
+
+| Reason | Description |
+|--------|-------------|
+| `ProhibitionViolated` | Output contains prohibited content |
+| `RequirementNotMet` | Output missing required content |
+| `CanonicalFactContradiction` | Output contradicts a canonical fact |
+| `KnowledgeBoundaryViolation` | NPC revealed forbidden knowledge |
+| `CanonicalMutationAttempt` | Tried to modify a protected fact |
+| `InvalidFormat` | Output parsing failed |
+| `CustomRuleFailed` | Custom validation rule failed |
+
+#### GateResult Properties
+
+```csharp
+GateResult result = agent.LastGateResult;
+
+// Check overall status
+bool passed = result.Passed;
+bool shouldRetry = result.ShouldRetry;
+bool hasCritical = result.HasCriticalFailure;
+
+// Examine failures
+foreach (var failure in result.Failures)
+{
+    Debug.Log($"[{failure.Severity}] {failure.Reason}: {failure.Description}");
+    if (failure.ViolatingText != null)
+        Debug.Log($"  Violating text: {failure.ViolatingText}");
+}
+
+// Check mutation status
+Debug.Log($"Approved: {result.ApprovedMutations.Count}");
+Debug.Log($"Rejected: {result.RejectedMutations.Count}");
+Debug.Log($"Intents: {result.ApprovedIntents.Count}");
+```
+
+#### Adding Custom Validation Rules
+
+```csharp
+// Pattern-based rule (prohibition)
+var noMagicRule = new PatternValidationRule
+{
+    Id = "no_magic",
+    Description = "NPC should not mention magic in this scene",
+    Pattern = @"\bmagic\b",
+    IsProhibition = true,
+    CaseInsensitive = true,
+    Severity = ConstraintSeverity.Hard
+};
+agent.ValidationGate.AddRule(noMagicRule);
+
+// Pattern-based rule (requirement)
+var mustGreetRule = new PatternValidationRule
+{
+    Id = "must_greet",
+    Description = "NPC must greet the player",
+    Pattern = @"(hello|hi|greetings|welcome)",
+    IsProhibition = false, // This is a requirement
+    CaseInsensitive = true,
+    Severity = ConstraintSeverity.Soft
+};
+agent.ValidationGate.AddRule(mustGreetRule);
+```
+
+### Retry & Fallback Flow
+
+When validation fails, the system follows the retry loop shown in the diagram:
+
+1. **Retry** (up to 3 attempts): Re-run inference with stricter constraints
+2. **Fallback**: After max attempts, use Author-Controlled Fallback text
+
+```csharp
+// Configure retry behavior
+agent.MaxRetryAttempts = 3;
+agent.EnableFallback = true;
+
+// Check if fallback was used
+if (agent.LastResponseWasFallback)
+{
+    Debug.Log("Fallback text was used");
+}
+```
+
+### Memory Mutation System (Component 8)
+
+The Memory Mutation Controller executes validated memory changes. **Only validated outputs can trigger mutations.** Memory writes are explicit - the LLM cannot directly modify memory.
+
+#### Mutation Types
+
+| Type | Description | Authority Required |
+|------|-------------|-------------------|
+| `AppendEpisodic` | Add new episodic memory | ValidatedOutput (50) |
+| `TransformBelief` | Create or update a belief | ValidatedOutput (50) |
+| `TransformRelationship` | Update relationship with entity | ValidatedOutput (50) |
+| `EmitWorldIntent` | Signal intent to game systems | ValidatedOutput (50) |
+
+#### Authority Hierarchy
+
+Mutations are blocked if the source authority is insufficient:
+
+| Source | Authority Level |
+|--------|-----------------|
+| Designer | 100 (highest) |
+| GameSystem | 75 |
+| ValidatedOutput | 50 |
+| LlmSuggestion | 25 (lowest) |
+
+**Canonical facts (authority 100) can never be modified by LLM output (authority 50).** This is a key architectural guarantee.
+
+#### Accessing Mutation Statistics
+
+```csharp
+// From NpcDialogueTrigger
+var stats = trigger.GetMutationStats();
+if (stats != null)
+{
+    Debug.Log($"Success rate: {stats.SuccessRate:F1}%");
+    Debug.Log($"Episodic: {stats.EpisodicAppended}");
+    Debug.Log($"Beliefs: {stats.BeliefsTransformed}");
+    Debug.Log($"Relationships: {stats.RelationshipsTransformed}");
+    Debug.Log($"Intents: {stats.IntentsEmitted}");
+    Debug.Log($"Canonical blocks: {stats.CanonicalMutationAttempts}");
+}
+
+// Last batch result
+var batch = trigger.GetLastMutationBatchResult();
+if (batch != null)
+{
+    Debug.Log($"Batch: {batch.SuccessCount}/{batch.TotalAttempted}");
+    foreach (var failure in batch.Failures)
+    {
+        Debug.LogWarning($"Failed: {failure.ErrorMessage}");
+    }
+}
+```
+
+### World Intent System
+
+NPCs can emit "intents" (desires) that game systems respond to. Intents are signals, not direct actions - the NPC cannot force game state changes.
+
+#### Common Intent Types
+
+| Intent | Description | Target |
+|--------|-------------|--------|
+| `follow_player` | NPC wants to follow player | player ID |
+| `give_item` | NPC wants to give an item | item ID |
+| `start_quest` | NPC wants to offer a quest | quest ID |
+| `change_location` | NPC wants to move | location ID |
+
+#### Using WorldIntentDispatcher
+
+```csharp
+// Get the dispatcher singleton
+var dispatcher = WorldIntentDispatcher.Instance;
+
+// Register a handler for specific intent
+dispatcher.RegisterHandler("follow_player", (intent, npcId) => {
+    var npc = FindNpc(npcId);
+    npc.StartFollowing(intent.Target);
+});
+
+// Register a wildcard handler (receives all intents)
+dispatcher.RegisterHandler("*", (intent, npcId) => {
+    Debug.Log($"[{npcId}] Intent: {intent.IntentType} -> {intent.Target}");
+});
+
+// Hook to mutation controller (automatic dispatch)
+var agent = GetComponent<LlamaBrainAgent>();
+dispatcher.HookToController(agent.MutationController);
+```
+
+#### Inspector-Based Handlers
+
+Configure handlers in the Unity Inspector on `WorldIntentDispatcher`:
+
+1. Add `WorldIntentDispatcher` component to a manager GameObject
+2. In "Intent-Specific Handlers", add handler configs
+3. Set `intentType` (e.g., "follow_player")
+4. Wire up `onIntentReceived` event to your handler method
+
+#### Querying Intent History
+
+```csharp
+// Get intents from a specific NPC
+foreach (var record in dispatcher.GetIntentsFromNpc("guard_01"))
+{
+    Debug.Log($"[{record.GameTime:F1}s] {record.Intent.IntentType}");
+}
+
+// Get intents by type
+foreach (var record in dispatcher.GetIntentsByType("give_item"))
+{
+    Debug.Log($"[{record.NpcId}] gave {record.Intent.Target}");
+}
+```
+
+## Architecture Troubleshooting
+
+### Validation Failures
+
+**Problem**: Output always fails validation
+
+**Solutions:**
+1. Check `LastGateResult.Failures` for specific failure reasons
+2. Review constraint patterns - may be too strict
+3. Verify canonical facts aren't contradicted unintentionally
+4. Check knowledge boundaries aren't too broad
+
+**Problem**: Canonical fact contradictions
+
+**Solutions:**
+1. Review canonical facts in `PersonaProfile`
+2. Check for indirect contradictions (negations, alternatives)
+3. Consider if the fact should be a belief instead (mutable)
+
+### Mutation Failures
+
+**Problem**: Mutations not executing
+
+**Solutions:**
+1. Ensure validation passed (`LastGateResult.Passed == true`)
+2. Check mutation statistics for blocked attempts
+3. Verify mutations aren't targeting canonical facts
+4. Review authority levels
+
+**Problem**: Canonical mutations being blocked
+
+**Expected behavior** - This is by design. Canonical facts are protected:
+1. Move fact from canonical to belief if it should be mutable
+2. Use GameSystem (75) or Designer (100) authority for special cases
+3. Design around the constraint rather than bypassing it
+
+### World Intent Issues
+
+**Problem**: Intents not dispatching
+
+**Solutions:**
+1. Verify `WorldIntentDispatcher` exists in scene
+2. Check it's hooked to the mutation controller
+3. Ensure intents are in `ApprovedIntents` (not blocked by validation)
+4. Enable debug logging: `dispatcher.debugLogging = true`
+
+**Problem**: Handlers not receiving intents
+
+**Solutions:**
+1. Verify handler is registered before intents are emitted
+2. Check intent type matches exactly (case-insensitive)
+3. Ensure handler isn't throwing exceptions (check logs)
+4. Use wildcard handler "*" to debug all intents
+
+### Debugging Tools
+
+```csharp
+// Enable detailed logging
+agent.EnableDebugLogging = true;
+agent.ValidationGate.OnLog = Debug.Log;
+agent.MutationController.OnLog = Debug.Log;
+
+// Inspect last results
+Debug.Log($"Gate: {agent.LastGateResult}");
+Debug.Log($"Mutations: {agent.MutationStats}");
+Debug.Log($"Batch: {agent.LastMutationBatchResult}");
+
+// Check constraint state
+var context = agent.GetValidationContext();
+Debug.Log($"Constraints: {context?.Constraints?.All.Count ?? 0}");
+Debug.Log($"Forbidden knowledge: {context?.ForbiddenKnowledge.Count ?? 0}");
+```
+
 ## Support
 
 For issues or questions:
@@ -416,6 +755,7 @@ For issues or questions:
 2. Review component Inspector settings
 3. Verify all events are properly wired
 4. Check that all required components are present
+5. Review validation failures and mutation statistics
 
 ---
 

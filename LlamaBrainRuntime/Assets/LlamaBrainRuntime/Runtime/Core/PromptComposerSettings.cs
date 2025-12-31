@@ -131,6 +131,7 @@ namespace LlamaBrain.Runtime.Core
     /// <summary>
     /// Creates a default PromptComposerSettings instance.
     /// </summary>
+    /// <returns>A new PromptComposerSettings instance with default values</returns>
     public static PromptComposerSettings CreateDefault()
     {
       var settings = CreateInstance<PromptComposerSettings>();
@@ -141,6 +142,7 @@ namespace LlamaBrain.Runtime.Core
     /// <summary>
     /// Creates a compact PromptComposerSettings instance for shorter prompts.
     /// </summary>
+    /// <returns>A new PromptComposerSettings instance optimized for compact prompts</returns>
     public static PromptComposerSettings CreateCompact()
     {
       var settings = CreateInstance<PromptComposerSettings>();
@@ -170,6 +172,7 @@ namespace LlamaBrain.Runtime.Core
     /// <summary>
     /// Creates a detailed PromptComposerSettings instance for more verbose prompts.
     /// </summary>
+    /// <returns>A new PromptComposerSettings instance optimized for detailed prompts</returns>
     public static PromptComposerSettings CreateDetailed()
     {
       var settings = CreateInstance<PromptComposerSettings>();
@@ -199,6 +202,7 @@ namespace LlamaBrain.Runtime.Core
     /// <summary>
     /// Validates the settings and returns any validation errors.
     /// </summary>
+    /// <returns>An array of validation error messages, or an empty array if validation passes</returns>
     public string[] ValidateSettings()
     {
       var errors = new System.Collections.Generic.List<string>();

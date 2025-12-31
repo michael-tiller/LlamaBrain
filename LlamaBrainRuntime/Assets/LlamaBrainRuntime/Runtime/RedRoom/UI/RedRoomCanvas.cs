@@ -5,6 +5,9 @@ using LlamaBrain.Runtime.RedRoom.AI;
 
 namespace LlamaBrain.Runtime.RedRoom.UI
 {
+  /// <summary>
+  /// Manages the UI canvas for the Red Room demo, handling conversation display and raycast interactions.
+  /// </summary>
   public class RedRoomCanvas : MonoBehaviour
   {
     [SerializeField] private GameObject _conversationPanel;
@@ -13,6 +16,9 @@ namespace LlamaBrain.Runtime.RedRoom.UI
 
     private NpcFollowerExample currentNpc = null;
 
+    /// <summary>
+    /// Gets the singleton instance of the RedRoomCanvas.
+    /// </summary>
     public static RedRoomCanvas Instance { get; private set; }
 
     private void Awake()
@@ -64,6 +70,10 @@ namespace LlamaBrain.Runtime.RedRoom.UI
       }
     }
 
+    /// <summary>
+    /// Called when the player raycast hits an NPC.
+    /// </summary>
+    /// <param name="hit">The raycast hit information</param>
     public void OnRaycastHit(RaycastHit hit)
     {
       var npc = hit.collider.GetComponentInParent<NpcFollowerExample>();
@@ -78,6 +88,9 @@ namespace LlamaBrain.Runtime.RedRoom.UI
       RefreshIndicator();
     }
 
+    /// <summary>
+    /// Called when the player raycast misses or no longer hits an NPC.
+    /// </summary>
     public void OnRaycastMiss()
     {
       ClearCurrentNpc();
@@ -109,6 +122,9 @@ namespace LlamaBrain.Runtime.RedRoom.UI
       _text.text = message;
     }
 
+    /// <summary>
+    /// Ends the current conversation and hides the conversation panel.
+    /// </summary>
     public void EndConversation()
     {
       _conversationPanel.SetActive(false);

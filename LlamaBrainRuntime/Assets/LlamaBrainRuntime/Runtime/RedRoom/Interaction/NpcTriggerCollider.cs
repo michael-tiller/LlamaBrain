@@ -27,6 +27,9 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
     List<ITrigger> triggerObjects = new List<ITrigger>();
 
 
+    /// <summary>
+    /// Gets the list of trigger objects currently in this collider.
+    /// </summary>
     public List<ITrigger> TriggerObjects => triggerObjects;
 
     /// <summary>

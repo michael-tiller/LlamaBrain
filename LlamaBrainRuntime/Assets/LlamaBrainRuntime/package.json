@@ -1,8 +1,8 @@
 {
   "name": "com.llamabrain.unity",
-  "version": "1.0.0",
-  "displayName": "LlamaBrain for Unity",
-  "description": "AI integration solution for Unity with local llama.cpp server support. Create intelligent NPCs, dialogue systems, and AI-powered game interactions.",
+  "version": "0.2.0-rc.1",
+  "displayName": "LlamaBrain Managed Host",
+  "description": "LlamaBrain Managed Host for Unity. This is the runtime library for LlamaBrain. It is used to host the LlamaBrain engine and manage the LlamaBrain agent.",
   "unity": "2022.3",
   "dependencies": {
     "com.unity.textmeshpro": "3.0.0"
@@ -19,9 +19,9 @@
     "memory"
   ],
   "author": {
-    "name": "LlamaBrain Team",
-    "email": "support@llamabrain.com",
-    "url": "https://github.com/your-repo/llamabrain"
+    "name": "Michael Tiller",
+    "email": "contact@michaeltiller.com",
+    "url": "https://github.com/michael-tiller/llamabrain"
   },
   "license": "See LICENSE.md file",
   "repository": {

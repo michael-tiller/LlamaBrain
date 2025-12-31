@@ -42,19 +42,19 @@ DOXYFILE_ENCODING      = UTF-8
 # title of most generated pages and in a few other places.
 # The default value is: My Project.
 
-PROJECT_NAME           = "LlamaBrain Runtime"
+PROJECT_NAME           = "LlamaBrain Managed Host"
 
 # The PROJECT_NUMBER tag can be used to enter a project or revision number. This
 # could be handy for archiving the generated documentation or if some version
 # control system is used.
 
-PROJECT_NUMBER         = 1.0.01
+PROJECT_NUMBER         = 0.2.0-rc.1
 
 # Using the PROJECT_BRIEF tag one can provide an optional one line description
 # for a project that appears at the top of each page and should give viewers a
 # quick idea about the purpose of the project. Keep the description short.
 
-PROJECT_BRIEF          = "Structured Agentic NPCs"
+PROJECT_BRIEF          = "Agentic NPCs in Unity"
 
 # With the PROJECT_LOGO tag one can specify a logo or an icon that is included
 # in the documentation. The maximum height of the logo should not exceed 55
@@ -1005,7 +1005,11 @@ WARN_LOGFILE           =
 # spaces. See also FILE_PATTERNS and EXTENSION_MAPPING
 # Note: If this tag is empty the current directory is searched.
 
-INPUT                  = ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/
+INPUT                  = ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/ \
+                         ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/Documenation \
+                         ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/README.md \
+                         ../../LlamaBrain/README.md \
+                         ../SAFEGUARDS.md
 
 # This tag can be used to specify the character encoding of the source files
 # that Doxygen parses. Internally Doxygen uses the UTF-8 encoding. Doxygen uses
@@ -1126,7 +1130,7 @@ EXCLUDE_SYMLINKS       = NO
 # Note that the wildcards are matched against the file with absolute path, so to
 # exclude all test directories for example use the pattern */test/*
 
-EXCLUDE_PATTERNS       =
+EXCLUDE_PATTERNS       = *Tests*
 
 # The EXCLUDE_SYMBOLS tag can be used to specify one or more symbol names
 # (namespaces, classes, functions, etc.) that should be excluded from the
@@ -1221,7 +1225,7 @@ FILTER_SOURCE_PATTERNS =
 # (index.html). This can be useful if you have a project on for instance GitHub
 # and want to reuse the introduction page also for the Doxygen output.
 
-USE_MDFILE_AS_MAINPAGE = ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/LLAMABRAIN.md
+USE_MDFILE_AS_MAINPAGE = ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/README.md
 
 # If the IMPLICIT_DIR_DOCS tag is set to YES, any README.md file found in sub-
 # directories of the project's root, is used as the documentation for that sub-

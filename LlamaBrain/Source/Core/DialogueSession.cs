@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using LlamaBrain.Persona;
 
 namespace LlamaBrain.Core
@@ -136,7 +137,11 @@ namespace LlamaBrain.Core
     /// <returns>The memory for the persona, or empty list if no memory store.</returns>
     public IReadOnlyList<string> GetMemory()
     {
-      return _memoryStore?.GetMemory(PersonaId) ?? Array.Empty<string>();
+      if (_memoryStore == null)
+        return Array.Empty<string>();
+
+      var memorySystem = _memoryStore.GetOrCreateSystem(PersonaId);
+      return memorySystem.GetAllMemoriesForPrompt(maxEpisodic: 20).ToList();
     }
 
     /// <summary>

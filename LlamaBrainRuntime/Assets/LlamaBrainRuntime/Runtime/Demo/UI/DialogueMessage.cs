@@ -21,6 +21,7 @@ namespace LlamaBrain.Runtime.Demo.UI
         /// <summary>
         /// Sets the message to display.
         /// </summary>
+        /// <param name="message">The message text to display</param>
         public void SetMessage(string message)
         {
             messageText.text = message;

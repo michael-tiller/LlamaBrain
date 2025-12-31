@@ -102,14 +102,26 @@ namespace LlamaBrain.Runtime.Core
     [Range(0.0f, 1.0f)]
     public float TopP = 0.9f;
 
+    /// <summary>
+    /// Limits the number of tokens considered for each step (0 = disabled).
+    /// Higher values allow more diverse outputs but may reduce quality.
+    /// </summary>
     [Tooltip("Limits the number of tokens considered for each step (0 = disabled)")]
     [Range(0, 100)]
     public int TopK = 40;
 
+    /// <summary>
+    /// Penalty for repeating tokens (1.0 = no penalty, higher values = stronger penalty).
+    /// Helps prevent the model from getting stuck in repetitive loops.
+    /// </summary>
     [Tooltip("Penalty for repeating tokens (1.0 = no penalty, higher values = stronger penalty)")]
     [Range(1.0f, 2.0f)]
     public float RepeatPenalty = 1.1f;
 
+    /// <summary>
+    /// Sequences that will stop generation when encountered.
+    /// When the model generates any of these sequences, it will stop generating further tokens.
+    /// </summary>
     [Header("Stop Sequences")]
     [Tooltip("Sequences that will stop generation when encountered")]
     public string[] StopSequences = new string[]

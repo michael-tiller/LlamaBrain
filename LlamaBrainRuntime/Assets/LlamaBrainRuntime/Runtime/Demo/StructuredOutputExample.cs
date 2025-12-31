@@ -75,19 +75,43 @@ namespace LlamaBrain.Runtime.Demo
     private BrainAgent? brainAgent;
     private bool isInitialized = false;
 
+    /// <summary>
+    /// Represents a structured dialogue response with emotion and action information.
+    /// </summary>
     [System.Serializable]
     public class DialogueResponse
     {
+      /// <summary>
+      /// The text response from the NPC.
+      /// </summary>
       public string response = "";
+      /// <summary>
+      /// The emotional state expressed in the response.
+      /// </summary>
       public string emotion = "";
+      /// <summary>
+      /// The action or behavior associated with the response.
+      /// </summary>
       public string action = "";
     }
 
+    /// <summary>
+    /// Represents the analysis result of a dialogue interaction.
+    /// </summary>
     [System.Serializable]
     public class AnalysisResult
     {
+      /// <summary>
+      /// The sentiment analysis result (e.g., "positive", "negative", "neutral").
+      /// </summary>
       public string sentiment = "";
+      /// <summary>
+      /// Array of topics identified in the dialogue.
+      /// </summary>
       public string[] topics = Array.Empty<string>();
+      /// <summary>
+      /// The intent detected in the dialogue.
+      /// </summary>
       public string intent = "";
     }
 
@@ -136,6 +160,10 @@ namespace LlamaBrain.Runtime.Demo
       }
     }
 
+    /// <summary>
+    /// Test method for structured dialogue output. Can be called from Unity's context menu.
+    /// </summary>
+    /// <returns>A UniTaskVoid representing the asynchronous operation</returns>
     [ContextMenu("Test Structured Dialogue")]
     public async UniTaskVoid TestStructuredDialogue()
     {
@@ -168,6 +196,10 @@ namespace LlamaBrain.Runtime.Demo
       }
     }
 
+    /// <summary>
+    /// Test method for structured analysis output. Can be called from Unity's context menu.
+    /// </summary>
+    /// <returns>A UniTaskVoid representing the asynchronous operation</returns>
     [ContextMenu("Test Analysis")]
     public async UniTaskVoid TestAnalysis()
     {
@@ -200,6 +232,10 @@ namespace LlamaBrain.Runtime.Demo
       }
     }
 
+    /// <summary>
+    /// Test method for structured memory storage. Can be called from Unity's context menu.
+    /// </summary>
+    /// <returns>A UniTaskVoid representing the asynchronous operation</returns>
     [ContextMenu("Test Memory Storage")]
     public async UniTaskVoid TestMemoryStorage()
     {
@@ -248,6 +284,10 @@ namespace LlamaBrain.Runtime.Demo
       }
     }
 
+    /// <summary>
+    /// Test method for structured decision making. Can be called from Unity's context menu.
+    /// </summary>
+    /// <returns>A UniTaskVoid representing the asynchronous operation</returns>
     [ContextMenu("Test Decision Making")]
     public async UniTaskVoid TestDecisionMaking()
     {
@@ -291,6 +331,10 @@ namespace LlamaBrain.Runtime.Demo
       }
     }
 
+    /// <summary>
+    /// Test method for regular dialogue (non-structured). Can be called from Unity's context menu.
+    /// </summary>
+    /// <returns>A UniTaskVoid representing the asynchronous operation</returns>
     [ContextMenu("Test Regular Dialogue")]
     public async UniTaskVoid TestRegularDialogue()
     {

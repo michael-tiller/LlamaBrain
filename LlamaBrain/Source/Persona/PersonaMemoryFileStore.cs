@@ -18,6 +18,11 @@ namespace LlamaBrain.Persona
     private readonly string _saveDir;
 
     /// <summary>
+    /// The file system abstraction
+    /// </summary>
+    private readonly IFileSystem _fileSystem;
+
+    /// <summary>
     /// Maximum file size in bytes (5MB for memory files)
     /// </summary>
     private const long MaxFileSizeBytes = 5 * 1024 * 1024;
@@ -36,17 +41,28 @@ namespace LlamaBrain.Persona
     /// Constructor
     /// </summary>
     /// <param name="saveDir">The directory to save the memory</param>
-    public PersonaMemoryFileStore(string saveDir)
+    public PersonaMemoryFileStore(string saveDir) : this(saveDir, new FileSystem())
+    {
+    }
+
+    /// <summary>
+    /// Constructor with file system injection for testing
+    /// </summary>
+    /// <param name="saveDir">The directory to save the memory</param>
+    /// <param name="fileSystem">The file system abstraction</param>
+    public PersonaMemoryFileStore(string saveDir, IFileSystem fileSystem)
     {
       if (string.IsNullOrWhiteSpace(saveDir))
         throw new ArgumentException("Save directory cannot be null or empty", nameof(saveDir));
+
+      _fileSystem = fileSystem ?? throw new ArgumentNullException(nameof(fileSystem));
 
       // Validate and sanitize the path
       _saveDir = ValidateAndSanitizePath(saveDir);
 
       try
       {
-        Directory.CreateDirectory(_saveDir);
+        _fileSystem.CreateDirectory(_saveDir);
       }
       catch (Exception ex)
       {
@@ -84,27 +100,27 @@ namespace LlamaBrain.Persona
           throw new InvalidOperationException($"Memory JSON too large for persona {safePersonaId}: {json.Length} characters (max: {MaxJsonLength})");
         }
 
-        var filePath = Path.Combine(_saveDir, $"{safePersonaId}.json");
+        var filePath = _fileSystem.CombinePath(_saveDir, $"{safePersonaId}.json");
 
         // Validate final file path
         ValidateFilePath(filePath);
 
         // Write to temporary file first, then move to final location
         var tempPath = filePath + ".tmp";
-        File.WriteAllText(tempPath, json);
+        _fileSystem.WriteAllText(tempPath, json);
 
         // Verify the written file size
-        var fileInfo = new FileInfo(tempPath);
+        var fileInfo = _fileSystem.GetFileInfo(tempPath);
         if (fileInfo.Length > MaxFileSizeBytes)
         {
-          File.Delete(tempPath);
+          _fileSystem.DeleteFile(tempPath);
           throw new InvalidOperationException($"Memory file too large for persona {safePersonaId}: {fileInfo.Length} bytes (max: {MaxFileSizeBytes})");
         }
 
         // Move to final location
-        if (File.Exists(filePath))
-          File.Delete(filePath);
-        File.Move(tempPath, filePath);
+        if (_fileSystem.FileExists(filePath))
+          _fileSystem.DeleteFile(filePath);
+        _fileSystem.MoveFile(tempPath, filePath);
 
         Logger.Info($"Successfully saved memory for persona: {safePersonaId} ({memory.Count} entries)");
       }
@@ -140,25 +156,25 @@ namespace LlamaBrain.Persona
         return;
 
       var safePersonaId = ValidateAndSanitizePersonaId(personaId);
-      var file = Path.Combine(_saveDir, $"{safePersonaId}.json");
+      var file = _fileSystem.CombinePath(_saveDir, $"{safePersonaId}.json");
 
       try
       {
         // Validate file path
         ValidateFilePath(file);
 
-        if (!File.Exists(file))
+        if (!_fileSystem.FileExists(file))
           return;
 
         // Check file size before reading
-        var fileInfo = new FileInfo(file);
+        var fileInfo = _fileSystem.GetFileInfo(file);
         if (fileInfo.Length > MaxFileSizeBytes)
         {
           Logger.Error($"Memory file too large for persona {safePersonaId}: {fileInfo.Length} bytes (max: {MaxFileSizeBytes})");
           return;
         }
 
-        var json = File.ReadAllText(file);
+        var json = _fileSystem.ReadAllText(file);
 
         // Validate JSON length
         if (json.Length > MaxJsonLength)
@@ -237,7 +253,7 @@ namespace LlamaBrain.Persona
         throw new ArgumentException("Path cannot be null or empty", nameof(path));
 
       // Get the full path to resolve any relative paths
-      var fullPath = Path.GetFullPath(path);
+      var fullPath = _fileSystem.GetFullPath(path);
 
       // Check for path traversal attempts
       if (fullPath.Contains("..") || fullPath.Contains("//"))
@@ -255,8 +271,8 @@ namespace LlamaBrain.Persona
         throw new ArgumentException("File path cannot be null or empty");
 
       // Ensure the file path is within the save directory
-      var fullPath = Path.GetFullPath(filePath);
-      var saveDirFullPath = Path.GetFullPath(_saveDir);
+      var fullPath = _fileSystem.GetFullPath(filePath);
+      var saveDirFullPath = _fileSystem.GetFullPath(_saveDir);
 
       if (!fullPath.StartsWith(saveDirFullPath, StringComparison.OrdinalIgnoreCase))
         throw new ArgumentException("File path is outside the save directory");

@@ -14,16 +14,19 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
     /// </summary>
     System.Guid Id { get; }
     /// <summary>
-    /// The name of the trigger.
+    /// Gets the name of the trigger.
     /// </summary>
+    /// <returns>The name of the trigger</returns>
     string GetTriggerName();
     /// <summary>
     /// Called when the trigger is entered.
     /// </summary>
+    /// <param name="other">The trigger collider that entered</param>
     void OnCollideEnter(NpcTriggerCollider other);
     /// <summary>
     /// Called when the trigger is exited.
     /// </summary>
+    /// <param name="other">The trigger collider that exited</param>
     void OnCollideExit(NpcTriggerCollider other);
   }
 }

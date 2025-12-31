@@ -512,13 +512,15 @@ namespace LlamaBrain.Core
     }
 
     /// <summary>
-    /// Composes a prompt split into static prefix (for KV cache) and dynamic suffix
+    /// Composes a prompt split into static prefix (for KV cache) and dynamic suffix.
+    /// The prefix contains static content that can be cached, while the suffix contains dynamic content that changes with each request.
     /// </summary>
-    /// <param name="profile">The persona profile to use</param>
-    /// <param name="session">The dialogue session with conversation history</param>
-    /// <param name="userInput">The current user input</param>
-    /// <param name="includeTraits">Whether to include personality traits in the prompt (default: true)</param>
-    /// <returns>Tuple of (prefix, suffix) where prefix is static and can be cached</returns>
+    /// <param name="profile">The persona profile to use.</param>
+    /// <param name="session">The dialogue session with conversation history.</param>
+    /// <param name="userInput">The current user input.</param>
+    /// <param name="includeTraits">Whether to include personality traits in the prompt (default: true).</param>
+    /// <returns>A tuple containing the static prefix string (can be cached for KV cache optimization) and the dynamic suffix string (changes with each request). The prefix is the first element and the suffix is the second element.</returns>
+    /// <remarks>This method returns a tuple to enable efficient KV cache usage by separating static and dynamic prompt content.</remarks>
     public (string prefix, string suffix) ComposePromptWithPrefix(PersonaProfile profile, DialogueSession session, string userInput, bool includeTraits = true)
     {
       if (profile == null)

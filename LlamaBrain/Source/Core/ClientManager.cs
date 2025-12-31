@@ -19,14 +19,26 @@ namespace LlamaBrain.Core
     /// The HTTP client
     /// </summary>
     private readonly HttpClient httpClient;
+    /// <summary>
+    /// Maximum number of retry attempts when waiting for server
+    /// </summary>
+    private readonly int maxRetries;
+    /// <summary>
+    /// Delay between retry attempts in milliseconds
+    /// </summary>
+    private readonly int retryDelayMs;
 
     /// <summary>
     /// Constructor
     /// </summary>
     /// <param name="config">The configuration for the process</param>
-    public ClientManager(ProcessConfig config)
+    /// <param name="maxRetries">Maximum number of retry attempts (default: 60)</param>
+    /// <param name="retryDelayMs">Delay between retries in milliseconds (default: 500)</param>
+    public ClientManager(ProcessConfig config, int maxRetries = 60, int retryDelayMs = 500)
     {
       this.config = config;
+      this.maxRetries = maxRetries;
+      this.retryDelayMs = retryDelayMs;
       httpClient = new HttpClient();
     }
 
@@ -77,15 +89,16 @@ namespace LlamaBrain.Core
     /// Wait for the process to be ready
     /// </summary>
     /// <param name="token">The cancellation token</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
     public async Task WaitForAsync(CancellationToken token = default)
     {
       Logger.Info("[Client] Waiting for server to be ready...");
 
-      for (int i = 0; i < 60; i++) // Wait up to 30 seconds (increased from 15)
+      for (int i = 0; i < maxRetries; i++)
       {
         if (token.IsCancellationRequested) break;
 
-        Logger.Info($"[Client] Attempt {i + 1}/60: Checking if server is ready...");
+        Logger.Info($"[Client] Attempt {i + 1}/{maxRetries}: Checking if server is ready...");
 
         if (await IsRunningAsync(token))
         {
@@ -93,7 +106,7 @@ namespace LlamaBrain.Core
           return;
         }
 
-        await Task.Delay(500, token);
+        await Task.Delay(retryDelayMs, token);
       }
 
       throw new InvalidOperationException("Server is not running. Please start it first.");
