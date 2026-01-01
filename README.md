@@ -2,12 +2,12 @@
 
 A comprehensive AI integration solution for Unity and .NET applications, providing secure, feature-rich integration with llama.cpp servers.
 
-## 🎯 Overview
+[![LlamaBrain R&D: Trigger Pre-caching + Episodic Logging](https://img.youtube.com/vi/RT2v9199gfM/0.jpg)](https://www.youtube.com/watch?v=RT2v9199gfM)
 
 LlamaBrain consists of two main components:
 
-- **LlamaBrain Core Library** - A robust .NET Standard 2.1 library for AI integration
-- **LlamaBrain for Unity** - A Unity package providing seamless integration with Unity projects
+- **LlamaBrain Core** - A robust .NET Standard 2.1 library for AI integration
+- **LlamaBrain Runtime** - A Unity package providing seamless integration with Unity projects
 
 ## 🏗️ Project Structure
 
@@ -111,6 +111,8 @@ LlamaBrain/
 ### Core Library
 - **[Core README](LlamaBrain/README.md)** - Complete library documentation
 - **[Security Guide](Documentation/SAFEGUARDS.md)** - Security measures and safeguards
+- **[API Documentation](https://metagrue.com/docs/llamabrainapi/)** - API for LlamaBrain
+- **[Runtime API Documentation](https://metagrue.com/docs/llamabrainruntimeapi/)** - API for LlamaBrain Runtime for Unity
 
 ### Unity Package
 Unity package documentation is available in the LlamaBrainRuntime project.
@@ -272,9 +274,9 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 ### Current Status: ~98% Complete
 
-**Current Phase**: Phase 8 - RedRoom Integration 🚧 60% Complete | Phase 10 - Deterministic Proof Gap Testing 🚧 ~25% Complete
+**Current Phase**: Phase 8 - RedRoom Integration 🚧 99% Complete | Phase 10 - Deterministic Proof Gap Testing 🚧 ~65% Complete
 
-**Next Priority**: Phase 8.4 - Testing Overlays & Phase 10.1 - ContextRetrievalLayer Selection Behavior Tests
+**Next Priority**: Phase 8.4 - Testing Overlay fixes & Phase 10.4 - ValidationGate detailed determinism tests
 
 ### Current Features (v0.2+)
 - ✅ **RedRoom Testing Suite**: Comprehensive in-game LLM testing framework
@@ -340,25 +342,32 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 - Failure reason logging
 - Full test coverage
 
-**Phase 8: RedRoom Integration** 🚧 60% Complete
+**Phase 8: RedRoom Integration** 🚧 99% Complete
 - Validation metrics and export ✅
 - Architectural pattern testing ✅
 - End-to-end validation scenarios ✅
-- Testing overlays (pending)
-- Unity PlayMode integration tests (pending)
+- Testing overlays ✅ (Memory Mutation Overlay, Validation Gate Overlay - minor fixes needed)
+- Unity PlayMode integration tests ✅ (73+ tests complete)
+- Full Pipeline Integration Tests ✅ (8 tests complete)
 
-**Phase 9: Documentation** 🚧 85% Complete
+**Phase 9: Documentation** ✅ 100% Complete
 - Architecture documentation with diagrams ✅
 - Setup tutorials for new components ✅
-- API reference for all layers ✅
-- Tutorial content (pending)
-- Few-shot prompt priming (pending)
+- API reference for all layers ✅ (100% XML documentation, zero missing member warnings)
+- Few-shot prompt priming ✅ Complete (30 tests, full integration)
+- Tutorial content ✅ Complete (4 comprehensive step-by-step tutorials)
 
-**Phase 10: Deterministic Proof Gap Testing** 🚧 In Progress (~25% Complete)
+**Phase 10: Deterministic Proof Gap Testing** 🚧 In Progress (~65% Complete)
 - ✅ Critical Requirements 1-4 implemented (strict total order sorting, SequenceNumber field, tie-breaker logic, OutputParser normalization)
 - ✅ 7 high-leverage determinism tests added
-- 🚧 ContextRetrievalLayer selection behavior tests (7/20-25 complete)
-- ⏳ Additional test suites pending (PromptAssembler, ValidationGate, MemoryMutationController, WorldIntentDispatcher, Full Pipeline)
+- ✅ ContextRetrievalLayer: 55 tests complete (exceeds estimate)
+- ✅ PromptAssembler: 40 tests complete
+- ✅ EphemeralWorkingMemory: 40 tests complete
+- ✅ OutputParser: 86 tests complete (includes normalization contract)
+- ✅ MemoryMutationController: 41 tests complete
+- 🚧 ValidationGate: 17 tests (Feature 10.4 detailed tests pending)
+- ⏳ WorldIntentDispatcher: 0 tests (not started)
+- ⏳ Full Pipeline deterministic tests: 0 tests (not started)
 - See [PHASE10_PROOF_GAPS.md](Documentation/PHASE10_PROOF_GAPS.md) for detailed test backlog
 
 For detailed status information, see the [STATUS.md](Documentation/STATUS.md) file.

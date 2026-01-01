@@ -1006,13 +1006,22 @@ WARN_LOGFILE           =
 # Note: If this tag is empty the current directory is searched.
 
 INPUT                  = ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/ \
-                         ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/Documenation \
+                         ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/Documentation \
                          ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/README.md \
                          ../../LlamaBrain/README.md \
                          ../SAFEGUARDS.md \
                          ../STATUS.md \
-                         ../STATUS.md \
-                         ../PHASE10_PROOF_GAPS.md
+                         ../PHASE10_PROOF_GAPS.md \
+                         ../PIPELINE_CONTRACT.md \
+                         ../VALIDATION_GATING.md \
+                         ../ARCHITECTURE.md \
+                         ../DETERMINISM_CONTRACT.md \
+                         ../USAGE_GUIDE.md \
+                         ../ROADMAP.md \
+                         ../MEMORY.md \
+                         ../CHANGELOG.md \
+                         ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/ \
+                         ../../LICENSE.md
 
 # This tag can be used to specify the character encoding of the source files
 # that Doxygen parses. Internally Doxygen uses the UTF-8 encoding. Doxygen uses

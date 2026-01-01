@@ -659,7 +659,7 @@ For detailed status information, see the [STATUS.md](../../Documentation/STATUS.
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE.md](../../../../LICENSE.md) file for details.
+This project is licensed under the MIT License - see the [LICENSE.md](../../../LICENSE.md) file for details.
 
 ## 🆘 Support
 

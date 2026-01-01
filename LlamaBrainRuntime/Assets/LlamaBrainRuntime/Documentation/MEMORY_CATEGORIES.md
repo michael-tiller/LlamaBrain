@@ -164,5 +164,4 @@ The categories use regex patterns to automatically extract information:
 6. **Use the Custom category** for one-off memories that don't fit elsewhere
 
 ## 🔗 Related Documentation
-- [Memory Management Sample](../../MemoryManagement/MEMORYMANAGEMENT.md)
-- [Troubleshooting](../../../Documenation/TROUBLESHOOTING.md) 
+- [Troubleshooting](TROUBLESHOOTING.md) 
