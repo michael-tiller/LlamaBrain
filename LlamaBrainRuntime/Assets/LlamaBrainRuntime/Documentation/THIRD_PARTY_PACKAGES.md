@@ -118,11 +118,11 @@ This asset is **not included** in the repository. You must download it separatel
 
 ---
 
-## 💾 Optional Persistence
+## 💾 Persistence (Feature 16)
 
-This package is optional and only required if you need game state persistence features.
+This package is required for Feature 16 (Save/Load Game Integration) and Feature 14 (Deterministic Generation Seed).
 
-### 4. SaveGameFree (Optional: Persistence)
+### 4. SaveGameFree (Required for Persistence)
 
 **Description:**  
 SaveGameFree is a free Unity asset for saving and loading game data. It provides a complete solution for game state persistence with support for multiple serialization formats (JSON, XML, Binary), encryption, cross-platform support, and cloud storage options.
@@ -137,7 +137,7 @@ SaveGameFree is a free Unity asset for saving and loading game data. It provides
 
 **Tested with:** Unity 2022.3 LTS
 
-**Note:** LlamaBrain does not require SaveGameFree; the repo contains an adapter interface and optional integration only.
+**Note:** SaveGameFree is required for Feature 16 (Save/Load Game Integration) to persist game state and InteractionCount across sessions.
 
 **Installation (recommended for this repo):**
 - Download `Save.Game.Free.unitypackage` from the [GitHub Releases page](https://github.com/BayatGames/SaveGameFree/releases)
@@ -162,7 +162,7 @@ SaveGameFree is a free Unity asset for saving and loading game data. It provides
 - **Ignored Files/Directories**: Configurable exclusion of files and directories from save operations
 
 **Usage in LlamaBrain:**
-- Used by the optional persistence adapter to persist game state and NPC memory
+- Used for persisting game state and NPC memory
 - Saves conversation history and persona configurations
 - Stores world state and episodic memories
 - Provides encrypted storage for sensitive game data
@@ -178,15 +178,14 @@ SaveGameFree is a free Unity asset for saving and loading game data. It provides
 
 | Package | Version | Type | Required |
 |---------|---------|------|----------|
-| UniTask | Tested | UPM/Git | ✅ Core Runtime |
-| TextMeshPro | (Editor version) | Unity Package | ✅ Core Runtime |
+| UniTask | Tested | UPM/Git | ✅ Yes |
+| TextMeshPro | (Editor version) | Unity Package | ✅ Yes |
 | Starter Assets – Third Person | - | Asset Store | ⚠️ Samples Only |
-| SaveGameFree | 2.5.0+ | UnityPackage (manual import) | 💾 Optional |
+| SaveGameFree | 2.5.0+ | UnityPackage (manual import) | ✅ Yes |
 
 **Legend:**
 - ✅ **Core Runtime**: Required for core functionality
 - ⚠️ **Samples Only**: Required only for sample scenes and demos
-- 💾 **Optional**: Required only for persistence features
 
 ---
 
@@ -202,8 +201,8 @@ Before using LlamaBrain Runtime, ensure you have:
 **Samples (if using sample scenes):**
 - [ ] Starter Assets – Third Person imported from Unity Asset Store
 
-**Optional Features:**
-- [ ] SaveGameFree installed locally (not committed) (if using persistence features)
+**Persistence (Feature 16):**
+- [ ] SaveGameFree installed locally (not committed) - Required for save/load functionality
 
 ---
 
