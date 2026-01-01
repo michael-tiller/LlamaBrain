@@ -2,9 +2,9 @@
 
 **Priority**: HIGH - Required for v1.0 release
 **Status**: 🚧 In Progress (~65% Complete)
-**Dependencies**: Phase 1-7 (All core components must be implemented)
+**Dependencies**: Features 1-7 (All core components must be implemented)
 
-**Versioning Note**: Phase 10 is required for v1.0 release. Pre-1.0 releases (rc/preview) can ship without Phase 10 complete, but must not claim architecture is "deterministically proven" until Phase 10 is complete.
+**Versioning Note**: Feature 10 is required for v1.0 release. Pre-0.2.0 releases (rc/preview) can ship without Feature 10 complete, but must not claim architecture is "deterministically proven" until Feature 10 is complete.
 
 **Goal**: Create explicit unit tests (or additional deterministic PlayMode tests) to close remaining proof gaps in critical architectural components. These tests verify that the deterministic state reconstruction pattern works correctly under all edge cases. Phase 10 transforms "good story" into "auditable claim."
 
@@ -28,7 +28,7 @@
 - [x] `AllWeightsZero_FallbackToTieBreakers_DeterministicOrdering`
 
 ### Actual Test Coverage (Updated)
-- **ContextRetrievalLayer**: 55 tests (includes all Phase 10.1 requirements + high-leverage determinism tests)
+- **ContextRetrievalLayer**: 55 tests (includes all Feature 10.1 requirements + high-leverage determinism tests)
 - **PromptAssembler**: 40 tests (covers prompt assembly, truncation, formatting)
 - **EphemeralWorkingMemory**: 40 tests (covers working memory bounds, truncation priority)
 - **OutputParser**: 86 tests (includes normalization contract tests + mutation extraction)
@@ -55,7 +55,7 @@
 ## 10.1 ContextRetrievalLayer: Selection Behavior Tests
 
 **Component**: `LlamaBrain/Source/Core/Inference/ContextRetrievalLayer.cs`  
-**Current Coverage**: ✅ **55 tests** - Comprehensive coverage including all Phase 10.1 requirements  
+**Current Coverage**: ✅ **55 tests** - Comprehensive coverage including all Feature 10.1 requirements  
 **Test Location**: `LlamaBrain.Tests/Inference/ContextRetrievalLayerTests.cs`  
 **Status**: ✅ **Complete** - All selection behavior, scoring, and determinism tests implemented
 
@@ -206,7 +206,7 @@
 **Component**: `LlamaBrain/Source/Core/Validation/ValidationGate.cs`  
 **Current Coverage**: 🚧 **17 tests** - Basic validation coverage exists, but Phase 10.4 detailed gate ordering and execution flow tests pending  
 **Test Location**: `LlamaBrain.Tests/Validation/ValidationGateTests.cs`  
-**Status**: 🚧 **Partial** - Basic tests complete, detailed Phase 10.4 tests needed
+**Status**: 🚧 **Partial** - Basic tests complete, detailed Feature 10.4 tests needed
 
 ### Tests Needed
 
@@ -357,7 +357,7 @@
 **Test Location**: `LlamaBrainRuntime/Tests/PlayMode/WorldIntentDispatcherTests.cs` (new file)  
 **Estimated Tests**: 20-25 PlayMode tests
 
-**Note**: Pipeline policy tests (when to dispatch, when not to dispatch) belong in Phase 10.7 Integration Tests. This section tests pure dispatcher behavior.
+**Note**: Pipeline policy tests (when to dispatch, when not to dispatch) belong in Feature 10.7 Integration Tests. This section tests pure dispatcher behavior.
 
 ### Tests Needed
 
@@ -481,23 +481,23 @@
 
 ## Implementation Plan
 
-1. **Phase 10.1-10.5**: Unit tests in base library (NUnit) ✅ **COMPLETE**
-   - ✅ Phase 10.1: ContextRetrievalLayer (55 tests)
-   - ✅ Phase 10.2: PromptAssembler/WorkingMemory (80 tests)
-   - ✅ Phase 10.3: OutputParser (86 tests)
-   - 🚧 Phase 10.4: ValidationGate (17 basic tests, detailed tests pending)
-   - ✅ Phase 10.5: MemoryMutationController (41 tests)
+1. **Feature 10.1-10.5**: Unit tests in base library (NUnit) ✅ **COMPLETE**
+   - ✅ Feature 10.1: ContextRetrievalLayer (55 tests)
+   - ✅ Feature 10.2: PromptAssembler/WorkingMemory (80 tests)
+   - ✅ Feature 10.3: OutputParser (86 tests)
+   - 🚧 Feature 10.4: ValidationGate (17 basic tests, detailed tests pending)
+   - ✅ Feature 10.5: MemoryMutationController (41 tests)
    - **Status**: 279 tests implemented (exceeds original estimate)
    - **Remaining**: Phase 10.4 detailed tests (1-2 days)
 
-2. **Phase 10.6**: PlayMode tests in Unity Runtime
+2. **Feature 10.6**: PlayMode tests in Unity Runtime
    - Requires Unity Test Framework
    - Requires Unity Editor or test runner
    - Tests Unity-specific components
    - **Estimated**: 2-3 days
    - **Status**: Not started
 
-3. **Phase 10.7**: Integration tests
+3. **Feature 10.7**: Integration tests
    - Can use mocked LLM for determinism
    - Tests full pipeline flow
    - Validates architectural correctness
@@ -591,13 +591,13 @@ These requirements must be implemented in code (not just tested). The tests will
 
 ## Success Criteria
 
-- [x] **Phase 10.1**: ContextRetrievalLayer tests complete (55 tests, exceeds estimate) ✅
-- [x] **Phase 10.2**: PromptAssembler/WorkingMemory tests complete (80 tests, exceeds estimate) ✅
-- [x] **Phase 10.3**: OutputParser tests complete (86 tests, exceeds estimate) ✅
-- [ ] **Phase 10.4**: ValidationGate detailed tests (17 basic tests exist, Phase 10.4 detailed tests pending) 🚧
-- [x] **Phase 10.5**: MemoryMutationController tests complete (41 tests, exceeds estimate) ✅
-- [ ] **Phase 10.6**: WorldIntentDispatcher tests (0 tests, not started) ❌
-- [ ] **Phase 10.7**: Full pipeline determinism integration tests (0 tests, not started) ❌
+- [x] **Feature 10.1**: ContextRetrievalLayer tests complete (55 tests, exceeds estimate) ✅
+- [x] **Feature 10.2**: PromptAssembler/WorkingMemory tests complete (80 tests, exceeds estimate) ✅
+- [x] **Feature 10.3**: OutputParser tests complete (86 tests, exceeds estimate) ✅
+- [ ] **Feature 10.4**: ValidationGate detailed tests (17 basic tests exist, Feature 10.4 detailed tests pending) 🚧
+- [x] **Feature 10.5**: MemoryMutationController tests complete (41 tests, exceeds estimate) ✅
+- [ ] **Feature 10.6**: WorldIntentDispatcher tests (0 tests, not started) ❌
+- [ ] **Feature 10.7**: Full pipeline determinism integration tests (0 tests, not started) ❌
 - [x] 100% of critical selection/ordering logic explicitly tested (ContextRetrievalLayer) ✅
 - [x] All edge cases covered for malformed input handling (OutputParser) ✅
 - [x] Authority enforcement verified for all mutation types (MemoryMutationController) ✅
@@ -615,22 +615,4 @@ These requirements must be implemented in code (not just tested). The tests will
 
 ---
 
-## Release Strategy & Deferral Decision
-
-**Phase 10 Status**: Required for v1.0 release, but can be deferred for pre-1.0 releases (rc/preview)
-
-**Versioning Strategy**:
-- **Pre-1.0 (rc/preview)**: Can ship without Phase 10 complete
-  - Architecture is functional and well-tested (92.37% coverage)
-  - Phase 10 document remains in-repo as explicit proof-gap backlog
-  - Pre-1.0 may claim "deterministic architecture pattern" but must NOT claim "deterministically proven" or "formally verified"
-- **v1.0+**: Phase 10 must be complete
-  - All proof gaps closed
-  - Architecture can be claimed as "deterministically proven"
-  - Full audit trail available
-
-**Rationale**: Phase 10 transforms "good story" into "auditable claim." The architecture is sound and functional without it, but the deterministic proof requires explicit verification of all selection/ordering/authority behaviors.
-
----
-
-**Next Review**: After Phase 10.4 detailed tests completion (ValidationGate gate ordering tests)
+**Next Review**: After Feature 10.4 detailed tests completion (ValidationGate gate ordering tests)

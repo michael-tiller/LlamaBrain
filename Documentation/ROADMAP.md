@@ -8,33 +8,39 @@
 
 ## Quick Links
 
-- **Status**: See `STATUS.md` for current phase completion and next tasks
+- **Status**: See `STATUS.md` for current feature completion and next tasks
 - **Determinism Contract**: See `DETERMINISM_CONTRACT.md` for explicit boundary statement and contract decisions
-- **Phase 10 Test Gaps**: See `PHASE10_PROOF_GAPS.md` for detailed test backlog
+- **Feature 10 Test Gaps**: See `PHASE10_PROOF_GAPS.md` for detailed test backlog
 
 ---
 
 ## Progress Overview
 
-| Phase | Status | Priority |
-|-------|--------|----------|
-| Phase 1: Determinism Layer | ✅ Complete | CRITICAL |
-| Phase 2: Structured Memory System | ✅ Complete | HIGH |
-| Phase 3: State Snapshot & Context Retrieval | ✅ Complete | HIGH |
-| Phase 4: Ephemeral Working Memory | ✅ Complete | MEDIUM |
-| Phase 5: Output Validation System | ✅ Complete | CRITICAL |
-| Phase 6: Controlled Memory Mutation | ✅ Complete | HIGH |
-| Phase 7: Enhanced Fallback System | ✅ Complete | MEDIUM |
-| Phase 8: RedRoom Integration | 🚧 In Progress (80%) | MEDIUM |
-| Phase 9: Documentation | 🚧 In Progress (90%) | MEDIUM |
-| Phase 10: Deterministic Proof Gap Testing | 🚧 In Progress | HIGH |
-| Phase 11: RAG-Based Memory Retrieval | 📋 Planned | MEDIUM |
-| Phase 12: Dedicated Structured Output | 📋 Planned | HIGH |
-| Phase 13: Structured Output Integration | 📋 Planned | HIGH |
+| Features | Status | Priority |
+|---------|--------|----------|
+| Feature 1: Determinism Layer | ✅ Complete | CRITICAL |
+| Feature 2: Structured Memory System | ✅ Complete | HIGH |
+| Feature 3: State Snapshot & Context Retrieval | ✅ Complete | HIGH |
+| Feature 4: Ephemeral Working Memory | ✅ Complete | MEDIUM |
+| Feature 5: Output Validation System | ✅ Complete | CRITICAL |
+| Feature 6: Controlled Memory Mutation | ✅ Complete | HIGH |
+| Feature 7: Enhanced Fallback System | ✅ Complete | MEDIUM |
+| Feature 8: RedRoom Integration | 🚧 In Progress (80%) | MEDIUM |
+| Feature 9: Documentation | 🚧 In Progress (90%) | MEDIUM |
+| Feature 10: Deterministic Proof Gap Testing | 🚧 In Progress | HIGH |
+| Feature 11: RAG-Based Memory Retrieval | 📋 Planned | MEDIUM |
+| Feature 12: Dedicated Structured Output | 📋 Planned | HIGH |
+| Feature 13: Structured Output Integration | 📋 Planned | HIGH |
+| Feature 14: Deterministic Generation Seed | 📋 Planned | CRITICAL |
+| Feature 15: Multiple NPC Support | 📋 Planned | MEDIUM |
+| Feature 16: Save/Load Game Integration | 📋 Planned | CRITICAL |
+| Feature 17: Token Cost Tracking & Analytics | 📋 Planned | MEDIUM |
+| Feature 18: Concurrent Request Handling & Thread Safety | 📋 Planned | MEDIUM |
+| Feature 19: Health Check & Resilience | 📋 Planned | MEDIUM |
 
 ---
 
-## ✅ Phase 1: Determinism Layer & Expectancy Engine
+## ✅ Feature 1: Determinism Layer & Expectancy Engine
 
 **Priority**: CRITICAL - Foundation for all downstream work  
 **Status**: ✅ Complete  
@@ -71,7 +77,7 @@
 
 ---
 
-## ✅ Phase 2: Structured Memory System
+## ✅ Feature 2: Structured Memory System
 
 **Priority**: HIGH - Required for proper state management  
 **Status**: ✅ Complete  
@@ -115,11 +121,11 @@
 
 ---
 
-## ✅ Phase 3: State Snapshot & Context Retrieval
+## ✅ Feature 3: State Snapshot & Context Retrieval
 
 **Priority**: HIGH - Enables retry logic and bounded context  
 **Status**: ✅ Complete  
-**Dependencies**: Phase 2 (Structured Memory)
+**Dependencies**: Feature 2 (Structured Memory)
 
 ### Definition of Done
 
@@ -166,11 +172,11 @@
 
 ---
 
-## ✅ Phase 4: Ephemeral Working Memory
+## ✅ Feature 4: Ephemeral Working Memory
 
 **Priority**: MEDIUM - Improves prompt quality and token efficiency  
 **Status**: ✅ Complete  
-**Dependencies**: Phase 3 (State Snapshot)
+**Dependencies**: Feature 3 (State Snapshot)
 
 ### Definition of Done
 
@@ -206,11 +212,11 @@
 
 ---
 
-## ✅ Phase 5: Output Validation System
+## ✅ Feature 5: Output Validation System
 
 **Priority**: CRITICAL - Core of the architectural pattern  
 **Status**: ✅ Complete  
-**Dependencies**: Phase 1 (Determinism Layer)
+**Dependencies**: Feature 1 (Determinism Layer)
 
 ### Definition of Done
 
@@ -256,11 +262,11 @@
 
 ---
 
-## ✅ Phase 6: Controlled Memory Mutation
+## ✅ Feature 6: Controlled Memory Mutation
 
 **Priority**: HIGH - Ensures memory integrity  
 **Status**: ✅ Complete  
-**Dependencies**: Phase 2 (Structured Memory), Phase 5 (Validation)
+**Dependencies**: Feature 2 (Structured Memory), Feature 5 (Validation)
 
 ### Definition of Done
 
@@ -298,11 +304,11 @@
 
 ---
 
-## ✅ Phase 7: Enhanced Fallback System
+## ✅ Feature 7: Enhanced Fallback System
 
 **Priority**: MEDIUM - Improves reliability  
 **Status**: ✅ Complete  
-**Dependencies**: Phase 3 (Retry Logic)
+**Dependencies**: Feature 3 (Retry Logic)
 
 ### Definition of Done
 
@@ -330,11 +336,11 @@
 
 ---
 
-## 🚧 Phase 8: RedRoom Integration
+## 🚧 Feature 8: RedRoom Integration
 
 **Priority**: MEDIUM - Enables testing of new architecture  
 **Status**: 🚧 In Progress (80% Complete)  
-**Dependencies**: All previous phases
+**Dependencies**: All previous features
 
 ### Definition of Done
 
@@ -446,11 +452,11 @@
 
 ---
 
-## 🚧 Phase 9: Documentation & Polish
+## 🚧 Feature 9: Documentation & Polish
 
 **Priority**: MEDIUM - Enables adoption and understanding
 **Status**: 🚧 In Progress (90% Complete)
-**Dependencies**: All previous phases
+**Dependencies**: All previous features
 
 ### Definition of Done
 
@@ -511,11 +517,11 @@
 
 ---
 
-## 🚧 Phase 10: Deterministic Proof Gap Testing
+## 🚧 Feature 10: Deterministic Proof Gap Testing
 
 **Priority**: HIGH - Required for v1.0 release  
 **Status**: 🚧 In Progress (~25% Complete)  
-**Dependencies**: Phase 1-7 (All core components must be implemented)
+**Dependencies**: Features 1-7 (All core components must be implemented)
 
 **Note**: See `PHASE10_PROOF_GAPS.md` for detailed test backlog with file targets and acceptance criteria.
 
@@ -549,19 +555,19 @@
 - [ ] All Critical Implementation Requirements met (4/5 complete, see `PHASE10_PROOF_GAPS.md`)
 
 **Estimated Effort**: 9-13 days total
-- Phase 10.1-10.5 (Unit tests): 5-7 days
-- Phase 10.6 (PlayMode tests): 2-3 days
-- Phase 10.7 (Integration tests): 2-3 days
+- Feature 10.1-10.5 (Unit tests): 5-7 days
+- Feature 10.6 (PlayMode tests): 2-3 days
+- Feature 10.7 (Integration tests): 2-3 days
 
-**Versioning Strategy**: Phase 10 is required for v1.0 release. Pre-1.0 releases (rc/preview) can ship without Phase 10 complete, but must not claim architecture is "deterministically proven" until Phase 10 is complete.
+**Versioning Strategy**: Feature 10 is required for v1.0 release. Pre-1.0 releases (rc/preview) can ship without Feature 10 complete, but must not claim architecture is "deterministically proven" until Feature 10 is complete.
 
 ---
 
-## 📋 Phase 11: RAG-Based Memory Retrieval & Memory Proving
+## 📋 Feature 11: RAG-Based Memory Retrieval & Memory Proving
 
 **Priority**: MEDIUM - Enhancement to existing retrieval system  
 **Status**: 📋 Planned (0% Complete)  
-**Dependencies**: Phase 3 (Context Retrieval Layer), Phase 10 (Deterministic Proof Gap Testing)
+**Dependencies**: Feature 3 (Context Retrieval Layer), Phase 10 (Deterministic Proof Gap Testing)
 
 ### Overview
 
@@ -681,11 +687,11 @@ Enhance the `ContextRetrievalLayer` to use Retrieval-Augmented Generation (RAG) 
 ### Estimated Effort
 
 **Total**: 3-4 weeks
-- Phase 11.1-11.2 (Embedding & Storage): 1 week
-- Phase 11.3-11.4 (Retrieval & Integration): 1 week
-- Phase 11.5-11.6 (Optimization & Testing): 3-5 days
-- Phase 11.7 (Memory Proving): 3-5 days
-- Phase 11.8 (Documentation): 2-3 days
+- Feature 11.1-11.2 (Embedding & Storage): 1 week
+- Feature 11.3-11.4 (Retrieval & Integration): 1 week
+- Feature 11.5-11.6 (Optimization & Testing): 3-5 days
+- Feature 11.7 (Memory Proving): 3-5 days
+- Feature 11.8 (Documentation): 2-3 days
 
 ### Success Criteria
 
@@ -705,11 +711,11 @@ Enhance the `ContextRetrievalLayer` to use Retrieval-Augmented Generation (RAG) 
 
 ---
 
-## 📋 Phase 12: Dedicated Structured Output
+## 📋 Feature 12: Dedicated Structured Output
 
 **Priority**: HIGH - Improves reliability and determinism of output parsing  
 **Status**: 📋 Planned (0% Complete)  
-**Dependencies**: Phase 5 (Output Validation System), Phase 10 (Deterministic Proof Gap Testing)
+**Dependencies**: Feature 5 (Output Validation System), Feature 10 (Deterministic Proof Gap Testing)
 
 ### Overview
 
@@ -791,9 +797,9 @@ Replace regex-based text parsing with LLM-native structured output formats. Curr
 ### Estimated Effort
 
 **Total**: 2-3 weeks
-- Phase 12.1-12.2 (Interfaces & Schema): 1 week
-- Phase 12.3-12.4 (Integration & Refactoring): 1 week
-- Phase 12.5-12.6 (Testing & Docs): 3-5 days
+- Feature 12.1-12.2 (Interfaces & Schema): 1 week
+- Feature 12.3-12.4 (Integration & Refactoring): 1 week
+- Feature 12.5-12.6 (Testing & Docs): 3-5 days
 
 ### Success Criteria
 
@@ -805,11 +811,11 @@ Replace regex-based text parsing with LLM-native structured output formats. Curr
 
 ---
 
-## 📋 Phase 13: Structured Output Integration
+## 📋 Feature 13: Structured Output Integration
 
 **Priority**: HIGH - Completes structured output migration  
 **Status**: 📋 Planned (0% Complete)  
-**Dependencies**: Phase 12 (Dedicated Structured Output)
+**Dependencies**: Feature 12 (Dedicated Structured Output)
 
 ### Overview
 
@@ -886,8 +892,8 @@ Complete integration of structured output throughout the validation pipeline, mu
 ### Estimated Effort
 
 **Total**: 1-2 weeks
-- Phase 13.1-13.3 (Pipeline Integration): 1 week
-- Phase 13.4-13.7 (Error Handling, Testing, Docs): 3-5 days
+- Feature 13.1-13.3 (Pipeline Integration): 1 week
+- Feature 13.4-13.7 (Error Handling, Testing, Docs): 3-5 days
 
 ### Success Criteria
 
@@ -900,42 +906,922 @@ Complete integration of structured output throughout the validation pipeline, mu
 
 ---
 
+## 📋 Feature 14: Deterministic Generation Seed
+
+**Priority**: CRITICAL - Completes cross-session determinism guarantee  
+**Status**: 📋 Planned (0% Complete)  
+**Dependencies**: Feature 10 (Deterministic Proof Gap Testing), Feature 16 (Save/Load Game Integration) - Requires deterministic inputs to be proven first and persistence for InteractionCount
+
+### Overview
+
+Implement the **InteractionCount seed strategy** to achieve true cross-session determinism. By using `InteractionContext.InteractionCount` as the seed for LLM generation, we transform the stochastic generator into a pure function relative to game state. This closes the "hidden variable" gap and ensures that identical game states produce identical outputs across sessions and devices (with hardware floating-point caveats).
+
+**Current State**: `InteractionContext.InteractionCount` exists and tracks "Number of times this NPC has been interacted with in this session", but it is not currently used to seed LLM generation. The LLM generation step has a hidden random seed that breaks determinism.
+
+**Architectural Impact**: This feature completes the deterministic state reconstruction pattern by locking the final source of non-determinism: the LLM's internal random number generator. Combined with Feature 10's deterministic inputs, this achieves the "Holy Grail" of AI game development: **Cross-Session State Consistency**.
+
+### Why This Works
+
+**1. It Closes the "Hidden Variable" Gap**
+- The LLM has no memory and no direct access to world state (per `ARCHITECTURE.md`)
+- However, standard LLM calls have a hidden variable: the random seed
+- By driving that seed with `InteractionContext.InteractionCount`, we remove that hidden variable
+- **Formula**: `f(Prompt, Context, InteractionCount) = Output`
+- **Result**: If a player reloads a save and talks to the NPC for the 5th time, they get the *exact* same text
+
+**2. Infrastructure Already Exists**
+- `InteractionCount` is already tracked in `InteractionContext`
+- No new tracking logic needed
+- Just need to pass this integer into `ApiClient` or `BrainServer` as the request seed
+
+**3. Distinction from Memory Sequence**
+- **Memory Sequence (`_nextSequenceNumber`)**: In `AuthoritativeMemorySystem.cs`, used for deterministic sort order (ensures memories with same score sort in insertion order)
+- **Generation Seed (`InteractionCount`)**: Controls the *randomness* of word choices (temperature/sampling) for the current response
+- These are separate concerns: one ensures deterministic retrieval, the other ensures deterministic generation
+
+### Definition of Done
+
+#### 14.1 Seed Parameter Support
+- [ ] Add `seed` parameter to `CompletionRequest` structure (llama.cpp API supports `seed` field)
+- [ ] Update `IApiClient` interface to accept optional `seed` parameter in `SendPromptAsync()` and `SendPromptWithMetricsAsync()`
+- [ ] Update `ApiClient` implementation to include `seed` in request JSON when provided
+- [ ] Validate seed parameter (must be non-negative integer, or null/unspecified for non-deterministic mode)
+- [ ] Add seed parameter to `LlmConfig` for default seed behavior (optional)
+
+#### 14.2 Integration with InteractionContext
+- [ ] Modify `LlamaBrainAgent.SendWithSnapshotAsync()` to extract `InteractionCount` from `InteractionContext`
+- [ ] Pass `InteractionCount` as seed to `ApiClient.SendPromptWithMetricsAsync()` (or `SendPromptAsync()`)
+- [ ] Ensure seed is passed through retry attempts (same seed for all retries of same interaction)
+- [ ] Handle edge case: `InteractionCount = 0` (first interaction) - use 0 as seed or special handling
+- [ ] Document seed behavior: seed is per-interaction, not per-attempt (retries use same seed)
+
+#### 14.3 Cross-Session Determinism Testing
+- [ ] **Core Determinism Test**: 
+  - Set `InteractionCount = 5`
+  - Send Prompt "Hello" with identical `StateSnapshot`
+  - Record Output A
+  - Clear everything (new session)
+  - Set `InteractionCount = 5` again
+  - Send Prompt "Hello" with identical `StateSnapshot`
+  - Assert Output B == Output A (byte-for-byte identical)
+- [ ] **Save/Load Test**:
+  - Create interaction with `InteractionCount = 3`
+  - Save game state
+  - Reload game state
+  - Create interaction with `InteractionCount = 3` again
+  - Assert identical output
+- [ ] **Multiple Interaction Test**:
+  - Run sequence: InteractionCount 1, 2, 3, 4, 5
+  - Save state
+  - Reload state
+  - Run sequence: InteractionCount 1, 2, 3, 4, 5 again
+  - Assert all outputs match (proves seed progression works)
+- [ ] **Retry Determinism Test**:
+  - Same `InteractionCount`, same prompt, same snapshot
+  - Trigger retry (validation failure)
+  - Assert retry uses same seed (output may differ due to constraint escalation, but seed is consistent)
+
+#### 14.4 Hardware Determinism Documentation
+- [ ] Document that determinism is **100% across sessions** (same device, same model)
+- [ ] Document that determinism is **99.9% across devices** (hardware floating-point differences may cause rare divergence)
+- [ ] Document mitigation: `llama.cpp` fights hard to be deterministic, usually "stable enough" for gameplay
+- [ ] Document edge cases: Different GPUs (NVIDIA vs AMD vs Apple Silicon) may have tiny rounding differences
+- [ ] Add note to `DETERMINISM_CONTRACT.md` about hardware determinism limits
+
+#### 14.5 Backward Compatibility
+- [ ] Ensure seed parameter is optional (null/unspecified = non-deterministic mode, backward compatible)
+- [ ] Default behavior: if `InteractionCount` not provided or seed not supported, fall back to non-deterministic mode
+- [ ] Add configuration flag to enable/disable seed-based determinism (for testing/debugging)
+- [ ] Log when seed is used vs when it's not available
+
+#### 14.6 Testing
+- [ ] Unit tests for `ApiClient` seed parameter handling
+- [ ] Unit tests for seed validation (negative seeds, null handling)
+- [ ] Integration tests for cross-session determinism (Phase 14.3 tests)
+- [ ] Tests for retry behavior with seed (same seed across retries)
+- [ ] Tests for backward compatibility (seed = null works correctly)
+- [ ] All tests in `LlamaBrain.Tests/Determinism/` passing
+
+#### 14.7 Documentation
+- [ ] Update `ARCHITECTURE.md` with seed-based determinism section
+- [ ] Document the "double-lock system":
+  - Lock 1: Context locking (SequenceNumber, Ordinal comparisons) ensures prompt never flutters
+  - Lock 2: Entropy locking (InteractionCount seed) ensures dice roll never flutters
+- [ ] Update `USAGE_GUIDE.md` with seed configuration examples
+- [ ] Document QA implications: testers can reproduce hallucinations exactly by loading save file
+- [ ] Add to `DETERMINISM_CONTRACT.md`: seed-based determinism guarantees and limitations
+
+### Technical Considerations
+
+**llama.cpp API Support**:
+- llama.cpp completion API supports `seed` parameter (integer, -1 for random)
+- Seed must be non-negative integer (0, 1, 2, ...)
+- Seed of -1 means "use random seed" (non-deterministic)
+- Seed of 0 or positive means "use this exact seed" (deterministic)
+
+**Seed vs Temperature**:
+- Seed controls *which* token is selected from the probability distribution
+- Temperature controls the *shape* of the probability distribution
+- Both must be identical for true determinism
+- Temperature is already controlled via `LlmConfig`, so seed is the missing piece
+
+**InteractionCount Tracking**:
+- `InteractionCount` is already tracked per-NPC per-session in `InteractionContext`
+- **CRITICAL**: Must be persisted in save games via Feature 16 (Save/Load Game Integration) to maintain determinism across sessions
+- On game load, `InteractionCount` must be restored from save data
+- Increment happens before seed is used (seed = InteractionCount at time of generation)
+- Feature 16 provides the persistence layer required for this to work
+
+**Hardware Determinism Limits**:
+- Different GPUs may have floating-point rounding differences
+- These accumulate in massive matrix multiplications (LLM inference)
+- Rare edge case: token with `p=0.499999` on one device becomes `p=0.500001` on another
+- If that token is on Top-P boundary, different word might be selected
+- Mitigation: `llama.cpp` is usually stable enough for gameplay purposes
+- **Contract**: We guarantee determinism across sessions (same device), but only "predictable" across devices
+
+### Estimated Effort
+
+**Total**: 1-2 weeks
+- Feature 14.1-14.2 (Seed Parameter & Integration): 3-4 days
+- Feature 14.3-14.4 (Testing & Documentation): 3-4 days
+- Feature 14.5-14.7 (Compatibility, Testing, Docs): 2-3 days
+
+### Success Criteria
+
+- [ ] Seed parameter successfully passed to llama.cpp API
+- [ ] `InteractionCount` correctly extracted from `InteractionContext` and used as seed
+- [ ] Cross-session determinism test passes: same `InteractionCount` + same prompt = identical output
+- [ ] Save/load determinism test passes: reloaded game produces identical outputs
+- [ ] Retry logic uses same seed across retry attempts
+- [ ] Backward compatibility maintained (seed = null works)
+- [ ] Hardware determinism limits documented
+- [ ] All tests passing
+- [ ] Documentation updated with seed-based determinism strategy
+
+### Proof Strategy
+
+For Feature 10 proof, this makes the integration test remarkably simple:
+
+1. Set `InteractionCount = 5`
+2. Send Prompt "Hello" with identical `StateSnapshot`
+3. Record Output A
+4. Clear everything
+5. Set `InteractionCount = 5` again
+6. Send Prompt "Hello" with identical `StateSnapshot`
+7. Assert Output B == Output A
+
+**If this passes, you have mathematically proven that your system is deterministic**, regardless of the inherent randomness of the underlying AI model.
+
+### Architectural Significance
+
+This phase completes the deterministic state reconstruction pattern:
+
+- **Before Feature 14**: Deterministic inputs (Feature 10) + Non-deterministic generation = Non-deterministic outputs
+- **After Feature 14**: Deterministic inputs (Feature 10) + Deterministic generation (Feature 14) = **Deterministic outputs**
+
+This is the "Senior" thinking that distinguishes this architecture:
+- **Locking the Context**: `SequenceNumber` and `Ordinal` string comparisons ensure the *prompt* never flutters
+- **Locking the Entropy**: `InteractionCount` seed ensures the *dice roll* never flutters
+
+You aren't just building a chatbot; you are building a **reproducible state engine**.
+
+---
+
+## 📋 Feature 15: Multiple NPC Support
+
+**Priority**: MEDIUM - Enables multi-NPC scenarios and shared memory  
+**Status**: 📋 Planned (0% Complete)  
+**Dependencies**: Feature 2 (Structured Memory System), Feature 3 (Context Retrieval), Feature 11 (RAG-Based Memory Retrieval)
+
+### Overview
+
+Enable support for multiple NPCs in the same conversation context, including NPC-to-NPC interactions, shared memory systems, and coordinated behavior. This extends the single-NPC architecture to support complex multi-agent scenarios where NPCs can interact with each other, share memories, and coordinate actions.
+
+**Current State**: The system is designed for single-NPC interactions. Each `LlamaBrainAgent` operates independently with its own memory system. Multi-NPC scenarios require coordination, shared context, and NPC-to-NPC interaction triggers.
+
+**Use Cases**:
+- Group conversations (player talks to multiple NPCs simultaneously)
+- NPC-to-NPC dialogue (NPCs interact with each other)
+- Shared knowledge systems (NPCs in a group share certain memories)
+- Coordinated actions (multiple NPCs respond to the same world event)
+- Party/faction systems (NPCs with shared goals and memories)
+
+### Definition of Done
+
+#### 15.1 Multi-NPC Conversation Context
+- [ ] Create `MultiNpcConversationContext` class extending `InteractionContext`
+- [ ] Support multiple NPC IDs in a single interaction
+- [ ] Track which NPC is currently speaking/responding
+- [ ] Support conversation turn management (player → NPC1 → NPC2 → player)
+- [ ] Add `ConversationMode` enum (SingleNpc, MultiNpc, NpcToNpc)
+- [ ] Update `StateSnapshot` to support multi-NPC context
+
+#### 15.2 Shared Memory Systems
+- [ ] Create `SharedMemoryGroup` class for managing shared memories across NPCs
+- [ ] Support group-level canonical facts (shared world knowledge)
+- [ ] Support group-level world state (shared game state)
+- [ ] Support group-level episodic memories (shared events)
+- [ ] Memory authority hierarchy: Individual NPC memories > Shared group memories
+- [ ] Add `MemorySharingConfig` for configuring what memories are shared
+- [ ] Update `AuthoritativeMemorySystem` to support shared memory queries
+
+#### 15.3 NPC-to-NPC Interaction Triggers
+- [ ] Add `NpcInteraction` trigger reason (already exists in enum, needs implementation)
+- [ ] Create `NpcToNpcTrigger` class for triggering NPC-to-NPC interactions
+- [ ] Support NPC-to-NPC dialogue generation (NPC1 speaks to NPC2)
+- [ ] Validate NPC-to-NPC outputs (both NPCs must pass validation)
+- [ ] Support NPC-to-NPC memory mutations (both NPCs can update shared memories)
+- [ ] Add `NpcInteractionContext` for NPC-to-NPC specific context
+
+#### 15.4 Coordinated Constraint Evaluation
+- [ ] Extend `ExpectancyEvaluator` to evaluate rules for multiple NPCs
+- [ ] Support group-level constraints (apply to all NPCs in group)
+- [ ] Support NPC-specific constraints (apply only to individual NPC)
+- [ ] Constraint conflict resolution (when NPCs have conflicting constraints)
+- [ ] Update `ConstraintSet` to support multi-NPC scenarios
+- [ ] Add constraint priority system (group constraints override individual)
+
+#### 15.5 Group Memory Retrieval
+- [ ] Extend `ContextRetrievalLayer` to retrieve from shared memory groups
+- [ ] Support hybrid retrieval (individual NPC memories + shared group memories)
+- [ ] Priority system: Individual memories > Shared memories (for relevance)
+- [ ] Update `RetrievedContext` to include shared memory sources
+- [ ] Support RAG-based retrieval across shared memories (when Feature 11 complete)
+
+#### 15.6 Multi-NPC World Intent Coordination
+- [ ] Extend `WorldIntentDispatcher` to handle intents from multiple NPCs
+- [ ] Support intent coordination (multiple NPCs can contribute to same intent)
+- [ ] Intent conflict resolution (when NPCs have conflicting intents)
+- [ ] Group intent priority system
+- [ ] Add `CoordinatedIntent` class for multi-NPC intents
+- [ ] Update intent history to track multi-NPC intents
+
+#### 15.7 Integration
+- [ ] Update `LlamaBrainAgent` to support multi-NPC mode
+- [ ] Add `MultiNpcConversationManager` Unity component
+- [ ] Support switching between single-NPC and multi-NPC modes
+- [ ] Update `NpcDialogueTrigger` to support multi-NPC triggers
+- [ ] Add Unity events for NPC-to-NPC interactions
+- [ ] Update RedRoom integration for multi-NPC testing
+
+#### 15.8 Performance & Optimization
+- [ ] Benchmark multi-NPC conversation latency
+- [ ] Optimize shared memory queries (caching, indexing)
+- [ ] Support async NPC-to-NPC interactions (non-blocking)
+- [ ] Configurable limits on concurrent NPCs in conversation
+- [ ] Memory pooling for multi-NPC contexts
+
+#### 15.9 Testing
+- [ ] Unit tests for `MultiNpcConversationContext`
+- [ ] Unit tests for `SharedMemoryGroup`
+- [ ] Unit tests for NPC-to-NPC interaction triggers
+- [ ] Integration tests for multi-NPC conversations
+- [ ] Integration tests for shared memory systems
+- [ ] Performance tests for concurrent NPC interactions
+- [ ] All tests in `LlamaBrain.Tests/MultiNpc/` passing
+
+#### 15.10 Documentation
+- [ ] Update `ARCHITECTURE.md` with multi-NPC architecture section
+- [ ] Document shared memory system design
+- [ ] Document NPC-to-NPC interaction patterns
+- [ ] Update `USAGE_GUIDE.md` with multi-NPC setup examples
+- [ ] Add examples for group conversations, NPC-to-NPC dialogue
+- [ ] Troubleshooting guide for multi-NPC scenarios
+
+### Technical Considerations
+
+**Memory Sharing Strategies**:
+- **Full Sharing**: All memories shared (simple but may leak information)
+- **Selective Sharing**: Only specific memory types shared (canonical facts, world state)
+- **Event-Based Sharing**: Memories shared when specific events occur
+- **Group-Based Sharing**: NPCs in same group share memories
+
+**Conversation Turn Management**:
+- **Sequential**: NPCs respond one at a time in order
+- **Parallel**: NPCs can respond simultaneously (more complex)
+- **Coordinated**: NPCs coordinate responses (requires additional logic)
+
+**Performance Considerations**:
+- Multiple NPCs = multiple LLM calls (latency multiplies)
+- Shared memory queries add overhead
+- Constraint evaluation for multiple NPCs increases computation
+- Consider batching or parallel processing for NPC-to-NPC interactions
+
+**Backward Compatibility**:
+- Single-NPC mode must remain fully functional
+- Existing `LlamaBrainAgent` components should work unchanged
+- Multi-NPC features should be opt-in (not required)
+
+### Estimated Effort
+
+**Total**: 2-3 weeks
+- Feature 15.1-15.3 (Context & Triggers): 1 week
+- Feature 15.4-15.6 (Coordination & Memory): 1 week
+- Feature 15.7-15.10 (Integration, Testing, Docs): 3-5 days
+
+### Success Criteria
+
+- [ ] Multiple NPCs can participate in same conversation
+- [ ] NPC-to-NPC interactions work correctly
+- [ ] Shared memory systems function as designed
+- [ ] Constraint evaluation works for multi-NPC scenarios
+- [ ] Performance acceptable (<500ms per NPC response in group)
+- [ ] Backward compatibility maintained (single-NPC mode unchanged)
+- [ ] All tests passing
+- [ ] Documentation complete with examples
+
+---
+
+## 📋 Feature 16: Save/Load Game Integration
+
+**Priority**: CRITICAL - Required for Feature 14 (Deterministic Generation Seed)  
+**Status**: 📋 Planned (0% Complete)  
+**Dependencies**: Feature 2 (Structured Memory System), Feature 3 (State Snapshot)
+
+### Overview
+
+Implement a simple, abstracted save/load system for game state persistence. This enables `InteractionCount` and other deterministic state to be preserved across game sessions, which is **required** for Feature 14 (Deterministic Generation Seed) to achieve true cross-session determinism.
+
+**Current State**: `InteractionContext.InteractionCount` exists but is session-only. Memory system has file-based persistence (`PersonaMemoryFileStore`), but there's no unified save/load system for game state including `InteractionCount`.
+
+**Design Philosophy**: Keep it simple and abstracted. Start with PlayerPrefs (Unity) or file-based JSON (engine-agnostic). Abstract behind an interface so production-quality packages (encrypted saves, cloud sync, etc.) can be swapped in later without breaking code.
+
+**Architectural Impact**: Without this feature, Feature 14 cannot achieve cross-session determinism because `InteractionCount` resets on game restart. This is a **hard dependency** for Feature 14.
+
+### Definition of Done
+
+#### 16.1 Persistence Abstraction Interface
+- [ ] Create `IGameStatePersistence` interface for save/load operations
+- [ ] Define `GameStateData` DTO containing:
+  - `Dictionary<string, int> InteractionCounts` (per NPC ID)
+  - `Dictionary<string, object> CustomState` (for extensibility)
+  - `string Version` (for migration)
+  - `DateTime SaveTimestamp`
+- [ ] Support async save/load operations
+- [ ] Support error handling (save failures, corrupted files)
+
+#### 16.2 Simple Implementations
+- [ ] **Unity Implementation**: `UnityPlayerPrefsPersistence` using `PlayerPrefs`
+  - Store `InteractionCounts` as JSON in PlayerPrefs
+  - Use keys like `"LlamaBrain_InteractionCount_{npcId}"`
+  - Handle PlayerPrefs size limits gracefully
+- [ ] **File-Based Implementation**: `JsonFilePersistence` (engine-agnostic)
+  - Save to JSON file in configurable directory
+  - Use `JsonUtils` for serialization (consistent with memory system)
+  - Handle file I/O errors gracefully
+  - Support configurable file path
+- [ ] Both implementations implement `IGameStatePersistence`
+
+#### 16.3 Integration with InteractionContext
+- [ ] Create `GameStateManager` class that wraps persistence interface
+- [ ] `SaveGameState()` method:
+  - Collects `InteractionCount` from all active NPCs
+  - Serializes to `GameStateData`
+  - Calls persistence interface
+- [ ] `LoadGameState()` method:
+  - Loads `GameStateData` from persistence
+  - Restores `InteractionCount` to NPC contexts
+  - Returns loaded state for validation
+- [ ] Integration point: `LlamaBrainAgent` or `PersonaMemoryStore` tracks InteractionCount per NPC
+
+#### 16.4 Unity Integration
+- [ ] Create `GameStatePersistenceManager` Unity MonoBehaviour component
+  - Configurable persistence provider (PlayerPrefs vs File-based)
+  - Auto-save on scene unload (optional)
+  - Manual save/load methods
+- [ ] Integration with Unity save system (if game has one)
+- [ ] Editor tools for testing save/load (optional)
+
+#### 16.5 Migration & Versioning
+- [ ] `GameStateData.Version` field for save format versioning
+- [ ] Basic migration support (upgrade old saves to new format)
+- [ ] Backward compatibility: handle missing fields gracefully
+- [ ] Migration path from no-save to save system (default InteractionCount = 0)
+
+#### 16.6 Testing
+- [ ] Unit tests for `IGameStatePersistence` interface
+- [ ] Unit tests for `UnityPlayerPrefsPersistence` (mock PlayerPrefs)
+- [ ] Unit tests for `JsonFilePersistence` (use temp files)
+- [ ] Integration tests: Save → Load → Verify InteractionCount restored
+- [ ] Integration tests: Save → Modify → Load → Verify state restored
+- [ ] Edge case tests: Corrupted saves, missing files, permission errors
+- [ ] All tests in `LlamaBrain.Tests/Persistence/` passing
+
+#### 16.7 Documentation
+- [ ] Update `ARCHITECTURE.md` with persistence system section
+- [ ] Document `IGameStatePersistence` interface and implementations
+- [ ] Update `USAGE_GUIDE.md` with save/load examples
+- [ ] Document migration path for existing games
+- [ ] Document how to swap in production persistence packages
+
+### Technical Considerations
+
+**Abstraction Design**:
+- `IGameStatePersistence` interface allows swapping implementations
+- Production packages (encrypted saves, cloud sync) can implement same interface
+- No breaking changes when upgrading persistence layer
+
+**Simple First, Upgradeable Later**:
+- Start with PlayerPrefs (Unity) or JSON files (engine-agnostic)
+- No encryption, no cloud sync, no fancy features
+- Focus on correctness and abstraction, not security
+- Production packages can add security/cloud features later
+
+**InteractionCount Tracking**:
+- Must track `InteractionCount` per NPC ID
+- Must persist before game closes
+- Must restore on game load
+- Default to 0 if not found in save (new game)
+
+**File Format** (JSON):
+```json
+{
+  "Version": "1.0",
+  "SaveTimestamp": "2025-12-31T12:00:00Z",
+  "InteractionCounts": {
+    "npc_001": 5,
+    "npc_002": 3,
+    "wizard_001": 12
+  },
+  "CustomState": {}
+}
+```
+
+**Unity PlayerPrefs Format**:
+- Key: `"LlamaBrain_InteractionCount_{npcId}"`
+- Value: `"{count}"` (string representation of int)
+- Alternative: Single JSON blob in one PlayerPrefs key (if size allows)
+
+**Error Handling**:
+- Save failures: Log error, continue (don't crash game)
+- Load failures: Return default state (InteractionCount = 0), log warning
+- Corrupted saves: Attempt recovery, fall back to defaults
+- Permission errors: Log, continue with in-memory only
+
+### Estimated Effort
+
+**Total**: 3-5 days
+- Feature 16.1-16.2 (Interface & Simple Implementations): 1-2 days
+- Feature 16.3-16.4 (Integration): 1-2 days
+- Feature 16.5-16.7 (Migration, Testing, Docs): 1 day
+
+### Success Criteria
+
+- [ ] `IGameStatePersistence` interface defined and documented
+- [ ] `UnityPlayerPrefsPersistence` and `JsonFilePersistence` implementations complete
+- [ ] `InteractionCount` successfully saved and restored across sessions
+- [ ] Integration with `LlamaBrainAgent` or memory system complete
+- [ ] Unity component for easy save/load integration
+- [ ] All tests passing
+- [ ] Documentation complete with examples
+- [ ] Feature 14 can use persisted `InteractionCount` for determinism
+
+### Future Enhancements (Post-v1.0)
+
+- Encrypted save files
+- Cloud save synchronization
+- Save file compression
+- Multiple save slots
+- Save file validation and repair tools
+- Performance: Incremental saves (only changed data)
+
+---
+
+## 📋 Feature 17: Token Cost Tracking & Analytics
+
+**Priority**: MEDIUM - Production monitoring and cost management  
+**Status**: 📋 Planned (0% Complete)  
+**Dependencies**: Feature 6 (Controlled Memory Mutation), Feature 3 (State Snapshot)
+
+### Overview
+
+Implement token usage tracking and cost analytics to provide visibility into API costs and usage patterns. This enables production deployments to monitor costs, identify optimization opportunities, and set budget limits.
+
+**Current State**: `CompletionMetrics` tracks token counts per request, but there's no aggregation, cost calculation, or analytics. No visibility into cumulative costs or usage patterns.
+
+**Use Cases**:
+- Track token usage per NPC, per interaction type, per session
+- Calculate API costs (if using paid APIs)
+- Identify high-cost interactions for optimization
+- Set budget alerts and throttling
+- Generate usage reports for analysis
+
+### Definition of Done
+
+#### 17.1 Token Usage Tracking
+- [ ] Create `TokenUsageTracker` class for aggregating token metrics
+- [ ] Track per-NPC token usage (prompt tokens, completion tokens, total)
+- [ ] Track per-interaction-type usage (PlayerUtterance, ZoneTrigger, etc.)
+- [ ] Track per-session cumulative usage
+- [ ] Track per-day/week/month usage (time-based aggregation)
+- [ ] Store usage data in memory with optional persistence
+
+#### 17.2 Cost Calculation
+- [ ] Create `CostCalculator` interface for cost calculation
+- [ ] Support multiple pricing models:
+  - Per-token pricing (OpenAI-style)
+  - Per-request pricing
+  - Tiered pricing
+- [ ] Create `OpenAIPricingCalculator` implementation (example)
+- [ ] Create `LlamaCppPricingCalculator` (free/local, but tracks for consistency)
+- [ ] Configurable pricing per model/endpoint
+- [ ] Support custom pricing calculators
+
+#### 17.3 Analytics & Reporting
+- [ ] Create `UsageAnalytics` class for generating reports
+- [ ] Generate usage statistics:
+  - Total tokens used (prompt + completion)
+  - Average tokens per interaction
+  - Peak usage periods
+  - Most expensive NPCs/interactions
+- [ ] Export usage data to CSV/JSON
+- [ ] Generate summary reports (daily, weekly, monthly)
+- [ ] Identify optimization opportunities (high-cost patterns)
+
+#### 17.4 Budget Management
+- [ ] Create `BudgetManager` class for budget tracking
+- [ ] Support daily/weekly/monthly budget limits
+- [ ] Budget alerts (warnings when approaching limits)
+- [ ] Budget throttling (pause requests when limit exceeded)
+- [ ] Configurable budget reset schedules
+
+#### 17.5 Integration
+- [ ] Integrate with `ApiClient` to capture token metrics
+- [ ] Integrate with `LlamaBrainAgent` for per-NPC tracking
+- [ ] Add usage metrics to `CompletionMetrics` events
+- [ ] Optional Unity component for runtime monitoring
+- [ ] Integration with existing metrics collection (RedRoom)
+
+#### 17.6 Testing
+- [ ] Unit tests for `TokenUsageTracker`
+- [ ] Unit tests for `CostCalculator` implementations
+- [ ] Unit tests for `UsageAnalytics`
+- [ ] Unit tests for `BudgetManager`
+- [ ] Integration tests: Verify tracking across multiple interactions
+- [ ] All tests in `LlamaBrain.Tests/Analytics/` passing
+
+#### 17.7 Documentation
+- [ ] Update `ARCHITECTURE.md` with analytics system section
+- [ ] Document cost calculation and pricing models
+- [ ] Update `USAGE_GUIDE.md` with usage tracking examples
+- [ ] Document budget management setup
+- [ ] Add examples for custom pricing calculators
+
+### Technical Considerations
+
+**Token Tracking**:
+- Capture from `CompletionMetrics` (already available)
+- Aggregate in-memory with optional persistence
+- Support reset/clear operations for testing
+
+**Cost Calculation**:
+- Abstract via `ICostCalculator` interface
+- Default implementations for common pricing models
+- Easy to add custom calculators for specific APIs
+
+**Performance**:
+- Lightweight tracking (minimal overhead)
+- Optional persistence (don't block on I/O)
+- Efficient aggregation (use dictionaries/counters)
+
+**Privacy**:
+- No sensitive data in usage tracking
+- Optional anonymization for reporting
+- Configurable data retention
+
+### Estimated Effort
+
+**Total**: 1-2 weeks
+- Feature 17.1-17.2 (Tracking & Cost Calculation): 3-4 days
+- Feature 17.3-17.4 (Analytics & Budget): 2-3 days
+- Feature 17.5-17.7 (Integration, Testing, Docs): 2-3 days
+
+### Success Criteria
+
+- [ ] Token usage tracked per NPC, interaction type, and session
+- [ ] Cost calculation working for multiple pricing models
+- [ ] Usage analytics and reports generated correctly
+- [ ] Budget management functional (alerts and throttling)
+- [ ] Integration with existing metrics system complete
+- [ ] All tests passing
+- [ ] Documentation complete with examples
+
+---
+
+## 📋 Feature 18: Concurrent Request Handling & Thread Safety
+
+**Priority**: MEDIUM - Required for multi-NPC scenarios and production reliability  
+**Status**: 📋 Planned (0% Complete)  
+**Dependencies**: Feature 15 (Multiple NPC Support), Feature 3 (State Snapshot)
+
+### Overview
+
+Ensure thread-safe concurrent request handling for multiple NPCs interacting simultaneously. This is required for Feature 15 (Multiple NPC Support) and production deployments where multiple NPCs may process requests in parallel.
+
+**Current State**: `ApiClient` has basic rate limiting with `SemaphoreSlim`, but there's no comprehensive thread-safety documentation or testing. Memory system may have race conditions with concurrent access.
+
+**Use Cases**:
+- Multiple NPCs responding to player simultaneously
+- Parallel NPC-to-NPC interactions
+- Concurrent zone triggers
+- Production deployments with high concurrency
+
+### Definition of Done
+
+#### 18.1 Thread Safety Audit
+- [ ] Audit all core components for thread safety:
+  - `AuthoritativeMemorySystem` (memory mutations)
+  - `ContextRetrievalLayer` (memory queries)
+  - `StateSnapshotBuilder` (snapshot creation)
+  - `PromptAssembler` (prompt assembly)
+  - `ValidationGate` (validation)
+  - `MemoryMutationController` (mutation execution)
+- [ ] Document thread-safety guarantees for each component
+- [ ] Identify race conditions and shared state issues
+- [ ] Create thread-safety documentation
+
+#### 18.2 Concurrent Request Queue
+- [ ] Create `ConcurrentRequestQueue` for managing parallel requests
+- [ ] Support priority-based queuing (high-priority interactions first)
+- [ ] Support request batching (group similar requests)
+- [ ] Configurable max concurrent requests
+- [ ] Request timeout handling
+- [ ] Deadlock prevention
+
+#### 18.3 Memory System Thread Safety
+- [ ] Ensure `AuthoritativeMemorySystem` is thread-safe:
+  - Use locks for mutation operations
+  - Use concurrent collections for queries
+  - Prevent race conditions on SequenceNumber counter
+- [ ] Ensure `PersonaMemoryStore` is thread-safe
+- [ ] Support concurrent reads (no locking required)
+- [ ] Serialize writes (mutations must be atomic)
+
+#### 18.4 Resource Pooling
+- [ ] Create resource pools for expensive operations:
+  - HTTP client pooling (reuse connections)
+  - Memory allocation pooling
+  - Snapshot builder pooling
+- [ ] Configurable pool sizes
+- [ ] Automatic cleanup of unused resources
+
+#### 18.5 Deadlock Prevention
+- [ ] Document lock ordering rules
+- [ ] Implement lock timeout mechanisms
+- [ ] Add deadlock detection (optional, for debugging)
+- [ ] Ensure no circular lock dependencies
+
+#### 18.6 Testing
+- [ ] Unit tests for thread-safe components
+- [ ] Concurrent stress tests (multiple threads accessing same components)
+- [ ] Race condition tests (verify no data corruption)
+- [ ] Deadlock tests (verify no deadlocks under load)
+- [ ] Performance tests (verify minimal overhead from locking)
+- [ ] All tests in `LlamaBrain.Tests/Concurrency/` passing
+
+#### 18.7 Documentation
+- [ ] Update `ARCHITECTURE.md` with thread-safety section
+- [ ] Document thread-safety guarantees for each component
+- [ ] Document lock ordering rules
+- [ ] Update `USAGE_GUIDE.md` with concurrent usage examples
+- [ ] Add best practices for multi-threaded usage
+
+### Technical Considerations
+
+**Thread Safety Strategy**:
+- **Read operations**: Use concurrent collections (no locking)
+- **Write operations**: Use locks (mutex/semaphore)
+- **Immutable data**: `StateSnapshot` is immutable (safe to share)
+- **Shared state**: Use locks or atomic operations
+
+**Lock Granularity**:
+- Fine-grained locks (per-NPC) when possible
+- Coarse-grained locks (entire system) only when necessary
+- Balance between safety and performance
+
+**Concurrent Collections**:
+- Use `ConcurrentDictionary` for memory lookups
+- Use `ConcurrentQueue` for request queuing
+- Minimize lock contention
+
+**Performance**:
+- Lock-free reads when possible
+- Minimize lock hold time
+- Use reader-writer locks for read-heavy workloads
+
+### Estimated Effort
+
+**Total**: 1-2 weeks
+- Feature 18.1-18.2 (Audit & Queue): 2-3 days
+- Feature 18.3-18.4 (Memory Safety & Pooling): 2-3 days
+- Feature 18.5-18.7 (Deadlock Prevention, Testing, Docs): 2-3 days
+
+### Success Criteria
+
+- [ ] All core components thread-safe and documented
+- [ ] Concurrent request queue functional
+- [ ] Memory system handles concurrent access correctly
+- [ ] Resource pooling implemented
+- [ ] No race conditions or deadlocks under load
+- [ ] Performance acceptable (minimal overhead from locking)
+- [ ] All tests passing
+- [ ] Documentation complete with thread-safety guarantees
+
+---
+
+## 📋 Feature 19: Health Check & Resilience
+
+**Priority**: MEDIUM - Production reliability and fault tolerance  
+**Status**: 📋 Planned (0% Complete)  
+**Dependencies**: Feature 6 (Controlled Memory Mutation), Feature 3 (State Snapshot)
+
+### Overview
+
+Implement health checks, automatic recovery, and resilience patterns to ensure the system gracefully handles failures and maintains availability in production deployments.
+
+**Current State**: Basic error handling exists in `ApiClient`, but there's no health monitoring, automatic recovery, or circuit breaker patterns. System may fail silently or crash on LLM server unavailability.
+
+**Use Cases**:
+- Monitor LLM server health
+- Automatic server restart on failure
+- Graceful degradation when LLM unavailable
+- Circuit breaker to prevent cascading failures
+- Production monitoring and alerting
+
+### Definition of Done
+
+#### 19.1 Health Check System
+- [ ] Create `IHealthCheck` interface for health monitoring
+- [ ] Create `HealthCheckService` for aggregating health checks
+- [ ] Implement health checks for:
+  - LLM server connectivity (`LlamaServerHealthCheck`)
+  - Memory system availability (`MemorySystemHealthCheck`)
+  - API client connectivity (`ApiClientHealthCheck`)
+- [ ] Support health check endpoints (HTTP/Unity events)
+- [ ] Health status reporting (Healthy, Degraded, Unhealthy)
+
+#### 19.2 Automatic Recovery
+- [ ] Create `RecoveryService` for automatic failure recovery
+- [ ] Automatic LLM server restart on failure
+- [ ] Automatic reconnection on network failure
+- [ ] Retry logic with exponential backoff
+- [ ] Configurable retry limits and timeouts
+- [ ] Recovery event notifications
+
+#### 19.3 Circuit Breaker Pattern
+- [ ] Create `CircuitBreaker` class for failure protection
+- [ ] Three states: Closed (normal), Open (failing), Half-Open (testing)
+- [ ] Automatic state transitions based on failure rates
+- [ ] Configurable failure thresholds
+- [ ] Fast-fail when circuit is open (don't attempt requests)
+- [ ] Automatic recovery attempts (half-open state)
+
+#### 19.4 Graceful Degradation
+- [ ] Create `DegradationStrategy` for handling unavailability
+- [ ] Fallback to cached responses when LLM unavailable
+- [ ] Fallback to deterministic responses (no LLM)
+- [ ] Reduce functionality (disable features) rather than crash
+- [ ] User-friendly error messages
+- [ ] Configurable degradation levels
+
+#### 19.5 Monitoring & Alerting
+- [ ] Create `HealthMonitor` for continuous monitoring
+- [ ] Track health metrics over time
+- [ ] Alert on health status changes (optional Unity events)
+- [ ] Health dashboard (optional Unity component)
+- [ ] Integration with existing metrics (RedRoom)
+
+#### 19.6 Integration
+- [ ] Integrate health checks with `ApiClient`
+- [ ] Integrate circuit breaker with request pipeline
+- [ ] Integrate recovery service with `BrainServer` (Unity)
+- [ ] Unity component for health monitoring UI
+- [ ] Integration with existing error handling
+
+#### 19.7 Testing
+- [ ] Unit tests for health check system
+- [ ] Unit tests for circuit breaker
+- [ ] Unit tests for recovery service
+- [ ] Integration tests: Verify recovery on server failure
+- [ ] Integration tests: Verify circuit breaker behavior
+- [ ] Stress tests: Verify system stability under failures
+- [ ] All tests in `LlamaBrain.Tests/Resilience/` passing
+
+#### 19.8 Documentation
+- [ ] Update `ARCHITECTURE.md` with resilience patterns section
+- [ ] Document health check system
+- [ ] Document circuit breaker configuration
+- [ ] Update `USAGE_GUIDE.md` with health monitoring examples
+- [ ] Document graceful degradation strategies
+- [ ] Troubleshooting guide for common failure scenarios
+
+### Technical Considerations
+
+**Health Check Design**:
+- Lightweight checks (don't impact performance)
+- Async health checks (don't block)
+- Cached results (avoid excessive checking)
+- Configurable check intervals
+
+**Circuit Breaker Design**:
+- Fast-fail when open (immediate response)
+- Automatic recovery attempts (half-open)
+- Configurable thresholds (failure rate, timeout)
+- Per-endpoint circuit breakers (isolate failures)
+
+**Recovery Strategy**:
+- Exponential backoff (avoid thundering herd)
+- Maximum retry limits (prevent infinite loops)
+- Recovery notifications (log/events)
+- Manual override (admin can force recovery)
+
+**Graceful Degradation**:
+- Tiered fallbacks (best to worst)
+- User transparency (inform user of degraded mode)
+- Feature flags (disable non-critical features)
+- Maintain core functionality
+
+### Estimated Effort
+
+**Total**: 1-2 weeks
+- Feature 19.1-19.2 (Health Checks & Recovery): 3-4 days
+- Feature 19.3-19.4 (Circuit Breaker & Degradation): 2-3 days
+- Feature 19.5-19.8 (Monitoring, Integration, Testing, Docs): 2-3 days
+
+### Success Criteria
+
+- [ ] Health check system functional and monitoring all components
+- [ ] Automatic recovery working (server restart, reconnection)
+- [ ] Circuit breaker preventing cascading failures
+- [ ] Graceful degradation maintaining core functionality
+- [ ] Monitoring and alerting operational
+- [ ] Integration with existing systems complete
+- [ ] All tests passing
+- [ ] Documentation complete with resilience patterns
+
+---
+
 ## 🎯 Milestones
 
-### Milestone 1: Core Architecture (Phases 1-3) ✅
+### Milestone 1: Core Architecture (Features 1-3) ✅
 **Target**: Weeks 1-3  
 **Status**: ✅ Complete
 - [x] Determinism layer functional
 - [x] Structured memory system working
 - [x] State snapshot and retry logic operational
 
-### Milestone 2: Validation & Control (Phases 4-6) ✅
+### Milestone 2: Validation & Control (Features 4-6) ✅
 **Target**: Weeks 4-6  
 **Status**: ✅ Complete
 - [x] Output validation gate functional
 - [x] Working memory system operational
 - [x] Memory mutation control enforced
 
-### Milestone 3: Integration & Polish (Phases 7-9) 🚧
+### Milestone 3: Integration & Polish (Features 7-9) 🚧
 **Target**: Weeks 7-8  
 **Status**: 🚧 Partial
 - [x] Fallback system complete
 - [ ] RedRoom fully integrated (80% complete)
 - [ ] Documentation comprehensive (90% complete)
 
-### Milestone 4: Production Ready ❌
+### Milestone 4: Production Ready (Features 10, 12, 13, 14, 16) 🚧
 **Target**: Week 9+  
-**Status**: ❌ Not Started
-- [ ] All tests passing (Phase 10 complete)
+**Status**: 🚧 In Progress
+- Feature 10: Deterministic Proof Gap Testing - 🚧 ~25% Complete
+- Feature 12: Dedicated Structured Output - 📋 Planned (HIGH priority)
+- Feature 13: Structured Output Integration - 📋 Planned (HIGH priority)
+- Feature 16: Save/Load Game Integration - 📋 Planned (CRITICAL priority - required for Feature 14)
+- Feature 14: Deterministic Generation Seed - 📋 Planned (CRITICAL priority - depends on Feature 16)
+- [ ] All tests passing (Feature 10 complete)
 - [ ] Performance benchmarks met
 - [ ] Documentation complete
-- [ ] Ready for external use
+- [ ] Ready for v0.2.0 release
+
+### Milestone 5: Enhanced Features (Features 11, 15, 17, 18, 19) 📋
+**Target**: Post-v0.2.0  
+**Status**: 📋 Planned
+- Feature 11: RAG-Based Memory Retrieval & Memory Proving - 📋 Planned (MEDIUM priority)
+- Feature 15: Multiple NPC Support - 📋 Planned (MEDIUM priority)
+- Feature 17: Token Cost Tracking & Analytics - 📋 Planned (MEDIUM priority)
+- Feature 18: Concurrent Request Handling & Thread Safety - 📋 Planned (MEDIUM priority)
+- Feature 19: Health Check & Resilience - 📋 Planned (MEDIUM priority)
+- [ ] RAG-based retrieval with embeddings
+- [ ] Vector storage and indexing
+- [ ] Memory proving through repetition recognition
+- [ ] Multi-NPC conversation support
+- [ ] Shared memory systems
+- [ ] NPC-to-NPC interaction capabilities
+- [ ] Token usage tracking and cost analytics
+- [ ] Thread-safe concurrent request handling
+- [ ] Health monitoring and automatic recovery
+- [ ] Circuit breaker and graceful degradation
 
 ---
 
 ## 🔄 Iteration Strategy
 
-Each phase follows this pattern:
+Each feature follows this pattern:
 1. **Build** - Implement core components
 2. **Test** - Unit and integration tests
 3. **Integrate** - Connect to existing system
@@ -955,19 +1841,32 @@ Each phase follows this pattern:
 
 ### Risks & Mitigations
 - **Risk**: Performance overhead from new layers
-  - **Mitigation**: Benchmark after each phase, optimize hot paths
+  - **Mitigation**: Benchmark after each feature, optimize hot paths
 - **Risk**: Backward compatibility breaking
   - **Mitigation**: Maintain compatibility layer for existing PersonaMemoryStore
 - **Risk**: Complexity overwhelming users
   - **Mitigation**: Provide sensible defaults, comprehensive tutorials
 
 ### Future Considerations (Beyond This Roadmap)
-- Multi-agent conversations with shared memory
 - Voice integration with validation
 - Visual novel integration
 - Multiplayer shared world state
 - Advanced analytics dashboard for metrics
+- Multi-agent conversations with shared memory (now Feature 15 in Milestone 5)
 
 ---
 
-**Next Review**: After Phase 8.4 completion (overlay persistence)
+## Further Reading
+
+- [README.md](../LlamaBrain/README.md) - Main library documentation and overview
+- [ARCHITECTURE.md](ARCHITECTURE.md) - Complete architectural documentation
+- [MEMORY.md](MEMORY.md) - Memory system documentation
+- [PIPELINE_CONTRACT.md](PIPELINE_CONTRACT.md) - Formal pipeline contract
+- [VALIDATION_GATING.md](VALIDATION_GATING.md) - Validation system documentation
+- [USAGE_GUIDE.md](USAGE_GUIDE.md) - Practical examples and best practices
+- [STATUS.md](STATUS.md) - Current implementation status
+- [DETERMINISM_CONTRACT.md](DETERMINISM_CONTRACT.md) - Determinism contract and boundaries
+
+---
+
+**Next Review**: After Feature 8.4 completion (overlay persistence)

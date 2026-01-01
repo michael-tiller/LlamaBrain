@@ -1009,7 +1009,16 @@ INPUT                  = ../../README.md \
                          ../../LlamaBrain/ \
                          ../SAFEGUARDS.md \
                          ../ROADMAP.md \
-                         ../CHANGELOG.md
+                         ../CHANGELOG.md \
+                         ../STATUS.md \
+                         ../MEMORY.md \
+                         ../PHASE10_PROOF_GAPS.md \
+                         ../MEMORY.md \
+                         ../PIPELINE_CONTRACT.md \
+                         ../VALIDATION_GATING.md \
+                         ../ARCHITECTURE.md \
+                         ../USAGE_GUIDE.md \
+                         ../DETERMINISM_CONTRACT.md
 
 # This tag can be used to specify the character encoding of the source files
 # that Doxygen parses. Internally Doxygen uses the UTF-8 encoding. Doxygen uses

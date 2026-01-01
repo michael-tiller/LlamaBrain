@@ -255,4 +255,15 @@ var safeFilename = PathUtils.CreateSafeFilename("unsafe<>filename"); // Sanitiza
 - **Error logging**: All safeguards log errors and warnings
 - **Performance monitoring**: Track resource usage and timing
 - **Security events**: Log suspicious activities and violations
-- **Health checks**: Monitor system health and resource availability 
+- **Health checks**: Monitor system health and resource availability
+
+---
+
+## Further Reading
+
+- [README.md](../LlamaBrain/README.md) - Main library documentation and overview
+- [ARCHITECTURE.md](ARCHITECTURE.md) - Complete architectural documentation
+- [PIPELINE_CONTRACT.md](PIPELINE_CONTRACT.md) - Formal pipeline contract including security guarantees
+- [VALIDATION_GATING.md](VALIDATION_GATING.md) - Validation system that enforces security constraints
+- [USAGE_GUIDE.md](USAGE_GUIDE.md) - Practical examples and best practices
+- [ROADMAP.md](ROADMAP.md) - Implementation status and future plans

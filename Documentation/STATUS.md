@@ -25,10 +25,11 @@
 | Phase 8: RedRoom Integration | 🚧 In Progress | 80% |
 | Phase 9: Documentation | 🚧 In Progress | 90% |
 | Phase 10: Deterministic Proof Gap Testing | 🚧 In Progress | ~25% |
+| Phase 14: Deterministic Generation Seed | 📋 Planned | 0% |
 
 ---
 
-## Phase 8: RedRoom Integration (80% Complete)
+## Feature 8: RedRoom Integration (80% Complete)
 
 ### Definition of Done
 
@@ -111,7 +112,7 @@
 
 ---
 
-## Phase 10: Deterministic Proof Gap Testing (~25% Complete)
+## Feature 10: Deterministic Proof Gap Testing (~25% Complete)
 
 **Status**: 🚧 In Progress
 **Priority**: HIGH - Required for v1.0 release
@@ -149,16 +150,135 @@
 
 ### Pending Work
 - [ ] Critical Requirement #5: WorldIntentDispatcher Singleton Lifecycle implementation and tests
-- [ ] Additional Phase 10.1 tests (ContextRetrievalLayer selection behavior - 13-18 tests remaining)
-- [ ] Phase 10.2-10.6 test suites (all pending)
-- [ ] Phase 10.7 integration tests (deterministic pipeline proof gaps)
+- [ ] Additional Feature 10.1 tests (ContextRetrievalLayer selection behavior - 13-18 tests remaining)
+- [ ] Feature 10.2-10.6 test suites (all pending)
+- [ ] Feature 10.7 integration tests (deterministic pipeline proof gaps)
 
 **Estimated Effort Remaining**: 9-13 days
-- Phase 10.1-10.5 (Unit tests): 5-7 days
-- Phase 10.6 (PlayMode tests): 2-3 days
-- Phase 10.7 (Integration tests): 2-3 days
+- Feature 10.1-10.5 (Unit tests): 5-7 days
+- Feature 10.6 (PlayMode tests): 2-3 days
+- Feature 10.7 (Integration tests): 2-3 days
 
 See `PHASE10_PROOF_GAPS.md` for detailed test backlog with file targets and acceptance criteria.
+
+---
+
+## Feature 12: Dedicated Structured Output
+
+**Status**: 📋 Planned (0% Complete)  
+**Priority**: HIGH - Improves reliability and determinism of output parsing  
+**Dependencies**: Feature 5 (Output Validation System), Feature 10 (Deterministic Proof Gap Testing)
+
+### Overview
+
+Replace regex-based text parsing with LLM-native structured output formats (JSON mode, function calling, schema-based outputs). This will eliminate parsing errors and improve determinism.
+
+### Key Components
+
+- Structured output provider interface (`IStructuredOutputProvider`)
+- JSON schema definition for `ParsedOutput` structure
+- LLM integration (extend `ApiClient` for structured output)
+- Output parser refactoring (maintain regex as fallback)
+- Comprehensive testing and documentation
+
+**Estimated Effort**: 2-3 weeks  
+**See**: `ROADMAP.md` for detailed implementation plan
+
+---
+
+## Feature 13: Structured Output Integration
+
+**Status**: 📋 Planned (0% Complete)  
+**Priority**: HIGH - Completes structured output migration  
+**Dependencies**: Feature 12 (Dedicated Structured Output)
+
+### Overview
+
+Complete integration of structured output throughout the validation pipeline, mutation extraction, and ensure full compatibility with existing systems.
+
+### Key Components
+
+- Validation pipeline integration with structured outputs
+- Enhanced mutation extraction (all mutation types in structured format)
+- World intent integration with complex parameters
+- Comprehensive error handling and fallback
+- Migration path and backward compatibility
+
+**Estimated Effort**: 1-2 weeks  
+**See**: `ROADMAP.md` for detailed implementation plan
+
+---
+
+## Feature 14: Deterministic Generation Seed
+
+**Status**: 📋 Planned (0% Complete)  
+**Priority**: CRITICAL - Completes cross-session determinism guarantee  
+**Dependencies**: Feature 10 (Deterministic Proof Gap Testing)
+
+### Overview
+
+Implement the **InteractionCount seed strategy** to achieve true cross-session determinism. By using `InteractionContext.InteractionCount` as the seed for LLM generation, we transform the stochastic generator into a pure function relative to game state.
+
+**Architectural Impact**: This completes the deterministic state reconstruction pattern by locking the final source of non-determinism: the LLM's internal random number generator. This achieves **Cross-Session State Consistency**.
+
+### Key Components
+
+- Seed parameter support in `ApiClient` and `CompletionRequest`
+- Integration with `InteractionContext.InteractionCount`
+- Cross-session determinism testing
+- Hardware determinism documentation
+- Backward compatibility (optional seed parameter)
+
+**Estimated Effort**: 1-2 weeks  
+**See**: `ROADMAP.md` for detailed implementation plan and proof strategy
+
+---
+
+## Feature 11: RAG-Based Memory Retrieval & Memory Proving
+
+**Status**: 📋 Planned (0% Complete)  
+**Priority**: MEDIUM - Enhancement to existing retrieval system  
+**Dependencies**: Feature 3 (Context Retrieval Layer), Feature 10 (Deterministic Proof Gap Testing)
+
+### Overview
+
+Enhance the `ContextRetrievalLayer` to use Retrieval-Augmented Generation (RAG) techniques instead of simple keyword matching. This will improve semantic relevance of retrieved memories by using embeddings and vector similarity search. Additionally, implement the repetition recognition feature to prove that retrieval influences generation.
+
+### Key Components
+
+- Embedding generation system (local and external APIs)
+- Vector storage and indexing (in-memory and persistent)
+- Semantic retrieval (replace keyword matching with vector similarity)
+- Memory proving through repetition recognition (location and topic)
+- Performance optimization and testing
+
+**Estimated Effort**: 3-4 weeks  
+**See**: `ROADMAP.md` and `MEMORY_TODO.md` for detailed implementation plan
+
+---
+
+## Feature 15: Multiple NPC Support
+
+**Status**: 📋 Planned (0% Complete)  
+**Priority**: MEDIUM - Enables multi-NPC scenarios and shared memory  
+**Dependencies**: Feature 2 (Structured Memory System), Feature 3 (Context Retrieval), Feature 11 (RAG-Based Memory Retrieval)
+
+### Overview
+
+Enable support for multiple NPCs in the same conversation context, including NPC-to-NPC interactions, shared memory systems, and coordinated behavior. This extends the single-NPC architecture to support complex multi-agent scenarios.
+
+### Key Components
+
+- Multi-NPC conversation context management
+- Shared memory systems for NPC groups
+- NPC-to-NPC interaction triggers and validation
+- Coordinated constraint evaluation across NPCs
+- Group memory retrieval and context sharing
+- Multi-NPC world intent coordination
+- Performance optimization for concurrent NPCs
+
+**Estimated Effort**: 2-3 weeks  
+**See**: `ROADMAP.md` for detailed implementation plan
 
 ---
 
@@ -171,26 +291,26 @@ See `PHASE10_PROOF_GAPS.md` for detailed test backlog with file targets and acce
    - Overlay system infrastructure (extend RedRoomCanvas)
    - **Estimated**: 2-3 days (overlays are more efficient than separate scenes)
 
-2. **Phase 9.5: Tutorial Content**
+2. **Feature 9.5: Tutorial Content**
    - "Setting Up Deterministic NPCs"
    - "Creating Custom Validation Rules"
    - "Understanding Memory Authority"
    - "Debugging Validation Failures"
    - **Estimated**: 3-4 days
 
-3. **Phase 10.1: ContextRetrievalLayer Selection Behavior Tests** (In Progress - 7/20-25 tests complete)
+3. **Feature 10.1: ContextRetrievalLayer Selection Behavior Tests** (In Progress - 7/20-25 tests complete)
    - Relevance/recency/significance scoring tests (remaining)
    - Combined scoring and selection tests
    - Edge cases (partially complete)
    - **Estimated**: 1-2 days remaining
 
-4. **Phase 10: Critical Requirement #5 - WorldIntentDispatcher Singleton Lifecycle**
+4. **Feature 10: Critical Requirement #5 - WorldIntentDispatcher Singleton Lifecycle**
    - Implement singleton lifecycle management
    - Add lifecycle tests
    - Ensure deterministic initialization and cleanup
    - **Estimated**: 1-2 days
 
-5. **Phase 10.2-10.5: Additional Determinism Proof Gap Tests**
+5. **Feature 10.2-10.5: Additional Determinism Proof Gap Tests**
    - PromptAssembler/WorkingMemory tests (25-30 tests)
    - ValidationGate tests (30-35 tests)
    - MemoryMutationController tests (30-35 tests)
@@ -213,33 +333,68 @@ See `PHASE10_PROOF_GAPS.md` for detailed test backlog with file targets and acce
 - **FullPipelineIntegrationTests**: 8 tests in `LlamaBrain.Tests/Integration/FullPipelineIntegrationTests.cs`
 
 ### Documentation
-- **Doxygen**: `doxygen Documentation/doxygen/llamabrain.Doxyfile`
-- **Artifact**: `Documentation/doxygen/html/`
+- **Core Doxygen**: `doxygen Documentation/doxygen/llamabrain.Doxyfile`
+- **Core Artifact**: `Documentation/doxygen/llamabrain/html/`
+- **Unity Doxygen**: `doxygen Documentation/doxygen/llamabrain.unity.Doxyfile`
+- **Unity Artifact**: `Documentation/doxygen/llamanrain-demo/html/`
 - **Status**: Zero missing member warnings
 
 ---
 
 ## Milestones
 
-### Milestone 1: Core Architecture (Phases 1-3) ✅
+### Milestone 1: Core Architecture (Features 1-3) ✅
 **Status**: Complete
 
-### Milestone 2: Validation & Control (Phases 4-6) ✅
+### Milestone 2: Validation & Control (Features 4-6) ✅
 **Status**: Complete
 
-### Milestone 3: Integration & Polish (Phases 7-9) 🚧
+### Milestone 3: Integration & Polish (Features 7-9) 🚧
 **Status**: Partial
-- Phase 7: ✅ Complete
-- Phase 8: 🚧 80% Complete
-- Phase 9: 🚧 90% Complete
+- Feature 7: Enhanced Fallback System - ✅ Complete
+- Feature 8: Red Room Integration - 🚧 80% Complete
+- Feature 9: Documenation - 🚧 90% Complete
 
-### Milestone 4: Production Ready ❌
-**Status**: Not Started
-- Requires Phase 10 completion (~25% complete, 9-13 days remaining)
+### Milestone 4: Production Ready (Features 10, 12, 13, 14) 🚧
+**Status**: In Progress
+- Feature 10: Deterministic Proof Gap Testing - 🚧 ~25% Complete (9-13 days remaining)
+- Feature 12: Dedicated Structured Output - 📋 Planned (HIGH priority)
+- Feature 13: Structured Output Integration - 📋 Planned (HIGH priority)
+- Feature 14: Deterministic Generation Seed - 📋 Planned (CRITICAL priority)
+
+**Target**: Complete all high-priority features for v0.2.0 release
+- Requires Feature 10 completion (deterministic proof gaps)
+- Requires Feature 12-13 completion (structured output migration)
+- Requires Feature 14 completion (cross-session determinism)
 - Requires all tests passing
 - Requires performance benchmarks met
-- Requires documentation complete
+
+### Milestone 5: Enhanced Features (Features 11, 15) 📋
+**Status**: Planned
+- Feature 11: RAG-Based Memory Retrieval & Memory Proving - 📋 Planned (MEDIUM priority)
+- Feature 15: Multiple NPC Support - 📋 Planned (MEDIUM priority)
+
+**Target**: Enhance memory retrieval with semantic search and support multi-NPC scenarios
+- RAG-based retrieval with embeddings
+- Vector storage and indexing
+- Memory proving through repetition recognition
+- Multi-NPC conversation support with shared memory
+- NPC-to-NPC interaction capabilities
+- Performance optimization
 
 ---
 
-**Next Review**: After Phase 8.4 completion (sample scenes)
+## Further Reading
+
+- [README.md](../LlamaBrain/README.md) - Main library documentation and overview
+- [ARCHITECTURE.md](ARCHITECTURE.md) - Complete architectural documentation
+- [MEMORY.md](MEMORY.md) - Memory system documentation
+- [PIPELINE_CONTRACT.md](PIPELINE_CONTRACT.md) - Formal pipeline contract
+- [VALIDATION_GATING.md](VALIDATION_GATING.md) - Validation system documentation
+- [USAGE_GUIDE.md](USAGE_GUIDE.md) - Practical examples and best practices
+- [ROADMAP.md](ROADMAP.md) - Implementation status and future plans
+- [DETERMINISM_CONTRACT.md](DETERMINISM_CONTRACT.md) - Determinism contract and boundaries
+
+---
+
+**Next Review**: After Feature 8.4 completion (sample scenes)

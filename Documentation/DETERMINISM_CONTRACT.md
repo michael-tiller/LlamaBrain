@@ -333,4 +333,17 @@ These tests catch common determinism leaks:
 
 ---
 
+## Further Reading
+
+- [README.md](../LlamaBrain/README.md) - Main library documentation and overview
+- [ARCHITECTURE.md](ARCHITECTURE.md) - Complete architectural documentation
+- [PIPELINE_CONTRACT.md](PIPELINE_CONTRACT.md) - Formal pipeline contract including determinism guarantees
+- [MEMORY.md](MEMORY.md) - Memory system with deterministic ordering
+- [VALIDATION_GATING.md](VALIDATION_GATING.md) - Validation system documentation
+- [USAGE_GUIDE.md](USAGE_GUIDE.md) - Practical examples and best practices
+- [ROADMAP.md](ROADMAP.md) - Implementation status including Feature 10 (Deterministic Proof Gap Testing)
+- [STATUS.md](STATUS.md) - Current implementation status
+
+---
+
 **Next Review**: After Phase 10 completion (deterministic proof gap testing)

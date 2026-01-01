@@ -578,6 +578,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced code documentation with XML comments
 - Added coverage analysis PowerShell script for automated reporting
 - Reorganized documentation structure (moved to Documentation/ folder)
+- **Updated ROADMAP.md** - Added Feature 14: Deterministic Generation Seed
+  - Comprehensive plan for cross-session determinism via InteractionCount seed strategy
+  - Detailed implementation plan with seed parameter support, integration with InteractionContext, and cross-session determinism testing
+  - Documents the "double-lock system" (context locking + entropy locking) for complete determinism
+  - Includes proof strategy and architectural significance
+- **Updated ARCHITECTURE.md** - Added "Planned Features" section
+  - Feature 11: RAG-Based Memory Retrieval & Memory Proving
+  - Feature 12: Dedicated Structured Output
+  - Feature 13: Structured Output Integration
+  - Feature 14: Deterministic Generation Seed
+  - Each feature includes overview, key components, architectural impact, and roadmap links
+- **Terminology Update** - Changed "Phase" to "Feature" throughout documentation
+  - Updated ROADMAP.md, STATUS.md, PHASE10_PROOF_GAPS.md, and ARCHITECTURE.md
+  - Table headers now use "Features" (plural) for consistency
+  - All feature references updated from "Phase X" to "Feature X"
+  - Maintains backward compatibility with existing documentation structure
+- **New MEMORY.md** - Comprehensive memory system documentation
+  - Complete documentation of Component 3: External Authoritative Memory System
+  - Detailed explanation of memory authority hierarchy (Canonical > WorldState > Episodic > Belief)
+  - Memory type descriptions with use cases and authority boundaries
+  - Deterministic ordering and sequence number system
+  - Memory decay, pruning, and retrieval algorithms
+  - Integration with the broader LlamaBrain architecture
+  - Code examples and best practices
+- **New PIPELINE_CONTRACT.md** - Formal pipeline contract specification
+  - Version 1.0.0 contract defining the 9-component architectural pipeline
+  - Exact flow, data contracts, and behavioral guarantees
+  - Component execution order and data flow specifications
+  - Error handling and retry logic contracts
+  - State reconstruction and determinism guarantees
+  - Implementation requirements and validation criteria
+- **New VALIDATION_GATING.md** - Comprehensive validation system documentation
+  - Complete documentation of Component 7: Validation Gating System
+  - Five sequential validation gates (Output Parsing, Constraint Validation, Canonical Fact Validation, Knowledge Boundary Validation, Mutation Validation)
+  - Detailed gate descriptions with implementation details
+  - Failure handling and retry logic
+  - Integration with expectancy engine and memory system
+  - Code examples and validation patterns
 
 ## [0.1.0] - 2025-7-24
 

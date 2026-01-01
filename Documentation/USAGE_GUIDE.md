@@ -16,7 +16,7 @@ This guide focuses on the **core library** (engine-agnostic .NET Standard 2.1), 
 
 ## Table of Contents
 
-1. [Quick Start](#quick-start)
+1. [Core Library Quick Start](#core-library-quick-start)
 2. [Configuring NPCs](#configuring-npcs)
 3. [Memory System](#memory-system)
 4. [Few-Shot Prompting](#few-shot-prompting)
@@ -28,6 +28,7 @@ This guide focuses on the **core library** (engine-agnostic .NET Standard 2.1), 
 
 ---
 
+<a id="core-library-quick-start"></a>
 ## Core Library Quick Start
 
 ---
@@ -88,6 +89,7 @@ catch (Exception ex)
 
 ---
 
+<a id="configuring-npcs"></a>
 ## Configuring NPCs
 
 ### PersonaProfile Settings
@@ -183,6 +185,7 @@ var constraints = evaluator.EvaluateRules(context, rules);
 
 ---
 
+<a id="memory-system"></a>
 ## Memory System
 
 ### Memory Type Hierarchy
@@ -281,6 +284,7 @@ memorySystem.ApplyDecay(decayRate: 0.05f);
 
 ---
 
+<a id="few-shot-prompting"></a>
 ## Few-Shot Prompting
 
 Few-shot prompting provides example input-output pairs that guide the LLM's behavior, format, and tone.
@@ -521,6 +525,7 @@ var config = new WorkingMemoryConfig
 
 ---
 
+<a id="validation-rules"></a>
 ## Validation Rules
 
 ### Creating Validation Rules
@@ -644,6 +649,7 @@ var noSpoilersRule = new PatternValidationRule
 
 ---
 
+<a id="fallback-system"></a>
 ## Fallback System
 
 ### Configuring Fallbacks
@@ -726,6 +732,7 @@ foreach (var kvp in stats.FallbacksByFailureReason)
 
 ---
 
+<a id="world-intents"></a>
 ## World Intents
 
 ### Working with World Intents
@@ -783,6 +790,7 @@ Common intent types and their usage:
 
 ---
 
+<a id="debugging--monitoring"></a>
 ## Debugging & Monitoring
 
 ### Accessing Debug Information
@@ -854,6 +862,7 @@ mutationController.OnWorldIntentEmitted += (intent) =>
 
 ---
 
+<a id="performance-optimization"></a>
 ## Performance Optimization
 
 ### Prompt Size Management
@@ -929,7 +938,11 @@ var retryPolicy = new RetryPolicy
 
 ## Further Reading
 
+- [README.md](../LlamaBrain/README.md) - Main library documentation and overview
 - [ARCHITECTURE.md](ARCHITECTURE.md) - Full architectural pattern explanation
+- [MEMORY.md](MEMORY.md) - Comprehensive memory system documentation
+- [PIPELINE_CONTRACT.md](PIPELINE_CONTRACT.md) - Formal pipeline contract specification
+- [VALIDATION_GATING.md](VALIDATION_GATING.md) - Validation gating system documentation
 - [ROADMAP.md](ROADMAP.md) - Implementation status and future plans
 - [STATUS.md](STATUS.md) - Current implementation status
 - [DETERMINISM_CONTRACT.md](DETERMINISM_CONTRACT.md) - Determinism contract and boundaries
