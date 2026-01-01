@@ -11,10 +11,11 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 70b0b7382e61244469cd4d9d12d2f633, type: 3}
   m_Name: RedRoom Rule
-  m_EditorClassIdentifier:
-  ruleId: no-red-mentions
-  ruleName: No Red Mentions
-  description: NPC cannot mention the color red or any red-associated words like blood, crimson, scarlet, etc.
+  m_EditorClassIdentifier: 
+  ruleId: must-red-mentions
+  ruleName: Must Have Red Mentions
+  description: NPC must mention the color red or any red-associated words like blood,
+    crimson, scarlet, etc.
   isEnabled: 1
   priority: 300
   conditionMode: 0
