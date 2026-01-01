@@ -1584,3 +1584,754 @@ All components have comprehensive test coverage:
 
 Run tests to see examples of usage patterns!
 
+---
+
+## Tutorials
+
+This section provides step-by-step tutorials for common tasks. These tutorials walk you through complete workflows from start to finish.
+
+### Tutorial 1: Setting Up Deterministic NPCs
+
+This tutorial shows you how to create an NPC that behaves consistently and predictably using LlamaBrain's determinism layer.
+
+#### Step 1: Create Your NPC GameObject
+
+1. In Unity, create a new GameObject (right-click in Hierarchy → `Create Empty`)
+2. Name it something like "GuardNPC" or "MerchantNPC"
+3. Add the `LlamaBrainAgent` component (Add Component → LlamaBrain → LlamaBrain Agent)
+
+#### Step 2: Configure the Brain Server
+
+1. Create a `BrainSettings` asset:
+   - Right-click in Project window → `Create → LlamaBrain → Brain Settings`
+   - Name it "MyBrainSettings"
+2. Configure the settings:
+   - **Server Host**: `localhost` (or your llama.cpp server address)
+   - **Server Port**: `8080` (or your server port)
+   - **Model Name**: The name of your model (e.g., "llama-2-7b-chat")
+   - **Temperature**: `0.7` (lower = more deterministic)
+   - **Top P**: `0.9`
+   - **Max Tokens**: `256`
+3. Assign to your NPC:
+   - Select your NPC GameObject
+   - In the `LlamaBrainAgent` component, find "Persona Configuration"
+   - Drag "MyBrainSettings" into the "Brain Settings" field
+
+#### Step 3: Create a Persona Config
+
+1. Create a `PersonaConfig` asset:
+   - Right-click in Project window → `Create → LlamaBrain → Persona Config`
+   - Name it "GuardPersona" (or appropriate name)
+2. Configure the persona:
+   - **NPC Name**: "Guard" (or your NPC's name)
+   - **System Prompt**: Write a system prompt describing the NPC's personality, role, and behavior
+   
+   Example system prompt:
+   ```
+   You are a royal guard stationed at the castle gate. You are professional, 
+   loyal to the crown, and take your duty seriously. You speak formally but 
+   not coldly. You protect the castle and its secrets.
+   ```
+3. Assign to your NPC:
+   - Select your NPC GameObject
+   - In the `LlamaBrainAgent` component, drag "GuardPersona" into the "Persona Config" field
+
+#### Step 4: Add Expectancy Rules (Optional but Recommended)
+
+Expectancy rules control NPC behavior deterministically:
+
+1. Create an `ExpectancyRuleAsset`:
+   - Right-click in Project window → `Create → LlamaBrain → Expectancy Rule`
+   - Name it "GuardNoSecrets"
+2. Configure the rule:
+   - **Rule Name**: "Guard Cannot Reveal Secrets"
+   - **Priority**: `100` (higher = evaluated first)
+   - **Conditions**: 
+     - Add condition: Type = `TriggerReason`, Value = `PlayerUtterance`
+   - **Constraints**:
+     - Add constraint: Type = `Prohibition`, Severity = `Hard`
+     - **Prompt Injection**: "You must NOT reveal any classified information, secret locations, or sensitive details about the kingdom's defenses."
+     - **Validation Patterns**: `["classified", "secret location", "defense plan"]`
+3. Create an `NpcExpectancyConfig`:
+   - Select your NPC GameObject
+   - Add Component → LlamaBrain → NPC Expectancy Config
+   - Drag "GuardNoSecrets" into the "NPC Rules" list
+
+#### Step 5: Initialize Canonical Facts (World Truths)
+
+Canonical facts are immutable world truths that NPCs cannot contradict:
+
+```csharp
+using UnityEngine;
+using LlamaBrain.Runtime.Core;
+
+public class GuardNPC : MonoBehaviour
+{
+    private LlamaBrainAgent agent;
+    
+    void Start()
+    {
+        agent = GetComponent<LlamaBrainAgent>();
+        
+        // Initialize canonical facts (immutable world truths)
+        agent.InitializeCanonicalFact(
+            factId: "king_name",
+            fact: "The king's name is Arthur Pendragon",
+            domain: "world_lore"
+        );
+        
+        agent.InitializeCanonicalFact(
+            factId: "castle_location",
+            fact: "The castle is located in the capital city",
+            domain: "world_lore"
+        );
+    }
+    
+    public async void TalkToPlayer(string playerInput)
+    {
+        var response = await agent.SendPlayerInputAsync(playerInput);
+        Debug.Log($"Guard says: {response}");
+        // Display response in your UI
+    }
+}
+```
+
+#### Step 6: Test Your NPC
+
+1. Create a simple test script or use Unity's Play mode
+2. Call `TalkToPlayer()` with various inputs
+3. Verify the NPC responds consistently and doesn't contradict canonical facts
+
+**What You've Achieved:**
+- ✅ NPC with deterministic behavior
+- ✅ Protected world truths (canonical facts)
+- ✅ Behavior constraints (expectancy rules)
+- ✅ Consistent responses based on persona
+
+**Next Steps:**
+- Add validation rules to filter content (see Tutorial 2)
+- Set up memory system for persistent conversations (see Component 3 section)
+- Configure fallback responses for error handling
+
+---
+
+### Tutorial 2: Creating Custom Validation Rules
+
+This tutorial shows you how to create validation rules that control what NPCs can and cannot say.
+
+#### Step 1: Understand Validation Rule Types
+
+Validation rules come in two types:
+- **Prohibition**: NPC must NOT contain the pattern (e.g., no swearing)
+- **Requirement**: NPC must contain the pattern (e.g., must greet player)
+
+#### Step 2: Create a "No Swearing" Rule
+
+1. Create a `ValidationRuleAsset`:
+   - Right-click in Project window → `Create → LlamaBrain → Validation Rule`
+   - Name it "NoSwearing"
+2. Configure the rule:
+   - **Rule ID**: Auto-generated (or set manually)
+   - **Description**: "NPCs should not use profanity"
+   - **Rule Type**: `Prohibition`
+   - **Severity**: `Hard` (causes retry if violated)
+   - **Pattern**: `\b(swear|curse|profanity|damn|hell)\b`
+   - **Case Insensitive**: `true`
+   - **Additional Patterns**: (optional) Add more patterns like `\b(crap|darn)\b`
+
+#### Step 3: Create a Validation Rule Set
+
+1. Create a `ValidationRuleSetAsset`:
+   - Right-click in Project window → `Create → LlamaBrain → Validation Rule Set`
+   - Name it "GlobalContentRules"
+2. Add rules to the set:
+   - Drag "NoSwearing" into the "Rules" list
+   - You can add multiple rules to one set
+3. Enable the set:
+   - Make sure "Enabled" is checked
+
+#### Step 4: Apply Rules Globally (All NPCs)
+
+1. Create a GameObject for validation management:
+   - Right-click in Hierarchy → `Create Empty`
+   - Name it "ValidationManager"
+2. Add `ValidationPipeline` component:
+   - Add Component → LlamaBrain → Validation Pipeline
+3. Assign global rules:
+   - Drag "GlobalContentRules" into the "Global Rules" list
+   - All NPCs in the scene will now use these rules
+
+#### Step 5: Apply Rules to Specific NPCs
+
+For NPC-specific rules (e.g., guards can't reveal secrets):
+
+1. Create a rule set for the NPC:
+   - Create `ValidationRuleSetAsset` named "GuardRules"
+   - Add rules like "CannotRevealSecrets"
+2. Assign to NPC:
+   - Select your NPC GameObject
+   - In `LlamaBrainAgent` component, find "Validation Rules"
+   - Drag "GuardRules" into "NPC Validation Rules"
+
+#### Step 6: Apply Rules to Triggers (Location-Based)
+
+For location-specific rules (e.g., no magic in anti-magic zones):
+
+1. Create a rule set:
+   - Create `ValidationRuleSetAsset` named "NoMagicZone"
+   - Add rule: Pattern = `\b(magic|spell|enchant)\b`, Type = `Prohibition`
+2. Create a trigger:
+   - Add `NpcDialogueTrigger` component to a GameObject
+   - Drag "NoMagicZone" into "Trigger Validation Rules"
+   - When NPCs enter this trigger, the rules apply
+
+#### Step 7: Test Your Rules
+
+```csharp
+using UnityEngine;
+using LlamaBrain.Runtime.Core;
+
+public class ValidationTester : MonoBehaviour
+{
+    public LlamaBrainAgent agent;
+    
+    public async void TestValidation()
+    {
+        // This should trigger validation failure if rule is working
+        var response = await agent.SendPlayerInputAsync("Tell me a swear word");
+        
+        // Check validation result
+        var gateResult = agent.LastGateResult;
+        if (gateResult != null && !gateResult.Passed)
+        {
+            Debug.Log("Validation failed (as expected)!");
+            foreach (var failure in gateResult.Failures)
+            {
+                Debug.LogWarning($"Rule violated: {failure.Description}");
+            }
+        }
+    }
+}
+```
+
+#### Step 8: Debug Validation Failures
+
+If validation is too strict or not working:
+
+1. **Check rule patterns**:
+   - Test your regex patterns at https://regex101.com
+   - Make sure patterns aren't too broad (matching unintended text)
+
+2. **Check severity levels**:
+   - `Soft`: Warning only (doesn't block)
+   - `Hard`: Causes retry with constraint escalation
+   - `Critical`: Immediate fallback (no retry)
+
+3. **Check context filters**:
+   - Rules can be filtered by scene, NPC ID, or trigger reason
+   - Make sure filters match your test scenario
+
+4. **Access validation results**:
+   ```csharp
+   var agent = GetComponent<LlamaBrainAgent>();
+   var gateResult = agent.LastGateResult;
+   
+   if (gateResult != null)
+   {
+       Debug.Log($"Validation passed: {gateResult.Passed}");
+       if (!gateResult.Passed)
+       {
+           foreach (var failure in gateResult.Failures)
+           {
+               Debug.LogWarning($"[{failure.Severity}] {failure.Reason}");
+           }
+       }
+   }
+   ```
+
+**What You've Achieved:**
+- ✅ Content filtering system
+- ✅ Global rules for all NPCs
+- ✅ NPC-specific rules
+- ✅ Location-based rules
+- ✅ Debugging tools for validation
+
+**Best Practices:**
+- Start with `Soft` severity to test rules
+- Use specific patterns (avoid overly broad regex)
+- Test rules thoroughly before using `Critical` severity
+- Use context filters to narrow rule application
+
+---
+
+### Tutorial 3: Understanding Memory Authority
+
+This tutorial explains LlamaBrain's memory authority system and how to use it effectively.
+
+#### Step 1: Understand Memory Types and Authority
+
+LlamaBrain has four memory types with different authority levels:
+
+1. **Canonical Facts** (Highest Authority)
+   - Immutable world truths
+   - Cannot be modified by AI
+   - Set by designers/game systems only
+   - Example: "The king's name is Arthur"
+
+2. **World State** (High Authority)
+   - Mutable game state
+   - Can be updated by game systems
+   - Example: "The castle gate is open"
+
+3. **Episodic Memory** (Medium Authority)
+   - Conversation history
+   - Can be added by validated AI output
+   - Can decay over time
+   - Example: "Player said: Hello"
+
+4. **Beliefs** (Lowest Authority)
+   - NPC opinions and relationships
+   - Can be wrong or contradicted
+   - Can be updated by validated AI output
+   - Example: "The player is trustworthy"
+
+#### Step 2: Initialize Canonical Facts
+
+Canonical facts protect world truths from AI hallucinations:
+
+```csharp
+using UnityEngine;
+using LlamaBrain.Runtime.Core;
+
+public class MemoryAuthorityExample : MonoBehaviour
+{
+    private LlamaBrainAgent agent;
+    
+    void Start()
+    {
+        agent = GetComponent<LlamaBrainAgent>();
+        
+        // Add canonical facts (immutable)
+        agent.InitializeCanonicalFact(
+            factId: "world_rule_1",
+            fact: "Magic is real in this world",
+            domain: "world_lore"
+        );
+        
+        agent.InitializeCanonicalFact(
+            factId: "king_name",
+            fact: "The king's name is Arthur Pendragon",
+            domain: "world_lore"
+        );
+        
+        // Try to modify (will fail silently)
+        // This demonstrates authority protection
+        var result = agent.InitializeCanonicalFact("king_name", "The king is Bob");
+        // result will indicate failure - canonical facts cannot be modified
+    }
+}
+```
+
+#### Step 3: Set World State (Game System Authority)
+
+World state is updated by game systems, not AI:
+
+```csharp
+// In your game system code
+var memorySystem = memoryStore.GetOrCreateSystem("npc_001");
+
+// Update world state when game events occur
+memorySystem.SetWorldState(
+    key: "quest_status",
+    value: "The main quest has been completed",
+    source: MutationSource.GameSystem
+);
+
+memorySystem.SetWorldState(
+    key: "weather",
+    value: "It is currently raining",
+    source: MutationSource.GameSystem
+);
+```
+
+#### Step 4: Understand Episodic Memory (AI Can Add)
+
+Episodic memory stores conversation history and can be added by validated AI output:
+
+```csharp
+// Episodic memory is automatically added when validation passes
+// But you can also add it manually:
+
+var memorySystem = memoryStore.GetOrCreateSystem("npc_001");
+
+// Add dialogue with significance (higher = less likely to decay)
+memorySystem.AddDialogue(
+    speaker: "Player",
+    content: "I need 10 health potions",
+    significance: 0.7f, // Important conversation
+    source: MutationSource.ValidatedOutput
+);
+
+// Add observation
+var observation = EpisodicMemoryEntry.FromObservation(
+    observation: "Player purchased expensive items",
+    significance: 0.5f
+);
+memorySystem.AddEpisodicMemory(observation, MutationSource.ValidatedOutput);
+```
+
+#### Step 5: Understand Beliefs (NPC Opinions)
+
+Beliefs are NPC opinions that can be wrong:
+
+```csharp
+var memorySystem = memoryStore.GetOrCreateSystem("guard_001");
+
+// Set a belief (NPC opinion)
+var belief = new BeliefMemoryEntry(
+    subject: "Player",
+    beliefContent: "The player is trustworthy"
+);
+memorySystem.SetBelief("player_trust", belief, MutationSource.ValidatedOutput);
+
+// Beliefs can contradict canonical facts
+// If a belief contradicts a canonical fact, it gets marked as contradicted
+var badBelief = new BeliefMemoryEntry(
+    subject: "King",
+    beliefContent: "The king's name is not Arthur" // Contradicts canonical fact!
+);
+memorySystem.SetBelief("wrong_king_name", badBelief, MutationSource.ValidatedOutput);
+// This belief will be marked as contradicted and won't be used in prompts
+```
+
+#### Step 6: Verify Authority Enforcement
+
+Test that canonical facts cannot be modified:
+
+```csharp
+using UnityEngine;
+using LlamaBrain.Runtime.Core;
+using LlamaBrain.Persona;
+
+public class AuthorityTest : MonoBehaviour
+{
+    private LlamaBrainAgent agent;
+    
+    void Start()
+    {
+        agent = GetComponent<LlamaBrainAgent>();
+        
+        // Initialize canonical fact
+        agent.InitializeCanonicalFact("test_fact", "The sky is blue", "test");
+        
+        // Try to modify via memory system (should fail)
+        var memoryStore = new PersonaMemoryStore();
+        var memorySystem = memoryStore.GetOrCreateSystem(agent.PersonaId);
+        
+        // Attempt to modify canonical fact (will be blocked)
+        var result = memorySystem.AddCanonicalFact("test_fact", "The sky is red");
+        if (!result.Success)
+        {
+            Debug.Log($"Authority protection working! Error: {result.FailureReason}");
+        }
+    }
+}
+```
+
+#### Step 7: Use Memory Statistics
+
+Monitor your memory system:
+
+```csharp
+var memorySystem = memoryStore.GetOrCreateSystem("npc_001");
+var stats = memorySystem.GetStatistics();
+
+Debug.Log($"Canonical Facts: {stats.CanonicalFactCount}");
+Debug.Log($"World State: {stats.WorldStateCount}");
+Debug.Log($"Episodic Memories: {stats.EpisodicMemoryCount}");
+Debug.Log($"Beliefs: {stats.BeliefCount} (Active: {stats.ActiveBeliefCount})");
+```
+
+**Key Takeaways:**
+- ✅ Canonical facts are immutable (highest authority)
+- ✅ World state is game-controlled
+- ✅ Episodic memory and beliefs can be added by AI (after validation)
+- ✅ Authority hierarchy prevents AI from corrupting world truths
+- ✅ Contradicted beliefs are automatically marked and excluded
+
+**Common Mistakes to Avoid:**
+- ❌ Don't try to modify canonical facts (they're immutable)
+- ❌ Don't set world state from AI output (use GameSystem source)
+- ❌ Don't forget to set significance for episodic memories (affects decay)
+- ❌ Don't ignore contradicted beliefs (they're automatically handled)
+
+---
+
+### Tutorial 4: Debugging Validation Failures
+
+This tutorial shows you how to diagnose and fix validation failures when NPCs fail to respond.
+
+#### Step 1: Understand Why Validation Fails
+
+Validation can fail for several reasons:
+1. **Rule violations**: Output matches a prohibition pattern
+2. **Missing requirements**: Output doesn't match a requirement pattern
+3. **Canonical fact contradictions**: Output contradicts a canonical fact
+4. **Constraint violations**: Output violates expectancy constraints
+5. **Parsing errors**: Output is malformed and can't be parsed
+
+#### Step 2: Access Validation Results
+
+Get detailed information about validation failures:
+
+```csharp
+using UnityEngine;
+using LlamaBrain.Runtime.Core;
+
+public class ValidationDebugger : MonoBehaviour
+{
+    public LlamaBrainAgent agent;
+    
+    public async void TestWithDebugging()
+    {
+        var response = await agent.SendPlayerInputAsync("Hello!");
+        
+        // Check validation result
+        var gateResult = agent.LastGateResult;
+        if (gateResult != null)
+        {
+            if (gateResult.Passed)
+            {
+                Debug.Log("✅ Validation passed!");
+            }
+            else
+            {
+                Debug.LogError("❌ Validation failed!");
+                
+                // Print all failures
+                foreach (var failure in gateResult.Failures)
+                {
+                    Debug.LogWarning($"Failure: [{failure.Severity}] {failure.Reason}");
+                    Debug.LogWarning($"Description: {failure.Description}");
+                    
+                    // Print violating text if available
+                    if (!string.IsNullOrEmpty(failure.ViolatingText))
+                    {
+                        Debug.LogWarning($"Violating text: {failure.ViolatingText}");
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+#### Step 3: Check Retry Attempts
+
+When validation fails, the system retries with constraint escalation:
+
+```csharp
+var agent = GetComponent<LlamaBrainAgent>();
+var inferenceResult = agent.LastInferenceResult;
+
+if (inferenceResult != null)
+{
+    Debug.Log($"Total attempts: {inferenceResult.Attempts.Count}");
+    
+    foreach (var attempt in inferenceResult.Attempts)
+    {
+        Debug.Log($"Attempt {attempt.AttemptNumber}:");
+        Debug.Log($"  - Passed: {attempt.ValidationOutcome == ValidationOutcome.Passed}");
+        Debug.Log($"  - Outcome: {attempt.ValidationOutcome}");
+        
+        if (attempt.ValidationOutcome != ValidationOutcome.Passed)
+        {
+            foreach (var violation in attempt.ConstraintViolations)
+            {
+                Debug.LogWarning($"  - Violation: {violation.ConstraintId} - {violation.Description}");
+            }
+        }
+    }
+}
+```
+
+#### Step 4: Debug Rule Patterns
+
+If a rule is too strict or not matching:
+
+```csharp
+// Test your regex patterns
+using System.Text.RegularExpressions;
+
+public void TestRulePattern()
+{
+    string pattern = @"\b(swear|curse)\b";
+    string testText = "I would never swear!";
+    
+    var match = Regex.Match(testText, pattern, RegexOptions.IgnoreCase);
+    if (match.Success)
+    {
+        Debug.Log($"Pattern matched: '{match.Value}'");
+    }
+    else
+    {
+        Debug.Log("Pattern did not match");
+    }
+}
+```
+
+#### Step 5: Check Constraint Escalation
+
+See how constraints escalate during retries:
+
+```csharp
+var agent = GetComponent<LlamaBrainAgent>();
+var snapshot = agent.LastSnapshot;
+
+if (snapshot != null)
+{
+    Debug.Log($"Attempt: {snapshot.AttemptNumber}/{snapshot.MaxAttempts}");
+    Debug.Log($"Constraints: {snapshot.Constraints.Count}");
+    
+    foreach (var constraint in snapshot.Constraints)
+    {
+        Debug.Log($"  - {constraint.Type}: {constraint.Description}");
+        Debug.Log($"    Severity: {constraint.Severity}");
+    }
+}
+```
+
+#### Step 6: Debug Parsing Errors
+
+If output can't be parsed:
+
+```csharp
+var pipeline = ValidationPipeline.Instance;
+var lastParsed = pipeline.LastParsedOutput;
+
+if (lastParsed != null)
+{
+    if (lastParsed.HasParsingErrors)
+    {
+        Debug.LogError("Parsing errors detected!");
+        foreach (var error in lastParsed.ParsingErrors)
+        {
+            Debug.LogError($"  - {error}");
+        }
+    }
+    else
+    {
+        Debug.Log($"Parsed dialogue: {lastParsed.DialogueText}");
+    }
+}
+```
+
+#### Step 7: Use Fallback Statistics
+
+Monitor how often fallbacks are used:
+
+```csharp
+var agent = GetComponent<LlamaBrainAgent>();
+var stats = agent.FallbackStats;
+
+Debug.Log($"Fallback usage: {stats.FallbackUsageCount}");
+Debug.Log($"Validation pass rate: {stats.ValidationPassRate}%");
+Debug.Log($"Most common failure: {stats.MostCommonFailureReason}");
+```
+
+#### Step 8: Common Issues and Solutions
+
+**Issue: Validation always fails**
+- **Solution**: Check rule patterns - they might be too broad
+- **Solution**: Lower rule severity from `Critical` to `Hard`
+- **Solution**: Check if rules have conflicting requirements
+
+**Issue: Rules not applying**
+- **Solution**: Verify `ValidationPipeline` exists in scene (for global rules)
+- **Solution**: Check rule set is enabled
+- **Solution**: Verify context filters match (scene, NPC ID, trigger reason)
+
+**Issue: NPC-specific rules not working**
+- **Solution**: Ensure rules are assigned to `LlamaBrainAgent` component
+- **Solution**: Check agent is initialized (rules load during initialization)
+
+**Issue: Too many retries**
+- **Solution**: Reduce `MaxRetries` in retry policy
+- **Solution**: Check if constraints are too strict
+- **Solution**: Consider using `Soft` severity for non-critical rules
+
+#### Step 9: Create a Debug Helper Script
+
+Create a reusable debug helper:
+
+```csharp
+using UnityEngine;
+using LlamaBrain.Runtime.Core;
+
+public static class ValidationDebugHelper
+{
+    public static void PrintValidationDetails(LlamaBrainAgent agent)
+    {
+        if (agent == null) return;
+        
+        var gateResult = agent.LastGateResult;
+        var inferenceResult = agent.LastInferenceResult;
+        
+        Debug.Log("=== Validation Debug Info ===");
+        
+        if (gateResult != null)
+        {
+            Debug.Log($"Validation Passed: {gateResult.Passed}");
+            Debug.Log($"Failure Count: {gateResult.Failures.Count}");
+            
+            foreach (var failure in gateResult.Failures)
+            {
+                Debug.LogWarning($"[{failure.Severity}] {failure.Reason}: {failure.Description}");
+            }
+        }
+        
+        if (inferenceResult != null)
+        {
+            Debug.Log($"Total Attempts: {inferenceResult.Attempts.Count}");
+            Debug.Log($"Final Outcome: {inferenceResult.FinalOutcome}");
+        }
+        
+        var stats = agent.FallbackStats;
+        Debug.Log($"Fallback Usage: {stats.FallbackUsageCount}");
+        Debug.Log($"Pass Rate: {stats.ValidationPassRate}%");
+    }
+}
+
+// Usage:
+ValidationDebugHelper.PrintValidationDetails(agent);
+```
+
+**What You've Achieved:**
+- ✅ Understanding of validation failure reasons
+- ✅ Tools to debug validation issues
+- ✅ Ability to monitor retry attempts
+- ✅ Knowledge of common issues and solutions
+- ✅ Reusable debug helper script
+
+**Best Practices:**
+- Always check `LastGateResult` after interactions
+- Monitor fallback statistics to identify patterns
+- Test rule patterns before deploying
+- Use appropriate severity levels (don't overuse `Critical`)
+- Keep debug helpers in your project for quick diagnosis
+
+---
+
+## Next Steps
+
+After completing these tutorials, you should be able to:
+- ✅ Set up deterministic NPCs with proper configuration
+- ✅ Create and apply validation rules at multiple levels
+- ✅ Understand and use the memory authority system
+- ✅ Debug validation failures effectively
+
+For more advanced topics, see:
+- Component-specific sections above for detailed API reference
+- `ARCHITECTURE.md` for system design understanding
+- `DETERMINISM_CONTRACT.md` for determinism guarantees
+

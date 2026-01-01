@@ -25,8 +25,8 @@
 | Feature 5: Output Validation System | ✅ Complete | CRITICAL |
 | Feature 6: Controlled Memory Mutation | ✅ Complete | HIGH |
 | Feature 7: Enhanced Fallback System | ✅ Complete | MEDIUM |
-| Feature 8: RedRoom Integration | 🚧 In Progress (80%) | MEDIUM |
-| Feature 9: Documentation | 🚧 In Progress (90%) | MEDIUM |
+| Feature 8: RedRoom Integration | 🚧 In Progress (99%) | MEDIUM |
+| Feature 9: Documentation | ✅ Complete | MEDIUM |
 | Feature 10: Deterministic Proof Gap Testing | 🚧 In Progress | HIGH |
 | Feature 11: RAG-Based Memory Retrieval | 📋 Planned | MEDIUM |
 | Feature 12: Dedicated Structured Output | 📋 Planned | HIGH |
@@ -37,6 +37,58 @@
 | Feature 17: Token Cost Tracking & Analytics | 📋 Planned | MEDIUM |
 | Feature 18: Concurrent Request Handling & Thread Safety | 📋 Planned | MEDIUM |
 | Feature 19: Health Check & Resilience | 📋 Planned | MEDIUM |
+
+---
+
+## 🎯 Recommended Execution Order
+
+**Critical Path for Milestone 4 (Production Ready):**
+
+The following execution order is **strongly recommended** to avoid rework and ensure architectural stability:
+
+### Phase 1: Foundation (Do First)
+1. **Feature 12 & 13 (Structured Output)** - **DO THIS FIRST**
+   - Fundamentally changes how data enters the pipeline
+   - Don't build persistence for data structures that are about to change
+   - Complete Feature 12, then immediately do Feature 13
+   - **Rationale**: Output parsing is core to the system; changing it later requires reworking everything downstream
+
+### Phase 2: Persistence Layer
+2. **Feature 16 (Save/Load Game Integration)** - **DO THIS SECOND**
+   - Build persistence layer after data structures are stable
+   - Persist `InteractionCount` and other deterministic state
+   - **Rationale**: Must be built on stable data structures from Phase 1
+
+### Phase 3: Determinism Completion
+3. **Feature 14 (Deterministic Generation Seed)** - **DO THIS THIRD**
+   - Hook the persistence layer into the RNG to achieve cross-session determinism
+   - Uses persisted `InteractionCount` from Feature 16
+   - **Rationale**: This is the "Holy Grail" of AI consistency, but requires persistence to work
+
+### Phase 4: Breather Tasks (Parallel/Interleaved)
+4. **Feature 8 & 9 (RedRoom Integration & Documentation)** - **Weave in as breather tasks**
+   - Can be done in parallel with heavy architectural work
+   - Feature 8: Testing overlays and integration polish
+   - Feature 9: Documentation and tutorial content
+   - **Rationale**: Lower cognitive load, good for maintaining momentum between heavy features
+
+### Phase 5: Proof & Validation
+5. **Feature 10 (Deterministic Proof Gap Testing)** - **Must be completed for Milestone 4**
+   - Should be ongoing throughout all phases
+   - Critical tests can be written as features are implemented
+   - **Must be finished** before Milestone 4 is considered complete
+   - **Rationale**: Proves determinism claims, required for v1.0. Cannot claim "deterministically proven" architecture without this.
+
+### Post-Milestone 4: Enhanced Features
+6. **Milestone 5 Features (11, 15, 17, 18, 19)** - **Only after Milestone 4 complete**
+   - Feature 11: RAG-Based Memory Retrieval
+   - Feature 15: Multiple NPC Support
+   - Feature 17: Token Cost Tracking & Analytics
+   - Feature 18: Concurrent Request Handling & Thread Safety
+   - Feature 19: Health Check & Resilience
+   - **Rationale**: These are enhancements that build on a stable foundation
+
+**Key Principle**: Build the foundation (structured output) before building on top of it (persistence, determinism). Don't build persistence for data structures that will change.
 
 ---
 
@@ -339,8 +391,9 @@
 ## 🚧 Feature 8: RedRoom Integration
 
 **Priority**: MEDIUM - Enables testing of new architecture  
-**Status**: 🚧 In Progress (80% Complete)  
-**Dependencies**: All previous features
+**Status**: 🚧 In Progress (99% Complete - overlay fixes needed)  
+**Dependencies**: All previous features  
+**Execution Order**: **Weave in as breather task** - Can be done in parallel with heavy architectural work (Features 12-14). Lower cognitive load, good for maintaining momentum.
 
 ### Definition of Done
 
@@ -386,9 +439,6 @@
     - [x] Display mutation type, target, and result
     - [x] Show authority hierarchy violations (canonical fact protection attempts)
     - [x] Mutation statistics (success rate, blocked attempts)
-  - [ ] Memory change history (future enhancement)
-    - [ ] Before/after snapshots for each interaction
-    - [ ] Diff view showing what changed (added/removed/modified)
   - [x] Integration with RedRoomCanvas
     - [x] Toggle via hotkey (F2)
     - [x] Auto-refresh on interaction events (0.5s interval)
@@ -397,7 +447,7 @@
     - [x] Programmatic UI generation at runtime
     - [x] Configurable styling and layout
 
-- [x] **Validation Gate Overlay** (medium priority) - **IMPLEMENTED**
+- [x] **Validation Gate Overlay** (medium priority) - **IMPLEMENTED (fixes needed)**
   - [x] Real-time validation results display (`ValidationGateOverlay.cs`)
     - [x] Gate pass/fail status with visual indicator (green/red)
     - [x] Failure reasons list (grouped by severity: Critical, Hard, Soft)
@@ -430,9 +480,10 @@
     - [x] Combined with Validation overlay (F3)
     - [x] Single unified overlay for validation + constraints
 
-- [x] **Overlay System Infrastructure** (partial)
+- [x] **Overlay System Infrastructure** - Complete (fixes needed)
   - [x] Extend `RedRoomCanvas` with input managed overlay panels (F2 + F3 toggles implemented)
   - [x] Auto-refresh event system (polling-based, 0.3-0.5s interval)
+  - [ ] **Overlay fixes needed** - Bug fixes and improvements required
 
 #### 8.5 Integration Testing
 - [x] **FullPipelineIntegrationTests** (base library) - Complete
@@ -448,35 +499,91 @@
   - [x] `FewShotAndFallbackPlayModeTests.cs` - 12 tests for few-shot priming, fallback system, multi-turn conversations
   - [x] Total: 73+ PlayMode integration tests
 
-**Estimated Effort**: 2-3 days remaining (overlay persistence, remaining overlay enhancements)
+**Estimated Effort**: ~1 day remaining (overlay fixes and improvements)
 
 ---
 
-## 🚧 Feature 9: Documentation & Polish
+## ✅ Feature 9: Documentation & Polish
 
 **Priority**: MEDIUM - Enables adoption and understanding
-**Status**: 🚧 In Progress (90% Complete)
-**Dependencies**: All previous features
+**Status**: ✅ Complete (100%)
+**Dependencies**: All previous features  
+**Execution Order**: **Weave in as breather task** - Can be done in parallel with heavy architectural work (Features 12-14). Documentation can be updated incrementally as features are completed.
 
 ### Definition of Done
 
 #### 9.1 Architecture Documentation
 - [x] Created `ARCHITECTURE.md`
-- [x] Full explanation of architectural pattern (all 9 components)
-- [x] Component interaction diagrams (references architectural_diagram.png)
-- [x] Code examples for each layer
-- [x] Best practices guide
+  - [x] Full explanation of architectural pattern (all 9 components)
+  - [x] Component interaction diagrams (references architectural_diagram.png)
+  - [x] Code examples for each layer
+  - [x] Best practices guide
+- [x] Created `DETERMINISM_CONTRACT.md`
+  - [x] Explicit boundary statement and contract decisions
+  - [x] Determinism guarantees and limitations
+  - [x] Hardware determinism documentation
+- [x] Created `PIPELINE_CONTRACT.md`
+  - [x] Formal pipeline contract specification
+  - [x] Component interaction contracts
+  - [x] Data flow documentation
+- [x] Created `MEMORY.md`
+  - [x] Memory system architecture documentation
+  - [x] Memory authority hierarchy explanation
+  - [x] Memory types and usage patterns
+- [x] Created `VALIDATION_GATING.md`
+  - [x] Validation system documentation
+  - [x] Rule creation and application guide
+  - [x] Validation pipeline explanation
+- [x] Created `SAFEGUARDS.md`
+  - [x] Security and safety documentation
+  - [x] Threat mitigation strategies
+  - [x] Best practices for secure implementation
+- [x] Created `CHANGELOG.md`
+  - [x] Version history and change tracking
+  - [x] Feature additions and modifications
+- [x] Created `PHASE10_PROOF_GAPS.md`
+  - [x] Deterministic proof gap testing documentation
+  - [x] Test backlog and acceptance criteria
+- [x] Created `MEMORY_TODO.md`
+  - [x] Memory system enhancement roadmap
+  - [x] RAG-based retrieval planning
 
 #### 9.2 Main README Updates
-- [x] Updated completion percentage
-- [x] Added architecture pattern overview
-- [x] Updated use cases with new capabilities
+- [x] Updated main `README.md` in core library
+  - [x] Updated completion percentage
+  - [x] Added architecture pattern overview
+  - [x] Updated use cases with new capabilities
+  - [x] Quick start guide
+- [x] Created `STATUS.md`
+  - [x] Current implementation status tracking
+  - [x] Feature completion percentages
+  - [x] Test coverage reporting
+  - [x] Next tasks and milestones
+- [x] Created `ROADMAP.md`
+  - [x] Complete feature roadmap
+  - [x] Implementation status for all features
+  - [x] Execution order recommendations
+  - [x] Milestone tracking
 
 #### 9.3 Unity Package Documentation
-- [x] Setup guide for determinism layer (in `USAGE_GUIDE.md`)
-- [x] Validation rule creation tutorial (in `USAGE_GUIDE.md`)
-- [x] Memory system migration guide (comprehensive guide in `USAGE_GUIDE.md`)
-- [x] Troubleshooting for new components (in `TROUBLESHOOTING.md` and `RedRoom/README.md`)
+- [x] Created `USAGE_GUIDE.md` (Unity Runtime)
+  - [x] Setup guide for determinism layer
+  - [x] Validation rule creation tutorial
+  - [x] Memory system migration guide (comprehensive guide)
+  - [x] Complete component-by-component usage guide
+  - [x] Four step-by-step tutorials (Feature 9.5)
+- [x] Created `USAGE_GUIDE.md` (Core Library)
+  - [x] Core library usage examples
+  - [x] API reference and patterns
+- [x] Created Unity Runtime documentation files
+  - [x] `QUICK_START.md` - Quick start guide for Unity integration
+  - [x] `TROUBLESHOOTING.md` - Troubleshooting guide for common issues
+  - [x] `SAMPLES.md` - Code samples and examples
+  - [x] `STRUCTURED_OUTPUT.md` - Structured output documentation
+  - [x] `RED_ROOM_THREAT_MODEL.md` - RedRoom security threat model
+- [x] RedRoom documentation
+  - [x] RedRoom README with troubleshooting
+  - [x] RedRoom threat model documentation
 
 #### 9.4 API Documentation
 - [x] XML documentation comments for all public APIs (100% coverage)
@@ -484,10 +591,10 @@
 - [x] Code examples in documentation
 
 #### 9.5 Tutorial Content
-- [ ] "Setting Up Deterministic NPCs"
-- [ ] "Creating Custom Validation Rules"
-- [ ] "Understanding Memory Authority"
-- [ ] "Debugging Validation Failures"
+- [x] "Setting Up Deterministic NPCs" - Complete tutorial with 6 steps
+- [x] "Creating Custom Validation Rules" - Complete tutorial with 8 steps
+- [x] "Understanding Memory Authority" - Complete tutorial with 7 steps
+- [x] "Debugging Validation Failures" - Complete tutorial with 9 steps
 
 #### 9.6 Few-Shot Prompt Priming
 - [x] **Integration with Prompt Assembly**
@@ -513,7 +620,7 @@
   - [x] Document best practices for few-shot example selection
   - [x] Document configuration options (MaxFewShotExamples, AlwaysIncludeFewShot)
 
-**Estimated Effort**: 3-4 days remaining (tutorial content only)
+**Estimated Effort**: Complete (all tutorials added to USAGE_GUIDE.md)
 
 ---
 
@@ -521,7 +628,8 @@
 
 **Priority**: HIGH - Required for v1.0 release  
 **Status**: 🚧 In Progress (~25% Complete)  
-**Dependencies**: Features 1-7 (All core components must be implemented)
+**Dependencies**: Features 1-7 (All core components must be implemented)  
+**Execution Order**: **MUST BE COMPLETED** for Milestone 4. Should be ongoing throughout all phases, but must be finished before Milestone 4 is considered complete. Cannot claim "deterministically proven" architecture without this.
 
 **Note**: See `PHASE10_PROOF_GAPS.md` for detailed test backlog with file targets and acceptance criteria.
 
@@ -715,7 +823,8 @@ Enhance the `ContextRetrievalLayer` to use Retrieval-Augmented Generation (RAG) 
 
 **Priority**: HIGH - Improves reliability and determinism of output parsing  
 **Status**: 📋 Planned (0% Complete)  
-**Dependencies**: Feature 5 (Output Validation System), Feature 10 (Deterministic Proof Gap Testing)
+**Dependencies**: Feature 5 (Output Validation System), Feature 10 (Deterministic Proof Gap Testing)  
+**Execution Order**: **DO THIS FIRST** - Fundamentally changes how data enters the pipeline. Must be completed before Feature 16 (Save/Load) to avoid rework.
 
 ### Overview
 
@@ -815,7 +924,8 @@ Replace regex-based text parsing with LLM-native structured output formats. Curr
 
 **Priority**: HIGH - Completes structured output migration  
 **Status**: 📋 Planned (0% Complete)  
-**Dependencies**: Feature 12 (Dedicated Structured Output)
+**Dependencies**: Feature 12 (Dedicated Structured Output)  
+**Execution Order**: **DO IMMEDIATELY AFTER Feature 12** - Completes the structured output migration. Must be done before Feature 16 (Save/Load) to ensure data structures are stable.
 
 ### Overview
 
@@ -910,7 +1020,8 @@ Complete integration of structured output throughout the validation pipeline, mu
 
 **Priority**: CRITICAL - Completes cross-session determinism guarantee  
 **Status**: 📋 Planned (0% Complete)  
-**Dependencies**: Feature 10 (Deterministic Proof Gap Testing), Feature 16 (Save/Load Game Integration) - Requires deterministic inputs to be proven first and persistence for InteractionCount
+**Dependencies**: Feature 10 (Deterministic Proof Gap Testing), Feature 16 (Save/Load Game Integration) - Requires deterministic inputs to be proven first and persistence for InteractionCount  
+**Execution Order**: **DO THIS THIRD** (after Feature 16). Hook the persistence layer into the RNG to achieve the "Holy Grail" of AI consistency (cross-session determinism).
 
 ### Overview
 
@@ -1237,7 +1348,8 @@ Enable support for multiple NPCs in the same conversation context, including NPC
 
 **Priority**: CRITICAL - Required for Feature 14 (Deterministic Generation Seed)  
 **Status**: 📋 Planned (0% Complete)  
-**Dependencies**: Feature 2 (Structured Memory System), Feature 3 (State Snapshot)
+**Dependencies**: Feature 2 (Structured Memory System), Feature 3 (State Snapshot), **Feature 12 & 13 (Structured Output)**  
+**Execution Order**: **DO THIS SECOND** (after Features 12 & 13). Build persistence layer after data structures are stable. Don't build persistence for data structures that are about to change.
 
 ### Overview
 
@@ -1762,6 +1874,109 @@ Implement health checks, automatic recovery, and resilience patterns to ensure t
 
 ---
 
+## 📋 Feature 20: Memory Change History Visualization
+
+**Priority**: LOW - Aspirational future enhancement  
+**Status**: 📋 Planned (0% Complete)  
+**Dependencies**: Feature 8 (RedRoom Integration), Feature 2 (Structured Memory System)  
+**Execution Order**: **Post-Milestone 4** - Future enhancement for RedRoom testing tools
+
+### Overview
+
+Add memory change history visualization to the RedRoom Memory Mutation Overlay. This enables developers to see before/after snapshots of memory state for each interaction, making it easier to debug memory mutations and understand how NPC memories evolve over time.
+
+**Current State**: The Memory Mutation Overlay shows current memory state and mutation execution tracking, but does not show historical changes or diffs between interactions.
+
+**Use Cases**:
+- Debug memory mutations (see what changed between interactions)
+- Understand memory evolution over time
+- Verify memory authority enforcement (see blocked mutations)
+- Track memory decay and pruning events
+
+### Definition of Done
+
+#### 20.1 Memory Snapshot System
+- [ ] Create `MemorySnapshot` class to capture memory state at a point in time
+- [ ] Capture all memory types: canonical facts, world state, episodic memories, beliefs
+- [ ] Support snapshot comparison (diff generation)
+- [ ] Store snapshots per interaction (configurable retention)
+- [ ] Efficient serialization for storage
+
+#### 20.2 Diff Generation
+- [ ] Create `MemoryDiff` class for representing changes
+- [ ] Detect added memories (new entries)
+- [ ] Detect removed memories (deleted entries)
+- [ ] Detect modified memories (updated fields)
+- [ ] Highlight authority violations (blocked canonical fact mutations)
+- [ ] Support diff visualization (color-coded changes)
+
+#### 20.3 History Storage
+- [ ] Create `MemoryHistoryStore` for managing snapshots
+- [ ] Configurable retention policy (keep last N interactions)
+- [ ] Efficient storage (only store deltas, not full snapshots)
+- [ ] Support clearing history
+- [ ] Optional persistence (save history to file)
+
+#### 20.4 RedRoom Integration
+- [ ] Extend `MemoryMutationOverlay` with history panel
+- [ ] Display interaction timeline (list of interactions with snapshots)
+- [ ] Show before/after comparison view
+- [ ] Diff visualization (added=green, removed=red, modified=yellow)
+- [ ] Navigation between historical snapshots
+- [ ] Filter by memory type (show only episodic changes, etc.)
+
+#### 20.5 Testing
+- [ ] Unit tests for `MemorySnapshot` and `MemoryDiff`
+- [ ] Unit tests for `MemoryHistoryStore`
+- [ ] Integration tests: Verify snapshots captured correctly
+- [ ] Integration tests: Verify diff generation accuracy
+- [ ] All tests in `LlamaBrain.Tests/MemoryHistory/` passing
+
+#### 20.6 Documentation
+- [ ] Update RedRoom README with memory history feature
+- [ ] Document snapshot retention policies
+- [ ] Add examples showing how to use history for debugging
+- [ ] Document performance considerations (snapshot overhead)
+
+### Technical Considerations
+
+**Performance**:
+- Snapshot creation should be lightweight (<10ms)
+- Use delta compression (only store changes, not full state)
+- Configurable retention (default: last 50 interactions)
+- Optional feature (can be disabled for production)
+
+**Storage**:
+- In-memory storage (default)
+- Optional file persistence for debugging sessions
+- Efficient serialization (JSON or binary)
+
+**UI Design**:
+- Side-by-side before/after view
+- Color-coded diff (green=added, red=removed, yellow=modified)
+- Collapsible sections by memory type
+- Timeline navigation (previous/next interaction)
+
+### Estimated Effort
+
+**Total**: 1-2 weeks
+- Feature 20.1-20.2 (Snapshot & Diff): 3-4 days
+- Feature 20.3-20.4 (Storage & Integration): 3-4 days
+- Feature 20.5-20.6 (Testing & Docs): 2-3 days
+
+### Success Criteria
+
+- [ ] Memory snapshots captured correctly for each interaction
+- [ ] Diff generation accurately identifies all changes
+- [ ] History visualization functional in RedRoom overlay
+- [ ] Performance overhead acceptable (<10ms per snapshot)
+- [ ] All tests passing
+- [ ] Documentation complete with examples
+
+**Note**: This is an aspirational future enhancement. It is not required for Milestone 4 or v1.0 release. It can be implemented post-Milestone 4 as a quality-of-life improvement for developers using RedRoom.
+
+---
+
 ## 🎯 Milestones
 
 ### Milestone 1: Core Architecture (Features 1-3) ✅
@@ -1782,30 +1997,48 @@ Implement health checks, automatic recovery, and resilience patterns to ensure t
 **Target**: Weeks 7-8  
 **Status**: 🚧 Partial
 - [x] Fallback system complete
-- [ ] RedRoom fully integrated (80% complete)
-- [ ] Documentation comprehensive (90% complete)
+- [x] RedRoom fully integrated (99% complete - overlay fixes needed)
+- [x] Documentation comprehensive (100% complete)
 
-### Milestone 4: Production Ready (Features 10, 12, 13, 14, 16) 🚧
+### Milestone 4: Production Ready (Features 10, 12, 13, 14, 16, 8, 9) 🚧
 **Target**: Week 9+  
 **Status**: 🚧 In Progress
-- Feature 10: Deterministic Proof Gap Testing - 🚧 ~25% Complete
-- Feature 12: Dedicated Structured Output - 📋 Planned (HIGH priority)
-- Feature 13: Structured Output Integration - 📋 Planned (HIGH priority)
-- Feature 16: Save/Load Game Integration - 📋 Planned (CRITICAL priority - required for Feature 14)
-- Feature 14: Deterministic Generation Seed - 📋 Planned (CRITICAL priority - depends on Feature 16)
+
+**Recommended Execution Order** (see "Recommended Execution Order" section above):
+1. **Feature 12 & 13** (Structured Output) - Do first
+2. **Feature 16** (Save/Load) - Do second
+3. **Feature 14** (Deterministic Seed) - Do third
+4. **Feature 8 & 9** (RedRoom & Documentation) - Weave in as breather tasks
+5. **Feature 10** (Proof Gap Testing) - **Must be completed** (ongoing throughout, but finish before Milestone 4 complete)
+
+**Status**:
+- Feature 10: Deterministic Proof Gap Testing - 🚧 ~25% Complete (**MUST BE COMPLETED** for Milestone 4)
+- Feature 12: Dedicated Structured Output - 📋 Planned (HIGH priority - **DO FIRST**)
+- Feature 13: Structured Output Integration - 📋 Planned (HIGH priority - **DO IMMEDIATELY AFTER 12**)
+- Feature 16: Save/Load Game Integration - 📋 Planned (CRITICAL priority - **DO SECOND**, after 12 & 13)
+- Feature 14: Deterministic Generation Seed - 📋 Planned (CRITICAL priority - **DO THIRD**, after 16)
+- Feature 8: RedRoom Integration - 🚧 99% Complete (overlay fixes needed)
+- Feature 9: Documentation - ✅ 100% Complete
+
+**Completion Criteria**:
+- [ ] **Feature 10 complete** - All deterministic proof gap tests passing (REQUIRED)
 - [ ] All tests passing (Feature 10 complete)
 - [ ] Performance benchmarks met
 - [ ] Documentation complete
 - [ ] Ready for v0.2.0 release
 
-### Milestone 5: Enhanced Features (Features 11, 15, 17, 18, 19) 📋
+**Note**: Feature 10 is **required** for Milestone 4 completion. The architecture cannot claim to be "deterministically proven" without completing Feature 10's test suite.
+
+### Milestone 5: Enhanced Features (Features 11, 15, 17, 18, 19, 20) 📋
 **Target**: Post-v0.2.0  
-**Status**: 📋 Planned
+**Status**: 📋 Planned  
+**Prerequisite**: **Milestone 4 must be complete** before starting Milestone 5 features. These are enhancements that build on a stable foundation.
 - Feature 11: RAG-Based Memory Retrieval & Memory Proving - 📋 Planned (MEDIUM priority)
 - Feature 15: Multiple NPC Support - 📋 Planned (MEDIUM priority)
 - Feature 17: Token Cost Tracking & Analytics - 📋 Planned (MEDIUM priority)
 - Feature 18: Concurrent Request Handling & Thread Safety - 📋 Planned (MEDIUM priority)
 - Feature 19: Health Check & Resilience - 📋 Planned (MEDIUM priority)
+- Feature 20: Memory Change History Visualization - 📋 Planned (LOW priority - aspirational)
 - [ ] RAG-based retrieval with embeddings
 - [ ] Vector storage and indexing
 - [ ] Memory proving through repetition recognition
@@ -1816,6 +2049,7 @@ Implement health checks, automatic recovery, and resilience patterns to ensure t
 - [ ] Thread-safe concurrent request handling
 - [ ] Health monitoring and automatic recovery
 - [ ] Circuit breaker and graceful degradation
+- [ ] Memory change history (before/after snapshots, diff view) - Future enhancement
 
 ---
 

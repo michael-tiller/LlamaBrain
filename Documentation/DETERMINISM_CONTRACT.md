@@ -1,5 +1,6 @@
 # Determinism Contract
 
+**Version**: 1.0.0  
 **Last Updated**: December 31, 2025  
 **Status**: Contract decisions documented, implementation in progress
 
