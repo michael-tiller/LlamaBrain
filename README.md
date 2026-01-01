@@ -272,11 +272,11 @@ All rights reserved. No part of this codebase may be copied, redistributed, or u
 
 **See [ROADMAP.md](Documentation/ROADMAP.md) for detailed implementation plan and progress tracking.**
 
-### Current Status: ~60% Complete
+### Current Status: ~98% Complete
 
-**Current Phase**: Phase 2 - Structured Memory System ✅ Complete
+**Current Phase**: Phase 8 - RedRoom Integration 🚧 60% Complete | Phase 10 - Deterministic Proof Gap Testing 🚧 ~25% Complete
 
-**Next Priority**: Phase 3 - State Snapshot & Context Retrieval 🎯
+**Next Priority**: Phase 8.4 - Testing Overlays & Phase 10.1 - ContextRetrievalLayer Selection Behavior Tests
 
 ### Current Features (v0.2+)
 - ✅ **RedRoom Testing Suite**: Comprehensive in-game LLM testing framework
@@ -312,40 +312,58 @@ All rights reserved. No part of this codebase may be copied, redistributed, or u
 - Belief/Relationship Memory (can be wrong, contradiction detection)
 - Full test coverage (~65 tests)
 
-**Phase 3: State Snapshot & Retry Logic** (Not Started)
+**Phase 3: State Snapshot & Retry Logic** ✅ Complete
 - Authoritative state snapshots before inference
 - Context retrieval with relevance weighting
 - Retry logic with stricter constraints (max 3 attempts)
+- Full test coverage (~69 tests)
 
-**Phase 4: Ephemeral Working Memory** (Not Started)
+**Phase 4: Ephemeral Working Memory** ✅ Complete
 - Bounded working memory for current inference
 - Token-aware prompt assembly
 - Explicit memory lifecycle management
+- Full test coverage
 
-**Phase 5: Output Validation System** (Not Started)
+**Phase 5: Output Validation System** ✅ Complete
 - Output parser for structured extraction
 - Validation gate with constraint checking
 - Automatic retry on validation failure
+- Full test coverage (60+ tests)
 
-**Phase 6: Controlled Memory Mutation** (Not Started)
+**Phase 6: Controlled Memory Mutation** ✅ Complete
 - Validated outputs only for memory writes
 - Canonical fact protection enforcement
 - World intent emission system
+- Full test coverage (41 tests)
 
-**Phase 7: Enhanced Fallback System** (Not Started)
+**Phase 7: Enhanced Fallback System** ✅ Complete
 - Author-controlled fallback hierarchy
 - Context-aware emergency responses
 - Failure reason logging
+- Full test coverage
 
-**Phase 8: RedRoom Integration** (40% Complete)
-- Validation metrics and export
-- Architectural pattern testing
-- End-to-end validation scenarios
+**Phase 8: RedRoom Integration** 🚧 60% Complete
+- Validation metrics and export ✅
+- Architectural pattern testing ✅
+- End-to-end validation scenarios ✅
+- Testing overlays (pending)
+- Unity PlayMode integration tests (pending)
 
-**Phase 9: Documentation** (30% Complete)
-- Architecture documentation with diagrams
-- Setup tutorials for new components
-- API reference for all layers
+**Phase 9: Documentation** 🚧 85% Complete
+- Architecture documentation with diagrams ✅
+- Setup tutorials for new components ✅
+- API reference for all layers ✅
+- Tutorial content (pending)
+- Few-shot prompt priming (pending)
+
+**Phase 10: Deterministic Proof Gap Testing** 🚧 In Progress (~25% Complete)
+- ✅ Critical Requirements 1-4 implemented (strict total order sorting, SequenceNumber field, tie-breaker logic, OutputParser normalization)
+- ✅ 7 high-leverage determinism tests added
+- 🚧 ContextRetrievalLayer selection behavior tests (7/20-25 complete)
+- ⏳ Additional test suites pending (PromptAssembler, ValidationGate, MemoryMutationController, WorldIntentDispatcher, Full Pipeline)
+- See [PHASE10_PROOF_GAPS.md](Documentation/PHASE10_PROOF_GAPS.md) for detailed test backlog
+
+For detailed status information, see the [STATUS.md](Documentation/STATUS.md) file.
 
 ### Future Features (Post-Architecture)
 - **Multi-Modal Support**: Image and audio integration

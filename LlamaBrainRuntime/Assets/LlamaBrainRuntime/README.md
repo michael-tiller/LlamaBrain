@@ -113,7 +113,7 @@ LlamaBrain for Unity brings the power of local AI to Unity games and application
 
 ## 🚀 Quick Start
 
-> **New to LlamaBrain?** Check out the [Quick Start Guide](Documenation/QUICK_START.md) for a step-by-step 5-minute setup tutorial!
+> **New to LlamaBrain?** Check out the [Quick Start Guide](Documentation/QUICK_START.md) for a step-by-step 5-minute setup tutorial!
 
 ### 1. Configure Brain Settings
 
@@ -555,6 +555,85 @@ Run tests through Unity's Test Runner window.
 - Implement memory cleanup
 - Monitor file sizes
 - Use appropriate memory settings
+
+## 🏗️ Development (Architectural Pattern Implementation)
+
+### Phase Status
+
+**Phase 1: Determinism Layer** ✅ Complete
+- Expectancy Engine for constraint generation
+- Rule-based control over LLM behavior
+- Per-NPC and global constraint configuration
+- Full test coverage (50 tests)
+
+**Phase 2: Structured Memory System** ✅ Complete
+- Canonical Facts (immutable, Designer-only)
+- World State (validated mutations, GameSystem+ authority)
+- Episodic Memory (decay-enabled, significance-weighted)
+- Belief/Relationship Memory (can be wrong, contradiction detection)
+- Full test coverage (~65 tests)
+
+**Phase 3: State Snapshot & Retry Logic** ✅ Complete
+- Authoritative state snapshots before inference
+- Context retrieval with relevance weighting
+- Retry logic with stricter constraints (max 3 attempts)
+- Full test coverage (~69 tests)
+
+**Phase 4: Ephemeral Working Memory** ✅ Complete
+- Bounded working memory for current inference
+- Token-aware prompt assembly
+- Explicit memory lifecycle management
+- Full test coverage
+
+**Phase 5: Output Validation System** ✅ Complete
+- Output parser for structured extraction
+- Validation gate with constraint checking
+- Automatic retry on validation failure
+- Full test coverage (60+ tests)
+
+**Phase 6: Controlled Memory Mutation** ✅ Complete
+- Validated outputs only for memory writes
+- Canonical fact protection enforcement
+- World intent emission system
+- Full test coverage (41 tests)
+
+**Phase 7: Enhanced Fallback System** ✅ Complete
+- Author-controlled fallback hierarchy
+- Context-aware emergency responses
+- Failure reason logging
+- Full test coverage
+
+**Phase 8: RedRoom Integration** 🚧 60% Complete
+- Validation metrics and export ✅
+- Architectural pattern testing ✅
+- End-to-end validation scenarios ✅
+- Testing overlays (pending)
+- Unity PlayMode integration tests (pending)
+
+**Phase 9: Documentation** 🚧 95% Complete
+- Architecture documentation with diagrams ✅
+- Setup tutorials for new components ✅
+- API reference for all layers ✅
+- Few-shot prompt priming ✅ Complete (30 tests, full integration)
+- Tutorial content (pending)
+
+**Phase 10: Deterministic Proof Gap Testing** 🚧 In Progress (~25% Complete)
+- ✅ Critical Requirements 1-4 implemented (strict total order sorting, SequenceNumber field, tie-breaker logic, OutputParser normalization)
+- ✅ 7 high-leverage determinism tests added
+- 🚧 ContextRetrievalLayer selection behavior tests (7/20-25 complete)
+- ⏳ Additional test suites pending (PromptAssembler, ValidationGate, MemoryMutationController, WorldIntentDispatcher, Full Pipeline)
+- See [PHASE10_PROOF_GAPS.md](../../Documentation/PHASE10_PROOF_GAPS.md) for detailed test backlog
+
+### Future Features (Post-Architecture)
+
+- **Multi-Modal Support**: Image and audio integration
+- **Performance Optimization**: Layer-specific optimizations
+- **Voice Integration**: Text-to-speech and speech-to-text
+- **Animation Integration**: Character animation triggers
+- **Multi-Player Support**: Shared world state with validation
+- **Advanced Analytics**: Validation and constraint visualization
+
+For detailed status information, see the [STATUS.md](../../Documentation/STATUS.md) file in the Documentation directory.
 
 ## 📚 Additional Resources
 

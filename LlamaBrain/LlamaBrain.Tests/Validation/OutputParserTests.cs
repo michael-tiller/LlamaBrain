@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using LlamaBrain.Core.Validation;
@@ -1066,6 +1067,303 @@ namespace LlamaBrain.Tests.Validation
       Assert.That(result.Success, Is.True);
       // Simple regex should handle basic JSON, JSON block is removed and dialogue parses
       Assert.That(result.DialogueText, Does.Contain("Hello"));
+    }
+
+    #endregion
+
+    #region Phase 10.3: NormalizeWhitespace Contract Tests
+
+    [Test]
+    public void NormalizeWhitespace_NullInput_ReturnsEmptyString()
+    {
+      // Act
+      var result = OutputParser.NormalizeWhitespace(null);
+
+      // Assert
+      Assert.That(result, Is.EqualTo(string.Empty));
+    }
+
+    [Test]
+    public void NormalizeWhitespace_EmptyInput_ReturnsEmptyString()
+    {
+      // Act
+      var result = OutputParser.NormalizeWhitespace("");
+
+      // Assert
+      Assert.That(result, Is.EqualTo(string.Empty));
+    }
+
+    [Test]
+    public void NormalizeWhitespace_StripsBOM()
+    {
+      // Arrange - BOM followed by text
+      var input = "\uFEFFHello World";
+
+      // Act
+      var result = OutputParser.NormalizeWhitespace(input);
+
+      // Assert - BOM should be stripped
+      Assert.That(result, Is.EqualTo("Hello World"));
+      Assert.That(result[0], Is.Not.EqualTo('\uFEFF'));
+    }
+
+    [Test]
+    public void NormalizeWhitespace_BOMOnly_ReturnsEmptyString()
+    {
+      // Arrange - Just a BOM
+      var input = "\uFEFF";
+
+      // Act
+      var result = OutputParser.NormalizeWhitespace(input);
+
+      // Assert
+      Assert.That(result, Is.EqualTo(string.Empty));
+    }
+
+    [Test]
+    public void NormalizeWhitespace_ConvertsCRLFToLF()
+    {
+      // Arrange - Windows line endings
+      var input = "Line 1\r\nLine 2\r\nLine 3";
+
+      // Act
+      var result = OutputParser.NormalizeWhitespace(input);
+
+      // Assert - Should be Unix line endings
+      Assert.That(result, Is.EqualTo("Line 1\nLine 2\nLine 3"));
+      Assert.That(result, Does.Not.Contain("\r"));
+    }
+
+    [Test]
+    public void NormalizeWhitespace_ConvertsStrayCRToLF()
+    {
+      // Arrange - Old Mac line endings (CR only)
+      var input = "Line 1\rLine 2\rLine 3";
+
+      // Act
+      var result = OutputParser.NormalizeWhitespace(input);
+
+      // Assert - Should be Unix line endings
+      Assert.That(result, Is.EqualTo("Line 1\nLine 2\nLine 3"));
+    }
+
+    [Test]
+    public void NormalizeWhitespace_TrimsTrailingWhitespacePerLine()
+    {
+      // Arrange - Lines with trailing spaces/tabs
+      var input = "Line 1   \nLine 2\t\t\nLine 3  \t  ";
+
+      // Act
+      var result = OutputParser.NormalizeWhitespace(input);
+
+      // Assert - Trailing whitespace should be removed from each line
+      Assert.That(result, Is.EqualTo("Line 1\nLine 2\nLine 3"));
+    }
+
+    [Test]
+    public void NormalizeWhitespace_PreservesLeadingWhitespace()
+    {
+      // Arrange - Lines with leading indentation
+      var input = "  Line 1\n    Line 2\n\tLine 3";
+
+      // Act
+      var result = OutputParser.NormalizeWhitespace(input);
+
+      // Assert - Leading whitespace/indentation should be preserved
+      Assert.That(result, Is.EqualTo("  Line 1\n    Line 2\n\tLine 3"));
+    }
+
+    [Test]
+    public void NormalizeWhitespace_CollapsesThreeOrMoreBlankLinesToTwo()
+    {
+      // Arrange - 4 blank lines between text
+      var input = "Line 1\n\n\n\n\nLine 2";
+
+      // Act
+      var result = OutputParser.NormalizeWhitespace(input);
+
+      // Assert - Should collapse to exactly 2 blank lines
+      Assert.That(result, Is.EqualTo("Line 1\n\n\nLine 2"));
+    }
+
+    [Test]
+    public void NormalizeWhitespace_PreservesTwoBlankLines()
+    {
+      // Arrange - Exactly 2 blank lines (allowed)
+      var input = "Line 1\n\n\nLine 2";
+
+      // Act
+      var result = OutputParser.NormalizeWhitespace(input);
+
+      // Assert - 2 blank lines should be preserved
+      Assert.That(result, Is.EqualTo("Line 1\n\n\nLine 2"));
+    }
+
+    [Test]
+    public void NormalizeWhitespace_PreservesOneBlankLine()
+    {
+      // Arrange - Single blank line
+      var input = "Line 1\n\nLine 2";
+
+      // Act
+      var result = OutputParser.NormalizeWhitespace(input);
+
+      // Assert - Single blank line should be preserved
+      Assert.That(result, Is.EqualTo("Line 1\n\nLine 2"));
+    }
+
+    [Test]
+    public void NormalizeWhitespace_PreservesTwoLeadingBlankLines()
+    {
+      // Arrange - 2 blank lines at start (2 newlines = 2 empty lines in split array)
+      var input = "\n\nActual content";
+
+      // Act
+      var result = OutputParser.NormalizeWhitespace(input);
+
+      // Assert - 2 leading blank lines should be preserved
+      Assert.That(result, Is.EqualTo("\n\nActual content"));
+    }
+
+    [Test]
+    public void NormalizeWhitespace_CollapsesThreeOrMoreLeadingBlankLines()
+    {
+      // Arrange - 3 blank lines at start (collapse to 2)
+      var input = "\n\n\nActual content";
+
+      // Act
+      var result = OutputParser.NormalizeWhitespace(input);
+
+      // Assert - Collapses to exactly 2 blank lines at start
+      Assert.That(result, Is.EqualTo("\n\nActual content"));
+    }
+
+    [Test]
+    public void NormalizeWhitespace_CollapsesFiveLeadingBlankLinesToTwo()
+    {
+      // Arrange - 5 blank lines at start
+      var input = "\n\n\n\n\nActual content";
+
+      // Act
+      var result = OutputParser.NormalizeWhitespace(input);
+
+      // Assert - Collapses to 2 blank lines at start
+      Assert.That(result, Is.EqualTo("\n\nActual content"));
+    }
+
+    [Test]
+    public void NormalizeWhitespace_PreservesExistingTrailingNewline()
+    {
+      // Arrange - Input ends with newline
+      var input = "Hello World\n";
+
+      // Act
+      var result = OutputParser.NormalizeWhitespace(input);
+
+      // Assert - Trailing newline should be preserved
+      Assert.That(result, Is.EqualTo("Hello World\n"));
+      Assert.That(result.EndsWith("\n"), Is.True);
+    }
+
+    [Test]
+    public void NormalizeWhitespace_DoesNotAddTrailingNewline()
+    {
+      // Arrange - Input does NOT end with newline
+      var input = "Hello World";
+
+      // Act
+      var result = OutputParser.NormalizeWhitespace(input);
+
+      // Assert - No trailing newline should be added
+      Assert.That(result, Is.EqualTo("Hello World"));
+      Assert.That(result.EndsWith("\n"), Is.False);
+    }
+
+    [Test]
+    public void NormalizeWhitespace_TreatsWhitespaceOnlyLinesAsBlank()
+    {
+      // Arrange - Lines with only spaces/tabs count as blank
+      var input = "Line 1\n   \n\t\n  \t  \n\nLine 2";
+
+      // Act
+      var result = OutputParser.NormalizeWhitespace(input);
+
+      // Assert - All whitespace-only lines treated as blank, collapsed to 2
+      Assert.That(result, Is.EqualTo("Line 1\n\n\nLine 2"));
+    }
+
+    [Test]
+    public void NormalizeWhitespace_Deterministic_SameInputSameOutput()
+    {
+      // Arrange - Complex input with various whitespace issues
+      var input = "\uFEFF  Hello World  \r\n\r\n\r\n\r\n  \t  \r\nGoodbye\n";
+
+      // Act - Run multiple times
+      var results = new List<string>();
+      for (int i = 0; i < 10; i++)
+      {
+        results.Add(OutputParser.NormalizeWhitespace(input));
+      }
+
+      // Assert - All results should be identical
+      for (int i = 1; i < results.Count; i++)
+      {
+        Assert.That(results[i], Is.EqualTo(results[0]),
+          $"Normalization was not deterministic at iteration {i}");
+      }
+    }
+
+    [Test]
+    public void NormalizeWhitespace_ComplexInput_ProducesExpectedOutput()
+    {
+      // Arrange - Complex real-world-like input
+      var input = "\uFEFF  First line with trailing spaces   \r\n" +
+                  "\r\n" +
+                  "\r\n" +
+                  "\r\n" +
+                  "\r\n" +
+                  "  Indented line\t\t\r\n" +
+                  "Last line\r\n";
+
+      // Act
+      var result = OutputParser.NormalizeWhitespace(input);
+
+      // Assert
+      var expected = "  First line with trailing spaces\n" +
+                     "\n" +
+                     "\n" +
+                     "  Indented line\n" +
+                     "Last line\n";
+      Assert.That(result, Is.EqualTo(expected));
+    }
+
+    [Test]
+    public void NormalizeWhitespace_IsPureFunction_NoSideEffects()
+    {
+      // Arrange
+      var input = "Hello World\r\n";
+      var originalInput = input;
+
+      // Act
+      var result1 = OutputParser.NormalizeWhitespace(input);
+      var result2 = OutputParser.NormalizeWhitespace(input);
+
+      // Assert - Input unchanged, results identical
+      Assert.That(input, Is.EqualTo(originalInput));
+      Assert.That(result1, Is.EqualTo(result2));
+    }
+
+    [Test]
+    public void NormalizeWhitespace_MixedLineEndings_NormalizesAll()
+    {
+      // Arrange - Mix of CRLF, CR, and LF
+      var input = "Line1\r\nLine2\rLine3\nLine4";
+
+      // Act
+      var result = OutputParser.NormalizeWhitespace(input);
+
+      // Assert - All normalized to LF
+      Assert.That(result, Is.EqualTo("Line1\nLine2\nLine3\nLine4"));
     }
 
     #endregion

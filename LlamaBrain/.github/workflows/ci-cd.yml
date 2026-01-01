@@ -1,0 +1,187 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [ main, dev ]
+    tags:
+      - '*'
+  pull_request:
+    # Run on all PRs regardless of target branch
+  release:
+    types: [ created ]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore LlamaBrain.sln
+
+      - name: Build
+        run: dotnet build LlamaBrain.sln --no-restore -c Release
+
+      - name: Run tests
+        run: dotnet test LlamaBrain.sln --no-build -c Release --verbosity normal --collect:"XPlat Code Coverage"
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v5
+        with:
+          files: '**/coverage.cobertura.xml'
+          fail_ci_if_error: false
+
+  build:
+    name: Build Release DLL
+    runs-on: windows-latest
+    needs: test
+    if: github.ref_type == 'tag' || github.event_name == 'release'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref }}
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore LlamaBrain.sln
+
+      - name: Get version
+        id: version
+        run: |
+          if ("${{ github.event_name }}" -eq "release") {
+            # For release events, get tag from event
+            $tag = "${{ github.event.release.tag_name }}"
+            $version = $tag -replace '^v', ''
+          } elseif ("${{ github.ref_type }}" -eq "tag") {
+            $tag = "${{ github.ref }}"
+            # Remove 'refs/tags/' prefix, then remove optional 'v' prefix
+            $version = $tag -replace 'refs/tags/', '' -replace '^v', ''
+          } else {
+            # For push events, use version from csproj or default
+            $version = "1.0.0"
+          }
+          echo "VERSION=$version" >> $env:GITHUB_ENV
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Build DLL
+        run: |
+          dotnet build LlamaBrain/LlamaBrain.csproj `
+            -c Release `
+            -p:Version=$env:VERSION `
+            --no-restore
+
+      - name: Create package directory
+        run: |
+          New-Item -ItemType Directory -Path artifacts -Force | Out-Null
+          New-Item -ItemType Directory -Path artifacts/LlamaBrain-$env:VERSION -Force | Out-Null
+
+      - name: Copy DLL and dependencies
+        run: |
+          $dllPath = "LlamaBrain/bin/Release/netstandard2.1/LlamaBrain.dll"
+          $pdbPath = "LlamaBrain/bin/Release/netstandard2.1/LlamaBrain.pdb"
+          $xmlPath = "LlamaBrain/bin/Release/netstandard2.1/LlamaBrain.xml"
+          
+          if (Test-Path $dllPath) {
+            Copy-Item $dllPath -Destination "artifacts/LlamaBrain-$env:VERSION/" -Force
+          }
+          if (Test-Path $pdbPath) {
+            Copy-Item $pdbPath -Destination "artifacts/LlamaBrain-$env:VERSION/" -Force
+          }
+          if (Test-Path $xmlPath) {
+            Copy-Item $xmlPath -Destination "artifacts/LlamaBrain-$env:VERSION/" -Force
+          }
+          
+          # Copy dependencies if they exist in the output directory
+          $depsPath = "LlamaBrain/bin/Release/netstandard2.1/"
+          if (Test-Path $depsPath) {
+            Get-ChildItem -Path $depsPath -Filter "*.dll" | Where-Object { $_.Name -ne "LlamaBrain.dll" } | ForEach-Object {
+              Copy-Item $_.FullName -Destination "artifacts/LlamaBrain-$env:VERSION/" -Force
+            }
+          }
+
+      - name: Create ZIP package
+        run: |
+          $zipName = "LlamaBrain-$env:VERSION.zip"
+          Compress-Archive -Path artifacts/LlamaBrain-$env:VERSION/* -DestinationPath artifacts/$zipName -Force
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: llamabrain-dll-${{ github.sha }}
+          path: artifacts/*.zip
+          retention-days: 7
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref_type == 'tag' || github.event_name == 'release'
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Get version and tag from event
+        id: tag_info
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            TAG_NAME="${{ github.event.release.tag_name }}"
+            VERSION="${{ github.event.release.tag_name }}"
+          else
+            TAG_NAME="${{ github.ref_name }}"
+            VERSION=${GITHUB_REF#refs/tags/}
+          fi
+          # Remove optional 'v' prefix if present
+          VERSION=${VERSION#v}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_OUTPUT
+
+      - name: Create/Update Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.tag_info.outputs.TAG_NAME }}
+          name: LlamaBrain ${{ steps.tag_info.outputs.VERSION }}
+          files: artifacts/**/*.zip
+          body: |
+            ## LlamaBrain ${{ steps.tag_info.outputs.VERSION }}
+            
+            ### Downloads
+            - **DLL Package**: `LlamaBrain-${{ steps.tag_info.outputs.VERSION }}.zip`
+            
+            The ZIP file contains:
+            - `LlamaBrain.dll` - The main library assembly
+            - `LlamaBrain.pdb` - Debug symbols (if available)
+            - `LlamaBrain.xml` - XML documentation (if available)
+            - Required dependencies (if any)
+            
+            ### Installation
+            1. Download the ZIP file
+            2. Extract the DLL and dependencies to your project
+            3. Reference the DLL in your .NET project
+            
+            See [README.md](https://github.com/${{ github.repository }}/blob/main/README.md) for more information.
+          draft: false
+          prerelease: false
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

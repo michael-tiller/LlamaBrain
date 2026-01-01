@@ -171,6 +171,7 @@ namespace LlamaBrain.Runtime.RedRoom.UI
     /// <summary>
     /// Sets the agent to track.
     /// </summary>
+    /// <param name="agent">The LlamaBrainAgent instance to track for memory mutations and state display.</param>
     public void SetTrackedAgent(LlamaBrainAgent agent)
     {
       _trackedAgent = agent;
@@ -186,6 +187,11 @@ namespace LlamaBrain.Runtime.RedRoom.UI
     /// <summary>
     /// Logs a mutation event to the overlay.
     /// </summary>
+    /// <param name="mutationType">The type of mutation that occurred (e.g., "EpisodicMemory", "Belief", "WorldState").</param>
+    /// <param name="target">The target of the mutation (e.g., memory ID, belief subject).</param>
+    /// <param name="approved">Whether the mutation was approved or rejected.</param>
+    /// <param name="details">Additional details about the mutation.</param>
+    /// <param name="failureReason">Optional reason for failure if the mutation was rejected.</param>
     public void LogMutation(string mutationType, string target, bool approved, string details, string failureReason = null)
     {
       var entry = new MutationLogEntry

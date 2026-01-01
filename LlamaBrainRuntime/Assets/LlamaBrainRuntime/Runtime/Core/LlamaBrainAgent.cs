@@ -772,6 +772,8 @@ namespace LlamaBrain.Runtime.Core
         memorySystem.AddDialogue("Player", input, significance: 0.5f, MutationSource.ValidatedOutput);
         memorySystem.AddDialogue("NPC", finalResult.FinalResult.Response, significance: 0.7f, MutationSource.ValidatedOutput);
 
+        // Add NPC response to conversation history (player input was already added before snapshot)
+        AddToConversationHistory("NPC", finalResult.FinalResult.Response);
         dialogueSession?.AppendPlayer(input);
         dialogueSession?.AppendNpc(finalResult.FinalResult.Response);
       }
@@ -786,7 +788,14 @@ namespace LlamaBrain.Runtime.Core
     /// </summary>
     private StateSnapshot BuildStateSnapshot(string playerInput)
     {
-      // Get dialogue history
+      // Add player input to conversation history BEFORE building snapshot
+      // This ensures dialogue history is available for the next turn
+      if (storeConversationHistory && !string.IsNullOrEmpty(playerInput))
+      {
+        AddToConversationHistory("Player", playerInput);
+      }
+
+      // Get dialogue history (now includes the current player input)
       var dialogueHistory = GetConversationHistory();
 
       // If we have ExpectancyConfig and memory provider, use the full builder
@@ -824,15 +833,25 @@ namespace LlamaBrain.Runtime.Core
         LastConstraints = constraints;
       }
 
-      return new StateSnapshotBuilder()
+      var builder = new StateSnapshotBuilder()
         .WithContext(context)
         .WithConstraints(constraints)
         .WithSystemPrompt(runtimeProfile?.SystemPrompt ?? "")
         .WithPlayerInput(playerInput)
         .WithDialogueHistory(dialogueHistory)
         .WithMaxAttempts(retryPolicy?.MaxAttempts ?? 3)
-        .WithMetadata("game_time", Time.time.ToString("F2"))
-        .Build();
+        .WithMetadata("game_time", Time.time.ToString("F2"));
+
+      // Retrieve memories if we have a memory provider (even without ExpectancyConfig)
+      if (memoryProvider != null && runtimeProfile != null)
+      {
+        var memorySystem = memoryProvider.GetOrCreateSystem(runtimeProfile.PersonaId);
+        var retrieval = new ContextRetrievalLayer(memorySystem);
+        var retrieved = retrieval.RetrieveContext(playerInput);
+        retrieved.ApplyTo(builder);
+      }
+
+      return builder.Build();
     }
 
     /// <summary>
