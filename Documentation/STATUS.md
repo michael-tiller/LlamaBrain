@@ -24,7 +24,7 @@
 | Feature 7: Enhanced Fallback System | ✅ Complete | 100% |
 | Feature 8: RedRoom Integration | 🚧 In Progress | 99% |
 | Feature 9: Documentation | ✅ Complete | 100% |
-| Feature 10: Deterministic Proof Gap Testing | 🚧 In Progress | ~65% |
+| Feature 10: Deterministic Proof Gap Testing | 🚧 In Progress | ~85% |
 | Feature 11: RAG-Based Memory Retrieval | 📋 Planned | MEDIUM |
 | Feature 12: Dedicated Structured Output | 📋 Planned | HIGH |
 | Feature 13: Structured Output Integration | 📋 Planned | HIGH |
@@ -122,7 +122,7 @@
 
 ---
 
-## Feature 10: Deterministic Proof Gap Testing (~65% Complete)
+## Feature 10: Deterministic Proof Gap Testing (~85% Complete)
 
 **Status**: 🚧 In Progress
 **Priority**: HIGH - Required for v1.0 release
@@ -152,24 +152,20 @@
 | ContextRetrievalLayer | `ContextRetrievalLayerTests.cs` | 20-25 | **55 tests** | ✅ **Complete** (exceeds estimate) |
 | PromptAssembler/WorkingMemory | `PromptAssemblerTests.cs`<br>`EphemeralWorkingMemoryTests.cs` | 25-30 | **80 tests** (40+40) | ✅ **Complete** (exceeds estimate) |
 | OutputParser | `OutputParserTests.cs` | 20-25 | **86 tests** | ✅ **Complete** (exceeds estimate) |
-| ValidationGate | `ValidationGateTests.cs` | 30-35 | **17 tests** | 🚧 Partial (basic coverage, Phase 10.4 tests pending) |
+| ValidationGate | `ValidationGateTests.cs` | 30-35 | **44 tests** | ✅ **Complete** (17 basic + 27 Feature 10.4 detailed tests) |
 | MemoryMutationController | `MemoryMutationControllerTests.cs` | 30-35 | **41 tests** | ✅ **Complete** (exceeds estimate) |
 | WorldIntentDispatcher | `WorldIntentDispatcherTests.cs` (new) | 20-25 | **0 tests** | Not Started |
-| Full Pipeline | `DeterministicPipelineTests.cs` (new) | 15-20 | **0 tests** | Not Started |
-| **Total** | | **150-180** | **279 tests** | **~65%** |
+| Full Pipeline | `DeterministicPipelineTests.cs` | 15-20 | **17 tests** | ✅ **Complete** |
+| **Total** | | **150-180** | **323 tests** | **~85%** |
 
 ### Pending Work
 - [ ] Critical Requirement #5: WorldIntentDispatcher Singleton Lifecycle implementation and tests
-- [ ] Feature 10.4: ValidationGate detailed determinism tests (13-18 tests remaining - basic validation complete)
-- [ ] Feature 10.5: WorldIntentDispatcher tests (20-25 tests - not started)
-- [ ] Feature 10.7: Full Pipeline deterministic integration tests (15-20 tests - not started)
+- [ ] Feature 10.6: WorldIntentDispatcher tests (20-25 tests - not started, Unity PlayMode)
 
-**Estimated Effort Remaining**: 5-7 days
-- Feature 10.4 (ValidationGate tests): 2-3 days
-- Feature 10.5 (WorldIntentDispatcher tests): 2-3 days
-- Feature 10.7 (Integration tests): 1-2 days
+**Estimated Effort Remaining**: 2-3 days
+- Feature 10.6 (WorldIntentDispatcher tests): 2-3 days (Unity PlayMode tests)
 
-**Note**: Features 10.1, 10.2, and 10.3 are complete. Most components (ContextRetrievalLayer, PromptAssembler, EphemeralWorkingMemory, OutputParser, MemoryMutationController) have comprehensive test coverage exceeding original estimates.
+**Note**: Features 10.1, 10.2, 10.3, 10.4, 10.5, and 10.7 are complete. Only WorldIntentDispatcher tests remain (Unity-specific).
 
 See `PHASE10_PROOF_GAPS.md` for detailed test backlog with file targets and acceptance criteria.
 
@@ -401,7 +397,7 @@ Enable support for multiple NPCs in the same conversation context, including NPC
 5. **Feature 10** (Proof Gap Testing) - **Must be completed** (ongoing throughout, but finish before Milestone 4 complete)
 
 **Status**:
-- Feature 10: Deterministic Proof Gap Testing - 🚧 ~65% Complete (**MUST BE COMPLETED** for Milestone 4)
+- Feature 10: Deterministic Proof Gap Testing - 🚧 ~85% Complete (**MUST BE COMPLETED** for Milestone 4)
 - Feature 12: Dedicated Structured Output - 📋 Planned (HIGH priority - **DO FIRST**)
 - Feature 13: Structured Output Integration - 📋 Planned (HIGH priority - **DO IMMEDIATELY AFTER 12**)
 - Feature 16: Save/Load Game Integration - 📋 Planned (CRITICAL priority - **DO SECOND**, after 12 & 13)

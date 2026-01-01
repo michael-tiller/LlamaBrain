@@ -44,3 +44,5 @@ LlamaBrain/LlamaBrain.sln.DotSettings.user
 /LlamaBrainRuntime/Assets/LlamaBrainRuntime/LlamaBrain.dll
 *.code-workspace
 /*.code-workspace
+/LlamaBrainRuntime/Assets/LlamaArt/scrubbed
+/Overview
