@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a7faaeae5c311e644bf3def2b5686402, type: 3}
+  m_Name: NoMarkdown Rule
+  m_EditorClassIdentifier:
+  ruleId: no-markdown
+  description: Prohibits markdown formatting in dialogue responses.
+  ruleType: 0
+  severity: 0
+  pattern: "^#{1,6}\\s"
+  caseInsensitive: 0
+  additionalPatterns:
+  - "\\*\\*[^*]+\\*\\*"
+  - "__[^_]+__"
+  - "```"
+  - "^\\s*[-*]\\s"
+  - "^\\s*\\d+\\.\\s"
+  sceneFilter: []
+  npcIdFilter: []
+  triggerReasonFilter: []

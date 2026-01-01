@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a7faaeae5c311e644bf3def2b5686402, type: 3}
+  m_Name: NoEmojis Rule
+  m_EditorClassIdentifier:
+  ruleId: no-emojis
+  description: Prohibits emojis and emoticons in responses.
+  ruleType: 0
+  severity: 0
+  pattern: "[\U0001F600-\U0001F64F]"
+  caseInsensitive: 0
+  additionalPatterns:
+  - "[\U0001F300-\U0001F5FF]"
+  - "[\U0001F680-\U0001F6FF]"
+  - "[\U0001F900-\U0001F9FF]"
+  - ":)"
+  - ":("
+  - ":D"
+  - ";)"
+  - ":P"
+  - "XD"
+  - ":3"
+  - "^_^"
+  - "o_o"
+  - "T_T"
+  - "<3"
+  sceneFilter: []
+  npcIdFilter: []
+  triggerReasonFilter: []

@@ -6,6 +6,55 @@ using LlamaBrain.Core.Expectancy;
 namespace LlamaBrain.Core.Inference
 {
   /// <summary>
+  /// Represents a few-shot example exchange for prompt priming.
+  /// </summary>
+  public class FewShotExample
+  {
+    /// <summary>
+    /// The player's input in this example.
+    /// </summary>
+    public string PlayerInput { get; set; } = "";
+
+    /// <summary>
+    /// The NPC's response in this example.
+    /// </summary>
+    public string NpcResponse { get; set; } = "";
+
+    /// <summary>
+    /// Creates a new few-shot example.
+    /// </summary>
+    public FewShotExample() { }
+
+    /// <summary>
+    /// Creates a new few-shot example with the specified values.
+    /// </summary>
+    /// <param name="playerInput">The player's input</param>
+    /// <param name="npcResponse">The NPC's response</param>
+    public FewShotExample(string playerInput, string npcResponse)
+    {
+      PlayerInput = playerInput;
+      NpcResponse = npcResponse;
+    }
+
+    /// <summary>
+    /// Creates a few-shot example from a fallback response.
+    /// Uses a generic player input appropriate for the fallback.
+    /// </summary>
+    /// <param name="fallbackResponse">The fallback response to use as NPC response</param>
+    /// <param name="playerInput">Optional player input (defaults to "Hello")</param>
+    /// <returns>A new FewShotExample</returns>
+    public static FewShotExample FromFallback(string fallbackResponse, string? playerInput = null)
+    {
+      return new FewShotExample(playerInput ?? "Hello", fallbackResponse);
+    }
+
+    /// <summary>
+    /// Gets the total character count of this example.
+    /// </summary>
+    public int CharacterCount => PlayerInput.Length + NpcResponse.Length;
+  }
+
+  /// <summary>
   /// Configuration for working memory bounds.
   /// </summary>
   public class WorkingMemoryConfig
@@ -47,6 +96,27 @@ namespace LlamaBrain.Core.Inference
     public bool AlwaysIncludeWorldState { get; set; } = true;
 
     /// <summary>
+    /// Optional few-shot examples for prompt priming.
+    /// These example exchanges are injected before the actual conversation
+    /// to guide the LLM's response style.
+    /// Default: null (no few-shot priming).
+    /// </summary>
+    public List<FewShotExample>? FewShotExamples { get; set; } = null;
+
+    /// <summary>
+    /// Maximum number of few-shot examples to include.
+    /// Default: 3.
+    /// </summary>
+    public int MaxFewShotExamples { get; set; } = 3;
+
+    /// <summary>
+    /// Whether to include few-shot examples even when dialogue history exists.
+    /// If false, few-shot examples are only included when dialogue history is empty.
+    /// Default: false.
+    /// </summary>
+    public bool AlwaysIncludeFewShot { get; set; } = false;
+
+    /// <summary>
     /// Creates a default configuration.
     /// </summary>
     public static WorkingMemoryConfig Default => new WorkingMemoryConfig();
@@ -59,7 +129,8 @@ namespace LlamaBrain.Core.Inference
       MaxDialogueExchanges = 2,
       MaxEpisodicMemories = 2,
       MaxBeliefs = 1,
-      MaxContextCharacters = 1000
+      MaxContextCharacters = 1000,
+      MaxFewShotExamples = 1
     };
 
     /// <summary>
@@ -70,7 +141,8 @@ namespace LlamaBrain.Core.Inference
       MaxDialogueExchanges = 10,
       MaxEpisodicMemories = 10,
       MaxBeliefs = 5,
-      MaxContextCharacters = 4000
+      MaxContextCharacters = 4000,
+      MaxFewShotExamples = 5
     };
   }
 
@@ -113,6 +185,12 @@ namespace LlamaBrain.Core.Inference
     /// Bounded beliefs.
     /// </summary>
     public IReadOnlyList<string> Beliefs { get; private set; }
+
+    /// <summary>
+    /// Few-shot examples for prompt priming.
+    /// These are example exchanges injected before actual dialogue to guide response style.
+    /// </summary>
+    public IReadOnlyList<FewShotExample> FewShotExamples { get; private set; }
 
     /// <summary>
     /// The system prompt.
@@ -161,6 +239,7 @@ namespace LlamaBrain.Core.Inference
       WorldState = Array.Empty<string>();
       EpisodicMemories = Array.Empty<string>();
       Beliefs = Array.Empty<string>();
+      FewShotExamples = Array.Empty<FewShotExample>();
       SystemPrompt = "";
       PlayerInput = "";
       Constraints = new ConstraintSet();
@@ -212,6 +291,19 @@ namespace LlamaBrain.Core.Inference
         .ToList();
       Beliefs = beliefs;
 
+      // Few-shot examples (include if configured and appropriate)
+      var fewShotExamples = new List<FewShotExample>();
+      if (_config.FewShotExamples != null && _config.FewShotExamples.Count > 0)
+      {
+        // Only include few-shot if: always include is set, OR dialogue history is empty
+        bool shouldIncludeFewShot = _config.AlwaysIncludeFewShot || dialogueHistory.Count == 0;
+        if (shouldIncludeFewShot)
+        {
+          fewShotExamples.AddRange(_config.FewShotExamples.Take(_config.MaxFewShotExamples));
+        }
+      }
+      FewShotExamples = fewShotExamples;
+
       // Calculate total character count
       TotalCharacterCount = CalculateTotalCharacters();
 
@@ -234,6 +326,7 @@ namespace LlamaBrain.Core.Inference
       foreach (var dialogue in DialogueHistory) total += dialogue.Length + 2;
       foreach (var memory in EpisodicMemories) total += memory.Length + 12;
       foreach (var belief in Beliefs) total += belief.Length + 2;
+      foreach (var fewShot in FewShotExamples) total += fewShot.CharacterCount + 20; // + formatting
 
       // Add constraint text estimate
       total += Constraints.Count * 50;
@@ -367,6 +460,25 @@ namespace LlamaBrain.Core.Inference
     }
 
     /// <summary>
+    /// Gets formatted few-shot examples for prompt injection.
+    /// </summary>
+    /// <param name="playerPrefix">Prefix for player lines (default: "Player")</param>
+    /// <param name="npcPrefix">Prefix for NPC lines (default: "NPC")</param>
+    /// <returns>Formatted few-shot examples string</returns>
+    public string GetFormattedFewShotExamples(string playerPrefix = "Player", string npcPrefix = "NPC")
+    {
+      if (FewShotExamples.Count == 0) return "";
+
+      var parts = new List<string>();
+      foreach (var example in FewShotExamples)
+      {
+        parts.Add($"{playerPrefix}: {example.PlayerInput}");
+        parts.Add($"{npcPrefix}: {example.NpcResponse}");
+      }
+      return string.Join("\n", parts);
+    }
+
+    /// <summary>
     /// Gets statistics about this working memory.
     /// </summary>
     /// <returns>Statistics about the working memory contents</returns>
@@ -379,6 +491,7 @@ namespace LlamaBrain.Core.Inference
         WorldStateCount = WorldState.Count,
         EpisodicMemoryCount = EpisodicMemories.Count,
         BeliefCount = Beliefs.Count,
+        FewShotCount = FewShotExamples.Count,
         ConstraintCount = Constraints.Count,
         TotalCharacters = TotalCharacterCount,
         WasTruncated = WasTruncated
@@ -410,6 +523,7 @@ namespace LlamaBrain.Core.Inference
       WorldState = Array.Empty<string>();
       EpisodicMemories = Array.Empty<string>();
       Beliefs = Array.Empty<string>();
+      FewShotExamples = Array.Empty<FewShotExample>();
       SystemPrompt = "";
       PlayerInput = "";
       Constraints = new ConstraintSet();
@@ -436,6 +550,9 @@ namespace LlamaBrain.Core.Inference
     /// <summary>Number of beliefs.</summary>
     public int BeliefCount { get; set; }
 
+    /// <summary>Number of few-shot examples.</summary>
+    public int FewShotCount { get; set; }
+
     /// <summary>Number of constraints.</summary>
     public int ConstraintCount { get; set; }
 
@@ -447,7 +564,7 @@ namespace LlamaBrain.Core.Inference
 
     /// <summary>Total number of context items.</summary>
     public int TotalItems => DialogueCount + CanonicalFactCount + WorldStateCount +
-                             EpisodicMemoryCount + BeliefCount;
+                             EpisodicMemoryCount + BeliefCount + FewShotCount;
 
     /// <summary>
     /// Returns a string representation of the stats.
@@ -455,9 +572,10 @@ namespace LlamaBrain.Core.Inference
     /// <returns>A string representation of the working memory statistics</returns>
     public override string ToString()
     {
+      var fewShotInfo = FewShotCount > 0 ? $", fewshot={FewShotCount}" : "";
       return $"WorkingMemoryStats: {TotalItems} items, {TotalCharacters} chars, " +
              $"dialogue={DialogueCount}, facts={CanonicalFactCount}, state={WorldStateCount}, " +
-             $"episodes={EpisodicMemoryCount}, beliefs={BeliefCount}, constraints={ConstraintCount}";
+             $"episodes={EpisodicMemoryCount}, beliefs={BeliefCount}{fewShotInfo}, constraints={ConstraintCount}";
     }
   }
 }

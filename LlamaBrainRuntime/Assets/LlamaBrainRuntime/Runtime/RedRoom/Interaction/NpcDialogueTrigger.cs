@@ -44,6 +44,10 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
     [Tooltip("Trigger-specific rules that apply when this trigger is activated.")]
     [SerializeField] private List<ExpectancyRuleAsset> triggerRules = new List<ExpectancyRuleAsset>();
 
+    [Header("Validation Rules")]
+    [Tooltip("Trigger-specific validation rules that apply when this trigger is activated.")]
+    [SerializeField] private LlamaBrain.Runtime.Core.Validation.ValidationRuleSetAsset? triggerValidationRules;
+
     private string currentFallbackText = "";
     private CancellationTokenSource? cancellationTokenSource = null;
     private NpcFollowerExample? currentNpc = null;
@@ -166,6 +170,13 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
         var context = InteractionContext.FromZoneTrigger(npcId, triggerId, promptText, Time.time);
         context.SceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
 
+        // Load trigger-specific validation rules if available
+        int triggerRuleCount = 0;
+        if (triggerValidationRules != null && triggerValidationRules.Enabled)
+        {
+          triggerRuleCount = brainAgent.LoadTriggerValidationRules(triggerValidationRules);
+        }
+
         // Use context-aware method if trigger has rules or if agent supports it
         string response;
         if (triggerRules.Count > 0 || brainAgent.ExpectancyConfig != null)
@@ -178,6 +189,12 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
         {
           // Fallback to simple method if no expectancy system
           response = await npc.Agent.SayToNpc(promptText, cancellationTokenSource.Token);
+        }
+
+        // Clear trigger-specific validation rules after interaction
+        if (triggerRuleCount > 0)
+        {
+          brainAgent.ClearTriggerValidationRules(triggerValidationRules?.name);
         }
 
         conversationText = response ?? currentFallbackText;

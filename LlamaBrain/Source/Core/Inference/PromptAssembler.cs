@@ -57,6 +57,17 @@ namespace LlamaBrain.Core.Inference
     public string ConversationHeader { get; set; } = "\n[Conversation]";
 
     /// <summary>
+    /// Format string for few-shot examples section header.
+    /// </summary>
+    public string FewShotHeader { get; set; } = "\n[Examples]";
+
+    /// <summary>
+    /// Whether to include few-shot examples in the prompt.
+    /// Default: true.
+    /// </summary>
+    public bool IncludeFewShotExamples { get; set; } = true;
+
+    /// <summary>
     /// Format string for player input.
     /// {0} = player input text.
     /// </summary>
@@ -167,6 +178,9 @@ namespace LlamaBrain.Core.Inference
     /// <summary>Characters used by retry feedback.</summary>
     public int RetryFeedback { get; set; }
 
+    /// <summary>Characters used by few-shot examples.</summary>
+    public int FewShotExamples { get; set; }
+
     /// <summary>Characters used by dialogue history.</summary>
     public int DialogueHistory { get; set; }
 
@@ -178,7 +192,7 @@ namespace LlamaBrain.Core.Inference
 
     /// <summary>Total characters.</summary>
     public int Total => SystemPrompt + Context + Constraints + RetryFeedback +
-                        DialogueHistory + PlayerInput + Formatting;
+                        FewShotExamples + DialogueHistory + PlayerInput + Formatting;
   }
 
   /// <summary>
@@ -296,7 +310,21 @@ namespace LlamaBrain.Core.Inference
         breakdown.RetryFeedback = retryFeedback.Length + 1;
       }
 
-      // 5. Dialogue history
+      // 5. Few-shot examples (before actual dialogue)
+      if (_config.IncludeFewShotExamples && workingMemory.FewShotExamples.Count > 0)
+      {
+        var fewShotText = workingMemory.GetFormattedFewShotExamples("Player", effectiveNpcName);
+        if (!string.IsNullOrEmpty(fewShotText))
+        {
+          builder.Append(_config.FewShotHeader);
+          builder.Append("\n");
+          builder.Append(fewShotText);
+          breakdown.FewShotExamples = fewShotText.Length;
+          breakdown.Formatting += _config.FewShotHeader.Length + 1;
+        }
+      }
+
+      // 6. Dialogue history
       var dialogueText = workingMemory.GetFormattedDialogue();
       if (!string.IsNullOrEmpty(dialogueText))
       {

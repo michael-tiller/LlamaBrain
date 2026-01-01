@@ -1,0 +1,588 @@
+# Phase 10: Deterministic Proof Gap Testing
+
+**Priority**: HIGH - Required for v1.0 release  
+**Status**: Not Started (0% Complete)  
+**Dependencies**: Phase 1-7 (All core components must be implemented)
+
+**Versioning Note**: Phase 10 is required for v1.0 release. Pre-1.0 releases (rc/preview) can ship without Phase 10 complete, but must not claim architecture is "deterministically proven" until Phase 10 is complete.
+
+**Goal**: Create explicit unit tests (or additional deterministic PlayMode tests) to close remaining proof gaps in critical architectural components. These tests verify that the deterministic state reconstruction pattern works correctly under all edge cases. Phase 10 transforms "good story" into "auditable claim."
+
+---
+
+## Test Backlog Summary
+
+| Component | Test File | Estimated Tests | Status |
+|-----------|-----------|----------------|--------|
+| ContextRetrievalLayer | `ContextRetrievalLayerTests.cs` | 20-25 | Not Started |
+| PromptAssembler/WorkingMemory | `PromptAssemblerTests.cs`<br>`EphemeralWorkingMemoryTests.cs` | 25-30 | Not Started |
+| OutputParser | `OutputParserTests.cs` | 20-25 | Not Started |
+| ValidationGate | `ValidationGateTests.cs` | 30-35 | Not Started |
+| MemoryMutationController | `MemoryMutationControllerTests.cs` | 30-35 | Not Started |
+| WorldIntentDispatcher | `WorldIntentDispatcherTests.cs` (new) | 20-25 | Not Started |
+| Full Pipeline | `DeterministicPipelineTests.cs` (new) | 15-20 | Not Started |
+| **Total** | | **150-180** | **0%** |
+
+---
+
+## 10.1 ContextRetrievalLayer: Selection Behavior Tests
+
+**Component**: `LlamaBrain/Source/Core/Inference/ContextRetrievalLayer.cs`  
+**Current Coverage**: Basic retrieval tests exist (15 tests), but selection behavior needs explicit verification  
+**Test Location**: `LlamaBrain.Tests/Inference/ContextRetrievalLayerTests.cs`  
+**Estimated Tests**: 20-25 additional tests
+
+### Tests Needed
+
+#### Relevance Scoring Behavior
+- [ ] Test that relevance weight (0.4 default) correctly prioritizes memories with keyword overlap
+- [ ] Test that memories with no keyword overlap get lower relevance scores
+- [ ] Test that topic matching boosts relevance score (verify boost amount matches code constant, capped at 1.0)
+- [ ] Test relevance calculation with empty player input (should return 0)
+- [ ] Test relevance with multi-word topics vs single-word topics
+
+#### Recency Scoring Behavior
+- [ ] Test that recency weight (0.4 default) uses memory strength directly as recency score
+- [ ] Test that recently added memories (strength ~1.0) score higher than decayed memories
+- [ ] Test recency scoring with memories at different decay stages
+- [ ] Verify recency score is memory.Strength (0-1 range)
+
+#### Significance Scoring Behavior
+- [ ] Test that significance weight (0.2 default) uses memory.Significance directly
+- [ ] Test that high-significance memories (0.9) score higher than low-significance (0.1)
+- [ ] Test significance scoring with memories at different significance levels
+
+#### Confidence-Based Belief Selection
+- [ ] Test that beliefs below MinBeliefConfidence (0.3 default) are filtered out
+- [ ] Test that beliefs at exactly MinBeliefConfidence threshold are included
+- [ ] Test that contradicted beliefs have confidence penalized by 0.5x in scoring
+- [ ] Test belief scoring formula: (relevance * 0.6) + (confidence * 0.4)
+- [ ] Test that contradicted beliefs with high confidence still score lower than non-contradicted
+
+#### Combined Scoring and Selection
+- [ ] Test that memories are sorted by combined score (recency + relevance + significance)
+- [ ] Test that MaxEpisodicMemories limit is applied AFTER scoring/sorting
+- [ ] Test that highest-scoring memories are selected when limit is reached
+- [ ] Test with different weight configurations (e.g., RecencyWeight=1.0, others=0.0)
+- [ ] Test that scoring formula: (RecencyWeight * recency) + (RelevanceWeight * relevance) + (SignificanceWeight * significance) produces expected results
+
+#### Edge Cases
+- [ ] Test with all weights set to 0 (ordering is `CreatedAtTicks desc, Id asc (ordinal), SequenceNumber asc` for episodic; `Confidence desc, Id asc (ordinal), SequenceNumber asc` for beliefs)
+- [ ] Test that tie-breaker produces deterministic ordering (same input = same output order)
+- [ ] Test that tie-breaker works even when timestamps/identifiers are equal (SequenceNumber provides total order)
+- [ ] Test with empty memory system (should return empty lists)
+- [ ] Test with memories that have identical scores (should maintain deterministic ordering via tie-breaker including SequenceNumber)
+
+---
+
+## 10.2 PromptAssembler / WorkingMemoryConfig: Hard Bounds & Truncation Priority
+
+**Component**: `LlamaBrain/Source/Core/Inference/PromptAssembler.cs`, `EphemeralWorkingMemory.cs`, `WorkingMemoryConfig.cs`  
+**Current Coverage**: Basic assembly and truncation tests exist, but priority ordering needs explicit verification  
+**Test Location**: `LlamaBrain.Tests/Inference/PromptAssemblerTests.cs`, `EphemeralWorkingMemoryTests.cs`  
+**Estimated Tests**: 25-30 additional tests
+
+### Tests Needed
+
+#### Hard Bounds Enforcement
+- [ ] Test that MaxDialogueExchanges is a hard limit (exactly N exchanges, not N+1)
+- [ ] Test that MaxEpisodicMemories is a hard limit (exactly N memories, not N+1)
+- [ ] Test that MaxBeliefs is a hard limit (exactly N beliefs, not N+1)
+- [ ] Test that MaxContextCharacters is a soft cap for optional sections (dialogue, episodic, beliefs)
+- [ ] Test that AlwaysIncludeCanonicalFacts=true means canonical facts are NEVER truncated (even if exceeds MaxContextCharacters)
+- [ ] Test that AlwaysIncludeWorldState=true means world state is NEVER truncated (even if exceeds MaxContextCharacters)
+- [ ] Test that when mandatory content (canonical + world state + system prompt + input) exceeds MaxContextCharacters, optional content is removed entirely
+- [ ] Test that assembled prompt may exceed MaxContextCharacters when mandatory sections exceed it (expected behavior)
+- [ ] Document contract: "Hard bounds" apply to optional sections; mandatory sections bypass character limits
+
+#### Truncation Priority Ordering
+- [ ] Test that canonical facts are NEVER truncated (highest priority)
+- [ ] Test that world state is NEVER truncated when AlwaysIncludeWorldState=true (second priority)
+- [ ] Test truncation order when character limit exceeded:
+  - [ ] Dialogue history is truncated first (lowest priority)
+  - [ ] Episodic memories are truncated second
+  - [ ] Beliefs are truncated third
+- [ ] Test budget allocation: 60% dialogue, 25% episodic, 15% beliefs (when truncating)
+- [ ] Test that dialogue truncation keeps most recent exchanges (from end of list)
+- [ ] Test that episodic truncation keeps first N (already sorted by ContextRetrievalLayer)
+- [ ] Test that belief truncation keeps first N (already sorted by ContextRetrievalLayer)
+
+#### Character Limit Truncation Behavior
+- [ ] Test that TruncateListToCharacterLimit processes from end to beginning (keeps most recent)
+- [ ] Test that when mandatory content exceeds MaxContextCharacters, all optional content is removed
+- [ ] Test that character counting includes prefixes ([Fact], [State], [Memory], etc.)
+- [ ] Test that character counting includes formatting overhead (newlines, separators)
+- [ ] Test that WasTruncated flag is set correctly when any truncation occurs
+
+#### PromptAssembler Integration
+- [ ] Test that PromptAssembler respects WorkingMemoryConfig bounds
+- [ ] Test that PromptAssembler's CreateWorkingMemoryConfig() produces valid config
+- [ ] Test that assembled prompt character count matches WorkingMemory total
+- [ ] Test that prompt truncation warning is logged when MaxPromptCharacters exceeded
+
+#### Edge Cases
+- [ ] Test with MaxContextCharacters = 0 (should only include mandatory content)
+- [ ] Test with MaxContextCharacters = mandatory content size (should have no optional content)
+- [ ] Test with all AlwaysInclude flags = false (should respect character limits for all)
+- [ ] Test with very large canonical facts that exceed character budget
+
+---
+
+## 10.3 OutputParser: Mutation Extraction & Malformed Handling
+
+**Component**: `LlamaBrain/Source/Core/Validation/OutputParser.cs`  
+**Current Coverage**: Basic parsing and extraction tests exist (50+ tests), but mutation extraction edge cases need explicit verification  
+**Test Location**: `LlamaBrain.Tests/Validation/OutputParserTests.cs`  
+**Estimated Tests**: 20-25 additional tests
+
+### Tests Needed
+
+#### Mutation Extraction from Structured Output
+- [ ] Test that [MEMORY: content] marker extracts AppendEpisodic mutation with correct content
+- [ ] Test that [BELIEF: content] marker extracts TransformBelief mutation with default confidence (0.8)
+- [ ] Test that [INTENT: content] marker extracts WorldIntent with correct type
+- [ ] Test that [ACTION: content] marker extracts WorldIntent with type="action"
+- [ ] Test that multiple markers in same output extract all mutations
+- [ ] Test that markers are removed from dialogue text after extraction
+- [ ] Test that JSON blocks (```json ... ```) extract mutations from "memory", "belief", "intent" fields
+- [ ] Test that JSON extraction sets metadata["has_json"] = "true"
+
+#### Malformed Structured Output Handling
+- [ ] Test that malformed JSON (invalid syntax) doesn't crash, just ignores JSON block
+- [ ] Test that empty JSON block (```json\n\n```) doesn't crash
+- [ ] Test that unclosed JSON block marker is handled gracefully
+- [ ] Test that [MEMORY: with unclosed bracket is handled (regex should not match)
+- [ ] Test that [MEMORY: ] with empty content creates mutation with empty string
+- [ ] Test that nested markers [MEMORY: [INTENT: test]] are handled correctly
+- [ ] Test that markers with special characters [MEMORY: "quoted content"] extract correctly
+
+#### Mutation Content Validation
+- [ ] Test that extracted mutations have correct MutationType enum values
+- [ ] Test that extracted mutations preserve source text in SourceText field
+- [ ] Test that TransformBelief mutations have Target="extracted" (default)
+- [ ] Test that WorldIntent mutations have IntentType from marker or JSON field
+- [ ] Test that multiple JSON blocks extract all mutations (not just first)
+
+#### Edge Cases
+- [ ] Test with ExtractStructuredData=false (should ignore all markers and JSON)
+- [ ] Test that when ExtractStructuredData=false, normalization runs once on raw text (normalize CRLF→LF; trim trailing whitespace per line; collapse 3+ consecutive blank lines to 2; blank line = empty after trimming trailing whitespace; no marker removal)
+- [ ] Test that when ExtractStructuredData=true, extraction runs first on raw text, then normalization runs on resulting dialogue (Extract(raw) → NormalizeWhitespace(dialogue))
+- [ ] Test with markers in dialogue text that should be preserved (when extraction disabled)
+- [ ] Test that malformed JSON doesn't prevent dialogue text extraction
+- [ ] Test that extraction happens BEFORE normalization when ExtractStructuredData=true (order matters)
+- [ ] Test that multiple JSON blocks extract all mutations (verify implementation supports multiple blocks, not just first)
+
+---
+
+## 10.4 ValidationGate: Ordering & Gate Execution
+
+**Component**: `LlamaBrain/Source/Core/Validation/ValidationGate.cs`  
+**Current Coverage**: Basic validation tests exist (20 tests), but gate ordering and execution flow need explicit verification  
+**Test Location**: `LlamaBrain.Tests/Validation/ValidationGateTests.cs`  
+**Estimated Tests**: 30-35 additional tests
+
+### Tests Needed
+
+#### Gate Execution Ordering
+- [ ] Test that gates execute in correct order:
+  1. Constraint validation (Gate 1)
+  2. Canonical fact check (Gate 2)
+  3. Knowledge boundary check (Gate 3)
+  4. Mutation validation (Gate 4)
+  5. Custom rules (Gate 5)
+- [ ] Test that if Gate 1 fails, subsequent gates still execute (failures accumulate)
+- [ ] Test that all gate failures are collected before determining Passed status
+- [ ] Test that gate execution order is deterministic (same input = same order)
+
+#### Constraint Validation (Gate 1)
+- [ ] Test that CheckConstraints=false skips constraint validation entirely
+- [ ] Test that constraint violations create ValidationFailure with correct Reason
+- [ ] Test that prohibition violations use Reason=ProhibitionViolated
+- [ ] Test that requirement failures use Reason=RequirementNotMet
+- [ ] Test that constraint severity is preserved in ValidationFailure
+
+#### Canonical Fact Validation (Gate 2)
+- [ ] Test that CheckCanonicalFacts=false skips canonical check entirely
+- [ ] Test that canonical contradictions are detected with negation patterns:
+  - [ ] "not {factContent}"
+  - [ ] "isn't {factContent}"
+  - [ ] "is not {factContent}"
+  - [ ] "was not {factContent}"
+  - [ ] "never {factContent}"
+- [ ] Test that inline negation (e.g., "X is Y" vs "X is not Y") is detected
+- [ ] Test that ContradictionKeywords from canonical facts are checked
+- [ ] Test that canonical contradictions have Critical severity
+
+#### Knowledge Boundary Validation (Gate 3)
+- [ ] Test that CheckKnowledgeBoundaries=false skips knowledge check entirely
+- [ ] Test that ForbiddenKnowledge list is checked case-insensitively
+- [ ] Test that partial word matches don't trigger (e.g., "assassin" doesn't match "assassination")
+- [ ] Test that multiple forbidden topics are all checked
+- [ ] Test that empty ForbiddenKnowledge list doesn't cause errors
+
+#### Mutation Validation (Gate 4)
+- [ ] Test that ValidateMutations=false approves all mutations without checking
+- [ ] Test that mutations targeting canonical facts are rejected
+- [ ] Test that approved mutations are added to ApprovedMutations list
+- [ ] Test that rejected mutations are added to RejectedMutations list
+- [ ] Test that mutation validation happens even if dialogue validation passes
+- [ ] Test that rejected mutations don't prevent intent approval when overall gate passes (GateResult.Passed=true)
+
+#### Custom Rules (Gate 5)
+- [ ] Test that custom rules execute after all other gates
+- [ ] Test that custom rule failures are added to failures list
+- [ ] Test that multiple custom rules all execute
+- [ ] Test that custom rule severity is respected
+
+#### Gate Result Assembly
+- [ ] Test that Passed=false when ANY gate fails
+- [ ] Test that Passed=true only when ALL gates pass
+- [ ] Test that ApprovedMutations only contains mutations that passed Gate 4
+- [ ] Test that ApprovedIntents only includes intents when Passed=true (intents are gated by gate pass status)
+- [ ] Test that when Passed=false, ApprovedIntents is empty (no intents approved on failed gate)
+- [ ] Test that HasCriticalFailure=true when any failure has Critical severity
+- [ ] Test that ShouldRetry=true when Passed=false and HasCriticalFailure=false
+- [ ] Test that dispatcher only consumes ApprovedIntents or controller-emitted intents derived from approved intents
+- [ ] Document contract: Intents are only approved when gate passes; failed gates produce empty ApprovedIntents
+
+#### Configuration Flags
+- [ ] Test that Minimal config (all checks disabled) always passes
+- [ ] Test that Default config enables all checks
+- [ ] Test that individual flags can be toggled independently
+
+---
+
+## 10.5 MemoryMutationController: Authority Enforcement & Mutation Application
+
+**Component**: `LlamaBrain/Source/Persona/MemoryMutationController.cs`  
+**Current Coverage**: Basic mutation execution tests exist (41 tests), but authority enforcement needs explicit verification  
+**Test Location**: `LlamaBrain.Tests/Memory/MemoryMutationControllerTests.cs`  
+**Estimated Tests**: 30-35 additional tests
+
+### Tests Needed
+
+#### Approved Mutations Application
+- [ ] Test that only mutations from GateResult.ApprovedMutations are executed
+- [ ] Test that mutations from GateResult.RejectedMutations are NOT executed
+- [ ] Test that ExecuteMutations skips all mutations when GateResult.Passed=false
+- [ ] Test that mutations are executed in order (first to last)
+- [ ] Test that mutation execution continues even if one mutation fails
+
+#### Forbidden Mutations Rejection
+- [ ] Test that canonical fact mutations are rejected (even if in ApprovedMutations - defense in depth)
+- [ ] Test that ValidateMutation() pre-flight check rejects canonical facts (defense in depth: check before execution)
+- [ ] Test that canonical fact mutation attempts increment CanonicalMutationAttempts statistic
+- [ ] Test that rejected mutations don't affect memory system
+- [ ] Test that rejection reason is logged correctly
+- [ ] Test that defense in depth works: even if GateResult.Passed=true and mutation in ApprovedMutations, canonical fact check still rejects
+
+#### Authority Enforcement on World State
+- [ ] Test that mutations cannot modify world state directly (world state is GameSystem authority, not ValidatedOutput authority)
+- [ ] Test that AppendEpisodic mutations use MutationSource.ValidatedOutput authority
+- [ ] Test that TransformBelief mutations use MutationSource.ValidatedOutput authority
+- [ ] Test that TransformRelationship mutations use MutationSource.ValidatedOutput authority
+- [ ] Test that EmitWorldIntent can lead to world state changes via game systems, but is not a "direct" mutation (precise wording: no direct world state mutation type exists)
+- [ ] Test that authority boundaries are enforced by AuthoritativeMemorySystem
+
+#### Authority Enforcement on Canonical Facts
+- [ ] Test that canonical facts cannot be modified by any mutation type
+- [ ] Test that canonical facts cannot be deleted
+- [ ] Test that canonical facts cannot be overridden by beliefs
+- [ ] Test that IsCanonicalFact() check happens before mutation execution
+- [ ] Test that canonical fact protection works for all mutation types:
+  - [ ] AppendEpisodic (should not target canonical facts)
+  - [ ] TransformBelief (explicitly blocked)
+  - [ ] TransformRelationship (explicitly blocked)
+
+#### Mutation Execution Results
+- [ ] Test that successful mutations return MutationExecutionResult.Succeeded
+- [ ] Test that failed mutations return MutationExecutionResult.Failed with error message
+- [ ] Test that MutationBatchResult contains all individual results
+- [ ] Test that batch result statistics (SuccessCount, FailureCount) are accurate
+- [ ] Test that AllSucceeded=true only when all mutations succeed
+
+#### World Intent Emission
+- [ ] Test that approved intents from GateResult are emitted via OnWorldIntentEmitted event
+- [ ] Test that intents are emitted even if mutations fail
+- [ ] Test that intents include correct NPC ID
+- [ ] Test that intents are added to MutationBatchResult.EmittedIntents
+- [ ] Test that intent emission increments IntentsEmitted statistic
+
+#### Statistics Tracking
+- [ ] Test that TotalAttempted increments for each mutation
+- [ ] Test that TotalSucceeded increments only for successful mutations
+- [ ] Test that TotalFailed increments only for failed mutations
+- [ ] Test that type-specific statistics (EpisodicAppended, BeliefsTransformed, etc.) increment correctly
+- [ ] Test that SuccessRate calculates correctly: (TotalSucceeded / TotalAttempted * 100)
+
+#### Edge Cases
+- [ ] Test with empty ApprovedMutations list (should return empty batch)
+- [ ] Test with null GateResult (should throw ArgumentNullException)
+- [ ] Test with null MemorySystem (should throw ArgumentNullException)
+- [ ] Test that exception during mutation execution is caught and returned as Failed result
+
+---
+
+## 10.6 WorldIntentDispatcher: Pure Dispatcher Behavior
+
+**Component**: `LlamaBrainRuntime/Runtime/Core/WorldIntentDispatcher.cs` (Unity Runtime)  
+**Current Coverage**: No unit tests exist (Unity component requires PlayMode tests)  
+**Test Location**: `LlamaBrainRuntime/Tests/PlayMode/WorldIntentDispatcherTests.cs` (new file)  
+**Estimated Tests**: 20-25 PlayMode tests
+
+**Note**: Pipeline policy tests (when to dispatch, when not to dispatch) belong in Phase 10.7 Integration Tests. This section tests pure dispatcher behavior.
+
+### Tests Needed
+
+#### Intent Dispatch Execution
+- [ ] Test that DispatchIntent() fires OnAnyIntent Unity event with correct parameters
+- [ ] Test that DispatchBatch() dispatches all intents from MutationBatchResult.EmittedIntents
+- [ ] Test that intents are dispatched in order (first to last)
+- [ ] Test that null intent is handled gracefully (returns early, no crash)
+
+#### Intent Handler Execution
+- [ ] Test that OnAnyIntent Unity event fires for all dispatched intents
+- [ ] Test that intent-specific handlers (IntentHandlerConfig) fire for matching intent types
+- [ ] Test that code-registered handlers (RegisterHandler) fire for matching intent types
+- [ ] Test that wildcard handler ("*") fires for all intents
+- [ ] Test that handler exceptions don't prevent other handlers from executing
+
+#### Intent History Tracking
+- [ ] Test that dispatched intents are recorded in IntentHistory
+- [ ] Test that history respects maxHistorySize limit (default 100)
+- [ ] Test that GetIntentsFromNpc() filters correctly by NPC ID
+- [ ] Test that GetIntentsByType() filters correctly by intent type
+- [ ] Test that history records include correct GameTime (Time.time)
+
+#### Statistics
+- [ ] Test that TotalIntentsDispatched increments for each dispatched intent
+- [ ] Test that ResetStatistics() clears history and counter
+- [ ] Test that statistics are accurate across multiple dispatch calls
+
+#### Integration with MemoryMutationController
+- [ ] Test that HookToController() subscribes to OnWorldIntentEmitted event
+- [ ] Test that UnhookFromController() unsubscribes correctly
+- [ ] Test that automatic dispatch works when hooked to controller
+- [ ] Test that manual DispatchIntent() still works when hooked
+
+#### Singleton Pattern
+- [ ] Test that multiple dispatcher instances are handled correctly (enforce hard singleton: disable and Destroy duplicates in Awake())
+- [ ] Test that duplicate destruction happens end-of-frame (tests must yield return null before asserting)
+- [ ] Test that singleton instance is accessible via Instance property
+- [ ] Test that destroying singleton instance clears Instance property (only if Instance == this)
+
+#### Edge Cases
+- [ ] Test with null intent (should not crash, should return early)
+- [ ] Test with null npcId (should handle gracefully)
+- [ ] Test with empty intent type (should still dispatch)
+
+---
+
+## 10.7 Integration Tests: Full Pipeline Determinism & Policy
+
+**Component**: Full inference pipeline (all 9 components)  
+**Status**: In Progress - FullPipelineIntegrationTests Complete, Deterministic Proof Gaps Pending  
+**Current Coverage**: Full pipeline integration tests exist (`FullPipelineIntegrationTests.cs`), but deterministic behavior proof gaps need explicit verification  
+**Test Location**: 
+- ✅ `LlamaBrain.Tests/Integration/FullPipelineIntegrationTests.cs` (COMPLETE - 8 tests, tests full 9-component pipeline)
+- [ ] `LlamaBrain.Tests/Integration/DeterministicPipelineTests.cs` (new file - for deterministic proof gaps)  
+**Estimated Tests**: 15-20 additional tests
+
+### Tests Needed
+
+#### Deterministic State Reconstruction
+- [ ] Test that same StateSnapshot + same constraints = same prompt assembly
+- [ ] Test that same prompt sent to mocked IApiClient yields same output (controlled, deterministic mock)
+- [ ] Test that same ParsedOutput + same ValidationContext = same GateResult
+- [ ] Test that same GateResult + same MemorySystem initial state = same mutation results
+- [ ] Test that mutation results are a pure function of GateResult + MemorySystem initial state
+
+#### No-Now Enforcement Tests (High Leverage)
+- [ ] Test that runs the same retrieval/assembly twice with the same snapshot but different wall clock time and asserts identical output
+- [ ] **Catches**: Accidental `UtcNow` usage in scoring/decay
+- [ ] **Implementation**: Create snapshot with fixed `SnapshotTimeUtcTicks`, run twice with different `DateTime.UtcNow` values, assert byte-identical prompt assembly
+
+#### Dictionary Order Tripwire Test (High Leverage)
+- [ ] Test that stores memories in a dictionary in deliberately shuffled insertion order, then verifies output ordering is identical across runs
+- [ ] **Forces**: Sorting, not reliance on enumeration order
+- [ ] **Implementation**: Insert memories in random order into Dictionary/HashSet, retrieve via ContextRetrievalLayer, assert deterministic ordering regardless of insertion order
+
+#### Near-Equal Floating Score Tests (High Leverage)
+- [ ] Test with two items whose score differs at ~1e-12, verify deterministic ordering via tie-breakers or quantization rule
+- [ ] **Catches**: Floating-point drift issues
+- [ ] **Implementation**: Create memories with scores that differ only at floating-point precision limits, verify ordering via SequenceNumber tie-breaker
+
+#### Serialization Round-Trip Determinism (High Leverage)
+- [ ] Test that serializes memory system, reloads, runs retrieval/assembly, and asserts identical results including ordering
+- [ ] **Catches**: SequenceNumber persistence bugs immediately
+- [ ] **Implementation**: Serialize AuthoritativeMemorySystem, deserialize, run ContextRetrievalLayer, assert identical ordering and prompt assembly
+
+#### Pipeline Order Verification
+- [ ] Test that pipeline executes in correct order:
+  1. ContextRetrievalLayer retrieves context
+  2. StateSnapshotBuilder creates snapshot
+  3. PromptAssembler assembles prompt
+  4. Mocked IApiClient generates output (deterministic)
+  5. OutputParser parses output
+  6. ValidationGate validates output
+  7. MemoryMutationController executes mutations
+  8. WorldIntentDispatcher dispatches intents
+- [ ] Test that each step uses output from previous step correctly
+- [ ] **Test Mechanism**: Use instrumentation hooks (events, spy objects, or injected interfaces) to observe execution order without reflection. Verify order by checking hook invocation sequence.
+
+#### Retry Behavior
+- [ ] Test that failed validation triggers retry with constraint escalation
+- [ ] Test that retry uses snapshot.ForRetry() with merged constraints
+- [ ] Test that retry increments attempt number in state
+- [ ] Test that max retries limit is respected
+- [ ] Test that critical failures skip retry and use fallback
+
+#### Memory Mutation Integration
+- [ ] Test that mutations are only applied after successful validation (GateResult.Passed=true)
+- [ ] Test that mutations affect subsequent context retrieval (state changes are visible)
+- [ ] Test that canonical fact protection works end-to-end (cannot be mutated through any path)
+
+#### Intent Dispatch Policy (Pipeline-Level)
+- [ ] Test that intents are only dispatched when GateResult.Passed=true
+- [ ] Test that when GateResult.Passed=false, no intents are dispatched (even if intents exist in ParsedOutput)
+- [ ] Test that when GateResult.HasCriticalFailure=true, no intents are dispatched
+- [ ] Test that intent dispatch happens AFTER mutation execution (in pipeline order)
+- [ ] Test that rejected mutations don't prevent intent dispatch (if gate passed)
+- [ ] **Pipeline Policy Defense Test**: Inject intents into `ParsedOutput` on a failing gate and assert **zero dispatches** (dispatcher must only consume from `MutationBatchResult.EmittedIntents`, never directly from `ParsedOutput.Intents`)
+
+---
+
+## Implementation Plan
+
+1. **Phase 10.1-10.5**: Unit tests in base library (NUnit)
+   - Can be implemented immediately
+   - No Unity dependencies
+   - Fast execution
+   - **Estimated**: 5-7 days
+
+2. **Phase 10.6**: PlayMode tests in Unity Runtime
+   - Requires Unity Test Framework
+   - Requires Unity Editor or test runner
+   - Tests Unity-specific components
+   - **Estimated**: 2-3 days
+
+3. **Phase 10.7**: Integration tests
+   - Can use mocked LLM for determinism
+   - Tests full pipeline flow
+   - Validates architectural correctness
+   - **Estimated**: 2-3 days
+
+**Total Estimated Effort**: 9-13 days
+
+---
+
+## Critical Implementation Requirements
+
+These requirements must be implemented in code (not just tested). The tests will fail if these are not correctly implemented.
+
+### 1. Strict Total Order Sort Algorithm (ContextRetrievalLayer)
+- **Requirement**: Ordering must be implemented via a comparator chain that forms a strict total order, including `SequenceNumber` as the final unique key.
+- **Implementation shape**: Use LINQ `OrderBy().ThenBy()` for all sorting operations (implementation preference, not stability requirement).
+- **Reason**: Since every element has a unique final key (`SequenceNumber`), there are no ties. Stability is irrelevant—the requirement is a strict total order. LINQ `OrderBy/ThenBy` provides a clear implementation shape.
+- **Location**: `ContextRetrievalLayer.cs` - all memory sorting operations
+- **Test**: Verify that identical scores produce deterministic ordering via SequenceNumber tie-breaker
+
+### 2. Deterministic Total Order Key with Persistence (ContextRetrievalLayer)
+- **Requirement**: Every episodic memory and belief entry must have `SequenceNumber` assigned at insertion time from a monotonic counter owned by the memory system.
+- **Persistence** (CRITICAL): `SequenceNumber` is persisted as part of each memory entry. The memory system counter is persisted as `NextSequenceNumber`.
+- **On load**: `NextSequenceNumber = max(SequenceNumber) + 1` (never reassign based on enumeration order).
+- **On merge**: Preserve existing SequenceNumbers; new imported entries get new SequenceNumbers assigned in a deterministic order based on `(CreatedAtTicks, Id ordinal, Source)`.
+- **Sorting** (concrete LINQ shape):
+  - Episodic: `OrderByDescending(score).ThenByDescending(CreatedAtTicks).ThenBy(Id, StringComparer.Ordinal).ThenBy(SequenceNumber)`
+  - Beliefs: `OrderByDescending(score).ThenByDescending(Confidence).ThenBy(Id, StringComparer.Ordinal).ThenBy(SequenceNumber)`
+- **Id Comparison Requirement**: Id comparisons MUST use ordinal ordering (`StringComparer.Ordinal`). Default string comparison is culture-sensitive and breaks determinism across machines/locales.
+- **CreatedAt Requirement**: `CreatedAtTicks = DateTimeOffset.UtcNow.UtcTicks` captured at insertion and persisted; never derived from local time or recomputed.
+- **SequenceNumber Direction**: SequenceNumber is monotonic increasing; lower SequenceNumber means earlier insertion and sorts earlier when all higher-priority keys tie.
+- **Reason**: Guarantees determinism even when CreatedAt/Id collide and source order is unstable. SequenceNumber is required even if Ids are globally unique (cheap insurance and makes proof claim simple).
+- **Location**: 
+  - `AuthoritativeMemorySystem.cs` - add SequenceNumber field, monotonic counter, and persistence logic
+  - `ContextRetrievalLayer.cs` - implemented as secondary sort keys in a single total-order sort
+- **Test**: Verify determinism even when timestamps/identifiers are equal, and verify persistence round-trip determinism
+
+### 3. ContextRetrievalLayer Score vs Tie-Breaker Logic
+- **Requirement**: Primary sort = score, secondary sort = tie-breaker keys. "All weights zero" is a special case where score collapses to 0 for all items, so tie-breaker keys become primary.
+- **Time source**: All time-dependent computations use `SnapshotTimeUtcTicks` captured in `StateSnapshot`. No `DateTime.UtcNow` or `Time.time` during scoring, decay, or pruning.
+- **Floating-point determinism**: Score outputs are rounded before ordering, or ordering uses deterministic tiebreak even for "nearly equal" floats. Two viable patterns:
+  - Convert to `int scoreQ = (int)Math.Round(score * 1_000_000)` and sort by `scoreQ`.
+  - Or keep `double` but require that any comparisons use total-order keys afterward and tests include near-equal cases.
+- **Implementation** (must use StringComparer.Ordinal for Id): 
+  - Episodic: `OrderByDescending(score).ThenByDescending(CreatedAtTicks).ThenBy(Id, StringComparer.Ordinal).ThenBy(SequenceNumber)`
+  - Beliefs: `OrderByDescending(score).ThenByDescending(Confidence).ThenBy(Id, StringComparer.Ordinal).ThenBy(SequenceNumber)`
+- **Location**: `ContextRetrievalLayer.cs` - `RetrieveEpisodicMemories()` and `RetrieveBeliefs()`
+- **Test**: Assert exact behavior: primary = score, secondary = tie-breaker keys (including SequenceNumber), Id uses ordinal comparison. Test with near-equal floating scores.
+
+### 4. OutputParser Normalization Contract
+- **Requirement**: Normalization must be centralized and deterministic. Stage is pinned:
+  - If `ExtractStructuredData=false`: `NormalizeWhitespace(raw)` and return.
+  - If `ExtractStructuredData=true`: `Extract(raw)` → `NormalizeWhitespace(dialogue)`.
+- **Implementation**: Create `NormalizeWhitespace(string text)` method that applies:
+  - CRLF→LF
+  - Trim trailing whitespace per line
+  - Collapse 3+ consecutive blank lines to 2
+  - **Blank line definition**: a line that is empty after trimming trailing whitespace (determines collapse rule when lines contain spaces/tabs)
+  - **Trailing newline**: Does NOT add a newline. Preserves an existing trailing newline if present in input (or always strips—pick one and lock it).
+  - **Leading blank lines**: Preserved (or stripped—pick one and lock it).
+  - **BOM handling**: Strips `\uFEFF` (BOM) if present at start.
+- **Raw mode semantics**: Raw mode is semantically lossless except for whitespace normalization rules. Whitespace normalization is allowed even in raw mode.
+- **Location**: `OutputParser.cs` - normalization logic
+- **Test**: Verify "byte-for-byte identical except normalization" rule matches stage ordering. Test trailing newline, BOM, and leading blank line behavior.
+
+### 5. WorldIntentDispatcher Singleton Lifecycle
+- **Requirement**: 
+  - `Awake()` enforces singleton by: If `Instance != null && Instance != this`: disable duplicate and `Destroy(gameObject)` (end-of-frame). Else set `Instance = this`.
+  - `OnDestroy()` clears Instance only if `Instance == this`
+  - Tests must `yield return null` before asserting duplicate removal (Unity lifecycle)
+- **Lifetime Model** (MUST be pinned):
+  - **Option A**: Dispatcher is scene-local; no `DontDestroyOnLoad`; scenes must contain exactly one.
+  - **Option B**: Dispatcher is global; uses `DontDestroyOnLoad`; duplicates destroyed.
+  - **Pick one and state it explicitly**. Otherwise tests will pass in one setup and fail in another.
+- **Location**: `WorldIntentDispatcher.cs` - `Awake()` and `OnDestroy()` methods
+- **Test**: Verify singleton lifecycle semantics (duplicate destruction, Instance clearing). Test both scene-local and global lifetime models if applicable.
+
+---
+
+## Success Criteria
+
+- [ ] All 6 component test suites complete (10.1-10.6)
+- [ ] Integration tests verify deterministic behavior (10.7)
+- [ ] 100% of critical selection/ordering logic explicitly tested
+- [ ] All edge cases covered for malformed input handling
+- [ ] Authority enforcement verified for all mutation types
+- [ ] Gate ordering and execution flow documented through tests
+- [ ] All contract conflicts resolved and documented (see `DETERMINISM_CONTRACT.md`)
+- [ ] Tests match implemented contract (no contradictions between test expectations and code behavior)
+- [ ] **All Critical Implementation Requirements met** (see Implementation Requirements section):
+  - [ ] Stable sort algorithm (LINQ OrderBy/ThenBy) used throughout
+  - [ ] SequenceNumber field added to all episodic memories and beliefs (monotonic counter at insertion)
+  - [ ] Deterministic total order key implemented (score desc, CreatedAtTicks desc, Id asc (ordinal), SequenceNumber asc for episodic; score desc, Confidence desc, Id asc (ordinal), SequenceNumber asc for beliefs)
+  - [ ] Score vs tie-breaker logic correctly implemented (primary/secondary sort with SequenceNumber)
+  - [ ] OutputParser normalization centralized and deterministic (stage pinned: if ExtractStructuredData=false then NormalizeWhitespace(raw) and return; if true then Extract(raw) → NormalizeWhitespace(dialogue))
+  - [ ] WorldIntentDispatcher singleton lifecycle correctly implemented (Awake destroys duplicates end-of-frame, OnDestroy clears Instance)
+- [ ] Total estimated: 150-180 additional tests
+
+---
+
+## Release Strategy & Deferral Decision
+
+**Phase 10 Status**: Required for v1.0 release, but can be deferred for pre-1.0 releases (rc/preview)
+
+**Versioning Strategy**:
+- **Pre-1.0 (rc/preview)**: Can ship without Phase 10 complete
+  - Architecture is functional and well-tested (92.37% coverage)
+  - Phase 10 document remains in-repo as explicit proof-gap backlog
+  - Pre-1.0 may claim "deterministic architecture pattern" but must NOT claim "deterministically proven" or "formally verified"
+- **v1.0+**: Phase 10 must be complete
+  - All proof gaps closed
+  - Architecture can be claimed as "deterministically proven"
+  - Full audit trail available
+
+**Rationale**: Phase 10 transforms "good story" into "auditable claim." The architecture is sound and functional without it, but the deterministic proof requires explicit verification of all selection/ordering/authority behaviors.
+
+---
+
+**Next Review**: After Phase 10.1 completion (ContextRetrievalLayer tests)

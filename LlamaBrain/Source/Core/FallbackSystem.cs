@@ -7,6 +7,108 @@ using LlamaBrain.Core.Inference;
 namespace LlamaBrain.Core
 {
   /// <summary>
+  /// Utility class for converting fallback strings to few-shot examples.
+  /// </summary>
+  public static class FallbackToFewShotConverter
+  {
+    /// <summary>
+    /// Default player inputs for different trigger reasons.
+    /// Used when converting fallback responses to few-shot examples.
+    /// </summary>
+    private static readonly Dictionary<TriggerReason, string[]> DefaultPlayerInputs = new Dictionary<TriggerReason, string[]>
+    {
+      { TriggerReason.PlayerUtterance, new[] { "Hello", "Hi there", "Greetings", "Hey" } },
+      { TriggerReason.ZoneTrigger, new[] { "Hello", "Who are you?", "What is this place?" } },
+      { TriggerReason.TimeTrigger, new[] { "What's happening?", "How are things?" } },
+      { TriggerReason.QuestTrigger, new[] { "Do you have any work for me?", "I'm here to help" } },
+      { TriggerReason.NpcInteraction, new[] { "Hello friend", "Greetings", "Good day" } },
+      { TriggerReason.WorldEvent, new[] { "What was that?", "Did you see that?" } },
+      { TriggerReason.Custom, new[] { "Hello", "What can you tell me?" } }
+    };
+
+    /// <summary>
+    /// Converts a list of fallback responses to few-shot examples.
+    /// </summary>
+    /// <param name="fallbacks">The fallback responses to convert</param>
+    /// <param name="triggerReason">Optional trigger reason to select appropriate player inputs</param>
+    /// <param name="maxExamples">Maximum number of examples to generate (default: 3)</param>
+    /// <param name="random">Optional random number generator for input selection</param>
+    /// <returns>A list of FewShotExample instances</returns>
+    public static List<FewShotExample> ConvertFallbacksToFewShot(
+      IEnumerable<string> fallbacks,
+      TriggerReason triggerReason = TriggerReason.PlayerUtterance,
+      int maxExamples = 3,
+      Random? random = null)
+    {
+      var rng = random ?? new Random();
+      var fallbackList = fallbacks?.ToList() ?? new List<string>();
+      var playerInputs = GetPlayerInputsForTrigger(triggerReason);
+
+      var examples = new List<FewShotExample>();
+      var count = Math.Min(fallbackList.Count, maxExamples);
+
+      for (int i = 0; i < count; i++)
+      {
+        var playerInput = playerInputs[i % playerInputs.Length];
+        examples.Add(new FewShotExample(playerInput, fallbackList[i]));
+      }
+
+      return examples;
+    }
+
+    /// <summary>
+    /// Converts a FallbackConfig to a list of few-shot examples.
+    /// </summary>
+    /// <param name="config">The fallback configuration</param>
+    /// <param name="triggerReason">The trigger reason to select fallbacks for</param>
+    /// <param name="maxExamples">Maximum number of examples to generate</param>
+    /// <param name="random">Optional random number generator</param>
+    /// <returns>A list of FewShotExample instances</returns>
+    public static List<FewShotExample> ConvertConfigToFewShot(
+      FallbackSystem.FallbackConfig config,
+      TriggerReason triggerReason = TriggerReason.PlayerUtterance,
+      int maxExamples = 3,
+      Random? random = null)
+    {
+      if (config == null) return new List<FewShotExample>();
+
+      var fallbacks = triggerReason switch
+      {
+        TriggerReason.PlayerUtterance => config.PlayerUtteranceFallbacks,
+        TriggerReason.ZoneTrigger => config.ZoneTriggerFallbacks,
+        TriggerReason.TimeTrigger => config.TimeTriggerFallbacks,
+        TriggerReason.QuestTrigger => config.QuestTriggerFallbacks,
+        TriggerReason.NpcInteraction => config.NpcInteractionFallbacks,
+        TriggerReason.WorldEvent => config.WorldEventFallbacks,
+        TriggerReason.Custom => config.CustomTriggerFallbacks,
+        _ => config.GenericFallbacks
+      };
+
+      // If specific fallbacks are empty, fall back to generic
+      if (fallbacks == null || fallbacks.Count == 0)
+      {
+        fallbacks = config.GenericFallbacks;
+      }
+
+      return ConvertFallbacksToFewShot(fallbacks, triggerReason, maxExamples, random);
+    }
+
+    /// <summary>
+    /// Gets the default player inputs for a trigger reason.
+    /// </summary>
+    /// <param name="triggerReason">The trigger reason</param>
+    /// <returns>Array of player input strings</returns>
+    private static string[] GetPlayerInputsForTrigger(TriggerReason triggerReason)
+    {
+      if (DefaultPlayerInputs.TryGetValue(triggerReason, out var inputs))
+      {
+        return inputs;
+      }
+      return DefaultPlayerInputs[TriggerReason.PlayerUtterance];
+    }
+  }
+
+  /// <summary>
   /// Provides author-controlled fallback responses when inference fails.
   /// Supports context-aware fallbacks based on trigger reason and tracks usage statistics.
   /// Engine-agnostic implementation (no Unity dependencies).

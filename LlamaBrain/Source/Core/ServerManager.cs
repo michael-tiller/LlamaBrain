@@ -191,12 +191,15 @@ namespace LlamaBrain.Core
     /// </summary>
     public void StopServer()
     {
+      // Idempotent: if already disposed, return silently (no throw)
       if (_disposed)
-        throw new ObjectDisposedException(nameof(ServerManager));
+      {
+        return;
+      }
 
+      // Idempotent: if process is null or already exited, return silently
       if (_process == null || _process.HasExited)
       {
-        Logger.Info("[Server] llama-server is not running");
         return;
       }
 
@@ -205,24 +208,59 @@ namespace LlamaBrain.Core
         Logger.Info($"[Server] Stopping llama-server (PID: {_process.Id})");
 
         // Try graceful shutdown first
-        if (!_process.CloseMainWindow())
+        try
         {
-          // Force kill if graceful shutdown fails
-          _process.Kill();
+          if (!_process.CloseMainWindow())
+          {
+            // Force kill if graceful shutdown fails (kill entire process tree on Windows)
+            KillProcessTree(_process);
+          }
+        }
+        catch (InvalidOperationException)
+        {
+          // Process already exited - ignore (idempotent)
         }
 
-        // Wait for the process to exit
+        // Wait for the process to exit with bounded timeout
         if (!_process.WaitForExit(MaxShutdownTimeoutSeconds * 1000))
         {
-          Logger.Warn("[Server] Process did not exit within timeout, force killing");
-          _process.Kill();
-          _process.WaitForExit(5000); // Wait a bit more
+          // Process did not exit within timeout - force kill entire tree
+          try
+          {
+            KillProcessTree(_process);
+            // Wait again after kill
+            _process.WaitForExit(5000); // Wait a bit more after kill
+          }
+          catch (InvalidOperationException)
+          {
+            // Process already exited - ignore (idempotent)
+          }
+        }
+
+        // Verify process is actually dead (invariant: process must be dead before return)
+        if (!_process.HasExited)
+        {
+          Logger.Warn("[Server] Process still running after kill attempt, forcing final kill");
+          try
+          {
+            KillProcessTree(_process);
+            _process.WaitForExit(2000); // Final wait
+          }
+          catch (InvalidOperationException)
+          {
+            // Process exited during kill - ignore (idempotent)
+          }
         }
 
         Logger.Info("[Server] llama-server stopped successfully");
       }
+      catch (InvalidOperationException)
+      {
+        // Process already exited or disposed - swallow (idempotent, normal shutdown path)
+      }
       catch (Exception ex)
       {
+        // Only log unexpected errors (not "already exited" cases)
         Logger.Error($"[Server] Error stopping llama-server: {ex.Message}");
       }
       finally
@@ -598,7 +636,7 @@ namespace LlamaBrain.Core
     /// <summary>
     /// Check if a server log line should be filtered out (verbose/unnecessary messages)
     /// </summary>
-    private bool ShouldFilterServerLog(string line)
+    internal bool ShouldFilterServerLog(string line)
     {
       if (string.IsNullOrWhiteSpace(line))
         return true;
@@ -702,7 +740,7 @@ namespace LlamaBrain.Core
     /// <summary>
     /// Sanitize process output
     /// </summary>
-    private string SanitizeProcessOutput(string output)
+    internal string SanitizeProcessOutput(string output)
     {
       if (string.IsNullOrEmpty(output))
         return string.Empty;
@@ -719,6 +757,37 @@ namespace LlamaBrain.Core
     /// <summary>
     /// Clean up the process
     /// </summary>
+    /// <summary>
+    /// Kills the process and its entire process tree (all child processes).
+    /// On Windows, uses entireProcessTree parameter if available (.NET 5.0+).
+    /// </summary>
+    private void KillProcessTree(Process process)
+    {
+      if (process == null || process.HasExited)
+        return;
+
+      try
+      {
+#if NET5_0_OR_GREATER
+        // .NET 5.0+ supports entireProcessTree parameter
+        process.Kill(entireProcessTree: true);
+#else
+        // Fallback for older .NET versions - just kill the process
+        // Note: Child processes may leak on older .NET versions
+        process.Kill();
+#endif
+      }
+      catch (InvalidOperationException)
+      {
+        // Process already exited - ignore (idempotent)
+      }
+      catch (Exception ex)
+      {
+        // Log but don't throw - we'll verify HasExited later
+        Logger.Warn($"[Server] Error killing process tree: {ex.Message}");
+      }
+    }
+
     private void CleanupProcess()
     {
       try

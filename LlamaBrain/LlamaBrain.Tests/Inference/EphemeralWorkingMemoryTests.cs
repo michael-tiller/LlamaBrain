@@ -536,6 +536,226 @@ namespace LlamaBrain.Tests.Inference
 
     #endregion
 
+    #region Few-Shot Examples Tests
+
+    [Test]
+    public void FewShotExample_Constructor_SetsPropertiesCorrectly()
+    {
+      // Act
+      var example = new FewShotExample("Hello", "Hi there!");
+
+      // Assert
+      Assert.That(example.PlayerInput, Is.EqualTo("Hello"));
+      Assert.That(example.NpcResponse, Is.EqualTo("Hi there!"));
+    }
+
+    [Test]
+    public void FewShotExample_FromFallback_CreatesWithDefaultPlayerInput()
+    {
+      // Act
+      var example = FewShotExample.FromFallback("I'm not sure about that.");
+
+      // Assert
+      Assert.That(example.PlayerInput, Is.EqualTo("Hello"));
+      Assert.That(example.NpcResponse, Is.EqualTo("I'm not sure about that."));
+    }
+
+    [Test]
+    public void FewShotExample_FromFallback_WithCustomPlayerInput_UsesCustomInput()
+    {
+      // Act
+      var example = FewShotExample.FromFallback("Greetings traveler!", "Who are you?");
+
+      // Assert
+      Assert.That(example.PlayerInput, Is.EqualTo("Who are you?"));
+      Assert.That(example.NpcResponse, Is.EqualTo("Greetings traveler!"));
+    }
+
+    [Test]
+    public void FewShotExample_CharacterCount_ReturnsCorrectValue()
+    {
+      // Arrange
+      var example = new FewShotExample("Hello", "Hi there!");
+
+      // Act
+      var count = example.CharacterCount;
+
+      // Assert
+      Assert.That(count, Is.EqualTo(5 + 9)); // "Hello" + "Hi there!"
+    }
+
+    [Test]
+    public void WorkingMemoryConfig_FewShotDefaults_AreCorrect()
+    {
+      // Act
+      var config = WorkingMemoryConfig.Default;
+
+      // Assert
+      Assert.That(config.FewShotExamples, Is.Null);
+      Assert.That(config.MaxFewShotExamples, Is.EqualTo(3));
+      Assert.That(config.AlwaysIncludeFewShot, Is.False);
+    }
+
+    [Test]
+    public void EphemeralWorkingMemory_WithFewShotExamples_IncludesExamples()
+    {
+      // Arrange
+      var examples = new List<FewShotExample>
+      {
+        new FewShotExample("Hello", "Hi there!"),
+        new FewShotExample("How are you?", "I'm doing well, thank you!")
+      };
+      var config = new WorkingMemoryConfig { FewShotExamples = examples };
+      var snapshot = new StateSnapshotBuilder()
+        .WithContext(new InteractionContext())
+        .WithConstraints(new ConstraintSet())
+        .Build();
+
+      // Act
+      var workingMemory = new EphemeralWorkingMemory(snapshot, config);
+
+      // Assert
+      Assert.That(workingMemory.FewShotExamples.Count, Is.EqualTo(2));
+      Assert.That(workingMemory.FewShotExamples[0].PlayerInput, Is.EqualTo("Hello"));
+      Assert.That(workingMemory.FewShotExamples[1].NpcResponse, Is.EqualTo("I'm doing well, thank you!"));
+    }
+
+    [Test]
+    public void EphemeralWorkingMemory_WithMaxFewShotExamples_LimitsCount()
+    {
+      // Arrange
+      var examples = new List<FewShotExample>
+      {
+        new FewShotExample("Input 1", "Response 1"),
+        new FewShotExample("Input 2", "Response 2"),
+        new FewShotExample("Input 3", "Response 3"),
+        new FewShotExample("Input 4", "Response 4"),
+        new FewShotExample("Input 5", "Response 5")
+      };
+      var config = new WorkingMemoryConfig
+      {
+        FewShotExamples = examples,
+        MaxFewShotExamples = 2
+      };
+      var snapshot = new StateSnapshotBuilder()
+        .WithContext(new InteractionContext())
+        .WithConstraints(new ConstraintSet())
+        .Build();
+
+      // Act
+      var workingMemory = new EphemeralWorkingMemory(snapshot, config);
+
+      // Assert
+      Assert.That(workingMemory.FewShotExamples.Count, Is.EqualTo(2));
+    }
+
+    [Test]
+    public void EphemeralWorkingMemory_WithNoFewShotExamples_HasEmptyList()
+    {
+      // Arrange
+      var config = new WorkingMemoryConfig { FewShotExamples = null };
+      var snapshot = new StateSnapshotBuilder()
+        .WithContext(new InteractionContext())
+        .WithConstraints(new ConstraintSet())
+        .Build();
+
+      // Act
+      var workingMemory = new EphemeralWorkingMemory(snapshot, config);
+
+      // Assert
+      Assert.That(workingMemory.FewShotExamples, Is.Empty);
+    }
+
+    [Test]
+    public void GetFormattedFewShotExamples_FormatsCorrectly()
+    {
+      // Arrange
+      var examples = new List<FewShotExample>
+      {
+        new FewShotExample("Hello", "Greetings traveler!"),
+        new FewShotExample("What is this place?", "This is the town square.")
+      };
+      var config = new WorkingMemoryConfig { FewShotExamples = examples };
+      var snapshot = new StateSnapshotBuilder()
+        .WithContext(new InteractionContext())
+        .WithConstraints(new ConstraintSet())
+        .Build();
+      var workingMemory = new EphemeralWorkingMemory(snapshot, config);
+
+      // Act
+      var formatted = workingMemory.GetFormattedFewShotExamples("Player", "Guard");
+
+      // Assert
+      Assert.That(formatted, Does.Contain("Player: Hello"));
+      Assert.That(formatted, Does.Contain("Guard: Greetings traveler!"));
+      Assert.That(formatted, Does.Contain("Player: What is this place?"));
+      Assert.That(formatted, Does.Contain("Guard: This is the town square."));
+    }
+
+    [Test]
+    public void GetFormattedFewShotExamples_EmptyExamples_ReturnsEmpty()
+    {
+      // Arrange
+      var snapshot = new StateSnapshotBuilder()
+        .WithContext(new InteractionContext())
+        .WithConstraints(new ConstraintSet())
+        .Build();
+      var workingMemory = new EphemeralWorkingMemory(snapshot);
+
+      // Act
+      var formatted = workingMemory.GetFormattedFewShotExamples("Player", "NPC");
+
+      // Assert
+      Assert.That(formatted, Is.Empty);
+    }
+
+    [Test]
+    public void GetStats_IncludesFewShotCount()
+    {
+      // Arrange
+      var examples = new List<FewShotExample>
+      {
+        new FewShotExample("Hello", "Hi!"),
+        new FewShotExample("Bye", "Farewell!")
+      };
+      var config = new WorkingMemoryConfig { FewShotExamples = examples };
+      var snapshot = new StateSnapshotBuilder()
+        .WithContext(new InteractionContext())
+        .WithConstraints(new ConstraintSet())
+        .Build();
+      var workingMemory = new EphemeralWorkingMemory(snapshot, config);
+
+      // Act
+      var stats = workingMemory.GetStats();
+
+      // Assert
+      Assert.That(stats.FewShotCount, Is.EqualTo(2));
+    }
+
+    [Test]
+    public void Dispose_ClearsFewShotExamples()
+    {
+      // Arrange
+      var examples = new List<FewShotExample>
+      {
+        new FewShotExample("Hello", "Hi!")
+      };
+      var config = new WorkingMemoryConfig { FewShotExamples = examples };
+      var snapshot = new StateSnapshotBuilder()
+        .WithContext(new InteractionContext())
+        .WithConstraints(new ConstraintSet())
+        .Build();
+      var workingMemory = new EphemeralWorkingMemory(snapshot, config);
+
+      // Act
+      workingMemory.Dispose();
+
+      // Assert
+      Assert.That(workingMemory.FewShotExamples, Is.Empty);
+    }
+
+    #endregion
+
     #region ToString Tests
 
     [Test]

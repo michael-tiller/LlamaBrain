@@ -1,3 +1,4 @@
+#nullable enable
 using UnityEngine;
 using LlamaBrain.Core;
 using LlamaBrain.Persona;
@@ -17,17 +18,21 @@ namespace LlamaBrain.Runtime.Core
     /// <summary>
     /// The settings for the LlamaBrain server.
     /// </summary>
-    public BrainSettings Settings;
+    public BrainSettings? Settings;
 
     /// <summary>
     /// The server manager for the LlamaBrain server.
     /// </summary>
-    private ServerManager serverManager;
+    private ServerManager? serverManager;
     /// <summary>
     /// The client manager for the LlamaBrain server.
     /// </summary>
-    private ClientManager clientManager;
-    private CancellationTokenSource _cancellationTokenSource;
+    private ClientManager? clientManager;
+    private CancellationTokenSource? _cancellationTokenSource;
+    /// <summary>
+    /// The startup task for observing exceptions (prevents unobserved Task exceptions from async void Start)
+    /// </summary>
+    private Task? _startupTask;
     /// <summary>
     /// Whether the LlamaBrain server is initialized.
     /// </summary>
@@ -109,7 +114,9 @@ namespace LlamaBrain.Runtime.Core
         serverManager = new ServerManager(config);
         clientManager = new ClientManager(config);
         _cancellationTokenSource = new CancellationTokenSource();
+#if !UNITY_INCLUDE_TESTS
         DontDestroyOnLoad(gameObject);
+#endif
 
         // Subscribe to server output events so we can see llama.cpp logs in Unity
         serverManager.OnServerOutput += OnLlamaServerOutput;
@@ -126,8 +133,9 @@ namespace LlamaBrain.Runtime.Core
 
     /// <summary>
     /// Starts the LlamaBrain server.
+    /// Stores the startup Task to observe exceptions and prevent unobserved Task exceptions.
     /// </summary>
-    private async void Start()
+    private void Start()
     {
       // Auto-initialize if not already done
       if (!_isInitialized)
@@ -142,8 +150,35 @@ namespace LlamaBrain.Runtime.Core
         return;
       }
 
+      // Store the startup task to observe exceptions (prevents unobserved Task exceptions)
+      _startupTask = StartAsync();
+    }
+
+    /// <summary>
+    /// Async startup logic - separated from Start() to enable Task observation.
+    /// </summary>
+    private async Task StartAsync()
+    {
+      // Get cancellation token safely (may be disposed by StopServer() in race conditions)
+      CancellationToken token;
       try
       {
+        token = _cancellationTokenSource?.Token ?? CancellationToken.None;
+      }
+      catch (ObjectDisposedException)
+      {
+        // StopServer() was called during initialization - abort startup
+        return;
+      }
+
+      try
+      {
+        // Check if managers are still available (StopServer() might have disposed them)
+        if (serverManager == null || clientManager == null)
+        {
+          return; // StopServer() was called during initialization
+        }
+
         // Start the llama-server process
         serverManager.StartServer();
 
@@ -151,19 +186,68 @@ namespace LlamaBrain.Runtime.Core
         UnityEngine.Debug.Log($"[LLM] Server started with arguments: {serverManager.LastStartupArguments}");
 
         // Give the server a moment to start up
-        await Task.Delay(2000, _cancellationTokenSource.Token);
+        await Task.Delay(2000, token);
+        
+        // Re-check _isInitialized after await - StopServer() can flip it mid-flight
+        if (!_isInitialized || serverManager == null || clientManager == null)
+        {
+          return; // StopServer() was called during delay
+        }
 
         // Wait for the server to be ready
-        await clientManager.WaitForAsync(_cancellationTokenSource.Token);
+        await clientManager.WaitForAsync(token);
+        
+        // Re-check _isInitialized after await - StopServer() can flip it mid-flight
+        if (!_isInitialized)
+        {
+          return; // StopServer() was called during wait
+        }
       }
       catch (OperationCanceledException)
       {
         // Expected when the server is being destroyed, don't log as error
         UnityEngine.Debug.Log("[LLM] Server startup was canceled during cleanup.");
       }
+      catch (ObjectDisposedException)
+      {
+        // Expected when StopServer() disposes the CTS or managers during startup
+        UnityEngine.Debug.Log("[LLM] Server startup aborted during cleanup.");
+      }
+      catch (Exception ex)
+      {
+        // Only log if still initialized (not aborted by StopServer())
+        if (_isInitialized)
+        {
+          UnityEngine.Debug.LogError($"[LLM] Failed to start server: {ex.Message}");
+        }
+      }
+    }
+
+    /// <summary>
+    /// Manually start the server process.
+    /// This method starts the llama-server process but does not wait for it to be ready.
+    /// Use WaitForServerAsync() after calling this to wait for the server to be ready.
+    /// </summary>
+    public void StartServer()
+    {
+      if (!_isInitialized || serverManager == null)
+      {
+        UnityEngine.Debug.LogWarning("[LLM] LlamaBrainServer not initialized. Cannot start server.");
+        return;
+      }
+
+      try
+      {
+        // Start the llama-server process
+        serverManager.StartServer();
+
+        // Log the startup arguments to Unity console
+        UnityEngine.Debug.Log($"[LLM] Server started with arguments: {serverManager.LastStartupArguments}");
+      }
       catch (Exception ex)
       {
         UnityEngine.Debug.LogError($"[LLM] Failed to start server: {ex.Message}");
+        throw;
       }
     }
 
@@ -172,17 +256,83 @@ namespace LlamaBrain.Runtime.Core
     /// </summary>
     private void OnDestroy()
     {
+      // If StopServer() was already called, cleanup is already done - skip to avoid double-dispose
+      if (!_isInitialized)
+      {
+        return; // Already stopped/cleaned up
+      }
+
       // Unsubscribe from events
       if (serverManager != null)
       {
-        serverManager.OnServerOutput -= OnLlamaServerOutput;
-        serverManager.OnServerError -= OnLlamaServerStderrLine;
+        try
+        {
+          serverManager.OnServerOutput -= OnLlamaServerOutput;
+          serverManager.OnServerError -= OnLlamaServerStderrLine;
+        }
+        catch
+        {
+          // Ignore unsubscribe errors
+        }
       }
 
-      _cancellationTokenSource?.Cancel();
-      _cancellationTokenSource?.Dispose();
-      serverManager?.Dispose();
-      clientManager?.Dispose();
+      // Cancel and dispose only if not already disposed
+      try
+      {
+        _cancellationTokenSource?.Cancel();
+      }
+      catch
+      {
+        // Already disposed by StopServer() - ignore
+      }
+      
+      try
+      {
+        _cancellationTokenSource?.Dispose();
+      }
+      catch
+      {
+        // Already disposed - ignore
+      }
+      
+      try
+      {
+        serverManager?.Dispose();
+      }
+      catch
+      {
+        // Already disposed - ignore
+      }
+      
+      try
+      {
+        clientManager?.Dispose();
+      }
+      catch
+      {
+        // Already disposed - ignore
+      }
+
+      // Observe startup task to prevent unobserved Task exceptions
+      if (_startupTask != null)
+      {
+        try
+        {
+          // Observe any exceptions from the startup task
+          if (_startupTask.IsFaulted)
+          {
+            _ = _startupTask.Exception; // Observe exception to prevent unobserved Task exception
+          }
+        }
+        catch
+        {
+          // Ignore observation errors
+        }
+        _startupTask = null;
+      }
+
+      // Mark as uninitialized to avoid re-entry weirdness
+      _isInitialized = false;
     }
 
     /// <summary>
@@ -291,6 +441,30 @@ namespace LlamaBrain.Runtime.Core
     }
 
     /// <summary>
+    /// Register an agent for GPU layer updates.
+    /// This method registers the agent without configuring it.
+    /// Use ConfigureAgent() if you also want to configure the agent with server settings.
+    /// </summary>
+    /// <param name="agent">The agent to register</param>
+    public void RegisterAgent(LlamaBrainAgent agent)
+    {
+      if (agent == null)
+        return;
+
+      // Register agent for GPU layer updates
+      if (!registeredAgents.Contains(agent))
+      {
+        registeredAgents.Add(agent);
+      }
+
+      // Update with actual GPU layers if we've parsed them
+      if (ActualGpuLayersOffloaded >= 0)
+      {
+        agent.UpdateGpuLayersOffloaded(ActualGpuLayersOffloaded, TotalModelLayers);
+      }
+    }
+
+    /// <summary>
     /// Unregister an agent (call when agent is destroyed).
     /// </summary>
     /// <param name="agent">The agent to unregister</param>
@@ -306,7 +480,7 @@ namespace LlamaBrain.Runtime.Core
     /// Creates a client for the LlamaBrain server.
     /// </summary>
     /// <returns>The client for the LlamaBrain server.</returns>
-    public ApiClient CreateClient()
+    public ApiClient? CreateClient()
     {
       if (!_isInitialized || clientManager == null)
       {
@@ -414,19 +588,135 @@ namespace LlamaBrain.Runtime.Core
     /// <returns>Formatted status string</returns>
     public string GetServerStatus()
     {
-      if (!_isInitialized)
-        return "Server not initialized";
-
       var status = new System.Text.StringBuilder();
+      status.AppendLine("Server Status");
+      status.AppendLine($"Initialized: {_isInitialized}");
+      
+      if (!_isInitialized)
+      {
+        return status.ToString();
+      }
+
       status.AppendLine($"Status: {ConnectionStatus}");
       status.AppendLine($"Running: {IsServerRunning}");
       status.AppendLine($"Startup Time: {ServerStartupTime:F1}s");
       status.AppendLine($"Connection Attempts: {ConnectionAttempts}");
+      status.AppendLine($"Active Agents: {registeredAgents.Count}");
 
       if (!string.IsNullOrEmpty(LastErrorMessage))
         status.AppendLine($"Last Error: {LastErrorMessage}");
 
       return status.ToString();
+    }
+
+    /// <summary>
+    /// Stops the server process synchronously and idempotently.
+    /// This ensures the llama-server process is terminated before the GameObject is destroyed.
+    /// Call this explicitly in tests to prevent process leaks.
+    /// 
+    /// Requirements:
+    /// - Multiple calls are safe (idempotent)
+    /// - Returns only after the child process is dead (or confirmed not running)
+    /// - Never logs errors on normal shutdown paths during tests
+    /// </summary>
+    public void StopServer()
+    {
+      if (!_isInitialized)
+      {
+        return; // Already stopped or never initialized (idempotent)
+      }
+
+      // Cancel first, never throw
+      try
+      {
+        _cancellationTokenSource?.Cancel();
+      }
+      catch
+      {
+        // Ignore all exceptions during cancellation (idempotent)
+      }
+
+      // Stop process deterministically; ServerManager.StopServer() blocks until dead
+      // This is idempotent - ServerManager checks if process is already stopped
+      try
+      {
+        serverManager?.StopServer();
+      }
+      catch
+      {
+        // StopServer() should be idempotent and non-throwing, but catch any edge cases
+      }
+
+      // Unsubscribe safely
+      try
+      {
+        if (serverManager != null)
+        {
+          serverManager.OnServerOutput -= OnLlamaServerOutput;
+          serverManager.OnServerError -= OnLlamaServerStderrLine;
+        }
+      }
+      catch
+      {
+        // Ignore unsubscribe errors (idempotent)
+      }
+
+      // Dispose quietly (no error logging on normal shutdown paths)
+      try
+      {
+        _cancellationTokenSource?.Dispose();
+      }
+      catch
+      {
+        // Ignore disposal errors (idempotent)
+      }
+      
+      try
+      {
+        clientManager?.Dispose();
+      }
+      catch
+      {
+        // Ignore disposal errors (idempotent)
+      }
+      
+      try
+      {
+        serverManager?.Dispose();
+      }
+      catch
+      {
+        // Ignore disposal errors (idempotent)
+      }
+
+      // Observe startup task to prevent unobserved Task exceptions
+      if (_startupTask != null)
+      {
+        try
+        {
+          // Observe any exceptions from the startup task
+          if (_startupTask.IsFaulted)
+          {
+            _ = _startupTask.Exception; // Observe exception to prevent unobserved Task exception
+          }
+        }
+        catch
+        {
+          // Ignore observation errors
+        }
+        _startupTask = null;
+      }
+
+      // Null fields to make idempotence complete (prevents accidental double-dispose elsewhere)
+      _cancellationTokenSource = null;
+      clientManager = null;
+      serverManager = null;
+      registeredAgents.Clear();
+
+      IsServerRunning = false;
+      ConnectionStatus = "Stopped";
+      LastErrorMessage = "";
+      _isInitialized = false;
     }
 
     /// <summary>
@@ -436,7 +726,7 @@ namespace LlamaBrain.Runtime.Core
     {
       if (!_isInitialized || serverManager == null)
       {
-        UnityEngine.Debug.LogWarning("[LLM] Cannot restart server: not initialized");
+        UnityEngine.Debug.LogWarning("[LLM] Cannot restart server - not initialized");
         return;
       }
 

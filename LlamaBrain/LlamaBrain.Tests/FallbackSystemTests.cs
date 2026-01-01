@@ -5,6 +5,7 @@ using NUnit.Framework;
 using LlamaBrain.Core;
 using LlamaBrain.Core.Expectancy;
 using LlamaBrain.Core.Inference;
+using FewShotExample = LlamaBrain.Core.Inference.FewShotExample;
 
 namespace LlamaBrain.Tests
 {
@@ -550,6 +551,339 @@ namespace LlamaBrain.Tests
       // Assert
       Assert.IsNotNull(response);
       Assert.IsNotEmpty(response);
+    }
+
+    #endregion
+  }
+
+  /// <summary>
+  /// Tests for the FallbackToFewShotConverter utility class
+  /// </summary>
+  [TestFixture]
+  public class FallbackToFewShotConverterTests
+  {
+    #region ConvertFallbacksToFewShot Tests
+
+    [Test]
+    public void ConvertFallbacksToFewShot_WithValidFallbacks_ReturnsCorrectCount()
+    {
+      // Arrange
+      var fallbacks = new List<string>
+      {
+        "Hello there!",
+        "Greetings traveler.",
+        "How may I help you?"
+      };
+
+      // Act
+      var result = FallbackToFewShotConverter.ConvertFallbacksToFewShot(fallbacks);
+
+      // Assert
+      Assert.That(result.Count, Is.EqualTo(3));
+    }
+
+    [Test]
+    public void ConvertFallbacksToFewShot_WithMaxExamples_LimitsCount()
+    {
+      // Arrange
+      var fallbacks = new List<string>
+      {
+        "Response 1",
+        "Response 2",
+        "Response 3",
+        "Response 4",
+        "Response 5"
+      };
+
+      // Act
+      var result = FallbackToFewShotConverter.ConvertFallbacksToFewShot(fallbacks, maxExamples: 2);
+
+      // Assert
+      Assert.That(result.Count, Is.EqualTo(2));
+    }
+
+    [Test]
+    public void ConvertFallbacksToFewShot_WithEmptyFallbacks_ReturnsEmptyList()
+    {
+      // Arrange
+      var fallbacks = new List<string>();
+
+      // Act
+      var result = FallbackToFewShotConverter.ConvertFallbacksToFewShot(fallbacks);
+
+      // Assert
+      Assert.That(result, Is.Empty);
+    }
+
+    [Test]
+    public void ConvertFallbacksToFewShot_WithNullFallbacks_ReturnsEmptyList()
+    {
+      // Act
+      var result = FallbackToFewShotConverter.ConvertFallbacksToFewShot(null!);
+
+      // Assert
+      Assert.That(result, Is.Empty);
+    }
+
+    [Test]
+    public void ConvertFallbacksToFewShot_PlayerUtterance_UsesCorrectPlayerInputs()
+    {
+      // Arrange
+      var fallbacks = new List<string> { "Hello there!" };
+
+      // Act
+      var result = FallbackToFewShotConverter.ConvertFallbacksToFewShot(
+        fallbacks,
+        TriggerReason.PlayerUtterance);
+
+      // Assert
+      Assert.That(result[0].PlayerInput, Is.AnyOf("Hello", "Hi there", "Greetings", "Hey"));
+      Assert.That(result[0].NpcResponse, Is.EqualTo("Hello there!"));
+    }
+
+    [Test]
+    public void ConvertFallbacksToFewShot_ZoneTrigger_UsesCorrectPlayerInputs()
+    {
+      // Arrange
+      var fallbacks = new List<string> { "Greetings, traveler." };
+
+      // Act
+      var result = FallbackToFewShotConverter.ConvertFallbacksToFewShot(
+        fallbacks,
+        TriggerReason.ZoneTrigger);
+
+      // Assert
+      Assert.That(result[0].PlayerInput, Is.AnyOf("Hello", "Who are you?", "What is this place?"));
+    }
+
+    [Test]
+    public void ConvertFallbacksToFewShot_QuestTrigger_UsesCorrectPlayerInputs()
+    {
+      // Arrange
+      var fallbacks = new List<string> { "I have a task for you." };
+
+      // Act
+      var result = FallbackToFewShotConverter.ConvertFallbacksToFewShot(
+        fallbacks,
+        TriggerReason.QuestTrigger);
+
+      // Assert
+      Assert.That(result[0].PlayerInput, Is.AnyOf("Do you have any work for me?", "I'm here to help"));
+    }
+
+    [Test]
+    public void ConvertFallbacksToFewShot_CyclesPlayerInputs()
+    {
+      // Arrange
+      var fallbacks = new List<string>
+      {
+        "Response 1",
+        "Response 2",
+        "Response 3",
+        "Response 4",
+        "Response 5"
+      };
+
+      // Act
+      var result = FallbackToFewShotConverter.ConvertFallbacksToFewShot(
+        fallbacks,
+        TriggerReason.PlayerUtterance,
+        maxExamples: 5);
+
+      // Assert - Should have 4 unique player inputs (cycling)
+      var uniqueInputs = result.Select(e => e.PlayerInput).Distinct().ToList();
+      Assert.That(uniqueInputs.Count, Is.LessThanOrEqualTo(4)); // Max 4 PlayerUtterance inputs
+    }
+
+    #endregion
+
+    #region ConvertConfigToFewShot Tests
+
+    [Test]
+    public void ConvertConfigToFewShot_WithValidConfig_ReturnsExamples()
+    {
+      // Arrange
+      var config = new FallbackSystem.FallbackConfig
+      {
+        PlayerUtteranceFallbacks = new List<string>
+        {
+          "Hello!",
+          "How can I help?"
+        }
+      };
+
+      // Act
+      var result = FallbackToFewShotConverter.ConvertConfigToFewShot(
+        config,
+        TriggerReason.PlayerUtterance);
+
+      // Assert
+      Assert.That(result.Count, Is.EqualTo(2));
+    }
+
+    [Test]
+    public void ConvertConfigToFewShot_WithNullConfig_ReturnsEmptyList()
+    {
+      // Act
+      var result = FallbackToFewShotConverter.ConvertConfigToFewShot(null!);
+
+      // Assert
+      Assert.That(result, Is.Empty);
+    }
+
+    [Test]
+    public void ConvertConfigToFewShot_WithEmptySpecificFallbacks_FallsBackToGeneric()
+    {
+      // Arrange
+      var config = new FallbackSystem.FallbackConfig
+      {
+        PlayerUtteranceFallbacks = new List<string>(), // Empty
+        GenericFallbacks = new List<string> { "Generic response" }
+      };
+
+      // Act
+      var result = FallbackToFewShotConverter.ConvertConfigToFewShot(
+        config,
+        TriggerReason.PlayerUtterance);
+
+      // Assert
+      Assert.That(result.Count, Is.EqualTo(1));
+      Assert.That(result[0].NpcResponse, Is.EqualTo("Generic response"));
+    }
+
+    [Test]
+    public void ConvertConfigToFewShot_ZoneTrigger_UsesZoneFallbacks()
+    {
+      // Arrange
+      var config = new FallbackSystem.FallbackConfig
+      {
+        ZoneTriggerFallbacks = new List<string> { "Zone fallback" },
+        GenericFallbacks = new List<string> { "Generic fallback" }
+      };
+
+      // Act
+      var result = FallbackToFewShotConverter.ConvertConfigToFewShot(
+        config,
+        TriggerReason.ZoneTrigger);
+
+      // Assert
+      Assert.That(result[0].NpcResponse, Is.EqualTo("Zone fallback"));
+    }
+
+    [Test]
+    public void ConvertConfigToFewShot_TimeTrigger_UsesTimeFallbacks()
+    {
+      // Arrange
+      var config = new FallbackSystem.FallbackConfig
+      {
+        TimeTriggerFallbacks = new List<string> { "Time fallback" }
+      };
+
+      // Act
+      var result = FallbackToFewShotConverter.ConvertConfigToFewShot(
+        config,
+        TriggerReason.TimeTrigger);
+
+      // Assert
+      Assert.That(result[0].NpcResponse, Is.EqualTo("Time fallback"));
+    }
+
+    [Test]
+    public void ConvertConfigToFewShot_QuestTrigger_UsesQuestFallbacks()
+    {
+      // Arrange
+      var config = new FallbackSystem.FallbackConfig
+      {
+        QuestTriggerFallbacks = new List<string> { "Quest fallback" }
+      };
+
+      // Act
+      var result = FallbackToFewShotConverter.ConvertConfigToFewShot(
+        config,
+        TriggerReason.QuestTrigger);
+
+      // Assert
+      Assert.That(result[0].NpcResponse, Is.EqualTo("Quest fallback"));
+    }
+
+    [Test]
+    public void ConvertConfigToFewShot_NpcInteraction_UsesNpcFallbacks()
+    {
+      // Arrange
+      var config = new FallbackSystem.FallbackConfig
+      {
+        NpcInteractionFallbacks = new List<string> { "NPC fallback" }
+      };
+
+      // Act
+      var result = FallbackToFewShotConverter.ConvertConfigToFewShot(
+        config,
+        TriggerReason.NpcInteraction);
+
+      // Assert
+      Assert.That(result[0].NpcResponse, Is.EqualTo("NPC fallback"));
+    }
+
+    [Test]
+    public void ConvertConfigToFewShot_WorldEvent_UsesWorldEventFallbacks()
+    {
+      // Arrange
+      var config = new FallbackSystem.FallbackConfig
+      {
+        WorldEventFallbacks = new List<string> { "World event fallback" }
+      };
+
+      // Act
+      var result = FallbackToFewShotConverter.ConvertConfigToFewShot(
+        config,
+        TriggerReason.WorldEvent);
+
+      // Assert
+      Assert.That(result[0].NpcResponse, Is.EqualTo("World event fallback"));
+    }
+
+    [Test]
+    public void ConvertConfigToFewShot_Custom_UsesCustomFallbacks()
+    {
+      // Arrange
+      var config = new FallbackSystem.FallbackConfig
+      {
+        CustomTriggerFallbacks = new List<string> { "Custom fallback" }
+      };
+
+      // Act
+      var result = FallbackToFewShotConverter.ConvertConfigToFewShot(
+        config,
+        TriggerReason.Custom);
+
+      // Assert
+      Assert.That(result[0].NpcResponse, Is.EqualTo("Custom fallback"));
+    }
+
+    [Test]
+    public void ConvertConfigToFewShot_WithMaxExamples_LimitsCount()
+    {
+      // Arrange
+      var config = new FallbackSystem.FallbackConfig
+      {
+        GenericFallbacks = new List<string>
+        {
+          "Response 1",
+          "Response 2",
+          "Response 3",
+          "Response 4",
+          "Response 5"
+        }
+      };
+
+      // Act
+      var result = FallbackToFewShotConverter.ConvertConfigToFewShot(
+        config,
+        TriggerReason.PlayerUtterance,
+        maxExamples: 2);
+
+      // Assert
+      Assert.That(result.Count, Is.EqualTo(2));
     }
 
     #endregion

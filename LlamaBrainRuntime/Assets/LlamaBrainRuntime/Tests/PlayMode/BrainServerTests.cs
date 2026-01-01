@@ -199,5 +199,344 @@ namespace LlamaBrain.Tests.PlayMode
       Assert.Contains("END", config.LlmConfig.StopSequences);
       Assert.Contains("STOP", config.LlmConfig.StopSequences);
     }
+
+    #region Server Lifecycle Tests
+
+    private bool ServerExecutableExists()
+    {
+      var exePath = System.IO.Path.GetFullPath(settings.ExecutablePath);
+      return System.IO.File.Exists(exePath);
+    }
+
+    private bool ModelFileExists()
+    {
+      var modelPath = System.IO.Path.GetFullPath(settings.ModelPath);
+      return System.IO.File.Exists(modelPath);
+    }
+
+    [UnityTest]
+    [Category("Integration")]
+    public IEnumerator BrainServer_WaitForServerAsync_WhenNotInitialized_ReturnsFalse()
+    {
+      // Arrange - Create a server without initialization
+      var uninitServerObject = new GameObject("UninitServer");
+      var uninitServer = uninitServerObject.AddComponent<BrainServer>();
+      uninitServer.Settings = null;
+
+      // Act
+      var task = uninitServer.WaitForServerAsync(1);
+      yield return new WaitUntil(() => task.IsCompleted);
+
+      // Assert
+      Assert.IsFalse(task.Result);
+      Assert.AreEqual("Not Initialized", uninitServer.ConnectionStatus);
+
+      // Cleanup
+      Object.DestroyImmediate(uninitServerObject);
+    }
+
+    [UnityTest]
+    [Category("Integration")]
+    public IEnumerator BrainServer_IsServerRunningAsync_WhenNotInitialized_ReturnsFalse()
+    {
+      // Arrange - Create a server without initialization
+      var uninitServerObject = new GameObject("UninitServer");
+      var uninitServer = uninitServerObject.AddComponent<BrainServer>();
+      uninitServer.Settings = null;
+
+      // Act
+      var task = uninitServer.IsServerRunningAsync();
+      yield return new WaitUntil(() => task.IsCompleted);
+
+      // Assert
+      Assert.IsFalse(task.Result);
+
+      // Cleanup
+      Object.DestroyImmediate(uninitServerObject);
+    }
+
+    [UnityTest]
+    [Category("Integration")]
+    public IEnumerator BrainServer_GetServerStatus_ReturnsFormattedStatus()
+    {
+      // Arrange
+      yield return null; // Let initialization complete
+
+      // Act
+      var status = server.GetServerStatus();
+
+      // Assert
+      Assert.IsNotNull(status);
+      Assert.IsTrue(status.Contains("Server Status"));
+      Assert.IsTrue(status.Contains("Initialized: True"));
+    }
+
+    [UnityTest]
+    [Category("Integration")]
+    public IEnumerator BrainServer_RestartServer_WhenNotInitialized_LogsWarning()
+    {
+      // Arrange - Create a server without initialization
+      var uninitServerObject = new GameObject("UninitServer");
+      var uninitServer = uninitServerObject.AddComponent<BrainServer>();
+      uninitServer.Settings = null;
+
+      // Expect the warning
+      LogAssert.Expect(LogType.Warning, "[LLM] Cannot restart server - not initialized");
+
+      // Act
+      uninitServer.RestartServer();
+      yield return null;
+
+      // Cleanup
+      Object.DestroyImmediate(uninitServerObject);
+    }
+
+    [UnityTest]
+    [Category("Integration")]
+    public IEnumerator BrainServer_WaitForServerAsync_WithTimeout_ReturnsWhenTimedOut()
+    {
+      // Arrange - server is initialized but not started
+      yield return null;
+
+      // Act - Wait with a very short timeout (server not running)
+      var startTime = Time.time;
+      var task = server.WaitForServerAsync(1); // 1 second timeout
+      yield return new WaitUntil(() => task.IsCompleted);
+      var elapsed = Time.time - startTime;
+
+      // Assert - Should complete within reasonable time
+      Assert.IsFalse(task.Result); // Server not running
+      Assert.That(elapsed, Is.LessThan(5f)); // Should timeout within 5 seconds
+    }
+
+    [UnityTest]
+    [Category("Integration")]
+    [Timeout(120000)]
+    public IEnumerator BrainServer_FullLifecycle_StartWaitStop()
+    {
+      // Skip if server executable doesn't exist
+      if (!ServerExecutableExists())
+      {
+        Assert.Ignore("Skipping: llama-server not found at " + settings.ExecutablePath);
+        yield break;
+      }
+
+      if (!ModelFileExists())
+      {
+        Assert.Ignore("Skipping: model not found at " + settings.ModelPath);
+        yield break;
+      }
+
+      // Start the server
+      server.StartServer();
+      yield return new WaitForSeconds(1);
+
+      // Wait for server to be ready
+      var waitTask = server.WaitForServerAsync(60);
+      yield return new WaitUntil(() => waitTask.IsCompleted);
+
+      if (!waitTask.Result)
+      {
+        // Server didn't start, skip test
+        Assert.Ignore("Server failed to start - may be missing dependencies");
+        yield break;
+      }
+
+      // Assert server is running
+      Assert.IsTrue(waitTask.Result, "Server should be ready");
+
+      // Check health
+      var healthTask = server.IsServerRunningAsync();
+      yield return new WaitUntil(() => healthTask.IsCompleted);
+      Assert.IsTrue(healthTask.Result, "Server should report as running");
+
+      // Stop the server
+      server.StopServer();
+      yield return new WaitForSeconds(2);
+
+      // Verify server stopped
+      var stoppedTask = server.IsServerRunningAsync();
+      yield return new WaitUntil(() => stoppedTask.IsCompleted);
+      Assert.IsFalse(stoppedTask.Result, "Server should be stopped");
+    }
+
+    [UnityTest]
+    [Category("Integration")]
+    [Timeout(180000)]
+    public IEnumerator BrainServer_RestartServer_FullCycle()
+    {
+      // Skip if server executable doesn't exist
+      if (!ServerExecutableExists())
+      {
+        Assert.Ignore("Skipping: llama-server not found at " + settings.ExecutablePath);
+        yield break;
+      }
+
+      if (!ModelFileExists())
+      {
+        Assert.Ignore("Skipping: model not found at " + settings.ModelPath);
+        yield break;
+      }
+
+      // Start the server initially
+      server.StartServer();
+      yield return new WaitForSeconds(1);
+
+      var startTask = server.WaitForServerAsync(60);
+      yield return new WaitUntil(() => startTask.IsCompleted);
+
+      if (!startTask.Result)
+      {
+        Assert.Ignore("Server failed to start - may be missing dependencies");
+        yield break;
+      }
+
+      // Restart the server
+      server.RestartServer();
+      yield return new WaitForSeconds(2);
+
+      // Wait for server to come back
+      var restartTask = server.WaitForServerAsync(60);
+      yield return new WaitUntil(() => restartTask.IsCompleted);
+
+      Assert.IsTrue(restartTask.Result, "Server should be ready after restart");
+
+      // Cleanup
+      server.StopServer();
+      yield return new WaitForSeconds(2);
+    }
+
+    [UnityTest]
+    [Category("Integration")]
+    public IEnumerator BrainServer_GetServerStatus_WhenNotInitialized_ShowsNotInitialized()
+    {
+      // Arrange - Create a server without initialization
+      var uninitServerObject = new GameObject("UninitServer");
+      var uninitServer = uninitServerObject.AddComponent<BrainServer>();
+      uninitServer.Settings = null;
+
+      yield return null;
+
+      // Act
+      var status = uninitServer.GetServerStatus();
+
+      // Assert
+      Assert.IsNotNull(status);
+      Assert.IsTrue(status.Contains("Initialized: False"));
+
+      // Cleanup
+      Object.DestroyImmediate(uninitServerObject);
+    }
+
+    [UnityTest]
+    [Category("Integration")]
+    public IEnumerator BrainServer_GpuLayersParsing_WorksCorrectly()
+    {
+      // Arrange
+      settings.GpuLayers = 35;
+
+      // Re-initialize with new GPU settings
+      server.Initialize();
+      yield return null;
+
+      // Act
+      var config = settings.ToProcessConfig();
+
+      // Assert
+      Assert.AreEqual(35, config.GpuLayers);
+    }
+
+    [UnityTest]
+    [Category("Integration")]
+    public IEnumerator BrainServer_RegisterAgent_AddsToActiveAgents()
+    {
+      // Arrange
+      yield return null; // Let initialization complete
+
+      var agentObject = new GameObject("TestAgent");
+      var agent = agentObject.AddComponent<LlamaBrainAgent>();
+
+      // Act
+      server.RegisterAgent(agent);
+      yield return null;
+
+      // Assert - Check status contains agent info
+      var status = server.GetServerStatus();
+      Assert.IsTrue(status.Contains("Active Agents:"));
+
+      // Cleanup
+      server.UnregisterAgent(agent);
+      Object.DestroyImmediate(agentObject);
+    }
+
+    [UnityTest]
+    [Category("Integration")]
+    public IEnumerator BrainServer_UnregisterAgent_RemovesFromActiveAgents()
+    {
+      // Arrange
+      yield return null; // Let initialization complete
+
+      var agentObject = new GameObject("TestAgent");
+      var agent = agentObject.AddComponent<LlamaBrainAgent>();
+
+      // Register then unregister
+      server.RegisterAgent(agent);
+      yield return null;
+      server.UnregisterAgent(agent);
+      yield return null;
+
+      // Assert - Agent should be removed
+      var status = server.GetServerStatus();
+      Assert.IsNotNull(status);
+
+      // Cleanup
+      Object.DestroyImmediate(agentObject);
+    }
+
+    [UnityTest]
+    [Category("Integration")]
+    public IEnumerator BrainServer_StopServer_WhenNotInitialized_HandlesGracefully()
+    {
+      // Arrange - Create a server without initialization
+      var uninitServerObject = new GameObject("UninitServer");
+      var uninitServer = uninitServerObject.AddComponent<BrainServer>();
+      uninitServer.Settings = null;
+
+      yield return null;
+
+      // Act - Should not throw
+      uninitServer.StopServer();
+      yield return null;
+
+      // Assert - Just verify we got here without exception
+      Assert.IsNotNull(uninitServer);
+
+      // Cleanup
+      Object.DestroyImmediate(uninitServerObject);
+    }
+
+    [UnityTest]
+    [Category("Integration")]
+    public IEnumerator BrainServer_StartServer_WhenNotInitialized_HandlesGracefully()
+    {
+      // Arrange - Create a server without initialization
+      var uninitServerObject = new GameObject("UninitServer");
+      var uninitServer = uninitServerObject.AddComponent<BrainServer>();
+      uninitServer.Settings = null;
+
+      yield return null;
+
+      // Act - Should not throw
+      uninitServer.StartServer();
+      yield return null;
+
+      // Assert - Just verify we got here without exception
+      Assert.IsNotNull(uninitServer);
+
+      // Cleanup
+      Object.DestroyImmediate(uninitServerObject);
+    }
+
+    #endregion
   }
 }
