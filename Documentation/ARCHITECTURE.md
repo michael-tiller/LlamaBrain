@@ -923,22 +923,117 @@ The architectural diagram shows the complete flow:
 All nine components are fully implemented and tested:
 
 - ✅ Component 1: Interaction Context - Complete
-- ✅ Component 2: Determinism Layer - Complete (Phase 1)
-- ✅ Component 3: Authoritative Memory System - Complete (Phase 2)
-- ✅ Component 4: State Snapshot & Context Retrieval - Complete (Phase 3)
-- ✅ Component 5: Ephemeral Working Memory - Complete (Phase 4)
+- ✅ Component 2: Determinism Layer - Complete (Feature 1)
+- ✅ Component 3: Authoritative Memory System - Complete (Feature 2)
+- ✅ Component 4: State Snapshot & Context Retrieval - Complete (Feature 3)
+- ✅ Component 5: Ephemeral Working Memory - Complete (Feature 4)
 - ✅ Component 6: Stateless Inference Core - Complete (Foundation)
-- ✅ Component 7: Output Validation - Complete (Phase 5)
-- ✅ Component 8: Memory Mutation - Complete (Phase 6)
-- ✅ Component 9: Fallback System - Complete (Phase 7)
+- ✅ Component 7: Output Validation - Complete (Feature 5)
+- ✅ Component 8: Memory Mutation - Complete (Feature 6)
+- ✅ Component 9: Fallback System - Complete (Feature 7)
 
 **Test Coverage**: 92.37% line coverage, 853+ passing tests
 
-**Phase 10: Deterministic Proof Gap Testing**: 🚧 In Progress (~25% Complete)
+**Feature 10: Deterministic Proof Gap Testing**: 🚧 In Progress (~25% Complete)
 - Critical requirements 1-4 implemented (strict total order sorting, SequenceNumber field, tie-breaker logic, OutputParser normalization)
 - 7 high-leverage determinism tests added
 - See `PHASE10_PROOF_GAPS.md` for detailed test backlog
 - Required for v1.0 release to claim "deterministically proven" architecture
+
+## Planned Features
+
+The following features are planned to enhance the architecture's capabilities and complete the deterministic state reconstruction pattern:
+
+### Feature 11: RAG-Based Memory Retrieval & Memory Proving
+
+**Status**: 📋 Planned  
+**Priority**: MEDIUM  
+**Dependencies**: Feature 3 (Context Retrieval Layer), Feature 10 (Deterministic Proof Gap Testing)
+
+**Overview**: Enhance the `ContextRetrievalLayer` to use Retrieval-Augmented Generation (RAG) techniques instead of simple keyword matching. This will improve semantic relevance of retrieved memories by using embeddings and vector similarity search.
+
+**Key Components**:
+- **Embedding Generation System**: Interface for generating embeddings from local models (llama.cpp) or external APIs (OpenAI, HuggingFace)
+- **Vector Storage & Indexing**: In-memory and persistent vector stores for episodic memories, beliefs, and canonical facts
+- **Semantic Retrieval**: Replace keyword-based `CalculateRelevance()` with cosine similarity search
+- **Memory Proving**: Implement deterministic repetition recognition system to prove retrieval influences generation
+  - Location repetition recognition (NPC gets tired of same tunnel)
+  - Topic/conversation repetition recognition (NPC gets tired of player obsessively talking about same topic)
+
+**Architectural Impact**: Improves memory retrieval quality while maintaining determinism. The repetition recognition system provides concrete proof that retrieval influences generation.
+
+**See**: [ROADMAP.md](ROADMAP.md#feature-11-rag-based-memory-retrieval--memory-proving) for detailed implementation plan.
+
+### Feature 12: Dedicated Structured Output
+
+**Status**: 📋 Planned  
+**Priority**: HIGH  
+**Dependencies**: Feature 5 (Output Validation System), Feature 10 (Deterministic Proof Gap Testing)
+
+**Overview**: Replace regex-based text parsing with LLM-native structured output formats (JSON mode, function calling, schema-based outputs). This will eliminate parsing errors and improve determinism.
+
+**Key Components**:
+- **Structured Output Provider Interface**: Support for JSON mode, function calling, and schema-based structured output
+- **JSON Schema Definition**: Schema for `ParsedOutput` structure (dialogue, mutations, world intents)
+- **LLM Integration**: Extend `ApiClient` to support structured output requests
+- **Output Parser Refactoring**: Use structured output when available, maintain regex parsing as fallback
+
+**Architectural Impact**: Eliminates parsing errors, improves reliability from ~95% to 100% success rate on valid structured outputs, and enhances determinism by removing regex ambiguity.
+
+**See**: [ROADMAP.md](ROADMAP.md#feature-12-dedicated-structured-output) for detailed implementation plan.
+
+### Feature 13: Structured Output Integration
+
+**Status**: 📋 Planned  
+**Priority**: HIGH  
+**Dependencies**: Feature 12 (Dedicated Structured Output)
+
+**Overview**: Complete integration of structured output throughout the validation pipeline, mutation extraction, and ensure full compatibility with existing systems.
+
+**Key Components**:
+- **Validation Pipeline Integration**: Update `ValidationGate` to work with structured outputs
+- **Mutation Extraction Enhancement**: Support all mutation types in structured format with schema validation
+- **World Intent Integration**: Handle structured intents with complex parameters (nested objects, arrays)
+- **Error Handling & Fallback**: Comprehensive error handling with automatic fallback to regex parsing
+
+**Architectural Impact**: Ensures structured outputs are used consistently throughout the pipeline, with robust error handling and backward compatibility.
+
+**See**: [ROADMAP.md](ROADMAP.md#feature-13-structured-output-integration) for detailed implementation plan.
+
+### Feature 14: Deterministic Generation Seed
+
+**Status**: 📋 Planned  
+**Priority**: CRITICAL  
+**Dependencies**: Feature 10 (Deterministic Proof Gap Testing)
+
+**Overview**: Implement the **InteractionCount seed strategy** to achieve true cross-session determinism. By using `InteractionContext.InteractionCount` as the seed for LLM generation, we transform the stochastic generator into a pure function relative to game state.
+
+**Key Components**:
+- **Seed Parameter Support**: Add `seed` parameter to `CompletionRequest` and `IApiClient` interface
+- **Integration with InteractionContext**: Extract `InteractionCount` and pass as seed to LLM generation
+- **Cross-Session Determinism**: Ensure same `InteractionCount` + same prompt = identical output across sessions
+- **Hardware Determinism Documentation**: Document 100% determinism across sessions (same device), 99.9% predictability across devices
+
+**Architectural Impact**: **Completes the deterministic state reconstruction pattern** by locking the final source of non-determinism: the LLM's internal random number generator. This achieves the "Holy Grail" of AI game development: **Cross-Session State Consistency**.
+
+**The "Double-Lock System"**:
+- **Lock 1: Context Locking** - `SequenceNumber` and `Ordinal` string comparisons ensure the *prompt* never flutters
+- **Lock 2: Entropy Locking** - `InteractionCount` seed ensures the *dice roll* never flutters
+
+**Formula**: `f(Prompt, Context, InteractionCount) = Output` - A pure function that guarantees identical game states produce identical outputs.
+
+**Proof Strategy**: Simple integration test:
+1. Set `InteractionCount = 5`
+2. Send Prompt "Hello" with identical `StateSnapshot`
+3. Record Output A
+4. Clear everything (new session)
+5. Set `InteractionCount = 5` again
+6. Send Prompt "Hello" with identical `StateSnapshot`
+7. Assert Output B == Output A (byte-for-byte identical)
+
+**If this passes, we will have mathematically proven that the system is deterministic**, regardless of the inherent randomness of the underlying AI model.
+
+**See**: [ROADMAP.md](ROADMAP.md#feature-14-deterministic-generation-seed) for detailed implementation plan.
 
 ## Best Practices
 
@@ -1036,10 +1131,14 @@ Guard: My duty never ends, but I can spare a moment for a citizen." // Guides to
 
 ## Further Reading
 
-- [README.md](../LlamaBrain/README.md) - Main library documentation
-- [USAGE_GUIDE.md](../LlamaBrainRuntime/Assets/LlamaBrainRuntime/Documentation/USAGE_GUIDE.md) - Unity integration guide
-- [TROUBLESHOOTING.md](../LlamaBrainRuntime/Assets/LlamaBrainRuntime/Documentation/TROUBLESHOOTING.md) - Common issues and solutions
+- [README.md](../LlamaBrain/README.md) - Main library documentation and overview
+- [MEMORY.md](MEMORY.md) - Comprehensive memory system documentation (Component 3)
+- [PIPELINE_CONTRACT.md](PIPELINE_CONTRACT.md) - Formal pipeline contract specification
+- [VALIDATION_GATING.md](VALIDATION_GATING.md) - Validation gating system documentation (Component 7)
+- [USAGE_GUIDE.md](USAGE_GUIDE.md) - Practical examples and best practices
 - [ROADMAP.md](ROADMAP.md) - Implementation progress and status
+- [STATUS.md](STATUS.md) - Current implementation status
+- [DETERMINISM_CONTRACT.md](DETERMINISM_CONTRACT.md) - Determinism contract and boundaries
 
 ---
 

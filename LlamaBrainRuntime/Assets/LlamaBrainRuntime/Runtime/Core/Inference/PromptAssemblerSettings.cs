@@ -113,8 +113,10 @@ namespace LlamaBrain.Runtime.Core.Inference
     /// <summary>
     /// Creates both configs together.
     /// </summary>
-    /// <returns>A tuple containing both the PromptAssemblerConfig (assembler) and WorkingMemoryConfig (workingMemory).</returns>
     /// <remarks>This is a convenience method that calls both ToConfig() and ToWorkingMemoryConfig() and returns them as a tuple.</remarks>
+    /// <returns>A tuple containing both the PromptAssemblerConfig (assembler) and WorkingMemoryConfig (workingMemory).</returns>
+    /// <seealso cref="ToConfig()"/>
+    /// <seealso cref="ToWorkingMemoryConfig()"/>
     public (PromptAssemblerConfig assembler, WorkingMemoryConfig workingMemory) ToConfigs()
     {
       return (ToConfig(), ToWorkingMemoryConfig());

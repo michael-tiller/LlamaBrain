@@ -254,8 +254,10 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
       Debug.Log($"[DialogueMetricsCollector] Exported session with {session.TotalInteractions} interactions (file #{fileIndex}):");
       Debug.Log($"  CSV: {csvPath}");
       Debug.Log($"  JSON: {jsonPath}");
-      Debug.Log($"  Validation Statistics: {Path.Combine(basePath, $"ValidationStats_{session.SessionId}_{DateTime.Now:yyyyMMdd_HHmmss}{(fileIndex > 0 ? $"_part{fileIndex:D3}" : "")}.csv")}");
-      Debug.Log($"  Constraint Violations: {Path.Combine(basePath, $"ConstraintViolations_{session.SessionId}_{DateTime.Now:yyyyMMdd_HHmmss}{(fileIndex > 0 ? $"_part{fileIndex:D3}" : "")}.csv")}");
+      string validationStatsPath = Path.Combine(basePath, $"ValidationStats_{session.SessionId}_{DateTime.Now:yyyyMMdd_HHmmss}{(fileIndex > 0 ? $"_part{fileIndex:D3}" : "")}.csv");
+      string constraintViolationsPath = Path.Combine(basePath, $"ConstraintViolations_{session.SessionId}_{DateTime.Now:yyyyMMdd_HHmmss}{(fileIndex > 0 ? $"_part{fileIndex:D3}" : "")}.csv");
+      Debug.Log($"  Validation Statistics: {validationStatsPath}");
+      Debug.Log($"  Constraint Violations: {constraintViolationsPath}");
     }
     
     /// <summary>

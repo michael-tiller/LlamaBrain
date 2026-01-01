@@ -512,6 +512,7 @@ namespace LlamaBrain.Core
     }
 
     /// <summary>
+    /// <summary>
     /// Composes a prompt split into static prefix (for KV cache) and dynamic suffix.
     /// The prefix contains static content that can be cached, while the suffix contains dynamic content that changes with each request.
     /// </summary>

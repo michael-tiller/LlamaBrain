@@ -124,12 +124,12 @@ namespace LlamaBrain.Core.Validation
     /// This is a pure function that applies consistent whitespace normalization rules.
     ///
     /// Rules applied (in order):
-    /// 1. Strip BOM (\uFEFF) if present at start
+    /// 1. Strip BOM (\\uFEFF) if present at start
     /// 2. Convert CRLF to LF (Windows → Unix line endings)
     /// 3. Trim trailing whitespace from each line
     /// 4. Collapse 3+ consecutive blank lines to exactly 2
     /// 5. Preserve leading blank lines (policy decision: preserved, not stripped)
-    /// 6. Preserve existing trailing newline (policy decision: if input ends with \n, output ends with \n)
+    /// 6. Preserve existing trailing newline (policy decision: if input ends with \\n, output ends with \\n)
     ///
     /// A "blank line" is defined as a line that is empty after trimming trailing whitespace.
     /// </summary>

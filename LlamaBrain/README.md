@@ -524,6 +524,21 @@ dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
 
 See `COVERAGE_REPORT.md` for detailed coverage breakdown.
 
+## 📚 Documentation
+
+Comprehensive documentation is available in the `Documentation/` folder:
+
+- **[ARCHITECTURE.md](../Documentation/ARCHITECTURE.md)** - Complete architectural documentation explaining the 9-component pattern
+- **[MEMORY.md](../Documentation/MEMORY.md)** - Comprehensive memory system documentation with authority hierarchy
+- **[PIPELINE_CONTRACT.md](../Documentation/PIPELINE_CONTRACT.md)** - Formal pipeline contract specification (Version 0.2.0)
+- **[VALIDATION_GATING.md](../Documentation/VALIDATION_GATING.md)** - Complete validation gating system documentation
+- **[USAGE_GUIDE.md](../Documentation/USAGE_GUIDE.md)** - Practical examples and best practices for using LlamaBrain
+- **[ROADMAP.md](../Documentation/ROADMAP.md)** - Implementation status and future plans
+- **[STATUS.md](../Documentation/STATUS.md)** - Current implementation status
+- **[DETERMINISM_CONTRACT.md](../Documentation/DETERMINISM_CONTRACT.md)** - Determinism contract and boundaries
+- **[SAFEGUARDS.md](../Documentation/SAFEGUARDS.md)** - Security measures and safeguards
+- **[CHANGELOG.md](../Documentation/CHANGELOG.md)** - Version history and changes
+
 ## 📄 License
 
 This asset is licensed under the Unity Asset Store Standard End User License Agreement. One license per seat is required. See: https://unity.com/legal/as-terms
