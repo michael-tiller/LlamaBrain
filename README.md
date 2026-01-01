@@ -264,9 +264,7 @@ When reporting issues, include:
 
 ## 📄 License
 
-This repository is provided privately for code review and evaluation purposes only.
-
-All rights reserved. No part of this codebase may be copied, redistributed, or used in any product or service without explicit written permission from Michael Tiller.
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
 
 ## 📈 Roadmap
 

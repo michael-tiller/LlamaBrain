@@ -24,6 +24,10 @@ Key features include:
 - **Process Management**: Safe server lifecycle management with monitoring and graceful shutdown
 - **Comprehensive Testing**: 92.37% code coverage with 1,531 passing tests
 
+**Coming Soon:**
+- **Structured Output (JSON)**: LLM-native structured output formats (JSON mode, function calling, schema-based outputs) will replace the current regex-based parser, eliminating parsing errors and improving determinism (Features 12 & 13)
+- **Save/Load Game Integration**: Game state persistence system for preserving deterministic state across sessions, enabling cross-session determinism (Feature 16)
+
 ## 🏗️ Architecture
 
 LlamaBrain implements a nine-component architectural pattern that ensures deterministic, controlled AI behavior. The complete flow is illustrated in the architectural diagram below:
@@ -88,6 +92,7 @@ LlamaBrain implements a nine-component architectural pattern that ensures determ
 
 #### Output Validation System
 - **OutputParser**: Parses LLM output into structured format, extracting dialogue, proposed mutations, and world intents
+  - **Note**: Currently uses regex-based text parsing. **Structured Output (JSON)** with LLM-native formats (JSON mode, function calling, schema-based outputs) is coming soon in Features 12 & 13, which will replace regex parsing and eliminate parsing errors.
 - **ValidationGate**: Multi-layer validation that checks outputs against constraints, canonical facts, and knowledge boundaries
 - **ParsedOutput**: Structured result container with dialogue text, proposed mutations, and world intents
 - **ValidationRule**: Extensible validation rule system supporting custom validation logic
@@ -556,7 +561,7 @@ Comprehensive documentation is available in the `Documentation/` folder:
 
 ## 📄 License
 
-This asset is licensed under the Unity Asset Store Standard End User License Agreement. One license per seat is required. See: https://unity.com/legal/as-terms
+This project is licensed under the MIT License - see the [LICENSE.md](../LICENSE.md) file for details.
 
 ## 🆘 Support
 
