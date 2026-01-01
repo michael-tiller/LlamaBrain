@@ -603,25 +603,32 @@ Run tests through Unity's Test Runner window.
 - Failure reason logging
 - Full test coverage
 
-**Phase 8: RedRoom Integration** 🚧 60% Complete
+**Feature 8: RedRoom Integration** 🚧 99% Complete
 - Validation metrics and export ✅
 - Architectural pattern testing ✅
 - End-to-end validation scenarios ✅
-- Testing overlays (pending)
-- Unity PlayMode integration tests (pending)
+- Testing overlays ✅ (Memory Mutation Overlay, Validation Gate Overlay - minor fixes needed)
+- Unity PlayMode integration tests ✅ (73+ tests complete)
+- Full Pipeline Integration Tests ✅ (8 tests complete)
 
-**Phase 9: Documentation** 🚧 95% Complete
+**Feature 9: Documentation** ✅ 100% Complete
 - Architecture documentation with diagrams ✅
 - Setup tutorials for new components ✅
-- API reference for all layers ✅
+- API reference for all layers ✅ (100% XML documentation, zero missing member warnings)
 - Few-shot prompt priming ✅ Complete (30 tests, full integration)
-- Tutorial content (pending)
+- Tutorial content ✅ Complete (4 comprehensive step-by-step tutorials)
 
-**Phase 10: Deterministic Proof Gap Testing** 🚧 In Progress (~25% Complete)
+**Feature 10: Deterministic Proof Gap Testing** 🚧 In Progress (~65% Complete)
 - ✅ Critical Requirements 1-4 implemented (strict total order sorting, SequenceNumber field, tie-breaker logic, OutputParser normalization)
 - ✅ 7 high-leverage determinism tests added
-- 🚧 ContextRetrievalLayer selection behavior tests (7/20-25 complete)
-- ⏳ Additional test suites pending (PromptAssembler, ValidationGate, MemoryMutationController, WorldIntentDispatcher, Full Pipeline)
+- ✅ ContextRetrievalLayer: 55 tests complete (exceeds estimate)
+- ✅ PromptAssembler: 40 tests complete
+- ✅ EphemeralWorkingMemory: 40 tests complete
+- ✅ OutputParser: 86 tests complete (includes normalization contract)
+- ✅ MemoryMutationController: 41 tests complete
+- 🚧 ValidationGate: 17 tests (Feature 10.4 detailed tests pending)
+- ⏳ WorldIntentDispatcher: 0 tests (not started)
+- ⏳ Full Pipeline deterministic tests: 0 tests (not started)
 - See [PHASE10_PROOF_GAPS.md](../../Documentation/PHASE10_PROOF_GAPS.md) for detailed test backlog
 
 ### Future Features (Post-Architecture)

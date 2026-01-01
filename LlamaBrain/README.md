@@ -22,7 +22,7 @@ Key features include:
 - **Controlled Mutations**: Authority-enforced memory updates with world intent dispatching
 - **Fallback System**: Context-aware fallback responses when inference fails after retries
 - **Process Management**: Safe server lifecycle management with monitoring and graceful shutdown
-- **Comprehensive Testing**: 92.37% code coverage with 853+ passing tests
+- **Comprehensive Testing**: 92.37% code coverage with 1,531 passing tests
 
 ## 🏗️ Architecture
 
@@ -109,7 +109,7 @@ LlamaBrain implements a nine-component architectural pattern that ensures determ
 - **IFileSystem**: Interface abstraction for file system operations (enables testing)
 - **IApiClient**: Interface abstraction for API client operations (enables testing)
 - **FileSystem**: Default implementation with 100% test coverage
-- **Comprehensive Test Suite**: 853+ tests with 92.37% code coverage
+- **Comprehensive Test Suite**: 1,531 tests with 92.37% code coverage
 
 #### Utilities
 - **JsonUtils**: Safe JSON serialization/deserialization with validation and compression
@@ -489,18 +489,33 @@ This architecture provides several key benefits:
 
 ## 🧪 Testing
 
-The library includes a comprehensive test suite with **92.37% code coverage** (5,100 of 5,521 lines covered) and **853+ passing tests**:
+The library includes a comprehensive test suite with **92.37% code coverage** (5,100 of 5,521 lines covered) and **1,531 passing tests**:
 
 ### Test Coverage by Component
 
-- **Expectancy Engine**: 50+ tests (ExpectancyEvaluator, Constraint, ConstraintSet, InteractionContext)
+- **Expectancy Engine**: 55+ tests (ExpectancyEvaluator, Constraint, ConstraintSet, InteractionContext)
 - **Structured Memory System**: 65+ tests (all memory types, AuthoritativeMemorySystem, PersonaMemoryStore)
-- **Inference Pipeline**: 164+ tests (StateSnapshot, ContextRetrievalLayer, InferenceResult, RetryPolicy, ResponseValidator, EphemeralWorkingMemory, PromptAssembler)
-- **Output Validation**: 60+ tests (OutputParser, ValidationGate, ParsedOutput)
-- **Memory Mutation**: 41 tests (MemoryMutationController)
-- **Core Integration**: 179 tests (BrainAgent, ClientManager, ServerManager, DialogueSession, CompletionMetrics)
-- **Utilities**: 162 tests (JsonUtils, PathUtils, ProcessUtils)
-- **Process Configuration**: 6 tests (100% coverage)
+- **Inference Pipeline**: Comprehensive coverage including:
+  - ContextRetrievalLayer: 55 tests (Feature 10 determinism tests)
+  - PromptAssembler: 40 tests
+  - EphemeralWorkingMemory: 40 tests
+  - StateSnapshot, InferenceResult, RetryPolicy, ResponseValidator: Additional tests
+- **Output Validation**: 120+ tests including:
+  - OutputParser: 86 tests (includes normalization contract tests)
+  - ValidationGate: 17+ tests
+  - ParsedOutput and related types: Additional tests
+- **Memory Mutation**: 41 tests (MemoryMutationController with 100% coverage of mutation types)
+- **Few-Shot Prompt Priming**: 30 tests (FewShotExample, EphemeralWorkingMemory few-shot handling, FallbackToFewShotConverter)
+- **Core Integration**: Comprehensive test suites including:
+  - ApiClient: 90.54% coverage with extensive HTTP, rate limiting, and error handling tests
+  - ServerManager: 74.55% coverage (92.31% branch coverage) with 2,123+ lines of tests
+  - BrainAgent, ClientManager, DialogueSession: Additional integration tests
+- **Utilities**: 200+ tests including:
+  - FileSystem: 100% line coverage (41 tests)
+  - ProcessUtils: 617+ lines of comprehensive tests
+  - JsonUtils, PathUtils: Additional utility tests
+- **Integration Tests**: 8 tests (FullPipelineIntegrationTests covering complete 9-component pipeline)
+- **Additional comprehensive test coverage across all components bringing total to 1,531 tests**
 
 ### Test Infrastructure
 
