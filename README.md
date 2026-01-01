@@ -2,12 +2,12 @@
 
 A comprehensive AI integration solution for Unity and .NET applications, providing secure, feature-rich integration with llama.cpp servers.
 
-## 🎯 Overview
+[![LlamaBrain R&D: Trigger Pre-caching + Episodic Logging](https://img.youtube.com/vi/RT2v9199gfM/0.jpg)](https://www.youtube.com/watch?v=RT2v9199gfM)
 
 LlamaBrain consists of two main components:
 
-- **LlamaBrain Core Library** - A robust .NET Standard 2.1 library for AI integration
-- **LlamaBrain for Unity** - A Unity package providing seamless integration with Unity projects
+- **LlamaBrain Core** - A robust .NET Standard 2.1 library for AI integration
+- **LlamaBrain Runtime** - A Unity package providing seamless integration with Unity projects
 
 ## 🏗️ Project Structure
 
