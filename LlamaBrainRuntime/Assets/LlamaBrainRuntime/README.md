@@ -101,9 +101,14 @@ LlamaBrain for Unity brings the power of local AI to Unity games and application
 ### Requirements
 - Unity 2022.3 LTS or higher
 - .NET Standard 2.1 support
-- Text Mesh Pro package (for UI components)
+- **UniTask** (via Unity Package Manager - Git URL: `https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask`)
+- **TextMeshPro (TMP)** (via Unity Package Manager)
+- **SaveGameFree** (manual import - download from [GitHub Releases](https://github.com/BayatGames/SaveGameFree/releases))
+- **Starter Assets - Third Person** (via Unity Asset Store - [download here](https://assetstore.unity.com/packages/essentials/starter-assets-thirdperson-updates-in-new-charactercontroller-pa-196526))
 - llama.cpp server executable
 - Compatible GGUF model file
+
+**See**: [THIRD_PARTY_PACKAGES.md](Documentation/THIRD_PARTY_PACKAGES.md) for detailed installation instructions.
 
 ### Setup
 1. Import the LlamaBrainForUnity package into your Unity project
@@ -655,8 +660,6 @@ For detailed status information, see the [STATUS.md](../../Documentation/STATUS.
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE.md](../../../../LICENSE.md) file for details.
-
-**Note**: If this package is distributed through the Unity Asset Store, the store listing may reference the Unity Asset Store EULA for that specific distribution channel. However, the source code in this repository is licensed under the MIT License.
 
 ## 🆘 Support
 

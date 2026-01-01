@@ -24,7 +24,7 @@
 | Feature 7: Enhanced Fallback System | ✅ Complete | 100% |
 | Feature 8: RedRoom Integration | 🚧 In Progress | 99% |
 | Feature 9: Documentation | ✅ Complete | 100% |
-| Feature 10: Deterministic Proof Gap Testing | 🚧 In Progress | ~85% |
+| Feature 10: Deterministic Proof Gap Testing | 🚧 In Progress | ~65% |
 | Feature 11: RAG-Based Memory Retrieval | 📋 Planned | MEDIUM |
 | Feature 12: Dedicated Structured Output | 📋 Planned | HIGH |
 | Feature 13: Structured Output Integration | 📋 Planned | HIGH |
@@ -122,7 +122,7 @@
 
 ---
 
-## Feature 10: Deterministic Proof Gap Testing (~85% Complete)
+## Feature 10: Deterministic Proof Gap Testing (~65% Complete)
 
 **Status**: 🚧 In Progress
 **Priority**: HIGH - Required for v1.0 release
@@ -152,20 +152,24 @@
 | ContextRetrievalLayer | `ContextRetrievalLayerTests.cs` | 20-25 | **55 tests** | ✅ **Complete** (exceeds estimate) |
 | PromptAssembler/WorkingMemory | `PromptAssemblerTests.cs`<br>`EphemeralWorkingMemoryTests.cs` | 25-30 | **80 tests** (40+40) | ✅ **Complete** (exceeds estimate) |
 | OutputParser | `OutputParserTests.cs` | 20-25 | **86 tests** | ✅ **Complete** (exceeds estimate) |
-| ValidationGate | `ValidationGateTests.cs` | 30-35 | **44 tests** | ✅ **Complete** (17 basic + 27 Feature 10.4 detailed tests) |
+| ValidationGate | `ValidationGateTests.cs` | 30-35 | **17 tests** | 🚧 Partial (basic coverage, Phase 10.4 tests pending) |
 | MemoryMutationController | `MemoryMutationControllerTests.cs` | 30-35 | **41 tests** | ✅ **Complete** (exceeds estimate) |
 | WorldIntentDispatcher | `WorldIntentDispatcherTests.cs` (new) | 20-25 | **0 tests** | Not Started |
-| Full Pipeline | `DeterministicPipelineTests.cs` | 15-20 | **17 tests** | ✅ **Complete** |
-| **Total** | | **150-180** | **323 tests** | **~85%** |
+| Full Pipeline | `DeterministicPipelineTests.cs` (new) | 15-20 | **0 tests** | Not Started |
+| **Total** | | **150-180** | **279 tests** | **~65%** |
 
 ### Pending Work
 - [ ] Critical Requirement #5: WorldIntentDispatcher Singleton Lifecycle implementation and tests
-- [ ] Feature 10.6: WorldIntentDispatcher tests (20-25 tests - not started, Unity PlayMode)
+- [ ] Feature 10.4: ValidationGate detailed determinism tests (13-18 tests remaining - basic validation complete)
+- [ ] Feature 10.5: WorldIntentDispatcher tests (20-25 tests - not started)
+- [ ] Feature 10.7: Full Pipeline deterministic integration tests (15-20 tests - not started)
 
-**Estimated Effort Remaining**: 2-3 days
-- Feature 10.6 (WorldIntentDispatcher tests): 2-3 days (Unity PlayMode tests)
+**Estimated Effort Remaining**: 5-7 days
+- Feature 10.4 (ValidationGate tests): 2-3 days
+- Feature 10.5 (WorldIntentDispatcher tests): 2-3 days
+- Feature 10.7 (Integration tests): 1-2 days
 
-**Note**: Features 10.1, 10.2, 10.3, 10.4, 10.5, and 10.7 are complete. Only WorldIntentDispatcher tests remain (Unity-specific).
+**Note**: Features 10.1, 10.2, and 10.3 are complete. Most components (ContextRetrievalLayer, PromptAssembler, EphemeralWorkingMemory, OutputParser, MemoryMutationController) have comprehensive test coverage exceeding original estimates.
 
 See `PHASE10_PROOF_GAPS.md` for detailed test backlog with file targets and acceptance criteria.
 
@@ -187,7 +191,7 @@ Implement a simple, abstracted save/load system for game state persistence. This
 ### Key Components
 
 - `IGameStatePersistence` interface for abstraction
-- `SaveGameFreePersistence` (Unity SaveGameFree implementation)
+- `EasySaveGamePersistence` (Unity EasySaveGame implementation)
 - `GameStateManager` wrapper class
 - Unity `GameStatePersistenceManager` MonoBehaviour component
 - Versioning and migration support
@@ -321,7 +325,7 @@ Enable support for multiple NPCs in the same conversation context, including NPC
 
 ## Next 5 Tasks (Recommended Execution Order)
 
-**Critical Path for Milestone 4:**
+**Critical Path for Milestone 5 (v0.3.0):**
 
 1. **Feature 12 & 13: Structured Output** - **DO THIS FIRST**
    - Feature 12: Dedicated Structured Output (2-3 weeks)
@@ -338,15 +342,17 @@ Enable support for multiple NPCs in the same conversation context, including NPC
    - Uses persisted `InteractionCount` from Feature 16
    - **Rationale**: The "Holy Grail" of AI consistency, but requires persistence to work
 
-4. **Feature 8: RedRoom Integration** - **Weave in as breather task**
+4. **Feature 10: Deterministic Proof Gap Testing** - **MUST BE COMPLETED**
+   - Ongoing throughout all phases, but must be finished before Milestone 5 complete
+   - Complete remaining test suites (5-7 days remaining)
+   - **Rationale**: Required for v1.0. Cannot claim "deterministically proven" architecture without this.
+
+5. **Feature 8: RedRoom Integration** - **Weave in as breather task** (Optional for v0.2.0)
    - Feature 8.4: Testing Overlay fixes (2-3 days)
    - **Rationale**: Lower cognitive load, good for maintaining momentum between heavy features
-   - **Note**: Feature 9 (Documentation) is complete - no additional work needed
+   - **Note**: Can be completed post-v0.2.0 release if needed
 
-5. **Feature 10: Deterministic Proof Gap Testing** - **MUST BE COMPLETED**
-   - Ongoing throughout all phases, but must be finished before Milestone 4 complete
-   - Complete remaining test suites (9-13 days remaining)
-   - **Rationale**: Required for v1.0. Cannot claim "deterministically proven" architecture without this.
+**Note**: Milestone 4 (v0.2.0) is complete and ready for open source release. The tasks above apply to Milestone 5 (v0.3.0).
 
 ---
 
@@ -386,26 +392,48 @@ Enable support for multiple NPCs in the same conversation context, including NPC
 - Feature 8: RedRoom Integration - 🚧 99% Complete (overlay fixes needed)
 - Feature 9: Documentation - ✅ Complete
 
-### Milestone 4: Production Ready (Features 10, 12, 13, 14, 16, 8, 9) 🚧
-**Status**: In Progress
+### Milestone 4: v0.2.0 - The Foundation Update (Features 1-9, 10 partial) ✅
+**Status**: ✅ Complete (Ready for Open Source Release)
+
+**What's Included in v0.2.0:**
+- ✅ Feature 1: Determinism Layer & Expectancy Engine
+- ✅ Feature 2: Structured Memory System
+- ✅ Feature 3: State Snapshot & Context Retrieval
+- ✅ Feature 4: Ephemeral Working Memory
+- ✅ Feature 5: Output Validation System
+- ✅ Feature 6: Controlled Memory Mutation
+- ✅ Feature 7: Enhanced Fallback System
+- ✅ Feature 8: RedRoom Integration (99% - overlay fixes in progress)
+- ✅ Feature 9: Documentation (100% complete)
+- 🚧 Feature 10: Deterministic Proof Gap Testing (~65% complete - ongoing)
+
+**Completion Criteria**:
+- [x] Core architecture complete (Features 1-6)
+- [x] Integration & polish complete (Features 7-9)
+- [x] Comprehensive documentation
+- [x] 92.37% test coverage with 1,531 passing tests
+- [x] Ready for v0.2.0-rc.1 open source release
+
+**Note**: v0.2.0 uses **regex-based parsing** for output extraction. v0.3.0 will introduce LLM-native Structured Output (JSON), which may require updates to custom parser logic.
+
+### Milestone 5: v0.3.0 - The Production Update (Features 12, 13, 14, 16, 10 completion) 🚧
+**Status**: 🚧 Planned  
+**Prerequisite**: **Milestone 4 (v0.2.0) must be released** before starting Milestone 5 features.
 
 **Recommended Execution Order** (see "Next 5 Tasks" section above):
 1. **Feature 12 & 13** (Structured Output) - Do first
 2. **Feature 16** (Save/Load) - Do second
 3. **Feature 14** (Deterministic Seed) - Do third
-4. **Feature 8** (RedRoom Integration) - Weave in as breather task
-5. **Feature 10** (Proof Gap Testing) - **Must be completed** (ongoing throughout, but finish before Milestone 4 complete)
+4. **Feature 10** (Proof Gap Testing) - **Must be completed** (ongoing throughout, but finish before Milestone 5 complete)
 
 **Status**:
-- Feature 10: Deterministic Proof Gap Testing - 🚧 ~85% Complete (**MUST BE COMPLETED** for Milestone 4)
+- Feature 10: Deterministic Proof Gap Testing - 🚧 ~65% Complete (**MUST BE COMPLETED** for Milestone 5)
 - Feature 12: Dedicated Structured Output - 📋 Planned (HIGH priority - **DO FIRST**)
 - Feature 13: Structured Output Integration - 📋 Planned (HIGH priority - **DO IMMEDIATELY AFTER 12**)
 - Feature 16: Save/Load Game Integration - 📋 Planned (CRITICAL priority - **DO SECOND**, after 12 & 13)
 - Feature 14: Deterministic Generation Seed - 📋 Planned (CRITICAL priority - **DO THIRD**, after 16)
-- Feature 8: RedRoom Integration - 🚧 99% Complete (overlay fixes needed)
-- Feature 9: Documentation - ✅ Complete
 
-**Target**: Complete all high-priority features for v0.2.0 release
+**Target**: Complete all high-priority features for v0.3.0 release
 - **Requires Feature 10 completion** (deterministic proof gaps) - **REQUIRED**
 - Requires Feature 12-13 completion (structured output migration) - **DO FIRST**
 - Requires Feature 16 completion (save/load persistence) - **DO SECOND**
@@ -413,11 +441,11 @@ Enable support for multiple NPCs in the same conversation context, including NPC
 - Requires all tests passing
 - Requires performance benchmarks met
 
-**Note**: Feature 10 is **required** for Milestone 4 completion. The architecture cannot claim to be "deterministically proven" without completing Feature 10's test suite.
+**Note**: Feature 10 is **required** for Milestone 5 completion. The architecture cannot claim to be "deterministically proven" without completing Feature 10's test suite.
 
-### Milestone 5: Enhanced Features (Features 11, 15, 17, 18, 19) 📋
+### Milestone 6: Enhanced Features (Features 11, 15, 17, 18, 19) 📋
 **Status**: Planned  
-**Prerequisite**: **Milestone 4 must be complete** before starting Milestone 5 features. These are enhancements that build on a stable foundation.
+**Prerequisite**: **Milestone 5 (v0.3.0) must be complete** before starting Milestone 6 features. These are enhancements that build on a stable foundation.
 
 - Feature 11: RAG-Based Memory Retrieval & Memory Proving - 📋 Planned (MEDIUM priority)
 - Feature 15: Multiple NPC Support - 📋 Planned (MEDIUM priority)

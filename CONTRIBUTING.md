@@ -16,6 +16,37 @@ Thank you for your interest in contributing to LlamaBrain! This document provide
 - **Unity Test Framework**: Included via Unity Test Runner
 - **Core Library**: Must build the core library first (see Unity Development section)
 
+### Unity Dependencies
+
+**Required Unity Packages:**
+
+1. **UniTask** (via Unity Package Manager - Git URL)
+   - **Purpose**: High-performance async/await library for Unity
+   - **Installation**: Package Manager → Add package from git URL → `https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask`
+   - **Usage**: Used throughout LlamaBrain for async operations (`SendPlayerInputAsync`, `SendWithSnapshotAsync`, etc.)
+   - **License**: MIT License
+
+2. **TextMeshPro (TMP)** (via Unity Package Manager)
+   - **Purpose**: Advanced text rendering for UI components
+   - **Installation**: Package Manager → Search "TextMeshPro" → Install
+   - **Usage**: All dialogue UI components, RedRoom overlays, and debug displays
+   - **License**: Unity package (distributed by Unity)
+
+3. **SaveGameFree** (manual import - UnityPackage)
+   - **Purpose**: Game state persistence (required for Feature 16: Save/Load Game Integration)
+   - **Installation**: Download from [GitHub Releases](https://github.com/BayatGames/SaveGameFree/releases) → Import `.unitypackage`
+   - **Version**: 2.5.0+ (use GitHub version, not Asset Store version)
+   - **Usage**: Persisting game state, NPC memory, and InteractionCount across sessions
+   - **License**: MIT License (GitHub version)
+
+4. **Starter Assets - Third Person** (via Unity Asset Store)
+   - **Purpose**: Character controller for NPC movement and interaction
+   - **Installation**: Download from [Unity Asset Store](https://assetstore.unity.com/packages/essentials/starter-assets-thirdperson-updates-in-new-charactercontroller-pa-196526)
+   - **Usage**: NPC movement, character controller functionality, and player interaction mechanics
+   - **License**: Standard Asset Store EULA
+
+**Note**: See [THIRD_PARTY_PACKAGES.md](LlamaBrainRuntime/Assets/LlamaBrainRuntime/Documentation/THIRD_PARTY_PACKAGES.md) for detailed installation instructions and usage information.
+
 ### Building the Project
 
 1. **Clone the repository**
