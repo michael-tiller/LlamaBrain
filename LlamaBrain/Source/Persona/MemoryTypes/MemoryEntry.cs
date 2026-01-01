@@ -19,14 +19,33 @@ namespace LlamaBrain.Persona.MemoryTypes
     public abstract MemoryAuthority Authority { get; }
 
     /// <summary>
-    /// When this memory was created.
+    /// When this memory was created, as UTC ticks.
+    /// Used for deterministic ordering (more precise than DateTime).
+    /// Captured at insertion time and persisted.
     /// </summary>
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public long CreatedAtTicks { get; set; } = DateTimeOffset.UtcNow.UtcTicks;
+
+    /// <summary>
+    /// When this memory was created.
+    /// Derived from CreatedAtTicks for backward compatibility.
+    /// </summary>
+    public DateTime CreatedAt
+    {
+      get => new DateTime(CreatedAtTicks, DateTimeKind.Utc);
+      set => CreatedAtTicks = value.ToUniversalTime().Ticks;
+    }
 
     /// <summary>
     /// When this memory was last accessed/used.
     /// </summary>
     public DateTime LastAccessedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Monotonically increasing sequence number assigned at insertion time.
+    /// Used as the final tie-breaker for deterministic ordering when all other keys match.
+    /// Lower SequenceNumber means earlier insertion.
+    /// </summary>
+    public long SequenceNumber { get; set; }
 
     /// <summary>
     /// The content of this memory as a string for prompt injection.

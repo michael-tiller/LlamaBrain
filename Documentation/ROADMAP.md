@@ -25,9 +25,9 @@
 | Phase 5: Output Validation System | ✅ Complete | CRITICAL |
 | Phase 6: Controlled Memory Mutation | ✅ Complete | HIGH |
 | Phase 7: Enhanced Fallback System | ✅ Complete | MEDIUM |
-| Phase 8: RedRoom Integration | 🚧 In Progress | MEDIUM |
-| Phase 9: Documentation | 🚧 In Progress | MEDIUM |
-| Phase 10: Deterministic Proof Gap Testing | 📋 Planned | HIGH |
+| Phase 8: RedRoom Integration | 🚧 In Progress (80%) | MEDIUM |
+| Phase 9: Documentation | 🚧 In Progress (90%) | MEDIUM |
+| Phase 10: Deterministic Proof Gap Testing | 🚧 In Progress | HIGH |
 | Phase 11: RAG-Based Memory Retrieval | 📋 Planned | MEDIUM |
 | Phase 12: Dedicated Structured Output | 📋 Planned | HIGH |
 | Phase 13: Structured Output Integration | 📋 Planned | HIGH |
@@ -333,7 +333,7 @@
 ## 🚧 Phase 8: RedRoom Integration
 
 **Priority**: MEDIUM - Enables testing of new architecture  
-**Status**: 🚧 In Progress (70% Complete)  
+**Status**: 🚧 In Progress (80% Complete)  
 **Dependencies**: All previous phases
 
 ### Definition of Done
@@ -391,51 +391,58 @@
     - [x] Programmatic UI generation at runtime
     - [x] Configurable styling and layout
 
-- [ ] **Validation Gate Overlay** (medium priority)
-  - [ ] Real-time validation results display
-    - [ ] Gate pass/fail status with visual indicator (green/red)
-    - [ ] Failure reasons list (expandable, grouped by severity)
-    - [ ] Violating text snippets highlighted
-  - [ ] Constraint evaluation status
-    - [ ] Active constraints (permissions, prohibitions, requirements)
-    - [ ] Which constraints were checked and their results
-    - [ ] Constraint severity indicators
-  - [ ] Retry attempt visualization
-    - [ ] Current attempt number / max attempts
-    - [ ] Constraint escalation status (none, add prohibition, harden, full)
-    - [ ] Retry history (previous attempts and their failures)
-  - [ ] Integration with RedRoomCanvas
-    - [ ] Toggle via hotkey (e.g., F3) or UI button
-    - [ ] Auto-refresh on validation events
+- [x] **Validation Gate Overlay** (medium priority) - **IMPLEMENTED**
+  - [x] Real-time validation results display (`ValidationGateOverlay.cs`)
+    - [x] Gate pass/fail status with visual indicator (green/red)
+    - [x] Failure reasons list (grouped by severity: Critical, Hard, Soft)
+    - [x] Violating text snippets displayed
+  - [x] Constraint evaluation status
+    - [x] Active constraints (permissions, prohibitions, requirements)
+    - [x] Constraints grouped by type with color coding
+    - [x] Constraint severity indicators (Critical=red, Hard=orange, Soft=yellow)
+    - [x] Source rule attribution (shows which ExpectancyRule triggered it)
+  - [x] Retry attempt visualization
+    - [x] Current attempt number / max attempts with progress bar
+    - [x] Constraint escalation status (None, Add Prohibition, Harden, Full)
+    - [x] Retry history (showing each attempt's status, timing, violations)
+  - [x] Integration with RedRoomCanvas
+    - [x] Toggle via hotkey (F3)
+    - [x] Auto-refresh on validation events (0.3s interval)
+  - [x] Setup helper (`ValidationGateOverlaySetup.cs`)
+    - [x] Prefab-based instantiation at runtime
+    - [x] Automatic wire-up of UI references
 
-- [ ] **Constraint Demonstration Overlay** (lower priority - can be combined with Validation overlay)
-  - [ ] Active constraints list
-    - [ ] Grouped by type (Permission, Prohibition, Requirement)
-    - [ ] Severity indicators (Critical, Hard, Soft)
-    - [ ] Rule source (which ExpectancyRule triggered it)
-  - [ ] Rule evaluation results
-    - [ ] Which rules matched the current InteractionContext
-    - [ ] Why rules matched (trigger reason, NPC ID, scene, tags)
-  - [ ] Integration with RedRoomCanvas
-    - [ ] Toggle via hotkey (e.g., F4) or UI button
-    - [ ] Can be combined into Validation overlay as tabs/sections
+- [x] **Constraint Demonstration Overlay** - **COMBINED INTO VALIDATION GATE OVERLAY**
+  - [x] Active constraints list (integrated into ValidationGateOverlay)
+    - [x] Grouped by type (Permission, Prohibition, Requirement)
+    - [x] Severity indicators (Critical, Hard, Soft)
+    - [x] Rule source (which ExpectancyRule triggered it)
+  - [x] Rule evaluation results
+    - [x] Displays constraints from LastConstraints
+    - [x] Shows trigger reason in stats section
+  - [x] Integration with RedRoomCanvas
+    - [x] Combined with Validation overlay (F3)
+    - [x] Single unified overlay for validation + constraints
 
 - [x] **Overlay System Infrastructure** (partial)
-  - [x] Extend `RedRoomCanvas` with input managed overlay panels (F2 toggle implemented)
-  - [x] Auto-refresh event system (polling-based, 0.5s interval)
-  - [ ] Overlay persistence (remember which overlays are open between sessions)
+  - [x] Extend `RedRoomCanvas` with input managed overlay panels (F2 + F3 toggles implemented)
+  - [x] Auto-refresh event system (polling-based, 0.3-0.5s interval)
 
 #### 8.5 Integration Testing
 - [x] **FullPipelineIntegrationTests** (base library) - Complete
   - [x] 8 tests in `LlamaBrain.Tests/Integration/FullPipelineIntegrationTests.cs`
   - [x] Tests full 9-component pipeline from InteractionContext through memory mutation
   - [x] Validates end-to-end flow, retry logic, constraint escalation, and fallback system
-- [ ] **Unity PlayMode Integration Tests** - Pending
-  - [ ] Full stack integration tests with real server
-  - [ ] Location: `LlamaBrainRuntime/Tests/PlayMode/`
-  - [ ] Estimated: 20-30 integration/system tests
+- [x] **Unity PlayMode Integration Tests** - Complete
+  - [x] Location: `LlamaBrainRuntime/Tests/PlayMode/`
+  - [x] `FullPipelinePlayModeTests.cs` - 12 tests (6 external integration, 6 contract tests)
+  - [x] `BrainAgentIntegrationTests.cs` - 9 tests for basic agent behavior
+  - [x] `BrainServerTests.cs` - 25 tests for server lifecycle
+  - [x] `MemoryMutationPlayModeTests.cs` - 15 tests for memory mutation flows (episodic, beliefs, world state, canonical facts)
+  - [x] `FewShotAndFallbackPlayModeTests.cs` - 12 tests for few-shot priming, fallback system, multi-turn conversations
+  - [x] Total: 73+ PlayMode integration tests
 
-**Estimated Effort**: 3-4 days remaining (remaining overlays, sample scenes, and Unity PlayMode tests)
+**Estimated Effort**: 2-3 days remaining (overlay persistence, remaining overlay enhancements)
 
 ---
 
@@ -492,34 +499,54 @@
   - [x] Unit tests for `WorkingMemoryConfig` few-shot settings (1 test)
   - [x] Unit tests for `EphemeralWorkingMemory` few-shot handling (8 tests)
   - [x] Unit tests for `FallbackToFewShotConverter` (17 tests)
-  - [x] All 30 few-shot tests passing
-- [ ] **Documentation**
-  - [ ] Update `ARCHITECTURE.md` with few-shot prompting component
-  - [ ] Add examples to `USAGE_GUIDE.md` showing how to use few-shot examples
-  - [ ] Document best practices for few-shot example selection
+  - [x] Integration tests in `FewShotAndFallbackPlayModeTests.cs` (12 tests)
+  - [x] All 30+ few-shot tests passing
+- [x] **Documentation**
+  - [x] Update `ARCHITECTURE.md` with few-shot prompting component
+  - [x] Add examples to both `USAGE_GUIDE.md` files (core library and Unity runtime) showing how to use few-shot examples
+  - [x] Document best practices for few-shot example selection
+  - [x] Document configuration options (MaxFewShotExamples, AlwaysIncludeFewShot)
 
-**Estimated Effort**: 2-3 days remaining (tutorial content + few-shot documentation)
+**Estimated Effort**: 3-4 days remaining (tutorial content only)
 
 ---
 
-## 📋 Phase 10: Deterministic Proof Gap Testing
+## 🚧 Phase 10: Deterministic Proof Gap Testing
 
 **Priority**: HIGH - Required for v1.0 release  
-**Status**: 📋 Planned (0% Complete)  
+**Status**: 🚧 In Progress (~25% Complete)  
 **Dependencies**: Phase 1-7 (All core components must be implemented)
 
 **Note**: See `PHASE10_PROOF_GAPS.md` for detailed test backlog with file targets and acceptance criteria.
 
+### Progress Summary
+
+#### Critical Requirements Implemented (4/5)
+- [x] **Requirement #1**: Strict Total Order Sort Algorithm - Updated ContextRetrievalLayer with LINQ OrderBy/ThenBy chains
+- [x] **Requirement #2**: SequenceNumber Field - Added to MemoryEntry base class, monotonic counter in AuthoritativeMemorySystem
+- [x] **Requirement #3**: Score vs Tie-Breaker Logic - Implemented with ordinal Id comparison and SequenceNumber tie-breaker
+- [x] **Requirement #4**: OutputParser Normalization Contract - Added `NormalizeWhitespace()` static method with 21 tests
+- [ ] **Requirement #5**: WorldIntentDispatcher Singleton Lifecycle - Pending
+
+#### High-Leverage Determinism Tests Added (7 tests)
+- [x] Dictionary order tripwire test
+- [x] Near-equal floating score tie-breaker test
+- [x] SequenceNumber tie-breaker test
+- [x] SequenceNumber persistence test
+- [x] Belief determinism test
+- [x] Ordinal string comparison test
+- [x] All weights zero fallback test
+
 ### Definition of Done
 
-- [ ] ContextRetrievalLayer selection behavior tests (20-25 tests)
-- [ ] PromptAssembler hard bounds & truncation priority tests (25-30 tests)
-- [ ] OutputParser mutation extraction & malformed handling tests (20-25 tests)
-- [ ] ValidationGate ordering & gate execution tests (30-35 tests)
-- [ ] MemoryMutationController authority enforcement tests (30-35 tests)
-- [ ] WorldIntentDispatcher pure dispatcher behavior tests (20-25 PlayMode tests)
-- [ ] Full pipeline determinism & policy integration tests (15-20 tests)
-- [ ] All Critical Implementation Requirements met (see `PHASE10_PROOF_GAPS.md`)
+- [ ] ContextRetrievalLayer selection behavior tests (7/20-25 tests complete)
+- [ ] PromptAssembler hard bounds & truncation priority tests (0/25-30 tests)
+- [x] OutputParser mutation extraction & malformed handling tests (21/20-25 tests)
+- [ ] ValidationGate ordering & gate execution tests (0/30-35 tests)
+- [ ] MemoryMutationController authority enforcement tests (0/30-35 tests)
+- [ ] WorldIntentDispatcher pure dispatcher behavior tests (0/20-25 PlayMode tests)
+- [ ] Full pipeline determinism & policy integration tests (0/15-20 tests)
+- [ ] All Critical Implementation Requirements met (4/5 complete, see `PHASE10_PROOF_GAPS.md`)
 
 **Estimated Effort**: 9-13 days total
 - Phase 10.1-10.5 (Unit tests): 5-7 days
@@ -893,8 +920,8 @@ Complete integration of structured output throughout the validation pipeline, mu
 **Target**: Weeks 7-8  
 **Status**: 🚧 Partial
 - [x] Fallback system complete
-- [ ] RedRoom fully integrated (60% complete)
-- [ ] Documentation comprehensive (85% complete)
+- [ ] RedRoom fully integrated (80% complete)
+- [ ] Documentation comprehensive (90% complete)
 
 ### Milestone 4: Production Ready ❌
 **Target**: Week 9+  
@@ -943,4 +970,4 @@ Each phase follows this pattern:
 
 ---
 
-**Next Review**: After Phase 8.4 completion (sample scenes)
+**Next Review**: After Phase 8.4 completion (overlay persistence)

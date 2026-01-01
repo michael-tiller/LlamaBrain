@@ -1,6 +1,8 @@
-# LlamaBrain Managed Host Usage Guide
+# LlamaBrain Unity Integration Guide
 
 This guide shows how to use all nine components of the LlamaBrain architecture in your Unity project. The system ensures deterministic, controlled AI behavior while maintaining the flexibility and creativity of Large Language Models.
+
+**Last Updated**: December 31, 2025
 
 ---
 
@@ -980,27 +982,137 @@ if (snapshot != null)
 
 ### Few-Shot Prompt Priming
 
-Add example demonstrations via `InteractionContext.TriggerPrompt`:
+Few-shot examples guide the LLM's response style, format, and tone by providing example input-output pairs. Configure them via `WorkingMemoryConfig` when assembling prompts.
+
+#### Basic Configuration
 
 ```csharp
-var context = new InteractionContext
-{
-    TriggerReason = TriggerReason.PlayerUtterance,
-    NpcId = "wizard_001",
-    PlayerInput = "Tell me about magic",
-    TriggerPrompt = @"Example 1:
-Player: What is magic?
-Wizard: Magic is the art of channeling energy.
+using LlamaBrain.Core.Inference;
+using LlamaBrain.Core.Expectancy;
 
-Example 2:
-Player: How do I learn?
-Wizard: Magic requires years of study."
+// Create few-shot examples
+var examples = new List<FewShotExample>
+{
+    new FewShotExample(
+        "Hello!",
+        "Greetings, traveler. What brings you to my forge today?"
+    ),
+    new FewShotExample(
+        "Can you make me a sword?",
+        "Aye, I can forge a blade. But quality steel takes time. What kind of sword do you need?"
+    ),
+    new FewShotExample(
+        "How long will it take?",
+        "A proper blade? Three days minimum. I don't rush my work."
+    )
 };
 
-var response = await agent.SendPlayerInputWithContextAsync("Tell me about magic", context);
+// Configure working memory with examples
+var workingMemoryConfig = new WorkingMemoryConfig
+{
+    MaxFewShotExamples = 3,
+    AlwaysIncludeFewShot = true,  // Include even when dialogue history exists
+    FewShotExamples = examples
+};
+
+// Use when assembling prompts (via PromptAssembler)
+var promptAssembler = new PromptAssembler();
+var assembledPrompt = promptAssembler.AssembleFromSnapshot(
+    snapshot,
+    npcName: "Gundren",
+    workingMemoryConfig: workingMemoryConfig
+);
 ```
 
-**Location**: `LlamaBrain/Source/Core/Inference/PromptAssembler.cs`
+#### Unity Integration
+
+In Unity, configure few-shot examples programmatically by creating a custom `WorkingMemoryConfig` and passing it to the prompt assembly process. Since `LlamaBrainAgent` uses `PromptAssemblerSettings`, you can extend it or configure examples at runtime:
+
+```csharp
+using UnityEngine;
+using LlamaBrain.Runtime.Core;
+using LlamaBrain.Core.Inference;
+using LlamaBrain.Core.Expectancy;
+using System.Collections.Generic;
+
+public class NPCWithFewShot : MonoBehaviour
+{
+    private LlamaBrainAgent agent;
+    private List<FewShotExample> fewShotExamples;
+
+    void Start()
+    {
+        agent = GetComponent<LlamaBrainAgent>();
+        
+        // Configure few-shot examples for this NPC
+        fewShotExamples = new List<FewShotExample>
+        {
+            new FewShotExample(
+                "Hello!",
+                "Greetings, traveler. What brings you to my forge today?"
+            ),
+            new FewShotExample(
+                "Can you repair my sword?",
+                "Aye, I can take a look. What needs fixing?"
+            ),
+            new FewShotExample(
+                "How much will it cost?",
+                "Depends on the damage. Show me the blade and I'll give you a fair price."
+            )
+        };
+    }
+
+    // Note: LlamaBrainAgent uses PromptAssemblerSettings internally
+    // For full control, you may need to extend the agent or configure
+    // WorkingMemoryConfig through PromptAssemblerSettings if supported
+}
+```
+
+#### Converting Fallbacks to Few-Shot Examples
+
+Reuse your fallback responses as few-shot examples:
+
+```csharp
+using LlamaBrain.Core.Fallback;
+
+// Your fallback responses
+var fallbacks = new List<string>
+{
+    "Hmm, let me think on that.",
+    "I'm not sure I understand.",
+    "*scratches head* Run that by me again?"
+};
+
+// Convert to few-shot examples
+var examples = FallbackToFewShotConverter.ConvertFallbacksToFewShot(
+    fallbacks,
+    maxExamples: 3,
+    triggerReason: TriggerReason.PlayerUtterance
+);
+
+// Use in WorkingMemoryConfig
+var workingMemoryConfig = new WorkingMemoryConfig
+{
+    FewShotExamples = examples,
+    MaxFewShotExamples = 3
+};
+```
+
+#### Configuration Options
+
+- **`MaxFewShotExamples`**: Maximum number of examples to include (default: 3)
+- **`AlwaysIncludeFewShot`**: If `true`, includes examples even when dialogue history exists. If `false`, examples are only included when dialogue history is empty (default: `false`)
+- **`FewShotExamples`**: The list of example input-output pairs
+
+**Best Practices**:
+- Use 2-5 examples for best results
+- Place most important examples last (recency bias)
+- Match examples to your NPC's voice and tone
+- Use examples to demonstrate expected response length and format
+
+**Location**: 
+- `LlamaBrain/Source/Core/Inference/EphemeralWorkingMemory.cs`
+- `LlamaBrain/Source/Core/Inference/PromptAssembler.cs`
 
 ---
 

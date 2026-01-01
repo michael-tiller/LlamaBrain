@@ -558,6 +558,317 @@ string finalResponse = gateResult.Passed
     : fallbackSystem.GetFallback(context.TriggerReason, failureReason);
 ```
 
+## Few-Shot Prompting System
+
+LlamaBrain includes a comprehensive few-shot prompting system that provides in-context learning examples to guide LLM behavior, format, and tone.
+
+### Overview
+
+Few-shot prompting (also called in-context learning) provides example input-output pairs that demonstrate desired behavior. The LLM uses these examples to understand the expected response format, tone, and content without explicit instructions.
+
+**Key Benefits**:
+- **Format Consistency**: Examples teach the expected response structure
+- **Tone Control**: Demonstrate the character's voice and personality
+- **Behavior Demonstration**: Show how to handle specific interaction types
+- **Error Reduction**: Examples reduce hallucinations by providing concrete patterns
+
+### Implementation Components
+
+**Core Classes**:
+- `FewShotExample` - Represents a single input-output example pair
+- `EphemeralWorkingMemory` - Stores and manages few-shot examples for prompt assembly
+- `WorkingMemoryConfig` - Configures few-shot limits and behavior
+- `PromptAssembler` - Injects few-shot examples into the prompt
+- `FallbackToFewShotConverter` - Converts fallback responses to few-shot examples
+
+### FewShotExample Structure
+
+```csharp
+public class FewShotExample
+{
+    /// <summary>Example player/user input</summary>
+    public string Input { get; set; }
+
+    /// <summary>Example NPC/assistant response</summary>
+    public string Output { get; set; }
+
+    /// <summary>Optional context or scenario description</summary>
+    public string? Context { get; set; }
+
+    /// <summary>Optional trigger reason this example is relevant for</summary>
+    public TriggerReason? TriggerReason { get; set; }
+
+    /// <summary>Optional tags for filtering examples</summary>
+    public List<string> Tags { get; set; }
+}
+```
+
+### Configuration Options
+
+**WorkingMemoryConfig Few-Shot Settings**:
+```csharp
+var config = new WorkingMemoryConfig
+{
+    // Maximum number of few-shot examples to include
+    MaxFewShotExamples = 3,
+
+    // List of few-shot examples
+    FewShotExamples = new List<FewShotExample>
+    {
+        new FewShotExample
+        {
+            Input = "Hello there!",
+            Output = "Greetings, traveler! What brings you to my shop today?",
+            TriggerReason = TriggerReason.PlayerUtterance
+        },
+        new FewShotExample
+        {
+            Input = "What do you sell?",
+            Output = "I deal in rare artifacts and enchanted trinkets. Browse freely, but touch nothing without asking first.",
+            TriggerReason = TriggerReason.PlayerUtterance
+        }
+    },
+
+    // Always include few-shot examples even if context is limited
+    AlwaysIncludeFewShot = true
+};
+```
+
+**PromptAssemblerConfig Few-Shot Settings**:
+```csharp
+var assemblerConfig = new PromptAssemblerConfig
+{
+    // Whether to include few-shot examples section
+    IncludeFewShotExamples = true,
+
+    // Header text before few-shot examples
+    FewShotHeader = "Here are examples of how you should respond:",
+
+    // Format string for each example (supports {input}, {output}, {context})
+    FewShotExampleFormat = "Player: {input}\nYou: {output}",
+
+    // Separator between examples
+    FewShotSeparator = "\n\n"
+};
+```
+
+### Using FallbackToFewShotConverter
+
+Convert author-controlled fallback responses into few-shot examples:
+
+```csharp
+// Create converter
+var converter = new FallbackToFewShotConverter();
+
+// Convert fallback config to few-shot examples
+var fallbackConfig = new FallbackSystem.FallbackConfig
+{
+    GenericFallbacks = new List<string>
+    {
+        "I'm not sure what to say.",
+        "Let me think about that."
+    },
+    ContextFallbacks = new Dictionary<TriggerReason, List<string>>
+    {
+        {
+            TriggerReason.PlayerUtterance,
+            new List<string>
+            {
+                "I hear you, traveler.",
+                "That's an interesting thought."
+            }
+        }
+    }
+};
+
+// Convert to few-shot examples with generated inputs
+var examples = converter.ConvertToFewShotExamples(
+    fallbackConfig,
+    generateInputs: true,  // Auto-generate matching inputs
+    maxExamplesPerReason: 2
+);
+
+// Use in working memory
+workingMemoryConfig.FewShotExamples = examples;
+```
+
+### Prompt Assembly Flow
+
+1. **Example Collection**: `EphemeralWorkingMemory` collects examples from config
+2. **Filtering**: Examples filtered by `TriggerReason` and tags if specified
+3. **Ordering**: Examples ordered deterministically (by sequence, ensuring byte-stable output)
+4. **Formatting**: `PromptAssembler` formats examples using configured template
+5. **Injection**: Examples injected into prompt at configured location
+
+**Prompt Structure**:
+```
+[System Prompt]
+[Persona Description]
+
+[Few-Shot Examples Header]
+Player: What is magic?
+You: Magic is the art of channeling the world's energy through focused will.
+
+Player: How do I learn magic?
+You: Magic requires years of study and a deep understanding of the arcane principles.
+
+[Memory Context]
+[Constraints]
+[Dialogue History]
+[Current Player Input]
+```
+
+### Few-Shot Best Practices
+
+#### 1. Match Trigger Reason
+Tag examples with relevant `TriggerReason` to show context-appropriate responses:
+
+```csharp
+// Examples for zone triggers (NPC reacts to player entering area)
+new FewShotExample
+{
+    Input = "[Player enters the shop]",
+    Output = "Ah, a customer! Welcome, welcome. Feel free to browse.",
+    TriggerReason = TriggerReason.ZoneTrigger
+}
+
+// Examples for player utterances (direct conversation)
+new FewShotExample
+{
+    Input = "Tell me about yourself.",
+    Output = "I've been running this shop for thirty years. Every item has a story.",
+    TriggerReason = TriggerReason.PlayerUtterance
+}
+```
+
+#### 2. Demonstrate Format Consistently
+Use examples to teach response length, structure, and style:
+
+```csharp
+// Short, punchy responses for a gruff character
+new FewShotExample { Input = "How are you?", Output = "Fine." }
+new FewShotExample { Input = "Nice weather.", Output = "Is it?" }
+
+// Verbose, detailed responses for a scholarly character
+new FewShotExample
+{
+    Input = "What is that book?",
+    Output = "Ah, you've noticed my most prized possession! This tome, penned by the great archmage Valdris, contains the fundamental theorems of elemental manipulation. It took me decades to acquire."
+}
+```
+
+#### 3. Show Constraint Compliance
+Include examples that demonstrate respecting constraints:
+
+```csharp
+// Example showing NPC refusing to reveal secrets
+new FewShotExample
+{
+    Input = "What's the king's secret?",
+    Output = "I cannot speak of such matters. The crown's affairs are not mine to share.",
+    Tags = new List<string> { "secret_protection" }
+}
+
+// Example showing NPC staying in character
+new FewShotExample
+{
+    Input = "What's your favorite video game?",
+    Output = "Video... game? I know not what strange magic you speak of, traveler.",
+    Tags = new List<string> { "anachronism_handling" }
+}
+```
+
+#### 4. Limit Example Count
+Too many examples waste tokens; too few miss patterns:
+
+```csharp
+// Recommended: 2-5 examples for most use cases
+config.MaxFewShotExamples = 3;
+
+// For complex behaviors, consider more examples
+// but watch token budget
+config.MaxFewShotExamples = 5;
+```
+
+#### 5. Order Examples Strategically
+Place most relevant/important examples last (recency bias in LLMs):
+
+```csharp
+var examples = new List<FewShotExample>
+{
+    // General example first
+    new FewShotExample { Input = "Hello", Output = "Greetings." },
+
+    // More specific examples later
+    new FewShotExample { Input = "I need help", Output = "What troubles you?" },
+
+    // Most important pattern last
+    new FewShotExample
+    {
+        Input = "Tell me a secret",
+        Output = "Some knowledge is too dangerous to share freely."
+    }
+};
+```
+
+#### 6. Use Context Field for Complex Scenarios
+Provide scenario context when needed:
+
+```csharp
+new FewShotExample
+{
+    Context = "The player has just defeated the dragon",
+    Input = "I did it!",
+    Output = "Incredible! The beast that terrorized our village for centuries, slain by your hand. You have earned our eternal gratitude.",
+    Tags = new List<string> { "post_victory" }
+}
+```
+
+### Deterministic Ordering
+
+Few-shot examples are always ordered deterministically to ensure byte-stable prompt assembly:
+
+- Examples maintain list order (first-in, first-out)
+- Filtered examples preserve relative order
+- No randomization unless explicitly configured
+- Same input state = same prompt output
+
+This ensures retries produce identical prompts (critical for the determinism architecture).
+
+### Integration with Fallback System
+
+Few-shot examples can be derived from fallback responses:
+
+```csharp
+// Fallback responses serve dual purpose:
+// 1. Emergency responses when LLM fails
+// 2. Source material for few-shot examples
+
+var fallbackConfig = fallbackSystem.GetConfig();
+var converter = new FallbackToFewShotConverter();
+
+// Convert fallbacks to examples
+var examples = converter.ConvertByTriggerReason(
+    fallbackConfig,
+    TriggerReason.PlayerUtterance,
+    maxExamples: 3
+);
+
+// Add to working memory config
+config.FewShotExamples.AddRange(examples);
+```
+
+This creates a virtuous cycle: well-crafted fallback responses improve both failure handling AND normal generation quality.
+
+### Performance Considerations
+
+- **Token Budget**: Each example consumes tokens; budget accordingly
+- **Example Selection**: Filter by trigger reason to minimize irrelevant examples
+- **Caching**: Examples are cached in `EphemeralWorkingMemory` per inference
+- **Statistics**: Track few-shot counts in `WorkingMemoryStats.FewShotCount`
+
+---
+
 ## Key Architectural Principles
 
 ### 1. Stateless LLM
@@ -622,6 +933,12 @@ All nine components are fully implemented and tested:
 - ✅ Component 9: Fallback System - Complete (Phase 7)
 
 **Test Coverage**: 92.37% line coverage, 853+ passing tests
+
+**Phase 10: Deterministic Proof Gap Testing**: 🚧 In Progress (~25% Complete)
+- Critical requirements 1-4 implemented (strict total order sorting, SequenceNumber field, tie-breaker logic, OutputParser normalization)
+- 7 high-leverage determinism tests added
+- See `PHASE10_PROOF_GAPS.md` for detailed test backlog
+- Required for v1.0 release to claim "deterministically proven" architecture
 
 ## Best Practices
 

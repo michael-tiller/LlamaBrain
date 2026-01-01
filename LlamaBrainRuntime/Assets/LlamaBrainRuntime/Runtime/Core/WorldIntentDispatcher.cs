@@ -47,12 +47,21 @@ namespace LlamaBrainRuntime.Core
   ///
   /// Game systems can subscribe to specific intent types to handle NPC desires like
   /// "follow_player", "give_item", "start_quest", etc.
+  ///
+  /// SINGLETON LIFECYCLE (Phase 10.5 Requirement):
+  /// - Lifetime Model: SCENE-LOCAL (Option A)
+  /// - Each scene should contain exactly one WorldIntentDispatcher
+  /// - Does NOT use DontDestroyOnLoad
+  /// - If duplicate detected in Awake(): component is disabled, gameObject is destroyed (end-of-frame)
+  /// - OnDestroy() clears Instance only if Instance == this
+  /// - Tests must yield return null before asserting duplicate removal (Unity lifecycle)
   /// </summary>
   [AddComponentMenu("LlamaBrain/World Intent Dispatcher")]
   public class WorldIntentDispatcher : MonoBehaviour
   {
     /// <summary>
     /// Singleton instance for global access.
+    /// Cleared only when the Instance itself is destroyed, not duplicates.
     /// </summary>
     public static WorldIntentDispatcher? Instance { get; private set; }
 
@@ -91,19 +100,40 @@ namespace LlamaBrainRuntime.Core
     /// </summary>
     public int TotalIntentsDispatched { get; private set; }
 
+    /// <summary>
+    /// Indicates whether this instance was marked as a duplicate and is pending destruction.
+    /// Used by tests to verify singleton enforcement.
+    /// </summary>
+    public bool IsDuplicateInstance { get; private set; }
+
     private void Awake()
     {
+      // Singleton enforcement: only one Instance allowed per scene
       if (Instance != null && Instance != this)
       {
-        Debug.LogWarning("[WorldIntentDispatcher] Multiple instances detected, destroying duplicate");
+        Debug.LogWarning($"[WorldIntentDispatcher] Multiple instances detected. " +
+          $"Existing: {Instance.gameObject.name}, Duplicate: {gameObject.name}. Destroying duplicate.");
+
+        // Mark as duplicate for test verification
+        IsDuplicateInstance = true;
+
+        // Disable the component immediately to prevent any further processing
+        enabled = false;
+
+        // Destroy the gameObject at end-of-frame (Unity lifecycle)
+        // Note: Destroy is deferred, so tests must yield return null before asserting
         Destroy(gameObject);
         return;
       }
+
       Instance = this;
+      IsDuplicateInstance = false;
     }
 
     private void OnDestroy()
     {
+      // Only clear Instance if WE are the actual singleton instance
+      // Duplicates should not affect the Instance reference when destroyed
       if (Instance == this)
       {
         Instance = null;

@@ -96,6 +96,11 @@ namespace LlamaBrain.Core.Validation
     private readonly OutputParserConfig config;
 
     /// <summary>
+    /// Unicode BOM character that may appear at start of text.
+    /// </summary>
+    private const char BOM = '\uFEFF';
+
+    /// <summary>
     /// Optional logging callback.
     /// </summary>
     public Action<string>? OnLog { get; set; }
@@ -115,7 +120,104 @@ namespace LlamaBrain.Core.Validation
     }
 
     /// <summary>
+    /// Normalizes whitespace in text for deterministic output.
+    /// This is a pure function that applies consistent whitespace normalization rules.
+    ///
+    /// Rules applied (in order):
+    /// 1. Strip BOM (\uFEFF) if present at start
+    /// 2. Convert CRLF to LF (Windows → Unix line endings)
+    /// 3. Trim trailing whitespace from each line
+    /// 4. Collapse 3+ consecutive blank lines to exactly 2
+    /// 5. Preserve leading blank lines (policy decision: preserved, not stripped)
+    /// 6. Preserve existing trailing newline (policy decision: if input ends with \n, output ends with \n)
+    ///
+    /// A "blank line" is defined as a line that is empty after trimming trailing whitespace.
+    /// </summary>
+    /// <param name="text">The text to normalize. May be null or empty.</param>
+    /// <returns>Normalized text with consistent whitespace. Returns empty string for null/empty input.</returns>
+    public static string NormalizeWhitespace(string? text)
+    {
+      if (string.IsNullOrEmpty(text))
+      {
+        return string.Empty;
+      }
+
+      // Step 1: Strip BOM if present at start
+      if (text[0] == BOM)
+      {
+        text = text.Substring(1);
+        if (string.IsNullOrEmpty(text))
+        {
+          return string.Empty;
+        }
+      }
+
+      // Step 2: Convert CRLF to LF
+      text = text.Replace("\r\n", "\n");
+      // Also handle any stray CR characters
+      text = text.Replace("\r", "\n");
+
+      // Check if original text ends with newline (to preserve it)
+      bool endsWithNewline = text.EndsWith("\n");
+
+      // Step 3: Split into lines and process each
+      var lines = text.Split('\n');
+      var processedLines = new List<string>(lines.Length);
+
+      foreach (var line in lines)
+      {
+        // Trim trailing whitespace from each line (but preserve leading whitespace/indentation)
+        processedLines.Add(line.TrimEnd());
+      }
+
+      // Step 4: Collapse 3+ consecutive blank lines to exactly 2
+      var result = new List<string>();
+      int consecutiveBlankLines = 0;
+
+      foreach (var line in processedLines)
+      {
+        bool isBlank = string.IsNullOrEmpty(line);
+
+        if (isBlank)
+        {
+          consecutiveBlankLines++;
+          // Only add if we haven't exceeded 2 consecutive blank lines
+          if (consecutiveBlankLines <= 2)
+          {
+            result.Add(line);
+          }
+          // If > 2, we skip adding this blank line (collapsing)
+        }
+        else
+        {
+          consecutiveBlankLines = 0;
+          result.Add(line);
+        }
+      }
+
+      // Step 5 & 6: Join lines and handle trailing newline
+      var normalized = string.Join("\n", result);
+
+      // If original ended with newline and result doesn't, add it back
+      // If original didn't end with newline, don't add one
+      if (endsWithNewline && !normalized.EndsWith("\n"))
+      {
+        normalized += "\n";
+      }
+      else if (!endsWithNewline && normalized.EndsWith("\n"))
+      {
+        // This shouldn't happen with our logic, but ensure we don't add trailing newline
+        normalized = normalized.TrimEnd('\n');
+      }
+
+      return normalized;
+    }
+
+    /// <summary>
     /// Parses raw LLM output into a structured ParsedOutput.
+    /// Applies whitespace normalization at the appropriate stage:
+    /// - If ExtractStructuredData=false: NormalizeWhitespace(raw) first
+    /// - If ExtractStructuredData=true: Extract(raw) → NormalizeWhitespace(dialogue)
     /// </summary>
     /// <param name="rawOutput">The raw LLM output text</param>
     /// <param name="wasTruncated">Whether the output was truncated by token limit</param>
@@ -127,23 +229,32 @@ namespace LlamaBrain.Core.Validation
         return ParsedOutput.Failed("Response is empty or whitespace", rawOutput ?? "");
       }
 
-      // Step 1: Check for meta-text BEFORE any cleaning
+      // Step 1: Apply early normalization if not extracting structured data
+      // This ensures deterministic whitespace handling for raw mode
+      var text = rawOutput;
+      if (!config.ExtractStructuredData)
+      {
+        text = NormalizeWhitespace(text);
+      }
+
+      // Step 2: Check for meta-text BEFORE any cleaning
       // This catches responses like "Example answer: ..." before they get cleaned
-      if (ContainsMetaText(rawOutput))
+      if (ContainsMetaText(text))
       {
         return ParsedOutput.Failed("Response contains meta-text/explanation instead of dialogue", rawOutput);
       }
 
       var result = ParsedOutput.Dialogue("", rawOutput);
-      var text = rawOutput;
 
-      // Step 2: Extract structured data if enabled
+      // Step 3: Extract structured data if enabled
       if (config.ExtractStructuredData)
       {
         text = ExtractStructuredData(text, result);
+        // Normalize after structured data extraction
+        text = NormalizeWhitespace(text);
       }
 
-      // Step 3: Extract dialogue text (clean the response)
+      // Step 4: Extract dialogue text (clean the response)
       var dialogueResult = ExtractDialogueText(text, wasTruncated);
       if (!dialogueResult.Success)
       {
@@ -152,7 +263,7 @@ namespace LlamaBrain.Core.Validation
 
       result.DialogueText = dialogueResult.Text;
 
-      // Step 4: Validate the final dialogue
+      // Step 5: Validate the final dialogue
       if (string.IsNullOrWhiteSpace(result.DialogueText))
       {
         return ParsedOutput.Failed("Dialogue text is empty after parsing", rawOutput);

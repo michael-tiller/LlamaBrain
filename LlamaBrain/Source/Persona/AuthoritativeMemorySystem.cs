@@ -17,6 +17,22 @@ namespace LlamaBrain.Persona
     private readonly Dictionary<string, BeliefMemoryEntry> _beliefs = new Dictionary<string, BeliefMemoryEntry>();
 
     /// <summary>
+    /// Monotonic counter for assigning deterministic SequenceNumbers to memory entries.
+    /// Persisted and restored on load to ensure ordering is preserved across sessions.
+    /// </summary>
+    private long _nextSequenceNumber = 1;
+
+    /// <summary>
+    /// Gets or sets the next sequence number to be assigned.
+    /// Used for persistence/restore. After loading, this should be set to max(SequenceNumber) + 1.
+    /// </summary>
+    public long NextSequenceNumber
+    {
+      get => _nextSequenceNumber;
+      set => _nextSequenceNumber = value;
+    }
+
+    /// <summary>
     /// Maximum number of episodic memories to retain.
     /// </summary>
     public int MaxEpisodicMemories { get; set; } = 100;
@@ -221,8 +237,10 @@ namespace LlamaBrain.Persona
       }
 
       entry.Source = source;
+      // Assign monotonic sequence number for deterministic ordering
+      entry.SequenceNumber = _nextSequenceNumber++;
       _episodicMemories.Add(entry);
-      OnLog?.Invoke($"[Memory] Added episodic memory: '{entry.Description}'");
+      OnLog?.Invoke($"[Memory] Added episodic memory: '{entry.Description}' (seq={entry.SequenceNumber})");
 
       // Prune old memories if over limit
       PruneEpisodicMemories();
@@ -330,8 +348,13 @@ namespace LlamaBrain.Persona
       }
 
       entry.Source = source;
+      // Assign monotonic sequence number for deterministic ordering (only if new entry)
+      if (entry.SequenceNumber == 0)
+      {
+        entry.SequenceNumber = _nextSequenceNumber++;
+      }
       _beliefs[id] = entry;
-      OnLog?.Invoke($"[Memory] Set belief: {id} = '{entry.BeliefContent}'");
+      OnLog?.Invoke($"[Memory] Set belief: {id} = '{entry.BeliefContent}' (seq={entry.SequenceNumber})");
 
       return MutationResult.Succeeded(entry);
     }
@@ -446,7 +469,33 @@ namespace LlamaBrain.Persona
       _worldState.Clear();
       _episodicMemories.Clear();
       _beliefs.Clear();
+      _nextSequenceNumber = 1;
       OnLog?.Invoke("[Memory] All memories cleared");
+    }
+
+    /// <summary>
+    /// Recalculates the next sequence number from existing memories.
+    /// Call this after loading/deserializing memories to ensure the counter is correct.
+    /// Sets NextSequenceNumber = max(all SequenceNumbers) + 1.
+    /// </summary>
+    public void RecalculateNextSequenceNumber()
+    {
+      long maxSeq = 0;
+
+      foreach (var memory in _episodicMemories)
+      {
+        if (memory.SequenceNumber > maxSeq)
+          maxSeq = memory.SequenceNumber;
+      }
+
+      foreach (var belief in _beliefs.Values)
+      {
+        if (belief.SequenceNumber > maxSeq)
+          maxSeq = belief.SequenceNumber;
+      }
+
+      _nextSequenceNumber = maxSeq + 1;
+      OnLog?.Invoke($"[Memory] Recalculated next sequence number: {_nextSequenceNumber}");
     }
 
     /// <summary>

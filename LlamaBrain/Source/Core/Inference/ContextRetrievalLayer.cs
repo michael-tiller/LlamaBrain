@@ -181,15 +181,21 @@ namespace LlamaBrain.Core.Inference
 
     /// <summary>
     /// Retrieves episodic memories with recency/relevance scoring.
+    /// Uses strict total order sorting for deterministic results:
+    /// Primary: score descending, then CreatedAtTicks descending, then Id ordinal, then SequenceNumber ascending.
     /// </summary>
     private List<string> RetrieveEpisodicMemories(string playerInput, List<string> topics)
     {
       var memories = _memorySystem.GetActiveEpisodicMemories(_config.MinEpisodicStrength).ToList();
 
-      // Score and sort memories
+      // Score and sort memories with strict total order for determinism
+      // Order: score desc, CreatedAtTicks desc, Id ordinal asc, SequenceNumber asc
       var scoredMemories = memories
         .Select(m => new ScoredItem<EpisodicMemoryEntry>(m, ScoreEpisodicMemory(m, playerInput, topics)))
         .OrderByDescending(s => s.Score)
+        .ThenByDescending(s => s.Item.CreatedAtTicks)
+        .ThenBy(s => s.Item.Id, StringComparer.Ordinal)
+        .ThenBy(s => s.Item.SequenceNumber)
         .Take(_config.MaxEpisodicMemories)
         .ToList();
 
@@ -198,6 +204,8 @@ namespace LlamaBrain.Core.Inference
 
     /// <summary>
     /// Retrieves beliefs with relevance scoring.
+    /// Uses strict total order sorting for deterministic results:
+    /// Primary: score descending, then Confidence descending, then Id ordinal, then SequenceNumber ascending.
     /// </summary>
     private List<string> RetrieveBeliefs(string playerInput, List<string> topics)
     {
@@ -209,10 +217,14 @@ namespace LlamaBrain.Core.Inference
         .Where(b => b.Confidence >= _config.MinBeliefConfidence)
         .ToList();
 
-      // Score and sort beliefs
+      // Score and sort beliefs with strict total order for determinism
+      // Order: score desc, Confidence desc, Id ordinal asc, SequenceNumber asc
       var scoredBeliefs = beliefList
         .Select(b => new ScoredItem<BeliefMemoryEntry>(b, ScoreBelief(b, playerInput, topics)))
         .OrderByDescending(s => s.Score)
+        .ThenByDescending(s => s.Item.Confidence)
+        .ThenBy(s => s.Item.Id, StringComparer.Ordinal)
+        .ThenBy(s => s.Item.SequenceNumber)
         .Take(_config.MaxBeliefs)
         .ToList();
 

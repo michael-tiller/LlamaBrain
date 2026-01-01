@@ -57,6 +57,12 @@ namespace LlamaBrain.Runtime.RedRoom.UI
       {
         ToggleMemoryOverlay();
       }
+
+      // F3: Toggle Validation Gate Overlay
+      if (Input.GetKeyDown(KeyCode.F3))
+      {
+        ToggleValidationOverlay();
+      }
     }
 
     /// <summary>
@@ -72,6 +78,22 @@ namespace LlamaBrain.Runtime.RedRoom.UI
       else
       {
         Debug.LogWarning("[RedRoomCanvas] MemoryMutationOverlay not found in scene.");
+      }
+    }
+
+    /// <summary>
+    /// Toggles the Validation Gate Overlay visibility.
+    /// </summary>
+    public void ToggleValidationOverlay()
+    {
+      var overlay = ValidationGateOverlay.Instance;
+      if (overlay != null)
+      {
+        overlay.Toggle();
+      }
+      else
+      {
+        Debug.LogWarning("[RedRoomCanvas] ValidationGateOverlay not found in scene.");
       }
     }
 

@@ -191,11 +191,8 @@ namespace LlamaBrain.Core
     /// </summary>
     public void StopServer()
     {
-      // Idempotent: if already disposed, return silently (no throw)
       if (_disposed)
-      {
-        return;
-      }
+        throw new ObjectDisposedException(nameof(ServerManager));
 
       // Idempotent: if process is null or already exited, return silently
       if (_process == null || _process.HasExited)
