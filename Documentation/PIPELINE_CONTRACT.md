@@ -1,7 +1,8 @@
 # LlamaBrain Pipeline Contract
 
-**Version**: 0.2.0  
+**Version**: 1.0.0  
 **Last Updated**: December 31, 2025
+**Status**: Contract decisions documented, implementation in progress
 
 This document defines the formal contract for the LlamaBrain 9-component architectural pipeline. It specifies the exact flow, data contracts, error handling, and behavioral guarantees that all implementations must satisfy.
 

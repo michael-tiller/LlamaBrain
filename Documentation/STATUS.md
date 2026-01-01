@@ -11,25 +11,33 @@
 
 ---
 
-## Phase Status
+## Feature Status
 
-| Phase | Status | Completion |
+| Feature | Status | Completion |
 |-------|--------|------------|
-| Phase 1: Determinism Layer | ✅ Complete | 100% |
-| Phase 2: Structured Memory System | ✅ Complete | 100% |
-| Phase 3: State Snapshot & Context Retrieval | ✅ Complete | 100% |
-| Phase 4: Ephemeral Working Memory | ✅ Complete | 100% |
-| Phase 5: Output Validation System | ✅ Complete | 100% |
-| Phase 6: Controlled Memory Mutation | ✅ Complete | 100% |
-| Phase 7: Enhanced Fallback System | ✅ Complete | 100% |
-| Phase 8: RedRoom Integration | 🚧 In Progress | 80% |
-| Phase 9: Documentation | 🚧 In Progress | 90% |
-| Phase 10: Deterministic Proof Gap Testing | 🚧 In Progress | ~25% |
-| Phase 14: Deterministic Generation Seed | 📋 Planned | 0% |
+| Feature 1: Determinism Layer | ✅ Complete | 100% |
+| Feature 2: Structured Memory System | ✅ Complete | 100% |
+| Feature 3: State Snapshot & Context Retrieval | ✅ Complete | 100% |
+| Feature 4: Ephemeral Working Memory | ✅ Complete | 100% |
+| Feature 5: Output Validation System | ✅ Complete | 100% |
+| Feature 6: Controlled Memory Mutation | ✅ Complete | 100% |
+| Feature 7: Enhanced Fallback System | ✅ Complete | 100% |
+| Feature 8: RedRoom Integration | 🚧 In Progress | 99% |
+| Feature 9: Documentation | ✅ Complete | 100% |
+| Feature 10: Deterministic Proof Gap Testing | 🚧 In Progress | ~25% |
+| Feature 11: RAG-Based Memory Retrieval | 📋 Planned | MEDIUM |
+| Feature 12: Dedicated Structured Output | 📋 Planned | HIGH |
+| Feature 13: Structured Output Integration | 📋 Planned | HIGH |
+| Feature 14: Deterministic Generation Seed | 📋 Planned | CRITICAL |
+| Feature 15: Multiple NPC Support | 📋 Planned | MEDIUM |
+| Feature 16: Save/Load Game Integration | 📋 Planned | CRITICAL |
+| Feature 17: Token Cost Tracking & Analytics | 📋 Planned | MEDIUM |
+| Feature 18: Concurrent Request Handling & Thread Safety | 📋 Planned | MEDIUM |
+| Feature 19: Health Check & Resilience | 📋 Planned | MEDIUM |
 
 ---
 
-## Feature 8: RedRoom Integration (80% Complete)
+## Feature 8: RedRoom Integration (99% Complete)
 
 ### Definition of Done
 
@@ -53,11 +61,11 @@
   - [x] Added troubleshooting section
   - [x] Added debugging tools examples
 
-- [ ] **8.4 Testing Overlays** - Pending
-  - [ ] Memory Mutation Overlay (high priority - can definitely be overlay)
-  - [ ] Validation Gate Overlay (medium priority)
-  - [ ] Constraint Demonstration Overlay (lower priority - can combine with Validation)
-  - [ ] Overlay System Infrastructure (extend RedRoomCanvas)
+- [x] **8.4 Testing Overlays** - Complete (fixes needed)
+  - [x] Memory Mutation Overlay (high priority - can definitely be overlay) - IMPLEMENTED (needs fixes)
+  - [x] Validation Gate Overlay (medium priority) - IMPLEMENTED (needs fixes)
+  - [x] Constraint Demonstration Overlay (lower priority - can combine with Validation) - COMBINED INTO VALIDATION GATE OVERLAY
+  - [x] Overlay System Infrastructure (extend RedRoomCanvas) - Complete (needs fixes)
 
 - [x] **8.5 Integration Testing** - Complete
   - [x] FullPipelineIntegrationTests (base library) - Complete (8 tests)
@@ -71,7 +79,7 @@
 
 ---
 
-## Phase 9: Documentation (90% Complete)
+## Phase 9: Documentation (100% Complete)
 
 ### Definition of Done
 
@@ -97,11 +105,12 @@
   - [x] Doxygen output generated (zero missing member warnings)
   - [x] Code examples in documentation
 
-- [ ] **9.5 Tutorial Content** - Pending
-  - [ ] "Setting Up Deterministic NPCs"
-  - [ ] "Creating Custom Validation Rules"
-  - [ ] "Understanding Memory Authority"
-  - [ ] "Debugging Validation Failures"
+- [x] **9.5 Tutorial Content** - Complete
+  - [x] "Setting Up Deterministic NPCs" - Complete tutorial with 6 steps
+  - [x] "Creating Custom Validation Rules" - Complete tutorial with 8 steps
+  - [x] "Understanding Memory Authority" - Complete tutorial with 7 steps
+  - [x] "Debugging Validation Failures" - Complete tutorial with 9 steps
+
 - [x] **9.6 Few-Shot Prompt Priming** - Complete
   - [x] Integration with prompt assembly (via `WorkingMemoryConfig.FewShotExamples`)
   - [x] Support for few-shot examples with configurable limits and inclusion rules
@@ -161,13 +170,41 @@
 
 See `PHASE10_PROOF_GAPS.md` for detailed test backlog with file targets and acceptance criteria.
 
+**Execution Order**: **MUST BE COMPLETED** for Milestone 4. Should be ongoing throughout all phases, but must be finished before Milestone 4 is considered complete. Cannot claim "deterministically proven" architecture without this.
+
+---
+
+## Feature 16: Save/Load Game Integration
+
+**Status**: 📋 Planned (0% Complete)  
+**Priority**: CRITICAL - Required for Feature 14 (Deterministic Generation Seed)  
+**Dependencies**: Feature 2 (Structured Memory System), Feature 3 (State Snapshot), **Feature 12 & 13 (Structured Output)**  
+**Execution Order**: **DO THIS SECOND** (after Features 12 & 13). Build persistence layer after data structures are stable. Don't build persistence for data structures that are about to change.
+
+### Overview
+
+Implement a simple, abstracted save/load system for game state persistence. This enables `InteractionCount` and other deterministic state to be preserved across game sessions, which is **required** for Feature 14 (Deterministic Generation Seed) to achieve true cross-session determinism.
+
+### Key Components
+
+- `IGameStatePersistence` interface for abstraction
+- `UnityPlayerPrefsPersistence` (Unity PlayerPrefs implementation)
+- `JsonFilePersistence` (engine-agnostic JSON file implementation)
+- `GameStateManager` wrapper class
+- Unity `GameStatePersistenceManager` MonoBehaviour component
+- Versioning and migration support
+
+**Estimated Effort**: 3-5 days  
+**See**: `ROADMAP.md` for detailed implementation plan
+
 ---
 
 ## Feature 12: Dedicated Structured Output
 
 **Status**: 📋 Planned (0% Complete)  
 **Priority**: HIGH - Improves reliability and determinism of output parsing  
-**Dependencies**: Feature 5 (Output Validation System), Feature 10 (Deterministic Proof Gap Testing)
+**Dependencies**: Feature 5 (Output Validation System), Feature 10 (Deterministic Proof Gap Testing)  
+**Execution Order**: **DO THIS FIRST** - Fundamentally changes how data enters the pipeline. Must be completed before Feature 16 (Save/Load) to avoid rework.
 
 ### Overview
 
@@ -190,7 +227,8 @@ Replace regex-based text parsing with LLM-native structured output formats (JSON
 
 **Status**: 📋 Planned (0% Complete)  
 **Priority**: HIGH - Completes structured output migration  
-**Dependencies**: Feature 12 (Dedicated Structured Output)
+**Dependencies**: Feature 12 (Dedicated Structured Output)  
+**Execution Order**: **DO IMMEDIATELY AFTER Feature 12** - Completes the structured output migration. Must be done before Feature 16 (Save/Load) to ensure data structures are stable.
 
 ### Overview
 
@@ -213,7 +251,8 @@ Complete integration of structured output throughout the validation pipeline, mu
 
 **Status**: 📋 Planned (0% Complete)  
 **Priority**: CRITICAL - Completes cross-session determinism guarantee  
-**Dependencies**: Feature 10 (Deterministic Proof Gap Testing)
+**Dependencies**: Feature 10 (Deterministic Proof Gap Testing), Feature 16 (Save/Load Game Integration)  
+**Execution Order**: **DO THIS THIRD** (after Feature 16). Hook the persistence layer into the RNG to achieve the "Holy Grail" of AI consistency (cross-session determinism).
 
 ### Overview
 
@@ -282,40 +321,34 @@ Enable support for multiple NPCs in the same conversation context, including NPC
 
 ---
 
-## Next 5 Tasks
+## Next 5 Tasks (Recommended Execution Order)
 
-1. **Phase 8.4: Create Testing Overlays**
-   - Memory Mutation Overlay (real-time memory state viewer, mutation tracker)
-   - Validation Gate Overlay (validation results, retry visualization)
-   - Constraint Demonstration Overlay (active constraints, rule evaluation)
-   - Overlay system infrastructure (extend RedRoomCanvas)
-   - **Estimated**: 2-3 days (overlays are more efficient than separate scenes)
+**Critical Path for Milestone 4:**
 
-2. **Feature 9.5: Tutorial Content**
-   - "Setting Up Deterministic NPCs"
-   - "Creating Custom Validation Rules"
-   - "Understanding Memory Authority"
-   - "Debugging Validation Failures"
-   - **Estimated**: 3-4 days
+1. **Feature 12 & 13: Structured Output** - **DO THIS FIRST**
+   - Feature 12: Dedicated Structured Output (2-3 weeks)
+   - Feature 13: Structured Output Integration (1-2 weeks)
+   - **Rationale**: Fundamentally changes how data enters the pipeline. Must be done before Feature 16 to avoid rework.
 
-3. **Feature 10.1: ContextRetrievalLayer Selection Behavior Tests** (In Progress - 7/20-25 tests complete)
-   - Relevance/recency/significance scoring tests (remaining)
-   - Combined scoring and selection tests
-   - Edge cases (partially complete)
-   - **Estimated**: 1-2 days remaining
+2. **Feature 16: Save/Load Game Integration** - **DO THIS SECOND**
+   - Build persistence layer after data structures are stable (3-5 days)
+   - Persist `InteractionCount` and other deterministic state
+   - **Rationale**: Must be built on stable data structures from Feature 12 & 13
 
-4. **Feature 10: Critical Requirement #5 - WorldIntentDispatcher Singleton Lifecycle**
-   - Implement singleton lifecycle management
-   - Add lifecycle tests
-   - Ensure deterministic initialization and cleanup
-   - **Estimated**: 1-2 days
+3. **Feature 14: Deterministic Generation Seed** - **DO THIS THIRD**
+   - Hook persistence layer into RNG for cross-session determinism (1-2 weeks)
+   - Uses persisted `InteractionCount` from Feature 16
+   - **Rationale**: The "Holy Grail" of AI consistency, but requires persistence to work
 
-5. **Feature 10.2-10.5: Additional Determinism Proof Gap Tests**
-   - PromptAssembler/WorkingMemory tests (25-30 tests)
-   - ValidationGate tests (30-35 tests)
-   - MemoryMutationController tests (30-35 tests)
-   - WorldIntentDispatcher tests (20-25 tests)
-   - **Estimated**: 5-7 days total
+4. **Feature 8 & 9: RedRoom & Documentation** - **Weave in as breather tasks**
+   - Feature 8.4: Testing Overlays (2-3 days)
+   - Feature 9.5: Tutorial Content (3-4 days)
+   - **Rationale**: Lower cognitive load, good for maintaining momentum between heavy features
+
+5. **Feature 10: Deterministic Proof Gap Testing** - **MUST BE COMPLETED**
+   - Ongoing throughout all phases, but must be finished before Milestone 4 complete
+   - Complete remaining test suites (9-13 days remaining)
+   - **Rationale**: Required for v1.0. Cannot claim "deterministically proven" architecture without this.
 
 ---
 
@@ -352,34 +385,58 @@ Enable support for multiple NPCs in the same conversation context, including NPC
 ### Milestone 3: Integration & Polish (Features 7-9) 🚧
 **Status**: Partial
 - Feature 7: Enhanced Fallback System - ✅ Complete
-- Feature 8: Red Room Integration - 🚧 80% Complete
+- Feature 8: RedRoom Integration - 🚧 99% Complete (overlay fixes needed)
 - Feature 9: Documenation - 🚧 90% Complete
 
-### Milestone 4: Production Ready (Features 10, 12, 13, 14) 🚧
+### Milestone 4: Production Ready (Features 10, 12, 13, 14, 16, 8, 9) 🚧
 **Status**: In Progress
-- Feature 10: Deterministic Proof Gap Testing - 🚧 ~25% Complete (9-13 days remaining)
-- Feature 12: Dedicated Structured Output - 📋 Planned (HIGH priority)
-- Feature 13: Structured Output Integration - 📋 Planned (HIGH priority)
-- Feature 14: Deterministic Generation Seed - 📋 Planned (CRITICAL priority)
+
+**Recommended Execution Order** (see "Next 5 Tasks" section above):
+1. **Feature 12 & 13** (Structured Output) - Do first
+2. **Feature 16** (Save/Load) - Do second
+3. **Feature 14** (Deterministic Seed) - Do third
+4. **Feature 8 & 9** (RedRoom & Documentation) - Weave in as breather tasks
+5. **Feature 10** (Proof Gap Testing) - **Must be completed** (ongoing throughout, but finish before Milestone 4 complete)
+
+**Status**:
+- Feature 10: Deterministic Proof Gap Testing - 🚧 ~25% Complete (**MUST BE COMPLETED** for Milestone 4)
+- Feature 12: Dedicated Structured Output - 📋 Planned (HIGH priority - **DO FIRST**)
+- Feature 13: Structured Output Integration - 📋 Planned (HIGH priority - **DO IMMEDIATELY AFTER 12**)
+- Feature 16: Save/Load Game Integration - 📋 Planned (CRITICAL priority - **DO SECOND**, after 12 & 13)
+- Feature 14: Deterministic Generation Seed - 📋 Planned (CRITICAL priority - **DO THIRD**, after 16)
+- Feature 8: RedRoom Integration - 🚧 99% Complete (overlay fixes needed)
+- Feature 9: Documentation - 🚧 90% Complete (breather task)
 
 **Target**: Complete all high-priority features for v0.2.0 release
-- Requires Feature 10 completion (deterministic proof gaps)
-- Requires Feature 12-13 completion (structured output migration)
-- Requires Feature 14 completion (cross-session determinism)
+- **Requires Feature 10 completion** (deterministic proof gaps) - **REQUIRED**
+- Requires Feature 12-13 completion (structured output migration) - **DO FIRST**
+- Requires Feature 16 completion (save/load persistence) - **DO SECOND**
+- Requires Feature 14 completion (cross-session determinism) - **DO THIRD**
 - Requires all tests passing
 - Requires performance benchmarks met
 
-### Milestone 5: Enhanced Features (Features 11, 15) 📋
-**Status**: Planned
+**Note**: Feature 10 is **required** for Milestone 4 completion. The architecture cannot claim to be "deterministically proven" without completing Feature 10's test suite.
+
+### Milestone 5: Enhanced Features (Features 11, 15, 17, 18, 19) 📋
+**Status**: Planned  
+**Prerequisite**: **Milestone 4 must be complete** before starting Milestone 5 features. These are enhancements that build on a stable foundation.
+
 - Feature 11: RAG-Based Memory Retrieval & Memory Proving - 📋 Planned (MEDIUM priority)
 - Feature 15: Multiple NPC Support - 📋 Planned (MEDIUM priority)
+- Feature 17: Token Cost Tracking & Analytics - 📋 Planned (MEDIUM priority)
+- Feature 18: Concurrent Request Handling & Thread Safety - 📋 Planned (MEDIUM priority)
+- Feature 19: Health Check & Resilience - 📋 Planned (MEDIUM priority)
 
-**Target**: Enhance memory retrieval with semantic search and support multi-NPC scenarios
+**Target**: Enhance memory retrieval with semantic search, support multi-NPC scenarios, and add production monitoring/resilience
 - RAG-based retrieval with embeddings
 - Vector storage and indexing
 - Memory proving through repetition recognition
 - Multi-NPC conversation support with shared memory
 - NPC-to-NPC interaction capabilities
+- Token usage tracking and cost analytics
+- Thread-safe concurrent request handling
+- Health monitoring and automatic recovery
+- Circuit breaker and graceful degradation
 - Performance optimization
 
 ---
@@ -397,4 +454,4 @@ Enable support for multiple NPCs in the same conversation context, including NPC
 
 ---
 
-**Next Review**: After Feature 8.4 completion (sample scenes)
+**Next Review**: After Feature 12 & 13 completion (structured output migration)

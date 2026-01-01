@@ -408,27 +408,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Refactored component hierarchy for better organization
   - Optimized trigger lookups (removed FindObjectsOfType calls)
   - Integration with dialogue trigger system
-- **RedRoom Integration**
-  - `NpcDialogueTrigger` supports trigger-specific expectancy rules
-  - Enhanced dialogue metrics collection
-  - Context-aware interaction tracking
+- **RedRoom Integration** (Feature 8)
+  - Enhanced `DialogueMetricsCollector` with architectural pattern metrics tracking
+  - Added validation pass/fail tracking, retry metrics per interaction, constraint violation tracking, and fallback usage tracking to metrics system
+  - Updated CSV and JSON export formats to include all new architectural metrics
+  - Enhanced session summary with architectural pattern statistics
+  - `NpcDialogueTrigger` now supports trigger-specific expectancy rules
+  - Context-aware interaction tracking improved
 - **Memory Mutation Overlay** (`Runtime/RedRoom/UI/MemoryMutationOverlay.cs`)
-  - Real-time memory state viewer panel with toggleable sections
-  - Display canonical facts (read-only, highlighted/protected indicator)
-  - Display world state (mutable, with change indicators)
-  - Display episodic memories (with significance scores, decay status, recency)
-  - Display beliefs (with confidence scores, relationship status)
-  - Mutation execution tracker showing approved vs rejected mutations
-  - Mutation statistics (success rate, blocked attempts, authority violations)
-  - Integration with RedRoomCanvas (toggle via F2 hotkey)
-  - Auto-refresh on interaction events (0.5s polling interval)
-  - Configurable section toggles and display limits
-  - Color-coded memory types and mutation status
+  - Real-time memory state viewer panel with toggleable sections for all memory types
+  - Displays canonical facts with read-only protection indicators, world state with change indicators, episodic memories with significance scores and decay status, and beliefs with confidence scores
+  - Mutation execution tracker showing approved vs rejected mutations with color coding
+  - Mutation statistics display including success rate, blocked attempts, and authority violations
+  - Integrated with RedRoomCanvas with F2 hotkey toggle and auto-refresh on interaction events (0.5s polling interval)
+  - Configurable section toggles and display limits for performance optimization
 - **Memory Mutation Overlay Setup** (`Runtime/RedRoom/UI/MemoryMutationOverlaySetup.cs`)
   - Auto-setup helper component for programmatic UI generation at runtime
   - Configurable styling and layout
   - Prefab-based instantiation system
   - Automatic reference wiring
+- **Validation Gate Overlay** (`Runtime/RedRoom/UI/ValidationGateOverlay.cs`)
+  - Real-time validation results display with visual pass/fail indicators
+  - Failure reasons grouped by severity (Critical, Hard, Soft) with violating text snippets
+  - Constraint evaluation status showing active constraints grouped by type with severity indicators and rule source attribution
+  - Retry attempt visualization with current attempt number, max attempts progress bar, constraint escalation status, and retry history
+  - Integrated with RedRoomCanvas with F3 hotkey toggle and auto-refresh on validation events (0.3s polling interval)
+  - Constraint demonstration features integrated into this unified overlay
 
 #### Memory System Integration
 - **Memory Decay Integration**
@@ -616,6 +621,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Failure handling and retry logic
   - Integration with expectancy engine and memory system
   - Code examples and validation patterns
+- **New DETERMINISM_CONTRACT.md** - Explicit determinism boundary statement
+  - Determinism guarantees and limitations
+  - Hardware determinism documentation
+  - Contract decisions and boundary definitions
+- **New PIPELINE_CONTRACT.md** - Formal pipeline contract specification
+  - Version 1.0.0 contract defining the 9-component architectural pipeline
+  - Exact flow, data contracts, and behavioral guarantees
+  - Component execution order and data flow specifications
+  - Error handling and retry logic contracts
+  - State reconstruction and determinism guarantees
+- **New SAFEGUARDS.md** - Security and safety documentation
+  - Threat mitigation strategies
+  - Best practices for secure implementation
+  - Security safeguards and input validation
+- **New PHASE10_PROOF_GAPS.md** - Deterministic proof gap testing documentation
+  - Test backlog and acceptance criteria
+  - Feature 10 implementation requirements
+- **New MEMORY_TODO.md** - Memory system enhancement roadmap
+  - RAG-based retrieval planning
+  - Memory proving system design
+- **Feature 8: RedRoom Integration**
+  - Enhanced metrics collection system with validation pass/fail tracking, retry metrics per interaction, constraint violation tracking, and fallback usage tracking
+  - Updated CSV and JSON export formats to include architectural pattern metrics
+  - Enhanced session summary with comprehensive architectural metrics
+  - Implemented Memory Mutation Overlay with real-time memory state viewing accessible via F2 hotkey
+  - Implemented Validation Gate Overlay with real-time validation results and constraint evaluation accessible via F3 hotkey
+  - Integrated constraint demonstration features into Validation Gate Overlay for unified debugging experience
+  - Built overlay system infrastructure with input-managed panels and auto-refresh event system
+  - Added full pipeline integration tests (8 tests) and Unity PlayMode integration tests (73+ tests)
+  - Updated RedRoom README with architectural pattern documentation and troubleshooting guides
+  - Some overlay fixes and improvements pending
+- **Feature 9: Documentation & Polish**
+  - Created comprehensive architecture documentation suite covering all aspects of the LlamaBrain system. ARCHITECTURE.md provides complete explanation of the 9-component architectural pattern with code examples and best practices. DETERMINISM_CONTRACT.md establishes explicit boundary statements and determinism guarantees including hardware determinism limitations. PIPELINE_CONTRACT.md defines formal pipeline specification with exact data contracts and behavioral guarantees. MEMORY.md documents the memory system architecture including authority hierarchy and memory types. VALIDATION_GATING.md describes the validation system with detailed gate descriptions and failure handling. SAFEGUARDS.md covers security documentation and threat mitigation strategies. PHASE10_PROOF_GAPS.md provides proof gap testing documentation with test backlog and acceptance criteria. MEMORY_TODO.md outlines the memory enhancement roadmap including RAG-based retrieval planning.
+  - Created status tracking documentation to monitor project progress. STATUS.md tracks current implementation status with feature completion percentages and test coverage reporting. ROADMAP.md provides comprehensive feature roadmap with detailed implementation plans and execution order recommendations for all features.
+  - Enhanced Unity package documentation with complete integration guides. USAGE_GUIDE.md (Unity Runtime) contains comprehensive component-by-component usage guide with four step-by-step tutorials covering deterministic NPC setup, validation rule creation, memory authority understanding, and validation failure debugging. USAGE_GUIDE.md (Core Library) provides core library usage examples and API patterns. QUICK_START.md enables rapid Unity integration. TROUBLESHOOTING.md addresses common issues and solutions. SAMPLES.md provides code samples. STRUCTURED_OUTPUT.md documents structured output features. RED_ROOM_THREAT_MODEL.md covers RedRoom security threat model.
+  - Added four comprehensive tutorials to USAGE_GUIDE.md providing step-by-step guidance: "Setting Up Deterministic NPCs" walks through creating NPCs with deterministic behavior (6 steps), "Creating Custom Validation Rules" explains rule creation and application at multiple levels (8 steps), "Understanding Memory Authority" teaches the memory authority hierarchy and usage patterns (7 steps), and "Debugging Validation Failures" provides debugging tools and techniques including reusable debug helper scripts (9 steps).
+  - Updated main README.md with enhanced architecture overview, current completion status, and improved feature descriptions to help users understand the system capabilities.
+  - Completed API documentation with XML comments achieving 100% coverage of all public APIs and generated Doxygen output with zero missing member warnings, ensuring comprehensive API reference documentation.
 
 ## [0.1.0] - 2025-7-24
 
@@ -682,7 +725,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Version History
 
 ### Current Version
-- **0.2.0-rc.1**: Phase 1-7 Complete - Determinism Layer (Expectancy Engine), Structured Memory System, State Snapshots & Context Retrieval, Ephemeral Working Memory (with Few-Shot Prompt Priming), Output Validation, Controlled Memory Mutation (MemoryMutationController & World Intent Dispatcher), Enhanced Fallback System, Comprehensive Testing Infrastructure (92.37% coverage with integration tests), Testability Improvements (IFileSystem, IApiClient interfaces), Major Test Coverage Improvements (ApiClient 90.54%, ServerManager 74.55%), Full Pipeline Integration Tests, Memory Mutation Overlay (RedRoom UI), and Comprehensive Documentation (ARCHITECTURE.md)
+- **0.2.0-rc.1**: Features 1-9 Complete - Determinism Layer (Expectancy Engine), Structured Memory System, State Snapshots & Context Retrieval, Ephemeral Working Memory (with Few-Shot Prompt Priming), Output Validation, Controlled Memory Mutation (MemoryMutationController & World Intent Dispatcher), Enhanced Fallback System, RedRoom Integration (with Memory Mutation Overlay and Validation Gate Overlay), Documentation & Polish (comprehensive documentation suite with 4 tutorials), Comprehensive Testing Infrastructure (92.37% coverage with integration tests), Testability Improvements (IFileSystem, IApiClient interfaces), Major Test Coverage Improvements (ApiClient 90.54%, ServerManager 74.55%), Full Pipeline Integration Tests, and Complete Documentation Suite (ARCHITECTURE.md, DETERMINISM_CONTRACT.md, PIPELINE_CONTRACT.md, MEMORY.md, VALIDATION_GATING.md, SAFEGUARDS.md, USAGE_GUIDE.md with tutorials, STATUS.md, ROADMAP.md, and more)
 
 ### Previous Versions
 - **0.1.0**: Initial Unity integration
