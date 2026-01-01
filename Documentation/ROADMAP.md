@@ -42,9 +42,9 @@
 
 ## 🎯 Recommended Execution Order
 
-**Critical Path for Milestone 4 (Production Ready):**
+**Critical Path for Milestone 5 (v0.3.0 - The Production Update):**
 
-The following execution order is **strongly recommended** to avoid rework and ensure architectural stability:
+The following execution order is **strongly recommended** for v0.3.0 to avoid rework and ensure architectural stability:
 
 ### Phase 1: Foundation (Do First)
 1. **Feature 12 & 13 (Structured Output)** - **DO THIS FIRST**
@@ -65,22 +65,15 @@ The following execution order is **strongly recommended** to avoid rework and en
    - Uses persisted `InteractionCount` from Feature 16
    - **Rationale**: This is the "Holy Grail" of AI consistency, but requires persistence to work
 
-### Phase 4: Breather Tasks (Parallel/Interleaved)
-4. **Feature 8 & 9 (RedRoom Integration & Documentation)** - **Weave in as breather tasks**
-   - Can be done in parallel with heavy architectural work
-   - Feature 8: Testing overlays and integration polish
-   - Feature 9: Documentation and tutorial content
-   - **Rationale**: Lower cognitive load, good for maintaining momentum between heavy features
-
-### Phase 5: Proof & Validation
-5. **Feature 10 (Deterministic Proof Gap Testing)** - **Must be completed for Milestone 4**
+### Phase 4: Proof & Validation
+4. **Feature 10 (Deterministic Proof Gap Testing)** - **Must be completed for Milestone 5**
    - Should be ongoing throughout all phases
    - Critical tests can be written as features are implemented
-   - **Must be finished** before Milestone 4 is considered complete
+   - **Must be finished** before Milestone 5 is considered complete
    - **Rationale**: Proves determinism claims, required for v1.0. Cannot claim "deterministically proven" architecture without this.
 
-### Post-Milestone 4: Enhanced Features
-6. **Milestone 5 Features (11, 15, 17, 18, 19)** - **Only after Milestone 4 complete**
+### Post-Milestone 5: Enhanced Features
+5. **Milestone 6 Features (11, 15, 17, 18, 19, 20)** - **Only after Milestone 5 complete**
    - Feature 11: RAG-Based Memory Retrieval
    - Feature 15: Multiple NPC Support
    - Feature 17: Token Cost Tracking & Analytics
@@ -89,6 +82,8 @@ The following execution order is **strongly recommended** to avoid rework and en
    - **Rationale**: These are enhancements that build on a stable foundation
 
 **Key Principle**: Build the foundation (structured output) before building on top of it (persistence, determinism). Don't build persistence for data structures that will change.
+
+**Note**: Milestone 4 (v0.2.0) is complete and ready for open source release. The execution order above applies to Milestone 5 (v0.3.0).
 
 ---
 
@@ -2013,39 +2008,65 @@ Add memory change history visualization to the RedRoom Memory Mutation Overlay. 
 - [x] RedRoom fully integrated (99% complete - overlay fixes needed)
 - [x] Documentation comprehensive (100% complete)
 
-### Milestone 4: Production Ready (Features 10, 12, 13, 14, 16, 8, 9) 🚧
-**Target**: Week 9+  
-**Status**: 🚧 In Progress
+### Milestone 4: v0.2.0 - The Foundation Update (Features 1-9, 10 partial) ✅
+**Target**: v0.2.0-rc.1  
+**Status**: ✅ Complete (Ready for Open Source Release)
+
+**What's Included in v0.2.0:**
+- ✅ Feature 1: Determinism Layer & Expectancy Engine
+- ✅ Feature 2: Structured Memory System
+- ✅ Feature 3: State Snapshot & Context Retrieval
+- ✅ Feature 4: Ephemeral Working Memory
+- ✅ Feature 5: Output Validation System
+- ✅ Feature 6: Controlled Memory Mutation
+- ✅ Feature 7: Enhanced Fallback System
+- ✅ Feature 8: RedRoom Integration (99% - overlay fixes in progress)
+- ✅ Feature 9: Documentation (100% complete)
+- 🚧 Feature 10: Deterministic Proof Gap Testing (~65% complete - ongoing)
+
+**Completion Criteria**:
+- [x] Core architecture complete (Features 1-6)
+- [x] Integration & polish complete (Features 7-9)
+- [x] Comprehensive documentation
+- [x] 92.37% test coverage with 1,531 passing tests
+- [x] Ready for v0.2.0-rc.1 open source release
+
+**Note**: v0.2.0 uses **regex-based parsing** for output extraction. v0.3.0 will introduce LLM-native Structured Output (JSON), which may require updates to custom parser logic. See "Breaking Changes" section below.
+
+### Milestone 5: v0.3.0 - The Production Update (Features 12, 13, 14, 16, 10 completion) 🚧
+**Target**: v0.3.0  
+**Status**: 🚧 Planned  
+**Prerequisite**: **Milestone 4 (v0.2.0) must be released** before starting Milestone 5 features.
 
 **Recommended Execution Order** (see "Recommended Execution Order" section above):
 1. **Feature 12 & 13** (Structured Output) - Do first
 2. **Feature 16** (Save/Load) - Do second
 3. **Feature 14** (Deterministic Seed) - Do third
-4. **Feature 8 & 9** (RedRoom & Documentation) - Weave in as breather tasks
-5. **Feature 10** (Proof Gap Testing) - **Must be completed** (ongoing throughout, but finish before Milestone 4 complete)
+4. **Feature 10** (Proof Gap Testing) - **Must be completed** (ongoing throughout, but finish before Milestone 5 complete)
 
 **Status**:
-- Feature 10: Deterministic Proof Gap Testing - 🚧 ~25% Complete (**MUST BE COMPLETED** for Milestone 4)
+- Feature 10: Deterministic Proof Gap Testing - 🚧 ~65% Complete (**MUST BE COMPLETED** for Milestone 5)
 - Feature 12: Dedicated Structured Output - 📋 Planned (HIGH priority - **DO FIRST**)
 - Feature 13: Structured Output Integration - 📋 Planned (HIGH priority - **DO IMMEDIATELY AFTER 12**)
 - Feature 16: Save/Load Game Integration - 📋 Planned (CRITICAL priority - **DO SECOND**, after 12 & 13)
 - Feature 14: Deterministic Generation Seed - 📋 Planned (CRITICAL priority - **DO THIRD**, after 16)
-- Feature 8: RedRoom Integration - 🚧 99% Complete (overlay fixes needed)
-- Feature 9: Documentation - ✅ 100% Complete
 
 **Completion Criteria**:
 - [ ] **Feature 10 complete** - All deterministic proof gap tests passing (REQUIRED)
-- [ ] All tests passing (Feature 10 complete)
+- [ ] Feature 12 & 13 complete - Structured Output migration
+- [ ] Feature 16 complete - Save/Load persistence
+- [ ] Feature 14 complete - Cross-session determinism
+- [ ] All tests passing
 - [ ] Performance benchmarks met
-- [ ] Documentation complete
-- [ ] Ready for v0.2.0 release
+- [ ] Documentation updated with breaking changes
+- [ ] Ready for v0.3.0 release
 
-**Note**: Feature 10 is **required** for Milestone 4 completion. The architecture cannot claim to be "deterministically proven" without completing Feature 10's test suite.
+**Note**: Feature 10 is **required** for Milestone 5 completion. The architecture cannot claim to be "deterministically proven" without completing Feature 10's test suite.
 
-### Milestone 5: Enhanced Features (Features 11, 15, 17, 18, 19, 20) 📋
-**Target**: Post-v0.2.0  
+### Milestone 6: Enhanced Features (Features 11, 15, 17, 18, 19, 20) 📋
+**Target**: Post-v0.3.0  
 **Status**: 📋 Planned  
-**Prerequisite**: **Milestone 4 must be complete** before starting Milestone 5 features. These are enhancements that build on a stable foundation.
+**Prerequisite**: **Milestone 5 (v0.3.0) must be complete** before starting Milestone 6 features. These are enhancements that build on a stable foundation.
 - Feature 11: RAG-Based Memory Retrieval & Memory Proving - 📋 Planned (MEDIUM priority)
 - Feature 15: Multiple NPC Support - 📋 Planned (MEDIUM priority)
 - Feature 17: Token Cost Tracking & Analytics - 📋 Planned (MEDIUM priority)
@@ -2075,6 +2096,26 @@ Each feature follows this pattern:
 4. **Validate** - RedRoom testing with metrics
 5. **Document** - Update relevant documentation
 6. **Review** - Code review and architecture validation
+
+---
+
+## ⚠️ Breaking Changes
+
+### v0.3.0: Structured Output Migration
+
+**Note on Roadmap**: v0.2.x uses **regex-based parsing** for extracting dialogue, mutations, and world intents from LLM output. v0.3.0 will introduce **LLM-native Structured Output** (JSON mode, function calling, schema-based outputs), which may require updates to custom parser logic.
+
+**Impact**:
+- Custom `OutputParser` implementations may need updates
+- Validation rules that rely on regex patterns may need adjustment
+- The `ParsedOutput` structure will remain compatible, but parsing internals will change
+
+**Migration Path**:
+- v0.2.x: Regex parsing (current, stable)
+- v0.3.0: Structured output with regex fallback (automatic, backward compatible)
+- Future: Structured output only (deprecation of regex mode)
+
+**See**: Features 12 & 13 in the roadmap for detailed migration guide.
 
 ---
 

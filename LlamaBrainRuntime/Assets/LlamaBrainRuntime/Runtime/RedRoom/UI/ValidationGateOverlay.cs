@@ -287,8 +287,8 @@ namespace LlamaBrain.Runtime.RedRoom.UI
         return;
       }
 
-      var gateResult = _trackedAgent.LastGateResult;
-      var inferenceResult = _trackedAgent.LastInferenceResult;
+      var gateResult = _trackedAgent?.LastGateResult;
+      var inferenceResult = _trackedAgent?.LastInferenceResult;
 
       _sb.AppendLine($"<color=#{headerHex}><b>=== VALIDATION GATE ===</b></color>");
 
@@ -336,15 +336,15 @@ namespace LlamaBrain.Runtime.RedRoom.UI
       _sb.Clear();
       var headerHex = ColorUtility.ToHtmlStringRGB(_headerColor);
 
-      if (_trackedAgent == null)
+      if (_trackedAgent == null || !_trackedAgent.IsInitialized)
       {
         _sb.AppendLine($"<color=#{headerHex}><b>=== VALIDATION FAILURES ===</b></color>");
-        _sb.AppendLine("<color=#666666>No failures.</color>");
+        _sb.AppendLine("<color=#666666>No agent tracked.</color>");
         _failuresText.text = _sb.ToString();
         return;
       }
 
-      var gateResult = _trackedAgent.LastGateResult;
+      var gateResult = _trackedAgent?.LastGateResult;
       var failures = gateResult?.Failures ?? new List<ValidationFailure>();
 
       _sb.AppendLine($"<color=#{headerHex}><b>=== VALIDATION FAILURES ({failures.Count}) ===</b></color>");
@@ -421,20 +421,23 @@ namespace LlamaBrain.Runtime.RedRoom.UI
     {
       if (_retryStatusText == null && _retryHistoryText == null) return;
 
-      _sb.Clear();
       var headerHex = ColorUtility.ToHtmlStringRGB(_headerColor);
 
-      if (_trackedAgent == null)
+      if (_trackedAgent == null || !_trackedAgent.IsInitialized)
       {
         if (_retryStatusText != null)
         {
-          _retryStatusText.text = $"<color=#{headerHex}><b>=== RETRY STATUS ===</b></color>\n<color=#666666>No agent.</color>";
+          _retryStatusText.text = $"<color=#{headerHex}><b>=== RETRY STATUS ===</b></color>\n<color=#666666>No agent tracked.</color>";
+        }
+        if (_retryHistoryText != null)
+        {
+          _retryHistoryText.text = $"<color=#{headerHex}><b>=== RETRY HISTORY ===</b></color>\n<color=#666666>No agent tracked.</color>";
         }
         return;
       }
 
-      var inferenceResult = _trackedAgent.LastInferenceResult;
-      var snapshot = _trackedAgent.LastSnapshot;
+      var inferenceResult = _trackedAgent?.LastInferenceResult;
+      var snapshot = _trackedAgent?.LastSnapshot;
 
       // Retry status text
       if (_retryStatusText != null)
@@ -446,7 +449,7 @@ namespace LlamaBrain.Runtime.RedRoom.UI
         {
           _sb.AppendLine("<color=#666666>No inference yet.</color>");
         }
-        else
+        else if (inferenceResult != null)
         {
           var attemptCount = inferenceResult.AttemptCount;
           var maxAttempts = snapshot?.MaxAttempts ?? 3;
@@ -468,6 +471,10 @@ namespace LlamaBrain.Runtime.RedRoom.UI
           var statusHex = ColorUtility.ToHtmlStringRGB(statusColor);
           var finalStatus = inferenceResult.Success ? "SUCCESS" : "EXHAUSTED";
           _sb.AppendLine($"<color=#{statusHex}>Final: {finalStatus}</color>");
+        }
+        else
+        {
+          _sb.AppendLine("<color=#666666>No inference data available.</color>");
         }
 
         _retryStatusText.text = _sb.ToString();

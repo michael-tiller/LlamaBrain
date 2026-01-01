@@ -24,9 +24,20 @@ Key features include:
 - **Process Management**: Safe server lifecycle management with monitoring and graceful shutdown
 - **Comprehensive Testing**: 92.37% code coverage with 1,531 passing tests
 
-**Coming Soon:**
+**Coming in v0.3.0:**
 - **Structured Output (JSON)**: LLM-native structured output formats (JSON mode, function calling, schema-based outputs) will replace the current regex-based parser, eliminating parsing errors and improving determinism (Features 12 & 13)
 - **Save/Load Game Integration**: Game state persistence system for preserving deterministic state across sessions, enabling cross-session determinism (Feature 16)
+- **Deterministic Generation Seed**: Cross-session determinism through InteractionCount-based seeding (Feature 14)
+
+**⚠️ Breaking Changes Notice (v0.3.0):**
+
+v0.2.x uses **regex-based parsing** for extracting dialogue, mutations, and world intents from LLM output. v0.3.0 will introduce **LLM-native Structured Output** (JSON mode, function calling, schema-based outputs), which may require updates to custom parser logic.
+
+- Custom `OutputParser` implementations may need updates
+- Validation rules that rely on regex patterns may need adjustment
+- The `ParsedOutput` structure will remain compatible, but parsing internals will change
+
+**Migration Path**: v0.2.x → v0.3.0 will include structured output with regex fallback (automatic, backward compatible). See `ROADMAP.md` for detailed migration guide.
 
 ## 🏗️ Architecture
 
@@ -561,7 +572,7 @@ Comprehensive documentation is available in the `Documentation/` folder:
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE.md](../LICENSE.md) file for details.
+This asset is licensed under the Unity Asset Store Standard End User License Agreement. One license per seat is required. See: https://unity.com/legal/as-terms
 
 ## 🆘 Support
 
