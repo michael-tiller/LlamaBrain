@@ -170,5 +170,5 @@ An advanced UI component that provides:
 - **Network Access**: Access to the server port and host
 
 ## 📚 Related Documentation
-- [SAMPLES.md](../../Documenation/SAMPLES.md) - Overview of all samples
-- [Troubleshooting](../../Documenation/TROUBLESHOOTING.md) - Common issues and solutions 
+- [SAMPLES.md](SAMPLES.md) - Overview of all samples
+- [Troubleshooting](TROUBLESHOOTING.md) - Common issues and solutions 

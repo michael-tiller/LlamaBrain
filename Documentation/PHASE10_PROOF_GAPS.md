@@ -1,10 +1,10 @@
 # Phase 10: Deterministic Proof Gap Testing
 
-**Priority**: HIGH - Required for v1.0 release
+**Priority**: HIGH - Required for v0.2.0 release
 **Status**: 🚧 In Progress (~85% Complete)
 **Dependencies**: Features 1-7 (All core components must be implemented)
 
-**Versioning Note**: Feature 10 is required for v1.0 release. Pre-0.2.0 releases (rc/preview) can ship without Feature 10 complete, but must not claim architecture is "deterministically proven" until Feature 10 is complete.
+**Versioning Note**: Feature 10 is required for v0.2.0 release. Pre-0.2.0 releases (rc/preview) can ship without Feature 10 complete, but must not claim architecture is "deterministically proven" until Feature 10 is complete.
 
 **Goal**: Create explicit unit tests (or additional deterministic PlayMode tests) to close remaining proof gaps in critical architectural components. These tests verify that the deterministic state reconstruction pattern works correctly under all edge cases. Phase 10 transforms "good story" into "auditable claim."
 
