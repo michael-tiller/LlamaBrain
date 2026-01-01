@@ -654,7 +654,9 @@ For detailed status information, see the [STATUS.md](../../Documentation/STATUS.
 
 ## 📄 License
 
-This asset is licensed under the Unity Asset Store Standard End User License Agreement. One license per seat is required. See: https://unity.com/legal/as-terms
+This project is licensed under the MIT License - see the [LICENSE.md](../../../../LICENSE.md) file for details.
+
+**Note**: If this package is distributed through the Unity Asset Store, the store listing may reference the Unity Asset Store EULA for that specific distribution channel. However, the source code in this repository is licensed under the MIT License.
 
 ## 🆘 Support
 

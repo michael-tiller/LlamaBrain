@@ -137,6 +137,8 @@ public class DialogueManager : MonoBehaviour
 - **Memory Enabled**: Turn on for persistent conversations
 - **Max Memory Items**: Limit to prevent memory bloat
 - **Memory Categories**: Organize memories by type
+- **Automatic Memory Decay**: Enable in LlamaBrainAgent inspector to fade old memories over time
+- **Canonical Facts**: Initialize immutable world truths for NPCs (see Usage Guide)
 
 ### Security
 - **Input Validation**: Always validate user inputs
@@ -163,12 +165,29 @@ public class DialogueManager : MonoBehaviour
 - ✅ Monitor file sizes in memory store
 - ✅ Use appropriate memory settings
 
+## 🚀 Advanced Features
+
+LlamaBrain includes powerful advanced features for production-ready NPCs:
+
+- **Expectancy Engine (Phase 1)**: Rule-based constraint system for deterministic NPC behavior
+  - Create rules that prevent NPCs from breaking character
+  - Context-aware constraints based on triggers, scenes, and interactions
+  - See [Usage Guide](Documentation/USAGE_GUIDE.md#phase-1-expectancy-engine-usage) for details
+
+- **Structured Memory System (Phase 2)**: Advanced memory management with authority levels
+  - Canonical facts (immutable world truths)
+  - World state tracking
+  - Episodic memory with automatic decay
+  - Beliefs and relationships
+  - See [Usage Guide](Documentation/USAGE_GUIDE.md#phase-2-structured-memory-system-usage) for details
+
 ## 📚 Next Steps
 
 1. **Explore Samples**: Try all the sample scenes to see different use cases
-2. **Read Full Docs**: Check [README.md](../README.md) for detailed documentation
-3. **Join Community**: Get help on [Discord](https://discord.gg/9ruBad4nrN)
-4. **Watch Tutorial**: [Quick Start Video](https://youtu.be/1EtU6qu7O5Q)
+2. **Read Full Docs**: Check [README.md](README.md) for detailed documentation
+3. **Learn Advanced Features**: See [Usage Guide](Documentation/USAGE_GUIDE.md) for Expectancy Engine and Structured Memory System
+4. **Join Community**: Get help on [Discord](https://discord.gg/9ruBad4nrN)
+5. **Watch Tutorial**: [Quick Start Video](https://youtu.be/1EtU6qu7O5Q)
 
 ## 🎁 Sample Scenes Included
 
@@ -182,7 +201,7 @@ public class DialogueManager : MonoBehaviour
 
 ## 🔗 Resources
 
-- [Full Documentation](../README.md)
+- [Full Documentation](README.md)
 - [Discord Community](https://discord.gg/9ruBad4nrN)
 - [Video Tutorial](https://youtu.be/1EtU6qu7O5Q)
 
