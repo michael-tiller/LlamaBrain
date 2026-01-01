@@ -1018,7 +1018,8 @@ INPUT                  = ../../README.md \
                          ../VALIDATION_GATING.md \
                          ../ARCHITECTURE.md \
                          ../USAGE_GUIDE.md \
-                         ../DETERMINISM_CONTRACT.md
+                         ../DETERMINISM_CONTRACT.md \
+                         ../../LICENSE.md
 
 # This tag can be used to specify the character encoding of the source files
 # that Doxygen parses. Internally Doxygen uses the UTF-8 encoding. Doxygen uses
