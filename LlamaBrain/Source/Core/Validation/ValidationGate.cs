@@ -554,13 +554,17 @@ namespace LlamaBrain.Core.Validation
         OnLog?.Invoke($"  - {failure}");
       }
 
+      // Contract: ApprovedIntents is EMPTY when gate fails.
+      // Intents are only approved when the gate passes.
+      // Downstream consumers (WorldIntentDispatcher, MemoryMutationController)
+      // must only consume from GateResult.ApprovedIntents, never from ParsedOutput.WorldIntents.
       return new GateResult
       {
         Passed = false,
         Failures = failures,
         ApprovedMutations = approvedMutations,
         RejectedMutations = rejectedMutations,
-        ApprovedIntents = approvedIntents
+        ApprovedIntents = new List<WorldIntent>() // Empty on fail - contract requirement
       };
     }
 
