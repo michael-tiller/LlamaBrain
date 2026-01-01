@@ -1357,7 +1357,7 @@ Implement a simple, abstracted save/load system for game state persistence. This
 
 **Current State**: `InteractionContext.InteractionCount` exists but is session-only. Memory system has file-based persistence (`PersonaMemoryFileStore`), but there's no unified save/load system for game state including `InteractionCount`.
 
-**Design Philosophy**: Keep it simple and abstracted. Use an adapter interface pattern (`IGameStatePersistence`) to allow multiple persistence implementations. Start with simple implementations (PlayerPrefs, JSON files), with optional integration for production-quality packages like SaveGameFree (encrypted saves, cloud sync, etc.) that can be swapped in without breaking code.
+**Design Philosophy**: Keep it simple and abstracted. Use an adapter interface pattern (`IGameStatePersistence`) to allow multiple persistence implementations. Primary implementation uses SaveGameFree for Unity. The adapter pattern allows swapping implementations without breaking code if needed in the future.
 
 **Architectural Impact**: Without this feature, Feature 14 cannot achieve cross-session determinism because `InteractionCount` resets on game restart. This is a **hard dependency** for Feature 14.
 
@@ -1378,24 +1378,12 @@ Implement a simple, abstracted save/load system for game state persistence. This
   - Defines contract for save/load operations
   - Allows swapping implementations without code changes
   - Supports async operations and error handling
-- [ ] **Simple Implementations** (built-in):
-  - [ ] `UnityPlayerPrefsPersistence` using `PlayerPrefs`
-    - Store `InteractionCounts` as JSON in PlayerPrefs
-    - Use keys like `"LlamaBrain_InteractionCount_{npcId}"`
-    - Handle PlayerPrefs size limits gracefully
-  - [ ] `JsonFilePersistence` (engine-agnostic)
-    - Save to JSON file in configurable directory
-    - Use `JsonUtils` for serialization (consistent with memory system)
-    - Handle file I/O errors gracefully
-    - Support configurable file path
-- [ ] **Optional SaveGameFree Integration**:
-  - [ ] `SaveGameFreePersistenceAdapter` implementing `IGameStatePersistence`
-    - Wraps SaveGameFree API behind adapter interface
-    - Provides encryption, cloud sync, and advanced features via SaveGameFree
-    - Optional dependency (only used if SaveGameFree is installed)
-    - Graceful fallback if SaveGameFree not available
-  - [ ] Conditional compilation or runtime detection for SaveGameFree availability
-  - [ ] Documentation for SaveGameFree integration setup
+- [ ] **Primary Implementation**:
+  - [ ] `SaveGameFreePersistence` using SaveGameFree
+    - Store `InteractionCounts` and game state using SaveGameFree API
+    - Use SaveGameFree's built-in serialization and file management
+    - Leverage SaveGameFree features (encryption, async/await, etc.) as configured
+    - Handle SaveGameFree errors gracefully
 
 #### 16.3 Integration with InteractionContext
 - [ ] Create `GameStateManager` class that wraps persistence interface
@@ -1411,7 +1399,7 @@ Implement a simple, abstracted save/load system for game state persistence. This
 
 #### 16.4 Unity Integration
 - [ ] Create `GameStatePersistenceManager` Unity MonoBehaviour component
-  - Configurable persistence provider (PlayerPrefs vs File-based)
+  - Uses SaveGameFree for persistence
   - Auto-save on scene unload (optional)
   - Manual save/load methods
 - [ ] Integration with Unity save system (if game has one)
@@ -1425,8 +1413,7 @@ Implement a simple, abstracted save/load system for game state persistence. This
 
 #### 16.6 Testing
 - [ ] Unit tests for `IGameStatePersistence` interface
-- [ ] Unit tests for `UnityPlayerPrefsPersistence` (mock PlayerPrefs)
-- [ ] Unit tests for `JsonFilePersistence` (use temp files)
+- [ ] Unit tests for `SaveGameFreePersistence` (mock SaveGameFree API)
 - [ ] Integration tests: Save → Load → Verify InteractionCount restored
 - [ ] Integration tests: Save → Modify → Load → Verify state restored
 - [ ] Edge case tests: Corrupted saves, missing files, permission errors
@@ -1435,9 +1422,9 @@ Implement a simple, abstracted save/load system for game state persistence. This
 #### 16.7 Documentation
 - [ ] Update `ARCHITECTURE.md` with persistence system section
 - [ ] Document `IGameStatePersistence` adapter interface pattern
-- [ ] Document all implementations (PlayerPrefs, JSON file, SaveGameFree adapter)
+- [ ] Document SaveGameFree implementation
 - [ ] Update `USAGE_GUIDE.md` with save/load examples
-- [ ] Document SaveGameFree integration setup (optional)
+- [ ] Document SaveGameFree integration setup and configuration
 - [ ] Document migration path for existing games
 - [ ] Document how to swap persistence providers (adapter pattern benefits)
 
@@ -1445,21 +1432,19 @@ Implement a simple, abstracted save/load system for game state persistence. This
 
 **Adapter Interface Design**:
 - `IGameStatePersistence` adapter interface provides clean abstraction
-- All implementations (PlayerPrefs, JSON files, SaveGameFree) implement same interface
-- No breaking changes when swapping persistence providers
-- Runtime selection of persistence provider via configuration
+- SaveGameFree implementation implements the interface
+- Adapter pattern allows for future extensibility if needed
+- Runtime configuration of SaveGameFree settings
 
-**Simple First, Upgradeable Later**:
-- Start with simple implementations: PlayerPrefs (Unity) or JSON files (engine-agnostic)
-- Basic implementations have no encryption, no cloud sync, minimal features
-- Focus on correctness and abstraction, not security
-- **Optional SaveGameFree Integration**: Provides production-ready features:
-  - Encryption support (Base64 format)
-  - Cloud storage options
+**SaveGameFree Implementation**:
+- Uses SaveGameFree for Unity projects
+- SaveGameFree provides production-ready features:
+  - Encryption support
+  - Async/await support for non-blocking operations
   - Multiple serialization formats (JSON, XML, Binary)
   - Cross-platform support
-  - Advanced file management
-- SaveGameFree adapter is optional - games can use simple implementations or upgrade to SaveGameFree without code changes
+  - Auto-save functionality
+  - Built-in error handling
 
 **InteractionCount Tracking**:
 - Must track `InteractionCount` per NPC ID
@@ -1467,7 +1452,7 @@ Implement a simple, abstracted save/load system for game state persistence. This
 - Must restore on game load
 - Default to 0 if not found in save (new game)
 
-**File Format** (JSON):
+**Data Structure** (serialized by SaveGameFree):
 ```json
 {
   "Version": "1.0",
@@ -1481,10 +1466,11 @@ Implement a simple, abstracted save/load system for game state persistence. This
 }
 ```
 
-**Unity PlayerPrefs Format**:
-- Key: `"LlamaBrain_InteractionCount_{npcId}"`
-- Value: `"{count}"` (string representation of int)
-- Alternative: Single JSON blob in one PlayerPrefs key (if size allows)
+**SaveGameFree Format**:
+- Uses SaveGameFree's native serialization format
+- Stores `GameStateData` object directly via SaveGameFree API
+- SaveGameFree handles file management, encryption, and async operations as configured
+- File location and naming managed by SaveGameFree settings
 
 **Error Handling**:
 - Save failures: Log error, continue (don't crash game)
@@ -1504,8 +1490,7 @@ Implement a simple, abstracted save/load system for game state persistence. This
 ### Success Criteria
 
 - [ ] `IGameStatePersistence` adapter interface defined and documented
-- [ ] `UnityPlayerPrefsPersistence` and `JsonFilePersistence` implementations complete
-- [ ] `SaveGameFreePersistenceAdapter` implementation complete (optional)
+- [ ] `SaveGameFreePersistence` implementation complete
 - [ ] Adapter pattern allows runtime selection of persistence provider
 - [ ] `InteractionCount` successfully saved and restored across sessions
 - [ ] Integration with `LlamaBrainAgent` or memory system complete
@@ -1516,9 +1501,9 @@ Implement a simple, abstracted save/load system for game state persistence. This
 
 ### Future Enhancements (Post-v1.0)
 
-**Note**: Many of these features are available via SaveGameFree adapter:
+**Note**: Many of these features are available via SaveGameFree:
 - ✅ Encrypted save files (via SaveGameFree)
-- ✅ Cloud save synchronization (via SaveGameFree)
+- ✅ Async/await support (via SaveGameFree)
 - ✅ Multiple serialization formats (via SaveGameFree)
 - Additional enhancements:
 - Save file compression

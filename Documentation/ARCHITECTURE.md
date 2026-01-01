@@ -1004,7 +1004,7 @@ The following features are planned to enhance the architecture's capabilities an
 
 **Status**: 📋 Planned  
 **Priority**: CRITICAL  
-**Dependencies**: Feature 10 (Deterministic Proof Gap Testing)
+**Dependencies**: Feature 10 (Deterministic Proof Gap Testing), Feature 16 (Save/Load Game Integration)
 
 **Overview**: Implement the **InteractionCount seed strategy** to achieve true cross-session determinism. By using `InteractionContext.InteractionCount` as the seed for LLM generation, we transform the stochastic generator into a pure function relative to game state.
 

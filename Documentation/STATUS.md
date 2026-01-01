@@ -1,12 +1,12 @@
 # LlamaBrain Implementation Status
 
-**Last Updated**: December 31, 2025  
+**Last Updated**: January 1, 2026  
 
 ## Current Status
 
 **Overall Progress**: ~98% Complete  
 **Test Coverage**: 92.37% line coverage (5,100 of 5,521 lines), ~95% branch coverage  
-**Total Tests**: 853+ tests (all passing)  
+**Total Tests**: 1,531 tests (all passing)  
 **FullPipelineIntegrationTests**: 8 tests complete
 
 ---
@@ -24,7 +24,7 @@
 | Feature 7: Enhanced Fallback System | ✅ Complete | 100% |
 | Feature 8: RedRoom Integration | 🚧 In Progress | 99% |
 | Feature 9: Documentation | ✅ Complete | 100% |
-| Feature 10: Deterministic Proof Gap Testing | 🚧 In Progress | ~25% |
+| Feature 10: Deterministic Proof Gap Testing | 🚧 In Progress | ~65% |
 | Feature 11: RAG-Based Memory Retrieval | 📋 Planned | MEDIUM |
 | Feature 12: Dedicated Structured Output | 📋 Planned | HIGH |
 | Feature 13: Structured Output Integration | 📋 Planned | HIGH |
@@ -66,6 +66,7 @@
   - [x] Validation Gate Overlay (medium priority) - IMPLEMENTED (needs fixes)
   - [x] Constraint Demonstration Overlay (lower priority - can combine with Validation) - COMBINED INTO VALIDATION GATE OVERLAY
   - [x] Overlay System Infrastructure (extend RedRoomCanvas) - Complete (needs fixes)
+  - [ ] Fix validation overlay bugs
 
 - [x] **8.5 Integration Testing** - Complete
   - [x] FullPipelineIntegrationTests (base library) - Complete (8 tests)
@@ -79,7 +80,7 @@
 
 ---
 
-## Phase 9: Documentation (100% Complete)
+## Feature 9: Documentation (100% Complete)
 
 ### Definition of Done
 
@@ -121,7 +122,7 @@
 
 ---
 
-## Feature 10: Deterministic Proof Gap Testing (~25% Complete)
+## Feature 10: Deterministic Proof Gap Testing (~65% Complete)
 
 **Status**: 🚧 In Progress
 **Priority**: HIGH - Required for v1.0 release
@@ -146,27 +147,29 @@
 
 ### Test Backlog by Component
 
-| Component | Test File | Progress | Status |
-|-----------|----------|----------|--------|
-| ContextRetrievalLayer | `ContextRetrievalLayerTests.cs` | 7/20-25 tests | 🚧 Partial |
-| PromptAssembler/WorkingMemory | `PromptAssemblerTests.cs`<br>`EphemeralWorkingMemoryTests.cs` | 0/25-30 tests | Not Started |
-| OutputParser | `OutputParserTests.cs` | 21/20-25 tests | ✅ Complete |
-| ValidationGate | `ValidationGateTests.cs` | 0/30-35 tests | Not Started |
-| MemoryMutationController | `MemoryMutationControllerTests.cs` | 0/30-35 tests | Not Started |
-| WorldIntentDispatcher | `WorldIntentDispatcherTests.cs` (new) | 0/20-25 tests | Not Started |
-| Full Pipeline | `DeterministicPipelineTests.cs` (new) | 0/15-20 tests | Not Started |
-| **Total** | | **~25%** | **🚧 In Progress** |
+| Component | Test File | Estimated Tests | Actual Tests | Status |
+|-----------|-----------|----------------|--------------|--------|
+| ContextRetrievalLayer | `ContextRetrievalLayerTests.cs` | 20-25 | **55 tests** | ✅ **Complete** (exceeds estimate) |
+| PromptAssembler/WorkingMemory | `PromptAssemblerTests.cs`<br>`EphemeralWorkingMemoryTests.cs` | 25-30 | **80 tests** (40+40) | ✅ **Complete** (exceeds estimate) |
+| OutputParser | `OutputParserTests.cs` | 20-25 | **86 tests** | ✅ **Complete** (exceeds estimate) |
+| ValidationGate | `ValidationGateTests.cs` | 30-35 | **17 tests** | 🚧 Partial (basic coverage, Phase 10.4 tests pending) |
+| MemoryMutationController | `MemoryMutationControllerTests.cs` | 30-35 | **41 tests** | ✅ **Complete** (exceeds estimate) |
+| WorldIntentDispatcher | `WorldIntentDispatcherTests.cs` (new) | 20-25 | **0 tests** | Not Started |
+| Full Pipeline | `DeterministicPipelineTests.cs` (new) | 15-20 | **0 tests** | Not Started |
+| **Total** | | **150-180** | **279 tests** | **~65%** |
 
 ### Pending Work
 - [ ] Critical Requirement #5: WorldIntentDispatcher Singleton Lifecycle implementation and tests
-- [ ] Additional Feature 10.1 tests (ContextRetrievalLayer selection behavior - 13-18 tests remaining)
-- [ ] Feature 10.2-10.6 test suites (all pending)
-- [ ] Feature 10.7 integration tests (deterministic pipeline proof gaps)
+- [ ] Feature 10.4: ValidationGate detailed determinism tests (13-18 tests remaining - basic validation complete)
+- [ ] Feature 10.5: WorldIntentDispatcher tests (20-25 tests - not started)
+- [ ] Feature 10.7: Full Pipeline deterministic integration tests (15-20 tests - not started)
 
-**Estimated Effort Remaining**: 9-13 days
-- Feature 10.1-10.5 (Unit tests): 5-7 days
-- Feature 10.6 (PlayMode tests): 2-3 days
-- Feature 10.7 (Integration tests): 2-3 days
+**Estimated Effort Remaining**: 5-7 days
+- Feature 10.4 (ValidationGate tests): 2-3 days
+- Feature 10.5 (WorldIntentDispatcher tests): 2-3 days
+- Feature 10.7 (Integration tests): 1-2 days
+
+**Note**: Features 10.1, 10.2, and 10.3 are complete. Most components (ContextRetrievalLayer, PromptAssembler, EphemeralWorkingMemory, OutputParser, MemoryMutationController) have comprehensive test coverage exceeding original estimates.
 
 See `PHASE10_PROOF_GAPS.md` for detailed test backlog with file targets and acceptance criteria.
 
@@ -188,8 +191,7 @@ Implement a simple, abstracted save/load system for game state persistence. This
 ### Key Components
 
 - `IGameStatePersistence` interface for abstraction
-- `UnityPlayerPrefsPersistence` (Unity PlayerPrefs implementation)
-- `JsonFilePersistence` (engine-agnostic JSON file implementation)
+- `SaveGameFreePersistence` (Unity SaveGameFree implementation)
 - `GameStateManager` wrapper class
 - Unity `GameStatePersistenceManager` MonoBehaviour component
 - Versioning and migration support
@@ -340,10 +342,10 @@ Enable support for multiple NPCs in the same conversation context, including NPC
    - Uses persisted `InteractionCount` from Feature 16
    - **Rationale**: The "Holy Grail" of AI consistency, but requires persistence to work
 
-4. **Feature 8 & 9: RedRoom & Documentation** - **Weave in as breather tasks**
-   - Feature 8.4: Testing Overlays (2-3 days)
-   - Feature 9.5: Tutorial Content (3-4 days)
+4. **Feature 8: RedRoom Integration** - **Weave in as breather task**
+   - Feature 8.4: Testing Overlay fixes (2-3 days)
    - **Rationale**: Lower cognitive load, good for maintaining momentum between heavy features
+   - **Note**: Feature 9 (Documentation) is complete - no additional work needed
 
 5. **Feature 10: Deterministic Proof Gap Testing** - **MUST BE COMPLETED**
    - Ongoing throughout all phases, but must be finished before Milestone 4 complete
@@ -362,7 +364,7 @@ Enable support for multiple NPCs in the same conversation context, including NPC
 
 ### Test Execution
 - **Command**: `dotnet test`
-- **Current**: 853+ tests (all passing)
+- **Current**: 1,531 tests (all passing)
 - **FullPipelineIntegrationTests**: 8 tests in `LlamaBrain.Tests/Integration/FullPipelineIntegrationTests.cs`
 
 ### Documentation
@@ -386,7 +388,7 @@ Enable support for multiple NPCs in the same conversation context, including NPC
 **Status**: Partial
 - Feature 7: Enhanced Fallback System - ✅ Complete
 - Feature 8: RedRoom Integration - 🚧 99% Complete (overlay fixes needed)
-- Feature 9: Documenation - 🚧 90% Complete
+- Feature 9: Documentation - ✅ Complete
 
 ### Milestone 4: Production Ready (Features 10, 12, 13, 14, 16, 8, 9) 🚧
 **Status**: In Progress
@@ -395,17 +397,17 @@ Enable support for multiple NPCs in the same conversation context, including NPC
 1. **Feature 12 & 13** (Structured Output) - Do first
 2. **Feature 16** (Save/Load) - Do second
 3. **Feature 14** (Deterministic Seed) - Do third
-4. **Feature 8 & 9** (RedRoom & Documentation) - Weave in as breather tasks
+4. **Feature 8** (RedRoom Integration) - Weave in as breather task
 5. **Feature 10** (Proof Gap Testing) - **Must be completed** (ongoing throughout, but finish before Milestone 4 complete)
 
 **Status**:
-- Feature 10: Deterministic Proof Gap Testing - 🚧 ~25% Complete (**MUST BE COMPLETED** for Milestone 4)
+- Feature 10: Deterministic Proof Gap Testing - 🚧 ~65% Complete (**MUST BE COMPLETED** for Milestone 4)
 - Feature 12: Dedicated Structured Output - 📋 Planned (HIGH priority - **DO FIRST**)
 - Feature 13: Structured Output Integration - 📋 Planned (HIGH priority - **DO IMMEDIATELY AFTER 12**)
 - Feature 16: Save/Load Game Integration - 📋 Planned (CRITICAL priority - **DO SECOND**, after 12 & 13)
 - Feature 14: Deterministic Generation Seed - 📋 Planned (CRITICAL priority - **DO THIRD**, after 16)
 - Feature 8: RedRoom Integration - 🚧 99% Complete (overlay fixes needed)
-- Feature 9: Documentation - 🚧 90% Complete (breather task)
+- Feature 9: Documentation - ✅ Complete
 
 **Target**: Complete all high-priority features for v0.2.0 release
 - **Requires Feature 10 completion** (deterministic proof gaps) - **REQUIRED**
