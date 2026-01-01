@@ -125,7 +125,7 @@
 ## Feature 10: Deterministic Proof Gap Testing (~65% Complete)
 
 **Status**: 🚧 In Progress
-**Priority**: HIGH - Required for v1.0 release
+**Priority**: HIGH - Required for v0.2.0 release
 
 ### Progress Summary
 
@@ -345,7 +345,7 @@ Enable support for multiple NPCs in the same conversation context, including NPC
 4. **Feature 10: Deterministic Proof Gap Testing** - **MUST BE COMPLETED**
    - Ongoing throughout all phases, but must be finished before Milestone 5 complete
    - Complete remaining test suites (5-7 days remaining)
-   - **Rationale**: Required for v1.0. Cannot claim "deterministically proven" architecture without this.
+   - **Rationale**: Required for v0.2.0. Cannot claim "deterministically proven" architecture without this.
 
 5. **Feature 8: RedRoom Integration** - **Weave in as breather task** (Optional for v0.2.0)
    - Feature 8.4: Testing Overlay fixes (2-3 days)

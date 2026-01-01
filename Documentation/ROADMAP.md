@@ -70,7 +70,7 @@ The following execution order is **strongly recommended** for v0.3.0 to avoid re
    - Should be ongoing throughout all phases
    - Critical tests can be written as features are implemented
    - **Must be finished** before Milestone 5 is considered complete
-   - **Rationale**: Proves determinism claims, required for v1.0. Cannot claim "deterministically proven" architecture without this.
+   - **Rationale**: Proves determinism claims, required for v0.2.0. Cannot claim "deterministically proven" architecture without this.
 
 ### Post-Milestone 5: Enhanced Features
 5. **Milestone 6 Features (11, 15, 17, 18, 19, 20)** - **Only after Milestone 5 complete**
@@ -621,7 +621,7 @@ The following execution order is **strongly recommended** for v0.3.0 to avoid re
 
 ## 🚧 Feature 10: Deterministic Proof Gap Testing
 
-**Priority**: HIGH - Required for v1.0 release  
+**Priority**: HIGH - Required for v0.2.0 release  
 **Status**: 🚧 In Progress (~25% Complete)  
 **Dependencies**: Features 1-7 (All core components must be implemented)  
 **Execution Order**: **MUST BE COMPLETED** for Milestone 4. Should be ongoing throughout all phases, but must be finished before Milestone 4 is considered complete. Cannot claim "deterministically proven" architecture without this.
@@ -662,7 +662,7 @@ The following execution order is **strongly recommended** for v0.3.0 to avoid re
 - Feature 10.6 (PlayMode tests): 2-3 days
 - Feature 10.7 (Integration tests): 2-3 days
 
-**Versioning Strategy**: Feature 10 is required for v1.0 release. Pre-1.0 releases (rc/preview) can ship without Feature 10 complete, but must not claim architecture is "deterministically proven" until Feature 10 is complete.
+**Versioning Strategy**: Feature 10 is required for v0.2.0 release. Pre-0.2.0 releases (rc/preview) can ship without Feature 10 complete, but must not claim architecture is "deterministically proven" until Feature 10 is complete.
 
 ---
 
@@ -1494,7 +1494,7 @@ Implement a simple, abstracted save/load system for game state persistence. This
 - [ ] Documentation complete with examples (including SaveGameFree setup)
 - [ ] Feature 14 can use persisted `InteractionCount` for determinism
 
-### Future Enhancements (Post-v1.0)
+### Future Enhancements (Post-v0.2.0)
 
 **Note**: Many of these features are available via SaveGameFree:
 - ✅ Encrypted save files (via SaveGameFree)
@@ -1981,7 +1981,7 @@ Add memory change history visualization to the RedRoom Memory Mutation Overlay. 
 - [ ] All tests passing
 - [ ] Documentation complete with examples
 
-**Note**: This is an aspirational future enhancement. It is not required for Milestone 4 or v1.0 release. It can be implemented post-Milestone 4 as a quality-of-life improvement for developers using RedRoom.
+**Note**: This is an aspirational future enhancement. It is not required for Milestone 4 or v0.2.0 release. It can be implemented post-Milestone 4 as a quality-of-life improvement for developers using RedRoom.
 
 ---
 
