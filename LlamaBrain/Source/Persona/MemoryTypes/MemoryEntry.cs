@@ -37,6 +37,7 @@ namespace LlamaBrain.Persona.MemoryTypes
 
     /// <summary>
     /// When this memory was last accessed/used.
+    /// Note: This is not included in deterministic serialization as it changes on access.
     /// </summary>
     public DateTime LastAccessedAt { get; set; } = DateTime.UtcNow;
 
@@ -64,6 +65,7 @@ namespace LlamaBrain.Persona.MemoryTypes
 
     /// <summary>
     /// Marks this memory as accessed, updating LastAccessedAt.
+    /// Uses system time (not deterministic) - LastAccessedAt is not part of deterministic state.
     /// </summary>
     public void MarkAccessed()
     {

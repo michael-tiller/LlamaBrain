@@ -72,6 +72,13 @@ namespace LlamaBrain.Core.Inference
     public float SignificanceWeight { get; set; } = 0.2f;
 
     /// <summary>
+    /// Half-life for recency decay in ticks. Memories older than this
+    /// relative to snapshot time will have recency score ~0.5.
+    /// Default: 1 hour (36_000_000_000 ticks).
+    /// </summary>
+    public long RecencyHalfLifeTicks { get; set; } = TimeSpan.FromHours(1).Ticks;
+
+    /// <summary>
     /// Creates a default configuration.
     /// </summary>
     public static ContextRetrievalConfig Default => new ContextRetrievalConfig();
@@ -104,13 +111,50 @@ namespace LlamaBrain.Core.Inference
     }
 
     /// <summary>
+    /// Retrieves all relevant context for an interaction using snapshot time for deterministic recency calculations.
+    /// This is the preferred method for deterministic behavior.
+    /// </summary>
+    /// <param name="snapshot">The state snapshot containing player input and snapshot time</param>
+    /// <param name="topics">Optional topics to filter by (for relevance)</param>
+    /// <returns>Retrieved context ready for snapshot building</returns>
+    public RetrievedContext RetrieveContext(StateSnapshot snapshot, IEnumerable<string>? topics = null)
+    {
+      return RetrieveContextInternal(snapshot.PlayerInput, snapshot.SnapshotTimeUtcTicks, topics);
+    }
+
+    /// <summary>
+    /// Retrieves all relevant context for an interaction using explicit snapshot time for deterministic recency calculations.
+    /// This is the preferred method when you have snapshot time but not yet a full snapshot.
+    /// </summary>
+    /// <param name="playerInput">The player's input (used for relevance scoring)</param>
+    /// <param name="snapshotTimeUtcTicks">The snapshot time in UTC ticks for deterministic recency calculations</param>
+    /// <param name="topics">Optional topics to filter by (for relevance)</param>
+    /// <returns>Retrieved context ready for snapshot building</returns>
+    public RetrievedContext RetrieveContext(string playerInput, long snapshotTimeUtcTicks, IEnumerable<string>? topics = null)
+    {
+      return RetrieveContextInternal(playerInput, snapshotTimeUtcTicks, topics);
+    }
+
+    /// <summary>
     /// Retrieves all relevant context for an interaction.
     /// Returns a RetrievedContext containing categorized memories.
+    /// NOTE: This overload uses current wall-clock time, which is NOT deterministic.
+    /// Use RetrieveContext(StateSnapshot, ...) for deterministic behavior.
     /// </summary>
     /// <param name="playerInput">The player's input (used for relevance scoring).</param>
     /// <param name="topics">Optional topics to filter by (for relevance).</param>
     /// <returns>Retrieved context ready for snapshot building.</returns>
     public RetrievedContext RetrieveContext(string playerInput, IEnumerable<string>? topics = null)
+    {
+      // Use current time for backward compatibility (not deterministic)
+      var snapshotTimeUtcTicks = DateTimeOffset.UtcNow.UtcTicks;
+      return RetrieveContextInternal(playerInput, snapshotTimeUtcTicks, topics);
+    }
+
+    /// <summary>
+    /// Internal method that retrieves context with explicit snapshot time.
+    /// </summary>
+    private RetrievedContext RetrieveContextInternal(string playerInput, long snapshotTimeUtcTicks, IEnumerable<string>? topics)
     {
       var topicList = topics?.ToList() ?? new List<string>();
 
@@ -120,7 +164,7 @@ namespace LlamaBrain.Core.Inference
       {
         CanonicalFacts = RetrieveCanonicalFacts(topicList),
         WorldState = RetrieveWorldState(topicList),
-        EpisodicMemories = RetrieveEpisodicMemories(playerInput, topicList),
+        EpisodicMemories = RetrieveEpisodicMemories(playerInput, topicList, snapshotTimeUtcTicks),
         Beliefs = RetrieveBeliefs(playerInput, topicList)
       };
 
@@ -184,14 +228,14 @@ namespace LlamaBrain.Core.Inference
     /// Uses strict total order sorting for deterministic results:
     /// Primary: score descending, then CreatedAtTicks descending, then Id ordinal, then SequenceNumber ascending.
     /// </summary>
-    private List<string> RetrieveEpisodicMemories(string playerInput, List<string> topics)
+    private List<string> RetrieveEpisodicMemories(string playerInput, List<string> topics, long snapshotTimeUtcTicks)
     {
       var memories = _memorySystem.GetActiveEpisodicMemories(_config.MinEpisodicStrength).ToList();
 
       // Score and sort memories with strict total order for determinism
       // Order: score desc, CreatedAtTicks desc, Id ordinal asc, SequenceNumber asc
       var scoredMemories = memories
-        .Select(m => new ScoredItem<EpisodicMemoryEntry>(m, ScoreEpisodicMemory(m, playerInput, topics)))
+        .Select(m => new ScoredItem<EpisodicMemoryEntry>(m, ScoreEpisodicMemory(m, playerInput, topics, snapshotTimeUtcTicks)))
         .OrderByDescending(s => s.Score)
         .ThenByDescending(s => s.Item.CreatedAtTicks)
         .ThenBy(s => s.Item.Id, StringComparer.Ordinal)
@@ -233,11 +277,35 @@ namespace LlamaBrain.Core.Inference
 
     /// <summary>
     /// Scores an episodic memory based on recency, relevance, and significance.
+    /// Recency is calculated using exponential decay based on snapshot time (deterministic).
     /// </summary>
-    private float ScoreEpisodicMemory(EpisodicMemoryEntry memory, string playerInput, List<string> topics)
+    private float ScoreEpisodicMemory(EpisodicMemoryEntry memory, string playerInput, List<string> topics, long snapshotTimeUtcTicks)
     {
-      // Recency score (0-1, based on strength which decays over time)
-      var recencyScore = memory.Strength;
+      // Calculate recency score using exponential decay based on snapshot time
+      // Formula: recency = 0.5 ^ (elapsedTime / halfLife)
+      // This ensures deterministic recency scoring that doesn't depend on wall-clock time
+      float recencyScore;
+      var elapsedTicks = snapshotTimeUtcTicks - memory.CreatedAtTicks;
+      if (elapsedTicks <= 0)
+      {
+        // Memory created at or after snapshot time - treat as fresh
+        recencyScore = 1.0f;
+      }
+      else if (_config.RecencyHalfLifeTicks <= 0)
+      {
+        // No decay configured - treat all as fresh
+        recencyScore = 1.0f;
+      }
+      else
+      {
+        // Calculate exponential decay: 0.5 ^ (elapsed / halfLife)
+        var halfLives = (double)elapsedTicks / _config.RecencyHalfLifeTicks;
+        recencyScore = (float)Math.Pow(0.5, halfLives);
+        
+        // Apply significance boost: higher significance resists decay
+        // Boost formula: recency = baseRecency * (1.0 + significance * 0.5), capped at 1.0
+        recencyScore = Math.Min(1.0f, recencyScore * (1.0f + memory.Significance * 0.5f));
+      }
 
       // Relevance score (0-1)
       var relevanceScore = CalculateRelevance(memory.Content, playerInput, topics);
