@@ -184,8 +184,8 @@ LlamaBrain includes powerful advanced features for production-ready NPCs:
 ## 📚 Next Steps
 
 1. **Explore Samples**: Try all the sample scenes to see different use cases
-2. **Read Full Docs**: Check [README.md](README.md) for detailed documentation
-3. **Learn Advanced Features**: See [Usage Guide](Documentation/USAGE_GUIDE.md) for Expectancy Engine and Structured Memory System
+2. **Read Unity Documentation**: Check [README.md](../README.md) for detailed documentation
+3. **Learn Advanced Features**: See [Usage Guide](USAGE_GUIDE.md) for Expectancy Engine and Structured Memory System
 4. **Join Community**: Get help on [Discord](https://discord.gg/9ruBad4nrN)
 5. **Watch Tutorial**: [Quick Start Video](https://youtu.be/1EtU6qu7O5Q)
 
@@ -201,9 +201,11 @@ LlamaBrain includes powerful advanced features for production-ready NPCs:
 
 ## 🔗 Resources
 
-- [Full Documentation](README.md)
+- [Unity Documentation](../README.md)
 - [Discord Community](https://discord.gg/9ruBad4nrN)
 - [Video Tutorial](https://youtu.be/1EtU6qu7O5Q)
+- [Unity API](http://metagrue.com/docs/llamabrainruntimeapi/)
+- [Core API](http://metagrue.com/docs/llamabrainapi/)
 
 ---
 

@@ -5,7 +5,7 @@ All notable changes to LlamaBrain will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0-rc.1] - 2025-12-31 (Unreleased)
+## [0.2.0-rc.1] - 2026-1-1
 
 ### Core Library
 
@@ -625,12 +625,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Determinism guarantees and limitations
   - Hardware determinism documentation
   - Contract decisions and boundary definitions
-- **New PIPELINE_CONTRACT.md** - Formal pipeline contract specification
-  - Version 1.0.0 contract defining the 9-component architectural pipeline
-  - Exact flow, data contracts, and behavioral guarantees
-  - Component execution order and data flow specifications
-  - Error handling and retry logic contracts
-  - State reconstruction and determinism guarantees
 - **New SAFEGUARDS.md** - Security and safety documentation
   - Threat mitigation strategies
   - Best practices for secure implementation
