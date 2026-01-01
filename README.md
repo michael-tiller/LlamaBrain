@@ -111,6 +111,8 @@ LlamaBrain/
 ### Core Library
 - **[Core README](LlamaBrain/README.md)** - Complete library documentation
 - **[Security Guide](Documentation/SAFEGUARDS.md)** - Security measures and safeguards
+- **[API Documentation](https://metagrue.com/docs/llamabrainapi/)** - API for LlamaBrain
+- **[Runtime API Documentation](https://metagrue.com/docs/llamabrainruntimeapi/)** - API for LlamaBrain Runtime for Unity
 
 ### Unity Package
 Unity package documentation is available in the LlamaBrainRuntime project.
