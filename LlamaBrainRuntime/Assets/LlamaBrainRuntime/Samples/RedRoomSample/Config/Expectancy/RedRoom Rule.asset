@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 70b0b7382e61244469cd4d9d12d2f633, type: 3}
+  m_Name: RedRoom Rule
+  m_EditorClassIdentifier:
+  ruleId: no-red-mentions
+  ruleName: No Red Mentions
+  description: NPC cannot mention the color red or any red-associated words like blood, crimson, scarlet, etc.
+  isEnabled: 1
+  priority: 300
+  conditionMode: 0
+  conditions: []
+  constraints:
+  - Type: 0
+    Severity: 2
+    Description: Cannot mention red or red-associated colors/concepts
+    PromptInjection: You must NEVER mention the color red or anything associated
+      with red. This includes words like blood, crimson, scarlet, ruby, cherry, vermillion,
+      rust, maroon, burgundy, carmine, or any shade of red. Avoid describing anything
+      that is typically red in color.
+    ValidationPatterns:
+    - red
+    - blood
+    - crimson
+    - scarlet
+    - ruby
+    - cherry
+    - vermillion
+    - vermilion
+    - rust
+    - maroon
+    - burgundy
+    - carmine
+    - cardinal
+    - cerise
+    - flame
+    - rose
+    - wine
+    - brick
+    - auburn
+    - ginger
+    - coral
+    UseRegex: 0

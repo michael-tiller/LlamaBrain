@@ -44,5 +44,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b4beb3879dee0774cba6b2f515fa6615, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  globalRules: []
+  globalRules:
+  - {fileID: 11400000, guid: a1b2c3d4e5f6789012345678901234a1, type: 2}
   debugLogging: 0

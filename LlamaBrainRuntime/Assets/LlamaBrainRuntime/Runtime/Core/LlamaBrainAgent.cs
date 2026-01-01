@@ -66,6 +66,14 @@ namespace LlamaBrain.Runtime.Core
     [SerializeField] private FallbackConfigAsset? fallbackConfig;
 
     /// <summary>
+    /// Optional NPC-specific validation rule set.
+    /// These rules apply to this NPC in addition to global rules from ValidationPipeline.
+    /// </summary>
+    [Header("Validation Rules")]
+    [Tooltip("Optional NPC-specific validation rules. These are added to global rules from ValidationPipeline.")]
+    [SerializeField] private LlamaBrain.Runtime.Core.Validation.ValidationRuleSetAsset? npcValidationRules;
+
+    /// <summary>
     /// The last evaluated constraint set (for debugging/metrics).
     /// </summary>
     public ConstraintSet? LastConstraints { get; private set; }
@@ -87,7 +95,7 @@ namespace LlamaBrain.Runtime.Core
     /// <summary>
     /// The client for the LlamaBrain server.
     /// </summary>
-    private ApiClient? client;
+    private IApiClient? client;
     /// <summary>
     /// The dialogue session for this agent.
     /// </summary>
@@ -247,7 +255,7 @@ namespace LlamaBrain.Runtime.Core
     /// </summary>
     /// <param name="client">The API client to use for LLM communication</param>
     /// <param name="memoryProvider">The memory store provider for persona memories</param>
-    public void Initialize(ApiClient client, PersonaMemoryStore memoryProvider)
+    public void Initialize(IApiClient client, PersonaMemoryStore memoryProvider)
     {
       initializationAttempted = true;
       UnityEngine.Debug.Log("[LlamaBrainAgent] Starting initialization...");
@@ -317,6 +325,9 @@ namespace LlamaBrain.Runtime.Core
         mutationController = new MemoryMutationController();
         mutationController.OnLog = msg => UnityEngine.Debug.Log(msg);
         UnityEngine.Debug.Log($"[LlamaBrainAgent] Output parser, validation gate, and mutation controller initialized");
+
+        // Load validation rules (global + NPC-specific)
+        LoadValidationRules();
 
         // Initialize fallback system
         var fallbackConfigInstance = fallbackConfig != null 
@@ -535,15 +546,53 @@ namespace LlamaBrain.Runtime.Core
           var parsedOutput = outputParser.Parse(metrics.Content, wasTruncated);
           LastParsedOutput = parsedOutput;
 
-          // Step 2: Validate through ValidationGate
-          if (validationGate == null) validationGate = new ValidationGate();
+          // Step 2: Validate through ValidationGate and/or ValidationPipeline
+          GateResult gateResult;
           var validationContext = new ValidationContext
           {
             Constraints = snapshot.Constraints,
             MemorySystem = memoryProvider?.GetOrCreateSystem(runtimeProfile?.PersonaId ?? ""),
             Snapshot = snapshot
           };
-          var gateResult = validationGate.Validate(parsedOutput, validationContext);
+
+          // Use ValidationPipeline if available (it includes global rules)
+          var globalPipeline = LlamaBrain.Runtime.Core.Validation.ValidationPipeline.Instance;
+          if (globalPipeline != null)
+          {
+            // ValidationPipeline handles global rules automatically and does its own parsing
+            // We need to pass the raw output, not the parsed output
+            gateResult = globalPipeline.ProcessWithSnapshot(metrics.Content, snapshot, validationContext.MemorySystem, wasTruncated);
+            
+            // Update LastParsedOutput from pipeline if available
+            if (globalPipeline.LastParsedOutput != null)
+            {
+              LastParsedOutput = globalPipeline.LastParsedOutput;
+            }
+
+            // Also check NPC-specific and trigger-specific rules in our local gate
+            // (ValidationPipeline handles global rules, but we need to check NPC/trigger rules separately)
+            if (npcValidationRules != null || validationGate != null)
+            {
+              if (validationGate == null) validationGate = new ValidationGate();
+              var localGateResult = validationGate.Validate(parsedOutput, validationContext);
+              
+              // Merge results: both must pass
+              if (!localGateResult.Passed)
+              {
+                // Combine failures from both gates
+                var combinedFailures = new List<ValidationFailure>(gateResult.Failures);
+                combinedFailures.AddRange(localGateResult.Failures);
+                gateResult = GateResult.Fail(combinedFailures.ToArray());
+              }
+            }
+          }
+          else
+          {
+            // Fallback to local ValidationGate (includes NPC-specific rules, but no global rules)
+            if (validationGate == null) validationGate = new ValidationGate();
+            gateResult = validationGate.Validate(parsedOutput, validationContext);
+          }
+          
           LastGateResult = gateResult;
 
           // Also run the constraint validator for backwards compatibility
@@ -744,13 +793,18 @@ namespace LlamaBrain.Runtime.Core
       if (ExpectancyConfig != null && memoryProvider != null && runtimeProfile != null)
       {
         var memorySystem = memoryProvider.GetOrCreateSystem(runtimeProfile.PersonaId);
-        return UnityStateSnapshotBuilder.BuildForNpcDialogue(
+        var interactionContext = ExpectancyConfig.CreatePlayerUtteranceContext(playerInput);
+        var evaluatedConstraints = ExpectancyConfig.Evaluate(interactionContext, currentTriggerRules);
+        LastConstraints = evaluatedConstraints; // Store constraints for debugging/metrics
+        
+        var snapshot = UnityStateSnapshotBuilder.BuildForNpcDialogue(
           npcConfig: ExpectancyConfig,
           memorySystem: memorySystem,
           playerInput: playerInput,
           systemPrompt: runtimeProfile.SystemPrompt ?? "",
           dialogueHistory: dialogueHistory
         );
+        return snapshot;
       }
 
       // Fallback to minimal snapshot
@@ -758,7 +812,8 @@ namespace LlamaBrain.Runtime.Core
       {
         TriggerReason = TriggerReason.PlayerUtterance,
         PlayerInput = playerInput,
-        GameTime = Time.time
+        GameTime = Time.time,
+        NpcId = runtimeProfile?.PersonaId
       };
 
       // Evaluate constraints if we have ExpectancyConfig
@@ -845,321 +900,8 @@ namespace LlamaBrain.Runtime.Core
     /// <returns>The response from the LlamaBrain server.</returns>
     public async UniTask<string> SendPlayerInputAsync(string? playerName, string input)
     {
-      // Use player name from settings if not provided or empty
-      if (string.IsNullOrEmpty(playerName) && PromptSettings != null)
-      {
-        playerName = PromptSettings.playerName;
-      }
-
-      // Fallback to a default name if still empty
-      if (string.IsNullOrEmpty(playerName))
-      {
-        playerName = "Player";
-      }
-
-      // Ensure we have a runtime profile
-      if (runtimeProfile == null && PersonaConfig != null)
-      {
-        runtimeProfile = PersonaConfig.ToProfile();
-      }
-
-      // Create a default profile if still null (fallback for uninitialized agents)
-      if (runtimeProfile == null)
-      {
-        var defaultPersonaId = gameObject.name + "-persona";
-        runtimeProfile = PersonaProfile.Create(defaultPersonaId, gameObject.name);
-        runtimeProfile.Description = "A helpful NPC";
-        runtimeProfile.SystemPrompt = "You are a helpful NPC.";
-        UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] RuntimeProfile was null, created default profile: {runtimeProfile.Name}");
-      }
-
-      // Ensure dialogue session is initialized (lazy initialization if Initialize() wasn't called)
-      if (dialogueSession == null)
-      {
-        var personaId = runtimeProfile?.PersonaId ?? runtimeProfile?.Name ?? "Unknown";
-        dialogueSession = new DialogueSession(personaId, memoryProvider);
-        UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] DialogueSession was null, initializing lazily with persona ID: {personaId}");
-      }
-
-      // Use PromptComposer for consistent prompt formatting
-      // Note: PromptComposer already includes the system prompt with "System:" prefix
-      var promptComposer = new PromptComposer();
-      var includeTraits = PromptSettings?.includePersonalityTraits ?? true; // Default to true if no settings
-      if (runtimeProfile == null)
-      {
-        throw new InvalidOperationException("RuntimeProfile is null. Cannot compose prompt.");
-      }
-      if (dialogueSession == null)
-      {
-        throw new InvalidOperationException("DialogueSession is null. Cannot compose prompt.");
-      }
-      var prompt = promptComposer.ComposePrompt(runtimeProfile, dialogueSession, input, includeTraits);
-
-      // Remove duplicate system prompt if it appears twice (raw + "System:" version)
-      var profileSystemPrompt = runtimeProfile?.SystemPrompt ?? "";
-      if (!string.IsNullOrEmpty(profileSystemPrompt))
-      {
-        var promptLines = prompt.Split(new[] { '\n', '\r' }, System.StringSplitOptions.RemoveEmptyEntries);
-        var cleanedLines = new List<string>();
-        var seenSystemPrompt = false;
-
-        foreach (var line in promptLines)
-        {
-          var trimmedLine = line.Trim();
-          // Check if this line is the system prompt (either raw or with "System:" prefix)
-          if ((trimmedLine == profileSystemPrompt || trimmedLine == $"System: {profileSystemPrompt}") && !seenSystemPrompt)
-          {
-            // Keep only the "System:" version from PromptComposer
-            if (trimmedLine.StartsWith("System:"))
-            {
-              cleanedLines.Add(line);
-              seenSystemPrompt = true;
-            }
-          }
-          else if (!(trimmedLine == profileSystemPrompt && seenSystemPrompt))
-          {
-            // Not a duplicate system prompt, keep it
-            cleanedLines.Add(line);
-          }
-        }
-
-        prompt = string.Join("\n", cleanedLines);
-      }
-
-      // Add instructions to not include trait information in responses if traits are included
-      if (includeTraits && runtimeProfile?.Traits.Count > 0 && !prompt.Contains("Do NOT include them in your responses"))
-      {
-        var traitInstructions = "\n\nIMPORTANT: Your personality traits are provided for context only. Do NOT include them in your responses. Respond naturally as your character would, without mentioning or listing your traits.";
-        prompt = prompt + traitInstructions;
-      }
-
-      // Evaluate expectancy rules and inject constraints (if config is set)
-      if (ExpectancyConfig != null)
-      {
-        // Use the provided context if available (from SendPlayerInputWithContextAsync),
-        // otherwise create a default player utterance context
-        var context = currentInteractionContext ?? ExpectancyConfig.CreatePlayerUtteranceContext(input);
-        // Include trigger rules if provided
-        LastConstraints = ExpectancyConfig.Evaluate(context, currentTriggerRules);
-
-        if (LastConstraints.HasConstraints)
-        {
-          // Insert constraints before the "Player:" line to ensure they're in the context
-          var constraintText = LastConstraints.ToPromptInjection();
-          var playerLineIndex = prompt.LastIndexOf("\nPlayer:");
-          if (playerLineIndex > 0)
-          {
-            prompt = prompt.Insert(playerLineIndex, constraintText);
-          }
-          else
-          {
-            // Fallback: append before the end (less ideal but still works)
-            prompt = constraintText + "\n" + prompt;
-          }
-          UnityEngine.Debug.Log($"[LlamaBrainAgent] Injected {LastConstraints.Count} constraints from Expectancy Engine (context: {context.TriggerReason})");
-        }
-      }
-      else
-      {
-        LastConstraints = ConstraintSet.Empty;
-      }
-
-      // NOTE: We removed the explicit constraint addition here because adding instructions
-      // at the end of the prompt (after "Paul the Spoony Bard:") was causing the model
-      // to generate explanations about punctuation/formatting instead of actual dialogue.
-      // The system prompt already contains the necessary constraints.
-
-      UnityEngine.Debug.Log($"[LlamaBrainAgent] Built prompt:\n{prompt}");
-
-      if (client == null)
-      {
-        var errorMsg = "Cannot send prompt: Client is null. Make sure the agent is properly initialized.";
-        UnityEngine.Debug.LogError($"[LlamaBrainAgent] {errorMsg}");
-        return errorMsg;
-      }
-
-      try
-      {
-        // Measure wall time at Unity boundary
-        var t0 = System.Diagnostics.Stopwatch.StartNew();
-
-        // Determine max tokens based on interaction type
-        // Token caps: barks=16, normal=24, dialogue=48
-        var agentSystemPrompt = runtimeProfile?.SystemPrompt ?? "";
-        var isSingleLine = agentSystemPrompt.Contains("one line") || agentSystemPrompt.Contains("single line");
-        // For single-line responses, use normal reply cap (24 tokens) to allow complete sentences
-        // At 180 tps: 24 tokens ≈ 133ms decode time, allowing natural sentence completion
-        var effectiveMaxTokens = isSingleLine ? System.Math.Min(maxResponseTokens, 24) : maxResponseTokens;
-
-        // Use the metrics-enabled method to get detailed performance data
-        var metrics = await client.SendPromptWithMetricsAsync(prompt, maxTokens: effectiveMaxTokens);
-        var response = metrics.Content;
-
-        t0.Stop();
-        var wallTimeMs = t0.ElapsedMilliseconds;
-
-        // Validate metrics make sense - if decode is 0 but we have tokens, something is wrong
-        if (metrics.DecodeTimeMs == 0 && metrics.GeneratedTokenCount > 0)
-        {
-          UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Invalid metrics detected: Decode=0ms but Generated={metrics.GeneratedTokenCount} tokens. Using wall time estimates.");
-          // Recalculate using wall time
-          if (metrics.PrefillTimeMs > 0 && metrics.PrefillTimeMs < wallTimeMs)
-          {
-            metrics.DecodeTimeMs = wallTimeMs - metrics.PrefillTimeMs;
-          }
-          else
-          {
-            metrics.DecodeTimeMs = (long)(wallTimeMs * 0.7);
-            metrics.PrefillTimeMs = (long)(wallTimeMs * 0.3);
-            metrics.TtftMs = metrics.PrefillTimeMs;
-          }
-        }
-
-        // Check if output was truncated
-        var wasTruncated = metrics.GeneratedTokenCount >= effectiveMaxTokens;
-
-        // Log detailed performance metrics with stability tracking
-        var truncationFlag = wasTruncated ? " TRUNCATED=true" : "";
-        UnityEngine.Debug.Log($"[LlamaBrainAgent] Generation metrics: " +
-          $"TTFT={metrics.TtftMs}ms | " +
-          $"Prefill={metrics.PrefillTimeMs}ms | " +
-          $"Decode={metrics.DecodeTimeMs}ms | " +
-          $"Prompt={metrics.PromptTokenCount} tokens | " +
-          $"Generated={metrics.GeneratedTokenCount} tokens (max={effectiveMaxTokens}){truncationFlag} | " +
-          $"Cached={metrics.CachedTokenCount} tokens | " +
-          $"Speed={metrics.TokensPerSecond:F1} tokens/sec | " +
-          $"Total={metrics.TotalTimeMs}ms (wall={wallTimeMs}ms)");
-
-        // Warn if decode speed is unusually low (suggests GPU not being used or performance issues)
-        // With GPU (RTX 4070 Ti), expect 100-200 tps. Below 50 tps suggests CPU-only or issues.
-        if (metrics.TokensPerSecond > 0 && metrics.TokensPerSecond < 50)
-        {
-          UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Low decode speed detected: {metrics.TokensPerSecond:F1} tps. " +
-            $"Consider: reducing max tokens, checking CPU/GPU usage, verifying llama.cpp threading settings.");
-        }
-
-        // Early check: if model generated very few tokens (< 3), it likely hit stop sequence immediately
-        if (metrics.GeneratedTokenCount < 3)
-        {
-          var rawResponseEscaped = response?.Replace("\n", "\\n").Replace("\r", "\\r").Replace("\t", "\\t") ?? "<null>";
-          UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Model generated only {metrics.GeneratedTokenCount} token(s). " +
-            $"Likely hit stop sequence immediately. Raw response (escaped): '{rawResponseEscaped}' " +
-            $"(length={response?.Length ?? 0}). This may indicate stop sequences are too aggressive or prompt needs adjustment.");
-          // Don't retry - this suggests the prompt or stop sequences are causing immediate termination
-          // Provide a context-appropriate fallback response
-          response = GenerateFallbackResponse(input);
-          UnityEngine.Debug.Log($"[LlamaBrainAgent] Using fallback response: '{response}'");
-        }
-        else
-        {
-          // Log raw response before validation for debugging
-          var rawResponseEscaped = response?.Replace("\n", "\\n").Replace("\r", "\\r").Replace("\t", "\\t") ?? "<null>";
-          UnityEngine.Debug.Log($"[LlamaBrainAgent] Raw response before validation (escaped): '{rawResponseEscaped}' (length={response?.Length ?? 0}, tokens={metrics.GeneratedTokenCount})");
-
-          // Validate and clean response with retry logic
-          if (runtimeProfile == null)
-          {
-            throw new InvalidOperationException("RuntimeProfile is null. Cannot validate response.");
-          }
-          var validationResult = ValidateAndCleanResponse(response ?? "", runtimeProfile, wasTruncated);
-
-          // If validation failed and we haven't retried, retry once with tighter constraints
-          if (!validationResult.IsValid && !validationResult.WasRetry)
-          {
-            UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Response validation failed: {validationResult.Reason}. Retrying with tighter constraints...");
-
-            // Retry with the same prompt - adding instructions confuses the model
-            // The system prompt already has the necessary constraints
-            var retryPrompt = prompt;
-            var retryMetrics = await client.SendPromptWithMetricsAsync(retryPrompt, maxTokens: effectiveMaxTokens);
-            var retryResponse = retryMetrics.Content;
-            var retryWasTruncated = retryMetrics.GeneratedTokenCount >= effectiveMaxTokens;
-
-            // Early check for retry too
-            if (retryMetrics.GeneratedTokenCount < 3)
-            {
-              UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Retry also generated only {retryMetrics.GeneratedTokenCount} token(s). Using fallback.");
-              response = GenerateFallbackResponse(input);
-            }
-            else
-            {
-              var retryValidation = ValidateAndCleanResponse(retryResponse, runtimeProfile, retryWasTruncated, wasRetry: true);
-
-              if (retryValidation.IsValid && !string.IsNullOrWhiteSpace(retryValidation.CleanedResponse))
-              {
-                response = retryValidation.CleanedResponse;
-                metrics = retryMetrics; // Use retry metrics for logging
-                wasTruncated = retryWasTruncated;
-                UnityEngine.Debug.Log($"[LlamaBrainAgent] Retry succeeded. Cleaned response: '{response}'");
-              }
-              else
-              {
-                // Fallback: use cleaned response if non-empty, otherwise provide default
-                if (!string.IsNullOrWhiteSpace(retryValidation.CleanedResponse))
-                {
-                  response = retryValidation.CleanedResponse;
-                  UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Retry validation failed but using cleaned response: '{response}'");
-                }
-                else
-                {
-                  // Generate a context-appropriate fallback based on the input
-                  var fallbackResponse = GenerateFallbackResponse(input);
-                  response = fallbackResponse;
-                  UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Retry also failed: {retryValidation.Reason}. Using fallback response: '{response}'");
-                }
-              }
-            }
-          }
-          else
-          {
-            // Use validation result, but ensure it's not empty
-            if (!string.IsNullOrWhiteSpace(validationResult.CleanedResponse))
-            {
-              response = validationResult.CleanedResponse;
-            }
-            else
-            {
-              // Validation passed but result is empty - shouldn't happen, but provide fallback
-              UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Validation passed but cleaned response is empty. Using fallback.");
-              response = GenerateFallbackResponse(input);
-            }
-          }
-        }
-
-        // Final safety check: never return empty string
-        if (string.IsNullOrWhiteSpace(response))
-        {
-          UnityEngine.Debug.LogError($"[LlamaBrainAgent] Response is still empty after all processing. Using fallback.");
-          response = GenerateFallbackResponse(input);
-        }
-
-        UnityEngine.Debug.Log($"[LlamaBrainAgent] Received response: '{response}'");
-
-        // Store conversation history using structured memory system
-        if (storeConversationHistory && memoryProvider != null && runtimeProfile != null)
-        {
-          var memorySystem = memoryProvider.GetOrCreateSystem(runtimeProfile.PersonaId);
-          memorySystem.AddDialogue("Player", input, significance: 0.5f, MutationSource.ValidatedOutput);
-          memorySystem.AddDialogue("NPC", response, significance: 0.7f, MutationSource.ValidatedOutput);
-        }
-
-        // Keep DialogueSession for prompt composition but don't store history there
-        dialogueSession.AppendPlayer(input);
-        dialogueSession.AppendNpc(response);
-
-        // Only extract memory if explicitly enabled and there's meaningful information
-        if (runtimeProfile?.UseMemory ?? false)
-        {
-          ExtractAndStoreImportantInformation(input, response);
-        }
-        return response;
-      }
-      catch (System.Exception ex)
-      {
-        var errorMsg = $"Network error: {ex.Message}";
-        UnityEngine.Debug.LogError($"[LlamaBrainAgent] {errorMsg}");
-        return errorMsg;
-      }
+      var result = await SendWithSnapshotAsync(input);
+      return result.FinalResult.Response;
     }
 
     /// <summary>
@@ -1738,270 +1480,6 @@ namespace LlamaBrain.Runtime.Core
       return "Agent is ready to use!";
     }
 
-    /// <summary>
-    /// Validation result for response cleaning
-    /// </summary>
-    private class ValidationResult
-    {
-      public bool IsValid { get; set; }
-      public string CleanedResponse { get; set; } = "";
-      public string Reason { get; set; } = "";
-      public bool WasRetry { get; set; }
-    }
-
-    /// <summary>
-    /// Validates and cleans the response according to constraints with hard enforcement
-    /// </summary>
-    /// <param name="response">The raw response</param>
-    /// <param name="profile">The persona profile</param>
-    /// <param name="wasTruncated">Whether the response hit the token cap</param>
-    /// <param name="wasRetry">Whether this is a retry attempt</param>
-    /// <returns>Validation result with cleaned response</returns>
-    /// \cond INTERNAL
-    private ValidationResult ValidateAndCleanResponse(string response, PersonaProfile profile, bool wasTruncated, bool wasRetry = false)
-    {
-      var result = new ValidationResult
-      {
-        CleanedResponse = response ?? "",
-        WasRetry = wasRetry
-      };
-
-      if (string.IsNullOrEmpty(response))
-      {
-        result.IsValid = false;
-        result.Reason = "Response is empty";
-        return result;
-      }
-
-      var originalResponse = response;
-
-      // STEP 1: Extract first line only (enforce one-line constraint)
-      var systemPrompt = profile?.SystemPrompt ?? "";
-      var requiresSingleLine = systemPrompt.Contains("one line") || systemPrompt.Contains("single line") ||
-                              systemPrompt.Contains("Respond with one line");
-
-      if (requiresSingleLine || true) // Always enforce single line for NPC dialogue
-      {
-        var lines = response.Split(new[] { '\n', '\r' }, System.StringSplitOptions.None);
-        // Find first non-empty, non-whitespace-only line
-        string? firstNonEmptyLine = null;
-        foreach (var line in lines)
-        {
-          var trimmed = line.Trim();
-          if (!string.IsNullOrWhiteSpace(trimmed))
-          {
-            firstNonEmptyLine = trimmed;
-            break;
-          }
-        }
-
-        if (firstNonEmptyLine != null)
-        {
-          response = firstNonEmptyLine;
-        }
-        else
-        {
-          // Response was just whitespace/newlines - invalid
-          result.IsValid = false;
-          result.Reason = "Response contains only whitespace/newlines";
-          result.CleanedResponse = "";
-          return result;
-        }
-      }
-
-      // Early exit if response is empty after trimming
-      if (string.IsNullOrWhiteSpace(response))
-      {
-        result.IsValid = false;
-        result.Reason = "Response is empty after trimming";
-        result.CleanedResponse = "";
-        return result;
-      }
-
-      // STEP 2: Trim to last complete sentence (handle truncation)
-      // Only trim if response is long enough (> 5 chars) to avoid over-trimming short responses
-      if (response.Length > 5)
-      {
-        var lastPunctuation = response.LastIndexOfAny(new[] { '.', '!', '?' });
-        if (lastPunctuation > 0)
-        {
-          response = response.Substring(0, lastPunctuation + 1).Trim();
-        }
-        else if (wasTruncated)
-        {
-          // Truncated but no punctuation found - check if it ends mid-word or mid-sentence
-          var lastWord = response.Split(new[] { ' ' }, System.StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
-          var truncatedWords = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase)
-          {
-            "the", "a", "an", "to", "and", "or", "but", "for", "with", "of", "in", "on", "at", "by", "some", "kind", "should've", "would've", "could've"
-          };
-
-          // If ends with dangling word or contraction, it's definitely truncated
-          if (lastWord != null && (truncatedWords.Contains(lastWord) || lastWord.Contains("'")))
-          {
-            result.IsValid = false;
-            result.Reason = $"Truncated output ends mid-sentence: '{response.Substring(System.Math.Max(0, response.Length - 30))}'";
-            result.CleanedResponse = ""; // Mark as invalid for retry
-            return result;
-          }
-
-          // Otherwise, mark as invalid but provide fallback
-          result.IsValid = false;
-          result.Reason = "Truncated output with no complete sentence";
-          result.CleanedResponse = response.Trim() + "..."; // Fallback: show truncated with ellipsis
-          return result;
-        }
-      }
-
-      // STEP 3: Ban stage directions and meta-text (hard enforcement)
-      var bannedPatterns = new List<string>();
-
-      // Check for asterisks (stage directions like *winks*)
-      if (response.Contains("*"))
-      {
-        bannedPatterns.Add("contains asterisks (stage directions)");
-        response = System.Text.RegularExpressions.Regex.Replace(response, @"\*[^*]*\*", "").Trim();
-      }
-
-      // Check for brackets (script directions like [action])
-      if (response.Contains("[") || response.Contains("]"))
-      {
-        bannedPatterns.Add("contains brackets (script directions)");
-        response = System.Text.RegularExpressions.Regex.Replace(response, @"\[.*?\]", "").Trim();
-      }
-
-      // Check for speaker labels (Name: dialogue)
-      if (System.Text.RegularExpressions.Regex.IsMatch(response, @"^\s*[A-Z][a-z\s]+:\s*"))
-      {
-        bannedPatterns.Add("contains speaker label");
-        response = System.Text.RegularExpressions.Regex.Replace(response, @"^\s*[A-Z][a-z\s]+:\s*", "", System.Text.RegularExpressions.RegexOptions.Multiline).Trim();
-      }
-
-      // Check for newlines (should be impossible with stop sequences, but validate anyway)
-      if (response.Contains("\n") || response.Contains("\r"))
-      {
-        bannedPatterns.Add("contains newlines");
-        response = response.Replace("\n", " ").Replace("\r", " ").Trim();
-      }
-
-      // STEP 4: Clean whitespace
-      var beforeWhitespaceClean = response;
-      response = System.Text.RegularExpressions.Regex.Replace(response, @"\s+", " ").Trim();
-
-      // Safety check: if cleaning removed everything, restore before whitespace clean
-      if (string.IsNullOrWhiteSpace(response) && !string.IsNullOrWhiteSpace(beforeWhitespaceClean))
-      {
-        UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Whitespace cleaning removed all content. Restoring: '{beforeWhitespaceClean}'");
-        response = beforeWhitespaceClean.Trim();
-      }
-
-      // STEP 5: Validate final response
-      if (string.IsNullOrWhiteSpace(response))
-      {
-        // Log what happened for debugging
-        UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Response became empty after cleaning. " +
-          $"Original: '{originalResponse}' (length={originalResponse?.Length ?? 0}), " +
-          $"Before whitespace clean: '{beforeWhitespaceClean}' (length={beforeWhitespaceClean?.Length ?? 0})");
-        result.IsValid = false;
-        result.Reason = "Response became empty after cleaning";
-        // Try to return original if it's not empty, otherwise empty string
-        result.CleanedResponse = !string.IsNullOrWhiteSpace(originalResponse) ? originalResponse.Trim() : "";
-        return result;
-      }
-
-      // STEP 5a: Detect meta-text patterns (explanations, examples, instructions)
-      var metaTextPatterns = new[]
-      {
-        "example answer:", "for example:", "example:", "note:", "remember:",
-        "important:", "hint:", "tip:", "answer:", "reply:", "response:",
-        "player asks", "player says", "npc replies", "npc says", "character responds",
-        "if you wish", "if you want", "don't forget", "keep in mind", "remember that",
-        "you should", "you can", "you may", "use punctuation", "add emphasis",
-        "indicate a question", "respectively", "for strong emotions"
-      };
-
-      var responseLower = response.ToLowerInvariant();
-      var containsMetaText = metaTextPatterns.Any(pattern => responseLower.Contains(pattern));
-
-      if (containsMetaText)
-      {
-        result.IsValid = false;
-        result.Reason = $"Response contains meta-text/explanation instead of dialogue: '{response.Substring(0, System.Math.Min(50, response.Length))}...'";
-        result.CleanedResponse = ""; // Mark as invalid for retry
-        return result;
-      }
-
-      // STEP 5b: Detect incomplete sentence fragments (starts mid-sentence)
-      // Responses starting with lowercase are likely fragments (e.g., "depending on your tone.")
-      if (response.Length > 0 && char.IsLower(response[0]))
-      {
-        // Check if it's a common fragment pattern
-        var fragmentPatterns = new[] { "depending on", "based on", "according to", "in order to", "so that", "such that" };
-        var startsWithFragment = fragmentPatterns.Any(pattern => response.StartsWith(pattern, System.StringComparison.OrdinalIgnoreCase));
-
-        if (startsWithFragment || wasTruncated)
-        {
-          result.IsValid = false;
-          result.Reason = $"Response appears to be a fragment (starts with lowercase: '{response.Substring(0, System.Math.Min(20, response.Length))}...')";
-          result.CleanedResponse = ""; // Mark as invalid for retry
-          return result;
-        }
-      }
-
-      // Check for truncated words (even if they have punctuation)
-      var danglingWords = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase)
-      {
-        "the", "a", "an", "to", "and", "or", "but", "for", "with", "of", "in", "on", "at", "by", "some", "kind", "souven"
-      };
-
-      // Extract last word before punctuation
-      var lastWordMatch = System.Text.RegularExpressions.Regex.Match(response, @"\b(\w+)[.!?]*\s*$");
-      if (lastWordMatch.Success)
-      {
-        var lastWord = lastWordMatch.Groups[1].Value;
-        if (danglingWords.Contains(lastWord))
-        {
-          result.IsValid = false;
-          result.Reason = $"Ends with truncated word '{lastWord}' (invalid)";
-          // Try to trim to previous sentence
-          var prevPunctuation = response.LastIndexOfAny(new[] { '.', '!', '?' }, response.Length - lastWordMatch.Length - 1);
-          if (prevPunctuation > 0)
-          {
-            result.CleanedResponse = response.Substring(0, prevPunctuation + 1).Trim();
-          }
-          else
-          {
-            result.CleanedResponse = response.Trim() + "...";
-          }
-          return result;
-        }
-      }
-
-      // Must end with sentence-ending punctuation
-      var endsWithPunctuation = response.EndsWith(".") || response.EndsWith("!") || response.EndsWith("?") ||
-                                response.EndsWith(".\"") || response.EndsWith("!\"") || response.EndsWith("?\"");
-
-      if (!endsWithPunctuation)
-      {
-        // No punctuation but looks complete - add period
-        response = response.Trim() + ".";
-      }
-
-      // Final validation: check if banned patterns were found (even after cleaning)
-      if (bannedPatterns.Count > 0 && !wasRetry)
-      {
-        result.IsValid = false;
-        result.Reason = $"Banned patterns detected: {string.Join(", ", bannedPatterns)}";
-        result.CleanedResponse = response; // Return cleaned version for retry
-        return result;
-      }
-
-      result.IsValid = true;
-      result.CleanedResponse = response;
-      result.Reason = "Valid";
-      return result;
-    }
-    /// \endcond
 
     /// <summary>
     /// Builds a failure reason string from the inference result.
@@ -2304,6 +1782,105 @@ namespace LlamaBrain.Runtime.Core
       {
         UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Failed to initialize canonical fact {factId}: {result.FailureReason}");
       }
+    }
+
+    /// <summary>
+    /// Loads validation rules from ValidationPipeline (global) and NPC-specific rules.
+    /// Called during initialization and can be called again to reload rules.
+    /// </summary>
+    private void LoadValidationRules()
+    {
+      if (validationGate == null)
+      {
+        UnityEngine.Debug.LogWarning("[LlamaBrainAgent] Cannot load validation rules: ValidationGate not initialized");
+        return;
+      }
+
+      int globalRuleCount = 0;
+      int npcRuleCount = 0;
+
+      // Load global rules from ValidationPipeline singleton
+      // Note: We access the internal gate to get rules, but ValidationPipeline doesn't expose this
+      // So we'll use a reflection-based approach or add a public method to ValidationPipeline
+      // For now, we'll note that ValidationPipeline applies rules during its Process method
+      var globalPipeline = LlamaBrain.Runtime.Core.Validation.ValidationPipeline.Instance;
+      if (globalPipeline != null)
+      {
+        // Try to get rules via reflection (temporary until ValidationPipeline exposes GetRules)
+        // For now, we'll use ValidationPipeline's Process method which includes global rules
+        UnityEngine.Debug.Log($"[LlamaBrainAgent] ValidationPipeline found - global rules will be applied via pipeline");
+      }
+      else
+      {
+        UnityEngine.Debug.Log($"[LlamaBrainAgent] No ValidationPipeline found in scene - no global validation rules will be applied");
+      }
+
+      // Load NPC-specific rules into our ValidationGate
+      if (npcValidationRules != null && npcValidationRules.Enabled)
+      {
+        foreach (var rule in npcValidationRules.ToValidationRules())
+        {
+          validationGate.AddRule(rule);
+          npcRuleCount++;
+        }
+        UnityEngine.Debug.Log($"[LlamaBrainAgent] Loaded {npcRuleCount} NPC-specific validation rules from '{npcValidationRules.name}'");
+      }
+
+      if (globalRuleCount == 0 && npcRuleCount == 0)
+      {
+        UnityEngine.Debug.Log($"[LlamaBrainAgent] No validation rules loaded (will use ValidationPipeline if available)");
+      }
+    }
+
+    /// <summary>
+    /// Loads trigger-specific validation rules into the validation gate.
+    /// These rules are temporary and should be cleared after the interaction.
+    /// </summary>
+    /// <param name="triggerRuleSet">The validation rule set from the trigger</param>
+    /// <returns>The number of rules loaded</returns>
+    public int LoadTriggerValidationRules(LlamaBrain.Runtime.Core.Validation.ValidationRuleSetAsset? triggerRuleSet)
+    {
+      if (validationGate == null)
+      {
+        UnityEngine.Debug.LogWarning("[LlamaBrainAgent] Cannot load trigger validation rules: ValidationGate not initialized");
+        return 0;
+      }
+
+      if (triggerRuleSet == null || !triggerRuleSet.Enabled)
+      {
+        return 0;
+      }
+
+      int count = 0;
+      foreach (var rule in triggerRuleSet.ToValidationRules())
+      {
+        validationGate.AddRule(rule);
+        count++;
+      }
+
+      if (count > 0)
+      {
+        UnityEngine.Debug.Log($"[LlamaBrainAgent] Loaded {count} trigger-specific validation rules from '{triggerRuleSet.name}'");
+      }
+
+      return count;
+    }
+
+    /// <summary>
+    /// Clears trigger-specific validation rules by rule set name.
+    /// This should be called after an interaction completes to remove temporary rules.
+    /// </summary>
+    /// <param name="ruleSetName">The name of the rule set to remove (optional - if null, clears all custom rules)</param>
+    public void ClearTriggerValidationRules(string? ruleSetName = null)
+    {
+      if (validationGate == null) return;
+
+      // Note: The core ValidationGate doesn't track rule sources, so we can't selectively remove by set name
+      // For now, we'll just clear all custom rules and reload NPC-specific rules
+      // In a future enhancement, we could track rule sources in the gate
+      validationGate.ClearRules();
+      LoadValidationRules(); // Reload global + NPC rules
+      UnityEngine.Debug.Log($"[LlamaBrainAgent] Cleared trigger validation rules{(ruleSetName != null ? $" for '{ruleSetName}'" : "")}");
     }
   }
 }

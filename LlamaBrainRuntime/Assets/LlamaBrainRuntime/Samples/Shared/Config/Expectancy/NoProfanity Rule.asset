@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 70b0b7382e61244469cd4d9d12d2f633, type: 3}
+  m_Name: NoProfanity Rule
+  m_EditorClassIdentifier:
+  ruleId: no-profanity
+  ruleName: No Profanity
+  description: Prevents NPCs from using profanity or inappropriate language.
+  isEnabled: 1
+  priority: 200
+  conditionMode: 0
+  conditions: []
+  constraints:
+  - Type: 0
+    Severity: 1
+    Description: Cannot use profanity or swear words
+    PromptInjection: You must never use profanity, swear words, or vulgar language.
+      Keep all responses family-friendly.
+    ValidationPatterns:
+    - damn
+    - hell
+    - crap
+    - bastard
+    UseRegex: 0

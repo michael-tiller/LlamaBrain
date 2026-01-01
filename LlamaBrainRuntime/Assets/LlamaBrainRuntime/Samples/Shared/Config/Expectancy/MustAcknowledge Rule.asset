@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 70b0b7382e61244469cd4d9d12d2f633, type: 3}
+  m_Name: MustAcknowledge Rule
+  m_EditorClassIdentifier:
+  ruleId: must-acknowledge
+  ruleName: Must Acknowledge Player
+  description: Requires NPCs to acknowledge the player in their response.
+  isEnabled: 1
+  priority: 50
+  conditionMode: 0
+  conditions: []
+  constraints:
+  - Type: 1
+    Severity: 0
+    Description: Must acknowledge or address the player
+    PromptInjection: Always acknowledge the player in your response. Use words like
+      you, your, friend, traveler, or similar addressing terms.
+    ValidationPatterns:
+    - you
+    - your
+    - traveler
+    - friend
+    - stranger
+    - adventurer
+    UseRegex: 0

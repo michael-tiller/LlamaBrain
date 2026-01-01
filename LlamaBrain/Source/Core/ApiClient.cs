@@ -83,6 +83,14 @@ namespace LlamaBrain.Core
     /// <param name="config">The LLM configuration (optional)</param>
     /// <param name="requestTimeoutSeconds">Request timeout in seconds (default: 30)</param>
     public ApiClient(string host, int port, string model, LlmConfig? config = null, int requestTimeoutSeconds = DefaultRequestTimeoutSeconds)
+      : this(host, port, model, config, requestTimeoutSeconds, null)
+    {
+    }
+
+    /// <summary>
+    /// Internal constructor for testing with custom HttpClient
+    /// </summary>
+    internal ApiClient(string host, int port, string model, LlmConfig? config, int requestTimeoutSeconds, HttpClient? httpClient)
     {
       // Input validation
       if (string.IsNullOrWhiteSpace(host))
@@ -104,24 +112,32 @@ namespace LlamaBrain.Core
       this.config = ValidateAndSanitizeConfig(config ?? new LlmConfig());
       this.requestTimeoutSeconds = requestTimeoutSeconds > 0 ? requestTimeoutSeconds : DefaultRequestTimeoutSeconds;
 
-      // Initialize HTTP client with optimized settings for low latency
-      // Key optimizations:
-      // 1. Disable proxy detection (major source of delays on Windows)
-      // 2. Disable Expect: 100-continue header (avoids round-trip delay)
-      // 3. Enable connection keep-alive for reuse
-      var handler = new HttpClientHandler
+      if (httpClient != null)
       {
-        UseProxy = false  // Disable proxy detection - major latency improvement
-        // Note: Setting Proxy = null explicitly causes issues in Unity Mono runtime
-      };
-
-      httpClient = new HttpClient(handler)
+        // Use provided HttpClient (for testing)
+        this.httpClient = httpClient;
+      }
+      else
       {
-        Timeout = TimeSpan.FromSeconds(this.requestTimeoutSeconds)
-      };
+        // Initialize HTTP client with optimized settings for low latency
+        // Key optimizations:
+        // 1. Disable proxy detection (major source of delays on Windows)
+        // 2. Disable Expect: 100-continue header (avoids round-trip delay)
+        // 3. Enable connection keep-alive for reuse
+        var handler = new HttpClientHandler
+        {
+          UseProxy = false  // Disable proxy detection - major latency improvement
+          // Note: Setting Proxy = null explicitly causes issues in Unity Mono runtime
+        };
 
-      // Disable Expect: 100-continue which causes an extra round-trip
-      httpClient.DefaultRequestHeaders.ExpectContinue = false;
+        this.httpClient = new HttpClient(handler)
+        {
+          Timeout = TimeSpan.FromSeconds(this.requestTimeoutSeconds)
+        };
+
+        // Disable Expect: 100-continue which causes an extra round-trip
+        this.httpClient.DefaultRequestHeaders.ExpectContinue = false;
+      }
 
       // Initialize rate limiting
       rateLimiter = new SemaphoreSlim(1, 1);
@@ -517,7 +533,7 @@ namespace LlamaBrain.Core
     /// <summary>
     /// Validate and sanitize configuration
     /// </summary>
-    private LlmConfig ValidateAndSanitizeConfig(LlmConfig config)
+    internal LlmConfig ValidateAndSanitizeConfig(LlmConfig config)
     {
       if (config == null)
         throw new ArgumentNullException(nameof(config));
@@ -535,7 +551,7 @@ namespace LlamaBrain.Core
     /// <summary>
     /// Validate max tokens parameter
     /// </summary>
-    private int ValidateMaxTokens(int maxTokens)
+    internal int ValidateMaxTokens(int maxTokens)
     {
       return Math.Max(1, Math.Min(maxTokens, 2048));
     }
@@ -543,7 +559,7 @@ namespace LlamaBrain.Core
     /// <summary>
     /// Validate temperature parameter
     /// </summary>
-    private float ValidateTemperature(float temperature)
+    internal float ValidateTemperature(float temperature)
     {
       return Math.Max(0.0f, Math.Min(temperature, 2.0f));
     }
@@ -551,7 +567,7 @@ namespace LlamaBrain.Core
     /// <summary>
     /// Sanitize host input
     /// </summary>
-    private string SanitizeHost(string host)
+    internal string SanitizeHost(string host)
     {
       // Remove any protocol prefixes
       host = host.Replace("http://", "").Replace("https://", "");
@@ -572,7 +588,7 @@ namespace LlamaBrain.Core
     /// <summary>
     /// Sanitize prompt input
     /// </summary>
-    private string SanitizePrompt(string prompt)
+    internal string SanitizePrompt(string prompt)
     {
       if (string.IsNullOrEmpty(prompt))
         return string.Empty;

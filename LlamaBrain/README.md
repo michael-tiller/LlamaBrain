@@ -1,24 +1,36 @@
 # LlamaBrain Core Library 0.2.0-rc.1
 
-A robust, secure, and feature-rich .NET Standard 2.1 library for integrating with llama.cpp servers. LlamaBrain provides a comprehensive solution for AI-powered applications with built-in safety measures, persona management, and process control.
+**Deterministic State Management for Stochastic AI**
+
+A robust, secure, and feature-rich .NET Standard 2.1 library for integrating with llama.cpp servers. I engineered an authoritative memory system that prevents LLM hallucinations from corrupting game state by enforcing a strict validation gate between the model's output and the runtime database.
 
 ## 🎯 Overview
 
-LlamaBrain is designed to be a production-ready library for AI integration, featuring:
+LlamaBrain solves a fundamental problem in AI-powered applications: **how to maintain deterministic, authoritative game state when using stochastic LLMs**. The library implements a production-ready architecture that treats the LLM as a pure, stateless generator while maintaining continuity through deterministic state reconstruction.
 
-- **Secure API Client**: Rate-limited, validated, and sanitized HTTP communication
-- **Persona Management**: Persistent character profiles with memory systems
-- **Determinism Layer**: Expectancy engine with constraint-based behavior control
-- **Structured Memory System**: Authoritative memory with canonical facts, world state, episodic memory, and beliefs
-- **State Snapshot & Context Retrieval**: Immutable state snapshots with intelligent context retrieval
-- **Ephemeral Working Memory**: Bounded working memory for efficient prompt assembly
-- **Output Validation System**: Comprehensive validation gate with constraint checking and mutation validation
-- **Enhanced Fallback System**: Context-aware fallback responses when inference fails after retries
-- **Process Management**: Safe server startup, monitoring, and shutdown
-- **Comprehensive Safeguards**: Multi-layered security and stability measures
-- **Unity Integration Ready**: Designed to work seamlessly with Unity projects
+**The Core Innovation**: An authoritative memory system with a strict validation gate ensures that LLM outputs cannot corrupt game state. All outputs are validated against constraints and canonical facts before any memory mutations occur, preventing hallucinations from affecting your game's world state.
+
+Key features include:
+
+- **Secure API Client**: Rate-limited, validated HTTP communication with dependency injection support for testing
+- **Persona Management**: Persistent character profiles with rich memory systems
+- **Determinism Layer**: Expectancy engine that enforces constraint-based behavior control
+- **Structured Memory System**: Authoritative memory hierarchy with canonical facts, world state, episodic memory, and beliefs
+- **State Snapshots**: Immutable context capture with intelligent retrieval and automatic retry logic
+- **Bounded Prompts**: Token-efficient prompt assembly using ephemeral working memory
+- **Output Validation**: Multi-layer validation gate that checks outputs against constraints and canonical facts
+- **Controlled Mutations**: Authority-enforced memory updates with world intent dispatching
+- **Fallback System**: Context-aware fallback responses when inference fails after retries
+- **Process Management**: Safe server lifecycle management with monitoring and graceful shutdown
+- **Comprehensive Testing**: 92.37% code coverage with 853+ passing tests
 
 ## 🏗️ Architecture
+
+LlamaBrain implements a nine-component architectural pattern that ensures deterministic, controlled AI behavior. The complete flow is illustrated in the architectural diagram below:
+
+![Architectural Diagram](../Documentation/architectural_diagram.png)
+
+*The "Continuity Emerges from Deterministic State Reconstruction Around a Stateless Generator" pattern*
 
 ### Core Components
 
@@ -46,45 +58,63 @@ LlamaBrain is designed to be a production-ready library for AI integration, feat
 - **ProcessConfig**: Configuration for server startup
 - **LlmConfig**: LLM generation parameters
 
-#### Determinism Layer (Phase 1)
-- **ExpectancyEvaluator**: Engine-agnostic rule evaluation system
-- **Constraint System**: Permission, Prohibition, and Requirement constraints with severity levels
-- **InteractionContext**: Context-aware rule evaluation with trigger reasons, NPC IDs, and scene names
-- **IExpectancyRule**: Extensible rule interface for custom behavior constraints
+#### Determinism Layer
+- **ExpectancyEvaluator**: Engine-agnostic rule evaluation system that generates constraints based on interaction context
+- **Constraint System**: Permission, Prohibition, and Requirement constraints with configurable severity levels (Soft, Hard, Critical)
+- **InteractionContext**: Context-aware rule evaluation supporting trigger reasons, NPC IDs, scene names, and custom tags
+- **IExpectancyRule**: Extensible interface for creating custom behavior constraint rules
 
-#### Structured Memory System (Phase 2)
-- **AuthoritativeMemorySystem**: Authority-based memory management with boundary enforcement
-- **Memory Types**: CanonicalFact (immutable), WorldState (mutable), EpisodicMemory (conversation history), BeliefMemory (NPC opinions)
-- **MemoryAuthority**: Hierarchy enforcement (Canonical > WorldState > Episodic > Belief)
-- **Memory Decay**: Automatic episodic memory decay with significance-based retention
+#### Structured Memory System
+- **AuthoritativeMemorySystem**: Authority-based memory management that enforces strict boundaries between memory types
+- **Memory Types**: Four distinct memory types with clear authority hierarchy:
+  - `CanonicalFact`: Immutable world truths that cannot be modified by AI
+  - `WorldState`: Mutable game state that can be updated by game systems
+  - `EpisodicMemory`: Conversation history with automatic decay and significance-based retention
+  - `BeliefMemory`: NPC opinions and relationships that can be wrong or contradicted
+- **MemoryAuthority**: Enforces hierarchy (Canonical > WorldState > Episodic > Belief) to prevent unauthorized modifications
+- **Memory Decay**: Automatic episodic memory decay with configurable significance-based retention rates
 
-#### State Snapshot & Context Retrieval (Phase 3)
-- **StateSnapshot**: Immutable snapshot of all context at inference time
-- **ContextRetrievalLayer**: Intelligent context retrieval with recency/relevance/significance scoring
-- **InferenceResult**: Result tracking with validation outcomes and token usage
-- **RetryPolicy**: Configurable retry behavior with constraint escalation
-- **ResponseValidator**: Response validation against constraint sets
+#### State Snapshot & Context Retrieval
+- **StateSnapshot**: Immutable snapshot capturing all context at inference time for deterministic retries
+- **ContextRetrievalLayer**: Intelligent context retrieval using recency, relevance, and significance scoring algorithms
+- **InferenceResult**: Comprehensive result tracking with validation outcomes, token usage, and retry information
+- **RetryPolicy**: Configurable retry behavior with automatic constraint escalation on failures
+- **ResponseValidator**: Validates responses against constraint sets before memory mutation
 
-#### Ephemeral Working Memory (Phase 4)
-- **EphemeralWorkingMemory**: Bounded working memory for single inference
-- **PromptAssembler**: Token-efficient prompt assembly with configurable limits
-- **WorkingMemoryConfig**: Preset configurations for different use cases
+#### Ephemeral Working Memory
+- **EphemeralWorkingMemory**: Bounded working memory that exists only for a single inference, then discarded
+- **PromptAssembler**: Token-efficient prompt assembly with configurable limits and format customization
+- **WorkingMemoryConfig**: Preset configurations (Default, Minimal, Expanded) for different use cases
 
-#### Output Validation System (Phase 5)
-- **OutputParser**: Parses LLM output into structured format (dialogue, mutations, world intents)
-- **ValidationGate**: Validates parsed output against constraints and canonical facts
-- **ParsedOutput**: Structured result with dialogue, proposed mutations, and world intents
-- **ValidationRule**: Extensible validation rule system
+#### Output Validation System
+- **OutputParser**: Parses LLM output into structured format, extracting dialogue, proposed mutations, and world intents
+- **ValidationGate**: Multi-layer validation that checks outputs against constraints, canonical facts, and knowledge boundaries
+- **ParsedOutput**: Structured result container with dialogue text, proposed mutations, and world intents
+- **ValidationRule**: Extensible validation rule system supporting custom validation logic
 
-#### Enhanced Fallback System (Phase 7)
-- **AuthorControlledFallback**: Context-aware fallback responses when inference fails
-- **FallbackConfig**: Configurable generic, context-aware, and emergency fallbacks
-- **FallbackStats**: Comprehensive statistics tracking for fallback usage
-- **Automatic Integration**: Seamlessly integrated with retry system in LlamaBrainAgent
+#### Controlled Memory Mutation
+- **MemoryMutationController**: Authority-enforced mutation execution that prevents canonical fact overrides
+- **Mutation Types**: Supports AppendEpisodic, TransformBelief, TransformRelationship, and EmitWorldIntent mutations
+- **Authority Enforcement**: Automatically blocks attempts to modify canonical facts with statistics tracking
+- **Mutation Statistics**: Comprehensive tracking of success/failure rates for debugging and metrics
+- **Event-Based World Intents**: World intent delivery via events for seamless game system integration
+
+#### Enhanced Fallback System
+- **FallbackSystem**: Engine-agnostic fallback implementation with context-aware response selection
+- **IFallbackSystem**: Interface abstraction enabling dependency injection and comprehensive testing
+- **FallbackConfig**: Configurable generic, context-aware, and emergency fallback responses
+- **FallbackStats**: Detailed statistics tracking for fallback usage by trigger reason and failure type
+
+#### Testability & Dependency Injection
+- **IFileSystem**: Interface abstraction for file system operations (enables testing)
+- **IApiClient**: Interface abstraction for API client operations (enables testing)
+- **FileSystem**: Default implementation with 100% test coverage
+- **Comprehensive Test Suite**: 853+ tests with 92.37% code coverage
 
 #### Utilities
-- **JsonUtils**: Safe JSON serialization/deserialization
-- **PathUtils**: Secure file path operations
+- **JsonUtils**: Safe JSON serialization/deserialization with validation and compression
+- **PathUtils**: Secure file path operations with traversal prevention
+- **ProcessUtils**: Process management and validation utilities
 - **Logger**: Structured logging system
 
 ## 📦 Installation
@@ -116,7 +146,7 @@ var response = await client.SendPromptAsync("Hello, how are you?");
 client.Dispose();
 ```
 
-### Brain Agent Usage
+### Brain Agent Usage (Basic)
 
 ```csharp
 using LlamaBrain.Core;
@@ -143,8 +173,103 @@ var instructionResponse = await agent.SendInstructionAsync("Write a short poem a
 // Get conversation history
 var history = agent.GetConversationHistory();
 
-// Add a memory
+// Add a memory (using structured memory system)
 agent.AddMemory("User prefers technical explanations");
+```
+
+### Advanced Usage with Architectural Pattern
+
+```csharp
+using LlamaBrain.Core;
+using LlamaBrain.Core.Expectancy;
+using LlamaBrain.Core.Inference;
+using LlamaBrain.Core.Validation;
+using LlamaBrain.Persona;
+using LlamaBrain.Persona.MemoryTypes;
+
+// Create persona profile
+var profile = PersonaProfile.Create("wizard", "Gorblaf the Grey-Green");
+profile.Description = "A wise and powerful wizard";
+
+// Create memory store with authoritative system
+var memoryStore = new PersonaMemoryStore("wizard");
+var memorySystem = memoryStore.GetOrCreateSystem("wizard");
+
+// Initialize canonical facts (immutable world truths)
+memoryStore.AddCanonicalFact("wizard", "magic-exists", "Magic exists in this world");
+memoryStore.AddCanonicalFact("wizard", "tower-destroyed", "The ancient tower was destroyed 100 years ago");
+
+// Set world state (mutable game state)
+memoryStore.SetWorldState("wizard", "CurrentWeather", "Stormy");
+memoryStore.SetWorldState("wizard", "TimeOfDay", "Evening");
+
+// Create expectancy evaluator for constraint-based behavior
+var expectancyEvaluator = new ExpectancyEvaluator();
+
+// Create context for interaction
+var interactionContext = new InteractionContext
+{
+    TriggerReason = TriggerReason.PlayerUtterance,
+    NpcId = "wizard",
+    SceneName = "TowerRuins",
+    PlayerInput = "Tell me about the ancient tower"
+};
+
+// Evaluate constraints (rules would come from your expectancy configuration)
+var constraints = new ConstraintSet();
+// Add constraints based on your rules...
+
+// Retrieve relevant context from memory system
+var retrievalLayer = new ContextRetrievalLayer(memorySystem);
+var retrievedContext = retrievalLayer.RetrieveContext(interactionContext.PlayerInput);
+
+// Create state snapshot builder
+var snapshotBuilder = new StateSnapshotBuilder();
+
+// Build snapshot with context
+var snapshot = retrievedContext.ApplyTo(snapshotBuilder
+    .WithContext(interactionContext)
+    .WithConstraints(constraints)
+    .WithSystemPrompt(profile.SystemPrompt ?? profile.Description ?? "")
+    .WithPlayerInput(interactionContext.PlayerInput))
+    .Build();
+
+// Create prompt assembler for bounded context
+var assembler = new PromptAssembler(PromptAssemblerConfig.Default);
+var assembledPrompt = assembler.AssembleFromSnapshot(snapshot);
+
+// Send to LLM (via ApiClient)
+var client = new ApiClient("localhost", 8080, "llama-2-7b.gguf");
+var response = await client.SendPromptAsync(assembledPrompt.PromptText);
+
+// Parse and validate output
+var parser = new OutputParser();
+var parsedOutput = parser.Parse(response);
+
+// Create validation context with memory system, constraints, and snapshot
+var validationContext = new ValidationContext
+{
+    MemorySystem = memorySystem,
+    Constraints = constraints,
+    Snapshot = snapshot
+};
+
+var validationGate = new ValidationGate();
+var gateResult = validationGate.Validate(parsedOutput, validationContext);
+
+if (gateResult.Passed)
+{
+    // Execute approved mutations
+    var mutationController = new MemoryMutationController();
+    var mutationResult = mutationController.ExecuteMutations(gateResult, memorySystem);
+    
+    // Handle world intents
+    foreach (var intent in gateResult.ApprovedIntents)
+    {
+        // Dispatch to game systems
+        Console.WriteLine($"World Intent: {intent.IntentType} - {intent.Target}");
+    }
+}
 ```
 
 ### Persona Management
@@ -264,13 +389,13 @@ LlamaBrain/
 │   │   ├── ProcessConfig.cs    # Server configuration
 │   │   ├── PromptComposer.cs   # Intelligent prompt building
 │   │   ├── ServerManager.cs    # Process management
-│   │   ├── Expectancy/         # Determinism layer (Phase 1)
+│   │   ├── Expectancy/         # Determinism layer
 │   │   │   ├── ExpectancyEvaluator.cs
 │   │   │   ├── Constraint.cs
 │   │   │   ├── ConstraintSet.cs
 │   │   │   ├── InteractionContext.cs
 │   │   │   └── IExpectancyRule.cs
-│   │   ├── Inference/          # State snapshot & context (Phase 3-4)
+│   │   ├── Inference/          # State snapshot & context retrieval
 │   │   │   ├── StateSnapshot.cs
 │   │   │   ├── ContextRetrievalLayer.cs
 │   │   │   ├── InferenceResult.cs
@@ -278,17 +403,19 @@ LlamaBrain/
 │   │   │   ├── ResponseValidator.cs
 │   │   │   ├── EphemeralWorkingMemory.cs
 │   │   │   └── PromptAssembler.cs
-│   │   ├── Validation/         # Output validation (Phase 5)
+│   │   ├── Validation/         # Output validation
 │   │   │   ├── OutputParser.cs
 │   │   │   ├── ParsedOutput.cs
 │   │   │   └── ValidationGate.cs
+│   │   ├── IApiClient.cs       # API client interface for testing
 │   │   └── SAFEGUARDS.md       # Security documentation
 │   ├── Persona/                # Character and memory system
 │   │   ├── PersonaMemoryFileStore.cs
 │   │   ├── PersonaMemoryStore.cs
 │   │   ├── PersonaProfile.cs   # Character profiles with traits
 │   │   ├── PersonaProfileManager.cs
-│   │   ├── MemoryTypes/        # Structured memory (Phase 2)
+│   │   ├── MemoryMutationController.cs  # Controlled memory mutation
+│   │   ├── MemoryTypes/        # Structured memory system
 │   │   │   ├── AuthoritativeMemorySystem.cs
 │   │   │   ├── MemoryEntry.cs
 │   │   │   ├── MemoryAuthority.cs
@@ -297,6 +424,7 @@ LlamaBrain/
 │   │   │   ├── EpisodicMemory.cs
 │   │   │   └── BeliefMemory.cs
 │   └── Utilities/              # Helper utilities
+│       ├── IFileSystem.cs      # File system interface for testing
 │       ├── JsonUtils.cs
 │       ├── Logger.cs
 │       ├── PathUtils.cs
@@ -306,7 +434,14 @@ LlamaBrain/
 ## 🔄 Integration
 
 ### Unity Integration
-LlamaBrain is designed to work seamlessly with Unity through the `LlamaBrainForUnity` package. See the Unity project README for integration details.
+LlamaBrain is designed to work seamlessly with Unity through the `LlamaBrainRuntime` package. The Unity package provides:
+- Unity MonoBehaviour wrappers (LlamaBrainAgent, BrainServer)
+- ScriptableObject-based configuration (BrainSettings, PersonaConfig, ExpectancyRuleAsset)
+- Unity-specific state snapshot builder (UnityStateSnapshotBuilder)
+- World intent dispatcher for game system integration
+- Editor tools and custom inspectors
+
+See the Unity Runtime README for integration details (located at `LlamaBrainRuntime/Assets/LlamaBrainRuntime/README.md`).
 
 ### Custom Integrations
 The library is built on .NET Standard 2.1, making it compatible with:
@@ -314,17 +449,80 @@ The library is built on .NET Standard 2.1, making it compatible with:
 - .NET Core 2.0+
 - .NET 5+
 - Unity 2022.3+
+- Other engines (Unreal, Godot) via the engine-agnostic core components
+
+### Architectural Flow
+
+The diagram above illustrates the complete inference pipeline. Here's how the components work together to ensure deterministic state management:
+
+1. **Untrusted Observation** → **Interaction Context**: Player actions, NPC interactions, quest triggers, or time-based events create an interaction context
+2. **Determinism Layer (Component 2)**: The Expectancy Engine evaluates rules based on context and generates constraints for both prompt assembly and output validation
+3. **External Authoritative Memory System (Component 3)**: Structured memory store containing canonical facts (immutable), world state (mutable), episodic memory, and beliefs. **This is the authoritative source of truth that LLMs cannot corrupt.**
+4. **Authoritative State Snapshot (Component 4)**: Context Retrieval Layer retrieves relevant memories and builds an immutable snapshot of all context
+5. **Ephemeral Working Memory (Component 5)**: Prompt Assembler creates a bounded, token-efficient prompt from the snapshot and constraints
+6. **Stateless Inference Core (Component 6)**: The LLM receives the bounded prompt and generates text output (pure function, no memory access, no authority)
+7. **Output Parsing & Validation (Component 7)**: **The Critical Validation Gate** - Output Parser extracts structured data, Validation Gate checks against constraints and canonical facts. **Only validated outputs proceed to mutation.**
+8. **Memory Mutation + World Effects (Component 8)**: Validated outputs trigger controlled memory mutations and world intents. **Crucially: canonical facts cannot be overridden, ensuring game state integrity.**
+9. **Author-Controlled Fallback (Component 9)**: If validation fails after retries, context-aware fallback responses are used (never corrupting state)
+
+**The Validation Gate: Your Defense Against Hallucinations**
+
+The validation gate (Component 7) is the critical barrier between the stochastic LLM and your authoritative game state. It ensures:
+- **Constraint Compliance**: All outputs must satisfy expectancy engine constraints
+- **Canonical Fact Protection**: Outputs cannot contradict or override immutable canonical facts
+- **Authority Enforcement**: Only authorized mutation types can modify specific memory types
+- **Retry Logic**: Invalid outputs trigger retries with stricter constraints, never corrupting state
+
+**Key Architectural Principles:**
+- **Stateless LLM**: The LLM has no memory or state - it's a pure generator that receives bounded prompts
+- **Deterministic State**: All context is captured in immutable StateSnapshots that can be replayed for retries
+- **Bounded Context**: EphemeralWorkingMemory ensures token-efficient prompts by explicitly bounding context size
+- **Validation Gate**: All outputs are validated against constraints and canonical facts before any state changes
+- **Controlled Mutation**: Only validated outputs can mutate memory, with strict authority enforcement
+- **Retry & Fallback**: Automatic retry with constraint escalation, graceful fallback when all retries fail
+
+This architecture provides several key benefits:
+- **Determinism**: Same input + context = same output (when constraints are met)
+- **Authority**: Canonical facts cannot be overridden by AI, ensuring world consistency
+- **Safety**: Multi-layer validation prevents invalid outputs from affecting game state
+- **Efficiency**: Bounded prompts prevent token waste while maintaining relevant context
 
 ## 🧪 Testing
 
-The library includes comprehensive unit tests covering:
-- API client functionality
-- Persona management
-- Process control
-- Security safeguards
-- Error handling
+The library includes a comprehensive test suite with **92.37% code coverage** (5,100 of 5,521 lines covered) and **853+ passing tests**:
 
-Run tests using your preferred .NET test runner.
+### Test Coverage by Component
+
+- **Expectancy Engine**: 50+ tests (ExpectancyEvaluator, Constraint, ConstraintSet, InteractionContext)
+- **Structured Memory System**: 65+ tests (all memory types, AuthoritativeMemorySystem, PersonaMemoryStore)
+- **Inference Pipeline**: 164+ tests (StateSnapshot, ContextRetrievalLayer, InferenceResult, RetryPolicy, ResponseValidator, EphemeralWorkingMemory, PromptAssembler)
+- **Output Validation**: 60+ tests (OutputParser, ValidationGate, ParsedOutput)
+- **Memory Mutation**: 41 tests (MemoryMutationController)
+- **Core Integration**: 179 tests (BrainAgent, ClientManager, ServerManager, DialogueSession, CompletionMetrics)
+- **Utilities**: 162 tests (JsonUtils, PathUtils, ProcessUtils)
+- **Process Configuration**: 6 tests (100% coverage)
+
+### Test Infrastructure
+
+- **Test Framework**: NUnit with NSubstitute for mocking
+- **Coverage Tool**: Coverlet for code coverage analysis
+- **Coverage Reporting**: Automated PowerShell script (`analyze-coverage.ps1`) generates detailed reports
+- **Test Project**: Standalone `LlamaBrain.Tests` project separate from Unity package
+
+### Running Tests
+
+```bash
+# Run all tests
+dotnet test
+
+# Run with coverage
+dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
+
+# Generate coverage report
+.\analyze-coverage.ps1
+```
+
+See `COVERAGE_REPORT.md` for detailed coverage breakdown.
 
 ## 📄 License
 

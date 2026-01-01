@@ -33,6 +33,7 @@ namespace LlamaBrain.Runtime.RedRoom.UI
 
     private void Update()
     {
+      // E key: Toggle conversation
       if (Input.GetKeyDown(KeyCode.E))
       {
         if (!_conversationPanel.activeSelf)
@@ -45,9 +46,32 @@ namespace LlamaBrain.Runtime.RedRoom.UI
         }
       }
 
+      // Escape: Close conversation
       if (Input.GetKeyDown(KeyCode.Escape) && _conversationPanel.activeSelf)
       {
         EndConversation();
+      }
+
+      // F2: Toggle Memory Mutation Overlay
+      if (Input.GetKeyDown(KeyCode.F2))
+      {
+        ToggleMemoryOverlay();
+      }
+    }
+
+    /// <summary>
+    /// Toggles the Memory Mutation Overlay visibility.
+    /// </summary>
+    public void ToggleMemoryOverlay()
+    {
+      var overlay = MemoryMutationOverlay.Instance;
+      if (overlay != null)
+      {
+        overlay.Toggle();
+      }
+      else
+      {
+        Debug.LogWarning("[RedRoomCanvas] MemoryMutationOverlay not found in scene.");
       }
     }
 

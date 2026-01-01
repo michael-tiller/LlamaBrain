@@ -298,6 +298,29 @@ namespace LlamaBrain.Runtime.Core.Validation
     }
 
     /// <summary>
+    /// Adds validation rules from a rule set asset.
+    /// Useful for adding NPC-specific or trigger-specific rules dynamically.
+    /// </summary>
+    /// <param name="ruleSet">The validation rule set to add</param>
+    /// <returns>The number of rules added</returns>
+    public int AddRuleSet(ValidationRuleSetAsset? ruleSet)
+    {
+      if (ruleSet == null || !ruleSet.Enabled)
+        return 0;
+
+      if (gate == null) Initialize();
+
+      int count = 0;
+      foreach (var rule in ruleSet.ToValidationRules())
+      {
+        gate!.AddRule(rule);
+        count++;
+      }
+
+      return count;
+    }
+
+    /// <summary>
     /// Removes a validation rule by ID.
     /// </summary>
     /// <param name="ruleId">The ID of the rule to remove</param>

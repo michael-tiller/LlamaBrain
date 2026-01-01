@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 70b0b7382e61244469cd4d9d12d2f633, type: 3}
+  m_Name: GuardDuty Rule
+  m_EditorClassIdentifier:
+  ruleId: guard-duty
+  ruleName: Guard Must Protect
+  description: Guards must not let strangers pass without authorization.
+  isEnabled: 1
+  priority: 180
+  conditionMode: 0
+  conditions:
+  - Type: 3
+    MatchValue: guard
+    TriggerReasonMatch: 0
+    MinInteractionCount: 0
+    MaxInteractionCount: -1
+    Invert: 0
+  constraints:
+  - Type: 0
+    Severity: 1
+    Description: Guards cannot let strangers pass freely
+    PromptInjection: As a guard, you cannot simply let strangers pass. You must question
+      their purpose and require proper authorization before allowing entry.
+    ValidationPatterns:
+    - go ahead
+    - pass through
+    - let you in
+    - come right in
+    UseRegex: 0

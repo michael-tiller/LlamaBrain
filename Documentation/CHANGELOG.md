@@ -5,11 +5,35 @@ All notable changes to LlamaBrain will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0-rc.1] - 2025-12-30
+## [0.2.0-rc.1] - 2025-12-31 (Unreleased)
 
 ### Core Library
 
 #### Added
+
+#### Integration Testing Infrastructure
+- **Full Pipeline Integration Tests** (`LlamaBrain.Tests/Integration/FullPipelineIntegrationTests.cs`)
+  - Comprehensive integration tests for the complete 9-component architectural pipeline
+  - Tests all components working together from InteractionContext through validated output and memory mutation
+  - Validates end-to-end flow including expectancy evaluation, context retrieval, prompt assembly, validation, and mutation execution
+  - Tests retry logic, constraint escalation, and fallback system integration
+  - Validates memory authority enforcement and canonical fact protection
+- **Comprehensive ServerManager Test Suite** (`LlamaBrain.Tests/Core/ServerManagerTests.cs`)
+  - 2,123+ lines of comprehensive tests for server lifecycle management
+  - Tests process startup, shutdown, monitoring, and error handling
+  - Validates configuration validation, path resolution, and argument building
+  - Tests event handling (OnServerOutput, OnServerError)
+  - Validates timeout handling and graceful shutdown procedures
+  - Coverage improved from 32.81% to 74.55% (92.31% branch coverage)
+- **ProcessUtils Test Suite** (`LlamaBrain.Tests/Utilities/ProcessUtilsTests.cs`)
+  - 617+ lines of comprehensive tests for process utility functions
+  - Tests process detection, validation, and management utilities
+  - Validates error handling and edge cases
+- **Enhanced ApiClient Test Suite** (`LlamaBrain.Tests/ApiClientTests.cs`)
+  - Major expansion with 1,605+ additional lines of tests
+  - Comprehensive coverage of HTTP communication, rate limiting, error handling
+  - Tests timeout management, request validation, and response parsing
+  - Coverage improved from 36.36% to 90.54%
 
 #### Determinism Layer & Expectancy Engine
 - **Expectancy Engine Core** (`ExpectancyEvaluator.cs`)
@@ -95,6 +119,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `GetFormattedContext()` and `GetFormattedDialogue()` for prompt building
   - `GetStats()` and `WorkingMemoryStats` for debugging/metrics
   - `IDisposable` implementation for cleanup after inference
+  - **Few-Shot Prompt Priming Support**
+    - `FewShotExample` class for input-output demonstration pairs
+    - `WorkingMemoryConfig` few-shot configuration (FewShotExamples, MaxFewShotExamples, AlwaysIncludeFewShot)
+    - `GetFormattedFewShotExamples()` for formatted few-shot section injection
+    - Deterministic ordering of examples (byte-stable)
+    - Few-shot count tracking in `WorkingMemoryStats`
 - **Prompt Assembler** (`Core/Inference/PromptAssembler.cs`)
   - `PromptAssembler` - Builds bounded, constrained prompts from snapshots
   - `PromptAssemblerConfig` - Token limits and format string configuration
@@ -105,6 +135,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Token estimation: `EstimateTokens()`, `EstimateCharacters()`
   - `AssembledPrompt` result with character/token counts and breakdown
   - `PromptSectionBreakdown` - Detailed character usage by section
+  - **Few-Shot Integration**
+    - `FewShotHeader` and `IncludeFewShotExamples` configuration options
+    - Automatic few-shot section injection into prompts
+    - Few-shot character count tracking in section breakdown
+- **Few-Shot Conversion Utilities** (`Core/FallbackSystem.cs`)
+  - `FallbackToFewShotConverter` - Utility for converting fallback responses to few-shot examples
+  - `ConvertFallbacksToFewShot()` - Converts fallback lists to few-shot examples
+  - `ConvertConfigToFewShot()` - Converts fallback configs by trigger reason to few-shot examples
+  - Support for deterministic ordering and configurable max examples
 
 #### Testing Infrastructure
 - **Comprehensive Test Suite** (`LlamaBrain.Tests/`)
@@ -206,14 +245,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Interface abstraction for API client operations
   - Enables dependency injection and unit testing
   - Async prompt sending with configurable parameters
+  - Enhanced with `SendPromptWithMetricsAsync` method with full parameter support
+  - Improved documentation and method signatures
 
 #### Testing Infrastructure
 - **Comprehensive Test Suite** (`LlamaBrain.Tests/`)
   - Standalone test project separate from Unity package
-  - 85.54% overall code coverage (4,715 of 5,512 lines covered)
-  - 39 files with 80%+ coverage, 0 files with 0% coverage
+  - 92.37% overall code coverage (5,100 of 5,521 lines covered) 🎉
+  - 40 files with 80%+ coverage, 0 files with 0% coverage
+  - 0 files with < 50% coverage (all files above 50%)
   - NUnit test framework with NSubstitute for mocking
   - Coverlet integration for code coverage analysis
+- **Integration Tests** (`LlamaBrain.Tests/Integration/`)
+  - FullPipelineIntegrationTests - Complete 9-component pipeline integration tests
+  - Tests all components working together from InteractionContext through memory mutation
+  - Validates end-to-end flow, retry logic, constraint escalation, and fallback system
 - **Expectancy Tests** (`LlamaBrain.Tests/Expectancy/`)
   - 16 tests for ExpectancyEvaluator
   - 29 tests for Constraint and ConstraintSet
@@ -230,9 +276,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - ~12 tests for RetryPolicy and constraint escalation
   - ~15 tests for ResponseValidator
   - ~15 tests for ContextRetrievalLayer
-  - ~20 tests for EphemeralWorkingMemory and WorkingMemoryConfig
-  - ~25 tests for PromptAssembler and PromptAssemblerConfig
+  - ~28 tests for EphemeralWorkingMemory and WorkingMemoryConfig (including few-shot tests)
+  - ~39 tests for PromptAssembler and PromptAssemblerConfig
   - All ~95+ tests passing
+- **Few-Shot Prompt Priming Tests**
+  - 4 tests for `FewShotExample` class
+  - 1 test for `WorkingMemoryConfig` few-shot settings
+  - 8 tests for `EphemeralWorkingMemory` few-shot handling
+  - 17 tests for `FallbackToFewShotConverter`
+  - All 30 few-shot tests passing
 - **Validation Tests** (`LlamaBrain.Tests/Validation/`)
   - ~20 tests for OutputParser
   - ~20 tests for ValidationGate
@@ -242,14 +294,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 54 tests for PromptComposer (100% line and branch coverage)
   - 42 tests for LlmConfig (91.07% line coverage, 100% branch coverage)
   - 41 tests for FileSystem (100% line coverage)
-  - Tests for ApiClient, BrainAgent, ClientManager, DialogueSession, ServerManager
+  - Comprehensive ApiClient tests (coverage improved from 36.36% to 90.54%)
+  - Comprehensive ServerManager tests (coverage improved from 32.81% to 74.55%, 92.31% branch coverage)
+  - Tests for BrainAgent, ClientManager, DialogueSession
   - Tests for PersonaProfileManager, PersonaMemoryFileStore, PersonaProfile
   - Tests for ProcessConfig, ApiContracts
 - **Utility Tests** (`LlamaBrain.Tests/Utilities/`)
   - FileSystemTests - Comprehensive file operation testing
   - JsonUtilsTests - JSON serialization/deserialization testing
   - PathUtilsTests - Path manipulation testing
-  - ProcessUtilsTests - Process management testing
+  - ProcessUtilsTests - Comprehensive process management testing (617+ lines)
 - **Metrics Tests** (`LlamaBrain.Tests/Metrics/`)
   - DialogueInteractionTests - Comprehensive metrics collection testing
 - **Coverage Reporting**
@@ -257,6 +311,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Automated coverage report generation (`COVERAGE_REPORT.md`)
   - CSV export for coverage data analysis
   - Detailed file-by-file coverage breakdown with complexity metrics
+  - Coverage tracking: 92.37% overall (up from 81.26%)
 
 #### Project Organization
 - Added `LlamaBrain.Tests` project to solution
@@ -269,15 +324,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Now uses IFileSystem interface for file operations (enables testing)
 - **PromptComposer** now supports constraint injection
   - Achieved 100% line and branch coverage through comprehensive testing
+  - Minor improvements to prompt composition logic
 - **DialogueSession** updated to work with new memory system
-- **ApiClient** and **ClientManager** minor improvements
-  - Added IApiClient interface for testability
+- **ApiClient** significantly enhanced
+  - Improved error handling and validation
+  - Enhanced timeout management and request validation
+  - Better HTTP client lifecycle management
+  - Test coverage improved from 36.36% to 90.54%
+- **IApiClient Interface** enhanced
+  - Added `SendPromptWithMetricsAsync` method with full parameter support
+  - Improved documentation and method signatures
+  - Better support for dependency injection and testing
+- **ServerManager** major improvements
+  - Enhanced process lifecycle management
+  - Improved error handling and validation
+  - Better path resolution and argument building
+  - Enhanced event handling and monitoring
+  - Test coverage improved from 32.81% to 74.55% (92.31% branch coverage)
+- **ClientManager** minor improvements
 - **ProcessConfig** parameter validation enhancements
 - **DialogueMetrics** enhanced with additional tracking fields
 - **Test Coverage** significantly improved
-  - Overall coverage increased from 81.26% to 85.54%
-  - FileSystem, PromptComposer, and LlmConfig now have excellent coverage
-  - All files now have at least some test coverage (0 files at 0%)
+  - Overall coverage increased from 81.26% to 92.37% (5,100 of 5,521 lines covered)
+  - 40 files now have 80%+ coverage (up from previous count)
+  - 0 files with 0% coverage (all files have test coverage)
+  - 0 files with < 50% coverage (all files above 50%)
+  - FileSystem (100%), PromptComposer (100%), LlmConfig (91.07%), ApiClient (90.54%) now have excellent coverage
+  - ServerManager (74.55%) and ProcessUtils significantly improved
 - Removed obsolete documentation files (moved to Documentation folder)
   - `CHANGELOG.md` from root (moved to Documentation/)
   - `LLAMABRAIN.md` (consolidated into README)
@@ -339,6 +412,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `NpcDialogueTrigger` supports trigger-specific expectancy rules
   - Enhanced dialogue metrics collection
   - Context-aware interaction tracking
+- **Memory Mutation Overlay** (`Runtime/RedRoom/UI/MemoryMutationOverlay.cs`)
+  - Real-time memory state viewer panel with toggleable sections
+  - Display canonical facts (read-only, highlighted/protected indicator)
+  - Display world state (mutable, with change indicators)
+  - Display episodic memories (with significance scores, decay status, recency)
+  - Display beliefs (with confidence scores, relationship status)
+  - Mutation execution tracker showing approved vs rejected mutations
+  - Mutation statistics (success rate, blocked attempts, authority violations)
+  - Integration with RedRoomCanvas (toggle via F2 hotkey)
+  - Auto-refresh on interaction events (0.5s polling interval)
+  - Configurable section toggles and display limits
+  - Color-coded memory types and mutation status
+- **Memory Mutation Overlay Setup** (`Runtime/RedRoom/UI/MemoryMutationOverlaySetup.cs`)
+  - Auto-setup helper component for programmatic UI generation at runtime
+  - Configurable styling and layout
+  - Prefab-based instantiation system
+  - Automatic reference wiring
 
 #### Memory System Integration
 - **Memory Decay Integration**
@@ -432,11 +522,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Mutations automatically executed after successful validation
 
 #### Changed
-- **LlamaBrainAgent** enhanced with expectancy evaluation support
+- **LlamaBrainAgent** significantly refactored and enhanced
+  - Code simplification and optimization (595 lines refactored)
+  - Enhanced with expectancy evaluation support
   - Added `ExpectancyConfig` field with auto-detection
   - Added `LastConstraints` property for debugging
   - Enhanced prompt composition with constraint injection
   - Enhanced with automatic memory decay and canonical facts initialization
+  - Improved error handling and state management
+- **BrainServer** major improvements
+  - Enhanced server lifecycle management (245 lines changed)
+  - Improved error handling and monitoring
+  - Better integration with ServerManager
+  - Enhanced event handling and logging
 - **NpcDialogueTrigger** updated to support expectancy rules and trigger-specific rule sets
   - Added `GetMutationStats()` method for accessing mutation statistics
   - Added `GetLastMutationBatchResult()` method for debugging
@@ -453,12 +551,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documentation link fixes
 
 ### Documentation
-- Added comprehensive ROADMAP.md tracking implementation phases
+- **New ARCHITECTURE.md** - Comprehensive architectural documentation
+  - Complete explanation of the 9-component architectural pattern
+  - Detailed component descriptions with code examples
+  - Complete flow examples showing all components working together
+  - Best practices and troubleshooting guides
+  - Implementation status and test coverage information
+- **Major README.md Updates** (326 lines changed)
+  - Enhanced architecture overview with component descriptions
+  - Updated feature list and capabilities
+  - Improved installation and usage instructions
+  - Better code examples and integration guides
+- **Updated ROADMAP.md** (818 lines changed)
+  - Comprehensive tracking of implementation phases
+  - Updated status for all components
+  - Detailed progress information
+- **Updated USAGE_GUIDE.md** (251 lines changed)
+  - Enhanced Unity integration examples
+  - Updated usage patterns for all phases
+  - Better code examples and best practices
+- **Updated COVERAGE_REPORT.md** (165 lines changed)
+  - Updated coverage statistics (92.37% overall coverage)
+  - Detailed file-by-file coverage breakdown
+  - Coverage improvement tracking and analysis
 - Updated SAFEGUARDS.md with latest security information
-- Updated USAGE_GUIDE.md with Phase 1 & 2 usage examples
-- Improved README with architecture details
 - Enhanced code documentation with XML comments
-- Added COVERAGE_REPORT.md with detailed test coverage analysis
 - Added coverage analysis PowerShell script for automated reporting
 - Reorganized documentation structure (moved to Documentation/ folder)
 
@@ -527,7 +644,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Version History
 
 ### Current Version
-- **0.2.0-rc.1**: Phase 1-7 Complete - Determinism Layer (Expectancy Engine), Structured Memory System, State Snapshots & Context Retrieval, Ephemeral Working Memory, Output Validation, Controlled Memory Mutation (MemoryMutationController & World Intent Dispatcher), Enhanced Fallback System, Comprehensive Testing Infrastructure (85.54% coverage), and Testability Improvements (IFileSystem, IApiClient interfaces)
+- **0.2.0-rc.1**: Phase 1-7 Complete - Determinism Layer (Expectancy Engine), Structured Memory System, State Snapshots & Context Retrieval, Ephemeral Working Memory (with Few-Shot Prompt Priming), Output Validation, Controlled Memory Mutation (MemoryMutationController & World Intent Dispatcher), Enhanced Fallback System, Comprehensive Testing Infrastructure (92.37% coverage with integration tests), Testability Improvements (IFileSystem, IApiClient interfaces), Major Test Coverage Improvements (ApiClient 90.54%, ServerManager 74.55%), Full Pipeline Integration Tests, Memory Mutation Overlay (RedRoom UI), and Comprehensive Documentation (ARCHITECTURE.md)
 
 ### Previous Versions
 - **0.1.0**: Initial Unity integration
