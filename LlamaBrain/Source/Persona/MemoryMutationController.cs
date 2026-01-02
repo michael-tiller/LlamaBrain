@@ -642,6 +642,8 @@ namespace LlamaBrain.Persona
     /// Raises the OnWorldIntentEmitted event for testing purposes.
     /// This method is intended for use in tests only.
     /// </summary>
+    /// <param name="intent">The world intent to emit.</param>
+    /// <param name="npcId">The optional NPC identifier associated with the intent.</param>
     public void RaiseWorldIntentEmittedForTests(WorldIntent intent, string? npcId)
     {
       WorldIntentEmitsForTests++;

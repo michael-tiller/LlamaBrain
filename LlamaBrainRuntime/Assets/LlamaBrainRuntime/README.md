@@ -636,7 +636,6 @@ Run tests through Unity's Test Runner window.
 - ✅ Full Pipeline deterministic tests: 25 tests complete (17 DeterministicPipelineTests + 8 FullPipelineIntegrationTests)
 - **Total: 351 tests** (exceeds original estimate of 150-180)
 - **Determinism proof now defensible at byte level** for serialized state and prompt text assembly
-- See [VERIFICATION_REPORT.md](../../Documentation/VERIFICATION_REPORT.md) for detailed completion status
 
 ### Future Features (Post-Architecture)
 
