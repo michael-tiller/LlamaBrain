@@ -9,6 +9,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using LlamaBrain.Utilities;
+using LlamaBrain.Core.StructuredOutput;
 
 /// <summary>
 /// API client for the llama.cpp API
@@ -474,6 +475,219 @@ namespace LlamaBrain.Core
       catch (System.Exception ex)
       {
         return $"Error: Unexpected error - {ex.Message}";
+      }
+    }
+
+    /// <summary>
+    /// Send a prompt with structured output enforcement
+    /// </summary>
+    /// <param name="prompt">The prompt to send</param>
+    /// <param name="jsonSchema">The JSON schema the response must conform to</param>
+    /// <param name="format">The structured output format to use</param>
+    /// <param name="maxTokens">The maximum number of tokens to generate</param>
+    /// <param name="temperature">The temperature to use</param>
+    /// <param name="cachePrompt">Whether to cache the prompt for KV cache reuse</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The structured JSON response</returns>
+    public async Task<string> SendStructuredPromptAsync(
+      string prompt,
+      string jsonSchema,
+      StructuredOutputFormat format = StructuredOutputFormat.JsonSchema,
+      int? maxTokens = null,
+      float? temperature = null,
+      bool cachePrompt = false,
+      CancellationToken cancellationToken = default)
+    {
+      var metrics = await SendStructuredPromptWithMetricsAsync(
+        prompt, jsonSchema, format, maxTokens, temperature, cachePrompt, cancellationToken);
+      return metrics.Content;
+    }
+
+    /// <summary>
+    /// Send a prompt with structured output enforcement and return detailed metrics
+    /// </summary>
+    /// <param name="prompt">The prompt to send</param>
+    /// <param name="jsonSchema">The JSON schema the response must conform to</param>
+    /// <param name="format">The structured output format to use</param>
+    /// <param name="maxTokens">The maximum number of tokens to generate</param>
+    /// <param name="temperature">The temperature to use</param>
+    /// <param name="cachePrompt">Whether to cache the prompt for KV cache reuse</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Detailed completion metrics including the structured response</returns>
+    public async Task<CompletionMetrics> SendStructuredPromptWithMetricsAsync(
+      string prompt,
+      string jsonSchema,
+      StructuredOutputFormat format = StructuredOutputFormat.JsonSchema,
+      int? maxTokens = null,
+      float? temperature = null,
+      bool cachePrompt = false,
+      CancellationToken cancellationToken = default)
+    {
+      // Check if disposed
+      if (disposed)
+        throw new ObjectDisposedException(nameof(ApiClient));
+
+      try
+      {
+        // Input validation
+        if (string.IsNullOrWhiteSpace(prompt))
+          return new CompletionMetrics { Content = "Error: Prompt cannot be null or empty" };
+
+        if (prompt.Length > MaxPromptLength)
+          return new CompletionMetrics { Content = $"Error: Prompt too long. Maximum length is {MaxPromptLength} characters" };
+
+        if (string.IsNullOrWhiteSpace(jsonSchema))
+          return new CompletionMetrics { Content = "Error: JSON schema cannot be null or empty" };
+
+        // Validate schema
+        var provider = LlamaCppStructuredOutputProvider.Instance;
+        if (!provider.ValidateSchema(jsonSchema, out var schemaError))
+          return new CompletionMetrics { Content = $"Error: Invalid JSON schema - {schemaError}" };
+
+        // Rate limiting
+        await EnforceRateLimitAsync();
+
+        // Validate and sanitize parameters
+        var validatedMaxTokens = ValidateMaxTokens(maxTokens ?? config.MaxTokens);
+        var validatedTemperature = ValidateTemperature(temperature ?? config.Temperature);
+
+        // Build the request with structured output parameters
+        var req = new CompletionRequest
+        {
+          prompt = SanitizePrompt(prompt),
+          n_predict = validatedMaxTokens,
+          temperature = validatedTemperature,
+          top_p = config.TopP,
+          top_k = config.TopK,
+          repeat_penalty = config.RepeatPenalty,
+          stop = new string[] { "</s>" },
+          cache_prompt = cachePrompt
+        };
+
+        // Apply structured output parameters based on format
+        switch (format)
+        {
+          case StructuredOutputFormat.JsonSchema:
+            req.json_schema = jsonSchema;
+            break;
+
+          case StructuredOutputFormat.Grammar:
+            var parameters = provider.BuildParameters(jsonSchema, format);
+            req.grammar = parameters.Grammar;
+            break;
+
+          case StructuredOutputFormat.ResponseFormat:
+            req.response_format = ResponseFormat.JsonObject;
+            break;
+
+          case StructuredOutputFormat.None:
+          default:
+            // No structured output enforcement - will rely on prompt instructions
+            break;
+        }
+
+        var content = new StringContent(JsonConvert.SerializeObject(req), Encoding.UTF8, "application/json");
+
+        // Add request to history for rate limiting
+        requestHistory.Enqueue(DateTime.UtcNow);
+
+        // Clean old requests from history
+        CleanupRequestHistory();
+
+        // Measure timings
+        var t0 = DateTime.UtcNow;
+        var resp = await httpClient.PostAsync(endpoint, content, cancellationToken);
+        var respJson = await resp.Content.ReadAsStringAsync();
+        var tDone = DateTime.UtcNow;
+        var totalWallTimeMs = (long)(tDone - t0).TotalMilliseconds;
+
+        if (!resp.IsSuccessStatusCode)
+        {
+          return new CompletionMetrics { Content = $"Error: HTTP {resp.StatusCode} - {respJson}", TotalTimeMs = totalWallTimeMs };
+        }
+
+        if (string.IsNullOrEmpty(respJson))
+          return new CompletionMetrics { Content = "Error: Empty response from server", TotalTimeMs = totalWallTimeMs };
+
+        var response = JsonConvert.DeserializeObject<CompletionResponse>(respJson);
+
+        if (response?.content == null)
+          return new CompletionMetrics { Content = "Error: Invalid response format from server", TotalTimeMs = totalWallTimeMs };
+
+        // Build metrics
+        var metrics = new CompletionMetrics
+        {
+          Content = response.content,
+          CachedTokenCount = response.tokens_cached,
+          TotalTimeMs = totalWallTimeMs
+        };
+
+        // Parse timing data if available
+        if (response.timings != null)
+        {
+          metrics.PrefillTimeMs = (long)response.timings.prompt_ms;
+          metrics.DecodeTimeMs = (long)response.timings.predicted_ms;
+          metrics.PromptTokenCount = response.timings.prompt_n > 0
+            ? response.timings.prompt_n
+            : (response.tokens_evaluated > 0 ? response.tokens_evaluated : 0);
+          metrics.GeneratedTokenCount = response.timings.predicted_n > 0
+            ? response.timings.predicted_n
+            : (response.tokens_predicted > 0 ? response.tokens_predicted : 0);
+          metrics.TtftMs = metrics.PrefillTimeMs;
+        }
+        else
+        {
+          // Estimate from wall time
+          metrics.PrefillTimeMs = (long)(totalWallTimeMs * 0.3);
+          metrics.DecodeTimeMs = (long)(totalWallTimeMs * 0.7);
+          metrics.TtftMs = metrics.PrefillTimeMs;
+          metrics.GeneratedTokenCount = response.content.Length / 4;
+          metrics.PromptTokenCount = prompt.Length / 4;
+        }
+
+        // Validate response length
+        if (metrics.Content.Length > MaxResponseLength)
+        {
+          metrics.Content = metrics.Content.Substring(0, MaxResponseLength) + "... [truncated]";
+        }
+
+        // Log metrics
+        try
+        {
+          Logger.Info($"[ApiClient] Structured output metrics ({format}): " +
+            $"Prompt={metrics.PromptTokenCount} tokens, " +
+            $"Generated={metrics.GeneratedTokenCount} tokens, " +
+            $"Speed={metrics.TokensPerSecond:F1} tokens/sec");
+        }
+        catch
+        {
+          // Logger may not be available in DLL context
+        }
+
+        // Raise event for subscribers
+        OnMetricsAvailable?.Invoke(metrics);
+
+        return metrics;
+      }
+      catch (TaskCanceledException) when (cancellationToken.IsCancellationRequested)
+      {
+        return new CompletionMetrics { Content = "Error: Request was cancelled" };
+      }
+      catch (TaskCanceledException)
+      {
+        return new CompletionMetrics { Content = "Error: Request timed out" };
+      }
+      catch (HttpRequestException ex)
+      {
+        return new CompletionMetrics { Content = $"Error: Network error - {ex.Message}" };
+      }
+      catch (JsonException ex)
+      {
+        return new CompletionMetrics { Content = $"Error: Invalid JSON response - {ex.Message}" };
+      }
+      catch (System.Exception ex)
+      {
+        return new CompletionMetrics { Content = $"Error: Unexpected error - {ex.Message}" };
       }
     }
 

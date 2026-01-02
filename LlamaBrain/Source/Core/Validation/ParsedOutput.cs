@@ -304,6 +304,46 @@ namespace LlamaBrain.Core.Validation
     }
 
     /// <summary>
+    /// Creates a new ParsedOutput with mutations replaced by the given list.
+    /// Used for schema validation filtering.
+    /// </summary>
+    /// <param name="mutations">The validated mutations to use</param>
+    /// <returns>A new ParsedOutput with the given mutations</returns>
+    public ParsedOutput WithMutationsReplaced(IEnumerable<ProposedMutation> mutations)
+    {
+      return new ParsedOutput
+      {
+        Success = Success,
+        DialogueText = DialogueText,
+        RawOutput = RawOutput,
+        ErrorMessage = ErrorMessage,
+        ProposedMutations = new List<ProposedMutation>(mutations),
+        WorldIntents = new List<WorldIntent>(WorldIntents),
+        Metadata = new Dictionary<string, string>(Metadata)
+      };
+    }
+
+    /// <summary>
+    /// Creates a new ParsedOutput with intents replaced by the given list.
+    /// Used for schema validation filtering.
+    /// </summary>
+    /// <param name="intents">The validated intents to use</param>
+    /// <returns>A new ParsedOutput with the given intents</returns>
+    public ParsedOutput WithIntentsReplaced(IEnumerable<WorldIntent> intents)
+    {
+      return new ParsedOutput
+      {
+        Success = Success,
+        DialogueText = DialogueText,
+        RawOutput = RawOutput,
+        ErrorMessage = ErrorMessage,
+        ProposedMutations = new List<ProposedMutation>(ProposedMutations),
+        WorldIntents = new List<WorldIntent>(intents),
+        Metadata = new Dictionary<string, string>(Metadata)
+      };
+    }
+
+    /// <summary>
     /// Returns a string representation of this parsed output.
     /// </summary>
     /// <returns>A string representation of the parsed output</returns>

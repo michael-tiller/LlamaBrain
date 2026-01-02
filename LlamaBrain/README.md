@@ -24,20 +24,27 @@ Key features include:
 - **Process Management**: Safe server lifecycle management with monitoring and graceful shutdown
 - **Comprehensive Testing**: 92.37% code coverage with 1,531 passing tests
 
+**Available Now (v0.2.0):**
+- ✅ **Structured Output (JSON)**: Native llama.cpp JSON schema support with automatic parsing (Feature 12 - Complete)
+  - `JsonSchemaBuilder` for dynamic schema generation
+  - `ParseStructured()` and `ParseAuto()` methods for JSON parsing
+  - Regex fallback maintained for backward compatibility
+  - 56 comprehensive tests
+
 **Coming in v0.3.0:**
-- **Structured Output (JSON)**: LLM-native structured output formats (JSON mode, function calling, schema-based outputs) will replace the current regex-based parser, eliminating parsing errors and improving determinism (Features 12 & 13)
+- **Structured Output Integration**: Complete pipeline integration with structured outputs throughout validation and mutation systems (Feature 13)
 - **Save/Load Game Integration**: Game state persistence system for preserving deterministic state across sessions, enabling cross-session determinism (Feature 16)
 - **Deterministic Generation Seed**: Cross-session determinism through InteractionCount-based seeding (Feature 14)
 
 **⚠️ Breaking Changes Notice (v0.3.0):**
 
-v0.2.x uses **regex-based parsing** for extracting dialogue, mutations, and world intents from LLM output. v0.3.0 will introduce **LLM-native Structured Output** (JSON mode, function calling, schema-based outputs), which may require updates to custom parser logic.
+v0.2.x uses **regex-based parsing** as the default for extracting dialogue, mutations, and world intents from LLM output. v0.2.0 now includes **native Structured Output** (JSON schema mode) as an option, and v0.3.0 will complete the integration throughout the pipeline.
 
-- Custom `OutputParser` implementations may need updates
+- Custom `OutputParser` implementations may need updates for structured output support
 - Validation rules that rely on regex patterns may need adjustment
-- The `ParsedOutput` structure will remain compatible, but parsing internals will change
+- The `ParsedOutput` structure remains compatible, but parsing internals now support both regex and structured JSON
 
-**Migration Path**: v0.2.x → v0.3.0 will include structured output with regex fallback (automatic, backward compatible). See `ROADMAP.md` for detailed migration guide.
+**Migration Path**: v0.2.0 → v0.3.0 includes structured output with automatic regex fallback (backward compatible). See `ROADMAP.md` for detailed migration guide.
 
 ## 🏗️ Architecture
 
@@ -103,7 +110,9 @@ LlamaBrain implements a nine-component architectural pattern that ensures determ
 
 #### Output Validation System
 - **OutputParser**: Parses LLM output into structured format, extracting dialogue, proposed mutations, and world intents
-  - **Note**: Currently uses regex-based text parsing. **Structured Output (JSON)** with LLM-native formats (JSON mode, function calling, schema-based outputs) is coming soon in Features 12 & 13, which will replace regex parsing and eliminate parsing errors.
+  - **Structured Output Support**: ✅ Native JSON schema parsing via `ParseStructured()` and `ParseAuto()` methods (Feature 12 - Complete)
+  - **Regex Fallback**: Maintains backward compatibility with regex-based parsing when structured output is unavailable
+  - **JsonSchemaBuilder**: Dynamic schema generation from C# types with pre-built schemas (ParsedOutputSchema, DialogueOnlySchema, AnalysisSchema)
 - **ValidationGate**: Multi-layer validation that checks outputs against constraints, canonical facts, and knowledge boundaries
 - **ParsedOutput**: Structured result container with dialogue text, proposed mutations, and world intents
 - **ValidationRule**: Extensible validation rule system supporting custom validation logic
