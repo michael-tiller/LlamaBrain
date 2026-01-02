@@ -23,7 +23,7 @@ Instead, please report them via one of the following methods:
 
 ### Alternative Methods
 
-- **Email**: [Michael](contact@michaeltiller.com)
+- **Email**: [Michael](mailto:contact@michaeltiller.com)
 - **Discord**: Contact maintainers privately on the [LlamaBrain Discord](https://discord.gg/9ruBad4nrN)
 
 ### What to Include
