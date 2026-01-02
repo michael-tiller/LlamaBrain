@@ -10,6 +10,7 @@ using LlamaBrain.Core.Metrics;
 using LlamaBrain.Persona;
 using LlamaBrain.Persona.MemoryTypes;
 using LlamaBrain.Runtime.Core.Expectancy;
+using LlamaBrain.Runtime.Core.FunctionCalling;
 using LlamaBrain.Runtime.Core.Inference;
 using LlamaBrain.Runtime.Core.Validation;
 using LlamaBrain.Core.Inference;
@@ -595,14 +596,14 @@ namespace LlamaBrain.Runtime.Core
             // Log detailed results
             foreach (var kvp in functionResults)
             {
-              var result = kvp.Value;
-              if (result.Success)
+              var functionResult = kvp.Value;
+              if (functionResult.Success)
               {
-                UnityEngine.Debug.Log($"[LlamaBrainAgent] Function call '{kvp.Key}' succeeded: {result.Result}");
+                UnityEngine.Debug.Log($"[LlamaBrainAgent] Function call '{kvp.Key}' succeeded: {functionResult.Result}");
               }
               else
               {
-                UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Function call '{kvp.Key}' failed: {result.ErrorMessage}");
+                UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Function call '{kvp.Key}' failed: {functionResult.ErrorMessage}");
               }
             }
           }
