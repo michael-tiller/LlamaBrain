@@ -84,6 +84,7 @@ namespace LlamaBrainRuntime.Core
     private readonly Queue<WorldIntentRecord> intentHistory = new Queue<WorldIntentRecord>();
     private readonly Dictionary<string, List<Action<WorldIntent, string?>>> codeHandlers
       = new Dictionary<string, List<Action<WorldIntent, string?>>>();
+    private readonly HashSet<MemoryMutationController> hookedControllers = new HashSet<MemoryMutationController>();
 
     /// <summary>
     /// Event fired for any dispatched intent.
@@ -139,6 +140,26 @@ namespace LlamaBrainRuntime.Core
         Instance = null;
       }
     }
+
+#if UNITY_EDITOR || UNITY_INCLUDE_TESTS
+    /// <summary>
+    /// Resets the singleton instance for testing purposes.
+    /// Only available in editor and test builds.
+    /// </summary>
+    internal static void ResetForTests()
+    {
+      Instance = null;
+    }
+
+    /// <summary>
+    /// Sets the maximum history size for testing purposes.
+    /// Only available in editor and test builds.
+    /// </summary>
+    internal void SetMaxHistorySizeForTests(int size)
+    {
+      maxHistorySize = size;
+    }
+#endif
 
     /// <summary>
     /// Dispatches a world intent to all registered handlers.
@@ -320,12 +341,20 @@ namespace LlamaBrainRuntime.Core
 
     /// <summary>
     /// Hooks this dispatcher to a mutation controller to automatically dispatch emitted intents.
+    /// This method is idempotent: calling it multiple times with the same controller will not
+    /// result in double-subscription.
     /// </summary>
     /// <param name="controller">The mutation controller to hook.</param>
     public void HookToController(MemoryMutationController controller)
     {
       if (controller == null) return;
-      controller.OnWorldIntentEmitted += HandleWorldIntent;
+      
+      // Idempotent: only subscribe if not already hooked
+      if (!hookedControllers.Contains(controller))
+      {
+        controller.OnWorldIntentEmitted += HandleWorldIntent;
+        hookedControllers.Add(controller);
+      }
     }
 
     /// <summary>
@@ -335,7 +364,13 @@ namespace LlamaBrainRuntime.Core
     public void UnhookFromController(MemoryMutationController controller)
     {
       if (controller == null) return;
-      controller.OnWorldIntentEmitted -= HandleWorldIntent;
+      
+      // Only unsubscribe if we're actually hooked
+      if (hookedControllers.Contains(controller))
+      {
+        controller.OnWorldIntentEmitted -= HandleWorldIntent;
+        hookedControllers.Remove(controller);
+      }
     }
 
     private void HandleWorldIntent(object? sender, WorldIntentEventArgs e)
