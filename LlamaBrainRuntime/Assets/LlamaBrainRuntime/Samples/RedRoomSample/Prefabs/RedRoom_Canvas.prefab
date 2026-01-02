@@ -224,6 +224,7 @@ GameObject:
   - component: {fileID: 2538015746072237262}
   - component: {fileID: 1729518606394773526}
   - component: {fileID: 2669952312470225669}
+  - component: {fileID: 547029029880344809}
   m_Layer: 5
   m_Name: RedRoom_Canvas
   m_TagString: Untagged
@@ -271,7 +272,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 1
-  m_AdditionalShaderChannelsFlag: 1
+  m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
   m_SortingOrder: 0
@@ -344,12 +345,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _autoSetup: 1
-  _targetCanvas: {fileID: 0}
-  _panelColor: {r: 0.1, g: 0.1, b: 0.15, a: 0.95}
-  _panelWidth: 500
-  _panelHeight: 600
-  _fontSize: 12
-  _font: {fileID: 0}
+  _targetCanvas: {fileID: 8497530750118964675}
+  _overlayPrefab: {fileID: 5732997126875414157, guid: 80882182aa7d2aa4688af2561ff4553e, type: 3}
+--- !u!114 &547029029880344809
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4857377203615635700}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d4e5f6a7b8c9012345678901234567b8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _autoSetup: 1
+  _targetCanvas: {fileID: 8497530750118964675}
+  _overlayPrefab: {fileID: 5368763519324597009, guid: d5d08853fbee7f2469e9ad008ae88791, type: 3}
 --- !u!1 &6188690138623166268
 GameObject:
   m_ObjectHideFlags: 0
