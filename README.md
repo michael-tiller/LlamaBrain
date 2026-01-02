@@ -81,7 +81,7 @@ LlamaBrain/
 ### For .NET Developers
 1. **Install the Core Library**
    ```xml
-   <PackageReference Include="LlamaBrain" Version="0.2.01" />
+   <PackageReference Include="LlamaBrain" Version="0.2.0" />
    ```
 
 2. **Basic Usage**
