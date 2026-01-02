@@ -384,6 +384,59 @@ else
 }
 ```
 
+#### Native Structured Output (Feature 12)
+
+**Purpose**: Replace regex-based output parsing with LLM-native structured output formats for improved reliability.
+
+**Implementation**:
+- `IStructuredOutputProvider` interface in `LlamaBrain.Core.StructuredOutput`
+- `LlamaCppStructuredOutputProvider` for llama.cpp server integration
+- `JsonSchemaBuilder` for generating JSON schemas from C# types
+- Extended `ApiClient` with `SendStructuredPromptAsync` methods
+
+**Structured Output Formats**:
+- **JsonSchema** (Recommended): Native llama.cpp `json_schema` parameter enforcement
+- **Grammar**: GBNF grammar constraints for non-JSON formats
+- **ResponseFormat**: Simple JSON mode (`response_format: json_object`)
+- **None**: Falls back to prompt injection with regex parsing
+
+**How It Works**:
+1. Define expected output structure as JSON Schema (or use pre-built `ParsedOutputSchema`)
+2. Call `SendStructuredPromptAsync` with the schema
+3. llama.cpp constrains token generation to match the schema
+4. `OutputParser.ParseStructured` deserializes the guaranteed-valid JSON
+5. No regex extraction needed - 100% reliability on valid outputs
+
+**Pre-built Schemas**:
+- `JsonSchemaBuilder.ParsedOutputSchema` - Full dialogue response with mutations and intents
+- `JsonSchemaBuilder.DialogueOnlySchema` - Simple dialogue with emotion
+- `JsonSchemaBuilder.AnalysisSchema` - Decision-making responses
+
+**Example**:
+```csharp
+// Native structured output (100% reliable JSON)
+var response = await agent.SendNativeStructuredMessageAsync(
+    message: "Tell me about the tower",
+    jsonSchema: JsonSchemaBuilder.ParsedOutputSchema,
+    format: StructuredOutputFormat.JsonSchema,
+    cancellationToken: token);
+
+// Parse the structured response
+var parser = new OutputParser(OutputParserConfig.NativeStructured);
+var parsed = parser.ParseStructured(response);
+
+// Or use the convenience method that does both:
+var parsedOutput = await agent.SendNativeDialogueAsync(
+    message: "Tell me about the tower",
+    format: StructuredOutputFormat.JsonSchema,
+    cancellationToken: token);
+```
+
+**Backward Compatibility**:
+- Existing `SendStructuredMessageAsync` methods continue to use prompt injection
+- `OutputParser.Parse` continues to use regex extraction
+- New `ParseAuto` method automatically detects and uses appropriate parsing
+
 ### Component 8: Memory Mutation + World Effects
 
 **Purpose**: Execute validated mutations and dispatch world intents, with strict authority enforcement.

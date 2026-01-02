@@ -29,7 +29,7 @@
 | Feature 9: Documentation | ✅ Complete | MEDIUM |
 | Feature 10: Deterministic Proof Gap Testing | ✅ Phase 10.7 Complete | HIGH |
 | Feature 11: RAG-Based Memory Retrieval | 📋 Planned | MEDIUM |
-| Feature 12: Dedicated Structured Output | 📋 Planned | HIGH |
+| Feature 12: Dedicated Structured Output | ✅ Complete | HIGH |
 | Feature 13: Structured Output Integration | 📋 Planned | HIGH |
 | Feature 14: Deterministic Generation Seed | 📋 Planned | CRITICAL |
 | Feature 15: Multiple NPC Support | 📋 Planned | MEDIUM |
@@ -2068,14 +2068,15 @@ Add memory change history visualization to the RedRoom Memory Mutation Overlay. 
 
 **Status**:
 - Feature 10.7: Deterministic Proof Gap Testing - ✅ Phase 10.7 Complete (all minimal proof suite tests done, architecture can claim "deterministically proven")
-- Feature 12: Dedicated Structured Output - 📋 Planned (HIGH priority - **DO FIRST**)
-- Feature 13: Structured Output Integration - 📋 Planned (HIGH priority - **DO IMMEDIATELY AFTER 12**)
-- Feature 16: Save/Load Game Integration - 📋 Planned (CRITICAL priority - **DO SECOND**, after 12 & 13)
-- Feature 14: Deterministic Generation Seed - 📋 Planned (CRITICAL priority - **DO THIRD**, after 16)
+- Feature 12: Dedicated Structured Output - ✅ **COMPLETE** (native llama.cpp json_schema support, JsonSchemaBuilder, ParseStructured, 56 tests)
+- Feature 13: Structured Output Integration - 📋 Planned (HIGH priority - **DO NEXT**)
+- Feature 16: Save/Load Game Integration - 📋 Planned (CRITICAL priority - **DO AFTER 13**)
+- Feature 14: Deterministic Generation Seed - 📋 Planned (CRITICAL priority - **DO AFTER 16**)
 
 **Completion Criteria**:
 - [x] **Feature 10.7 complete** - All minimal proof suite tests passing (Phase 10.7 complete)
-- [ ] Feature 12 & 13 complete - Structured Output migration
+- [x] **Feature 12 complete** - Native structured output with json_schema support
+- [ ] Feature 13 complete - Structured Output Integration
 - [ ] Feature 16 complete - Save/Load persistence
 - [ ] Feature 14 complete - Cross-session determinism
 - [ ] All tests passing

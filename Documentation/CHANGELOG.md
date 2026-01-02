@@ -5,6 +5,40 @@ All notable changes to LlamaBrain will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - (Unreleased)
+
+### Core Library
+
+#### Added
+- **Feature 12: Dedicated Structured Output - COMPLETE** ✅
+  - **Native llama.cpp Structured Output Support**
+    - Added `StructuredOutputFormat` enum with JsonSchema, Grammar, ResponseFormat, and None options
+    - Added `StructuredOutputConfig` for configuring structured output behavior
+    - Added `IStructuredOutputProvider` interface and `LlamaCppStructuredOutputProvider` implementation
+    - Extended `CompletionRequest` with `json_schema`, `grammar`, and `response_format` parameters
+    - Extended `IApiClient` with `SendStructuredPromptAsync` and `SendStructuredPromptWithMetricsAsync` methods
+    - Implemented `ApiClient.SendStructuredPromptWithMetricsAsync` for native llama.cpp structured output
+  - **JSON Schema Generation**
+    - Added `JsonSchemaBuilder` for generating JSON schemas from C# types
+    - Pre-built schemas: `ParsedOutputSchema`, `DialogueOnlySchema`, `AnalysisSchema`
+    - Schema validation with `ValidateSchema()` method
+    - Dynamic schema generation from C# types via `BuildFromType<T>()`
+  - **Structured Output Parsing**
+    - Added `OutputParser.ParseStructured()` for direct JSON parsing of structured responses
+    - Added `OutputParser.ParseAuto()` for automatic detection of structured vs free-form responses
+    - Added `OutputParserConfig.NativeStructured` preset for native structured output mode
+    - Added `StructuredDialogueResponse`, `StructuredMutation`, `StructuredIntent` DTOs for JSON deserialization
+  - **BrainAgent Integration**
+    - Added `SendNativeStructuredMessageAsync()` for native structured output with custom schema
+    - Added `SendNativeDialogueAsync()` for dialogue with built-in ParsedOutput schema
+    - Added `SendNativeStructuredInstructionAsync()` for instructions with structured output
+    - Generic versions with `<T>` for automatic deserialization to custom types
+  - **Test Coverage**: 56 new tests across 3 test files
+    - `JsonSchemaBuilderTests.cs`: Schema generation and validation tests
+    - `StructuredOutputProviderTests.cs`: Provider and configuration tests
+    - `OutputParserStructuredTests.cs`: Structured parsing tests
+  - **Documentation**: Updated `ARCHITECTURE.md` with Feature 12 section
+
 ## [0.2.0-rc.2] - 2026-1-1
 
 ### Core Library
