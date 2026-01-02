@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using LlamaBrain.Core.StructuredOutput;
+using LlamaBrain.Utilities;
 
 namespace LlamaBrain.Core.Validation
 {
@@ -59,18 +61,40 @@ namespace LlamaBrain.Core.Validation
     };
 
     /// <summary>
+    /// Whether to use native structured output parsing when available.
+    /// When true and input is valid JSON, ParseStructured will be used.
+    /// </summary>
+    public bool UseStructuredOutput { get; set; } = false;
+
+    /// <summary>
     /// Default configuration.
     /// </summary>
     public static OutputParserConfig Default => new OutputParserConfig();
 
     /// <summary>
     /// Configuration for structured output that may contain JSON.
+    /// Uses regex-based extraction from prompt-injected JSON responses.
     /// </summary>
     public static OutputParserConfig Structured => new OutputParserConfig
     {
       EnforceSingleLine = false,
       ExtractStructuredData = true,
       TrimToCompleteSentence = false
+    };
+
+    /// <summary>
+    /// Configuration for native structured output (llama.cpp json_schema mode).
+    /// Expects pure JSON responses that can be directly deserialized.
+    /// </summary>
+    public static OutputParserConfig NativeStructured => new OutputParserConfig
+    {
+      EnforceSingleLine = false,
+      ExtractStructuredData = false,
+      TrimToCompleteSentence = false,
+      RemoveStageDirections = false,
+      RemoveScriptDirections = false,
+      RemoveSpeakerLabels = false,
+      UseStructuredOutput = true
     };
 
     /// <summary>
@@ -278,6 +302,125 @@ namespace LlamaBrain.Core.Validation
       OnLog?.Invoke($"[OutputParser] Parsed: {result}");
 
       return result;
+    }
+
+    /// <summary>
+    /// Parses a structured JSON response from native structured output mode.
+    /// This method expects valid JSON that conforms to the ParsedOutput schema.
+    /// Use this when the LLM was called with json_schema constraint.
+    /// </summary>
+    /// <param name="jsonResponse">The JSON response from the LLM.</param>
+    /// <returns>Parsed output with dialogue, mutations, and intents.</returns>
+    public ParsedOutput ParseStructured(string jsonResponse)
+    {
+      if (string.IsNullOrWhiteSpace(jsonResponse))
+      {
+        return ParsedOutput.Failed("JSON response is empty or whitespace", jsonResponse ?? "");
+      }
+
+      // Validate that it's valid JSON
+      if (!JsonUtils.IsValidJson(jsonResponse))
+      {
+        OnLog?.Invoke($"[OutputParser] Invalid JSON, falling back to regex parsing");
+        // Fall back to regex-based parsing
+        return Parse(jsonResponse);
+      }
+
+      try
+      {
+        // Deserialize to the StructuredDialogueResponse DTO
+        var structured = JsonUtils.Deserialize<StructuredDialogueResponse>(jsonResponse);
+
+        if (structured == null)
+        {
+          return ParsedOutput.Failed("Failed to deserialize JSON response", jsonResponse);
+        }
+
+        // Build ParsedOutput from the structured response
+        var result = ParsedOutput.Dialogue(
+          structured.DialogueText ?? "",
+          jsonResponse
+        );
+
+        // Convert mutations
+        if (structured.ProposedMutations != null)
+        {
+          foreach (var mutation in structured.ProposedMutations)
+          {
+            result.WithMutation(mutation.ToProposedMutation());
+          }
+        }
+
+        // Convert intents
+        if (structured.WorldIntents != null)
+        {
+          foreach (var intent in structured.WorldIntents)
+          {
+            result.WithIntent(intent.ToWorldIntent());
+          }
+        }
+
+        // Validate the result
+        if (string.IsNullOrWhiteSpace(result.DialogueText))
+        {
+          return ParsedOutput.Failed("Dialogue text is empty in structured response", jsonResponse);
+        }
+
+        if (result.DialogueText.Length < config.MinimumCharacterCount)
+        {
+          return ParsedOutput.Failed(
+            $"Dialogue too short ({result.DialogueText.Length} chars, minimum {config.MinimumCharacterCount})",
+            jsonResponse);
+        }
+
+        result.Success = true;
+        result.WithMetadata("parse_mode", "structured");
+        OnLog?.Invoke($"[OutputParser] ParseStructured: {result}");
+
+        return result;
+      }
+      catch (Exception ex)
+      {
+        OnLog?.Invoke($"[OutputParser] Structured parsing failed: {ex.Message}, falling back to regex");
+        // Fall back to regex-based parsing
+        return Parse(jsonResponse);
+      }
+    }
+
+    /// <summary>
+    /// Parses output with automatic detection of structured vs free-form.
+    /// If the response is valid JSON matching the expected schema, uses ParseStructured.
+    /// Otherwise falls back to regex-based Parse.
+    /// </summary>
+    /// <param name="response">The response from the LLM.</param>
+    /// <param name="isStructuredOutput">Hint that the response is from structured output mode.</param>
+    /// <returns>Parsed output with dialogue, mutations, and intents.</returns>
+    public ParsedOutput ParseAuto(string response, bool isStructuredOutput = false)
+    {
+      if (string.IsNullOrWhiteSpace(response))
+      {
+        return ParsedOutput.Failed("Response is empty or whitespace", response ?? "");
+      }
+
+      // If explicitly marked as structured output, try structured parsing first
+      if (isStructuredOutput || config.UseStructuredOutput)
+      {
+        // Check if it looks like JSON (starts with { and is valid JSON)
+        var trimmed = response.Trim();
+        if (trimmed.StartsWith("{") && JsonUtils.IsValidJson(trimmed))
+        {
+          var result = ParseStructured(trimmed);
+          if (result.Success)
+          {
+            return result;
+          }
+          // If structured parsing failed, fall through to regex parsing
+          OnLog?.Invoke("[OutputParser] Structured parsing failed, using regex fallback");
+        }
+      }
+
+      // Use regex-based parsing
+      return Parse(response);
     }
 
     /// <summary>

@@ -41,6 +41,66 @@ namespace LlamaBrain.Core
     /// Cache the prompt to reuse KV cache (for prefix caching)
     /// </summary>
     public bool cache_prompt { get; set; } = false;
+
+    // --- Structured Output Parameters (llama.cpp native support) ---
+
+    /// <summary>
+    /// JSON schema to enforce structured output.
+    /// When set, the LLM output will be constrained to match this schema.
+    /// Maps to llama.cpp json_schema parameter.
+    /// </summary>
+    public string? json_schema { get; set; }
+
+    /// <summary>
+    /// GBNF grammar to constrain output format.
+    /// More flexible than json_schema, can enforce non-JSON formats.
+    /// Maps to llama.cpp grammar parameter.
+    /// </summary>
+    public string? grammar { get; set; }
+
+    /// <summary>
+    /// Response format specification for JSON mode.
+    /// When set to json_object type, forces valid JSON output.
+    /// Maps to llama.cpp response_format parameter.
+    /// </summary>
+    public ResponseFormat? response_format { get; set; }
+  }
+
+  /// <summary>
+  /// Response format specification for llama.cpp structured output.
+  /// Used with the response_format parameter to request JSON mode.
+  /// </summary>
+  public sealed class ResponseFormat
+  {
+    /// <summary>
+    /// The type of response format. Use "json_object" for JSON mode.
+    /// </summary>
+    public string type { get; set; } = "json_object";
+
+    /// <summary>
+    /// Optional JSON schema for the response format.
+    /// Some providers support embedding the schema in response_format.
+    /// </summary>
+    public object? schema { get; set; }
+
+    /// <summary>
+    /// Creates a ResponseFormat for JSON object mode.
+    /// </summary>
+    public static ResponseFormat JsonObject => new ResponseFormat { type = "json_object" };
+
+    /// <summary>
+    /// Creates a ResponseFormat with an embedded schema.
+    /// </summary>
+    /// <param name="schema">The JSON schema object to embed in the response format.</param>
+    /// <returns>A new ResponseFormat instance configured for JSON object mode with the specified schema.</returns>
+    public static ResponseFormat WithSchema(object schema)
+    {
+      return new ResponseFormat
+      {
+        type = "json_object",
+        schema = schema
+      };
+    }
   }
 
   /// <summary>

@@ -1,12 +1,30 @@
 # LlamaBrain
 
-A comprehensive AI integration solution for Unity and .NET applications, providing secure, feature-rich integration with llama.cpp servers.
+[![CI](https://github.com/michael-tiller/llamabrain/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/michael-tiller/llamabrain/actions/workflows/ci-cd.yml)
+[![C#](https://img.shields.io/badge/C%23-239120?logo=c-sharp&logoColor=white)](https://docs.microsoft.com/en-us/dotnet/csharp/)
+[![.NET Standard](https://img.shields.io/badge/.NET%20Standard-2.1-512BD4?logo=dotnet&logoColor=white)](https://docs.microsoft.com/en-us/dotnet/standard/net-standard)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[![LlamaBrain R&D: Trigger Pre-caching + Episodic Logging](https://img.youtube.com/vi/RT2v9199gfM/0.jpg)](https://www.youtube.com/watch?v=RT2v9199gfM)
+**Deterministic Neuro-Symbolic Authoritative State Management**
+
+A production-ready architecture that enforces a strict validation boundary between untrusted LLM outputs and your authoritative game state. The model is treated as a stateless generator—continuity emerges from deterministic state reconstruction, not from trusting the AI's memory.
+
+[![Deterministic Reconstruction + Validation Boundary](https://img.youtube.com/vi/RT2v9199gfM/0.jpg)](https://www.youtube.com/watch?v=RT2v9199gfM)
+
+## The Core Innovation
+
+**The Model is Untrusted.** LLMs are stochastic generators that hallucinate. LlamaBrain enforces a strict validation boundary: all LLM outputs are validated against constraints and canonical facts before any memory mutations occur. The model has no direct access to game state—it's a pure, stateless generator. Continuity emerges from deterministic state reconstruction, not from trusting the AI's memory.
+
+**The Validation Gate** prevents hallucinations from corrupting authoritative state. Every output is checked against:
+- Constraint sets from the expectancy engine
+- Immutable canonical facts (world truths that cannot be modified)
+- Authority hierarchy (canonical > world state > episodic > beliefs)
+
+Only validated outputs can trigger memory mutations. Invalid outputs trigger retries with stricter constraints, never corrupting state.
 
 LlamaBrain consists of two main components:
 
-- **LlamaBrain Core** - A robust .NET Standard 2.1 library for AI integration
+- **LlamaBrain Core** - A robust .NET Standard 2.1 library implementing the determinism boundary architecture
 - **LlamaBrain Runtime** - A Unity package providing seamless integration with Unity projects
 
 ## 🏗️ Project Structure
@@ -63,7 +81,7 @@ LlamaBrain/
 ### For .NET Developers
 1. **Install the Core Library**
    ```xml
-   <PackageReference Include="LlamaBrain" Version="0.2.01" />
+   <PackageReference Include="LlamaBrain" Version="0.2.0" />
    ```
 
 2. **Basic Usage**
@@ -109,10 +127,14 @@ LlamaBrain/
 ## 📚 Documentation
 
 ### Core Library
-- **[Core README](LlamaBrain/README.md)** - Complete library documentation
-- **[Security Guide](Documentation/SAFEGUARDS.md)** - Security measures and safeguards
-- **[API Documentation](https://metagrue.com/docs/llamabrainapi/)** - API for LlamaBrain
-- **[Runtime API Documentation](https://metagrue.com/docs/llamabrainruntimeapi/)** - API for LlamaBrain Runtime for Unity
+- **[Core README](LlamaBrain/README.md)** - Complete library documentation and usage guide
+- **[Security Guide](Documentation/SAFEGUARDS.md)** - Security measures, safeguards, and best practices
+- **[API Documentation](https://metagrue.com/docs/llamabrainapi/)** - Complete API reference for LlamaBrain Core
+- **[Runtime API Documentation](https://metagrue.com/docs/llamabrainruntimeapi/)** - Complete API reference for LlamaBrain Runtime (Unity)
+- **[ROADMAP.md](Documentation/ROADMAP.md)** - Development roadmap with comprehensive planning and milestone definitions
+- **[STATUS.md](Documentation/STATUS.md)** - Current milestone status and high-level project overview
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Guidelines for contributing to the project
+- **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** - Community standards and code of conduct
 
 ### Unity Package
 Unity package documentation is available in the LlamaBrainRuntime project.
@@ -269,111 +291,17 @@ When reporting issues, include:
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
 
 ## 📈 Roadmap
-
 **See [ROADMAP.md](Documentation/ROADMAP.md) for detailed implementation plan and progress tracking.**
 
-### Current Status: ~98% Complete
+### Current Status
 
-**Current Phase**: Phase 8 - RedRoom Integration 🚧 99% Complete | Phase 10 - Deterministic Proof Gap Testing ✅ Complete
+**Core Architecture**: Complete and production-ready. The determinism boundary, validation gate, and authoritative memory system are fully implemented and tested.
 
-**Next Priority**: Phase 8.4 - Testing Overlay fixes
+**Current Focus**: Structured Output Integration (Feature 13) and cross-session determinism (Feature 14, 16)
 
-### Current Features (v0.2+)
-- ✅ **RedRoom Testing Suite**: Comprehensive in-game LLM testing framework
-- ✅ **Metrics Collection**: Detailed performance and quality metrics with rolling files
-- ✅ **Multiple Test Scenarios**: Support for testing multiple conversational seeds
-- ✅ **NPC Follower System**: AI-powered NPCs with LLM dialogue
-- ✅ **Stateless LLM Core**: Clean separation of inference from state
-- ✅ **Expectancy Engine**: Constraint-based behavior control for NPCs
-  - Engine-agnostic core (works with Unity, Unreal, Godot)
-  - Rule types: Prohibition, Requirement, Permission
-  - ScriptableObject-based declarative rules
-  - Context-aware constraint evaluation
-  - 50 unit tests passing
-- ✅ **Structured Memory System**: Authority-based memory management
-  - Four memory types: Canonical Facts, World State, Episodic, Beliefs
-  - Authority hierarchy prevents unauthorized modifications
-  - Episodic memory with decay and significance
-  - Belief contradiction detection against canonical facts
-  - ~65 unit tests passing
+**See [STATUS.md](Documentation/STATUS.md) for milestone progress.**
 
-### In Development (Architectural Pattern Implementation)
-
-**Phase 1: Determinism Layer** ✅ Complete
-- Expectancy Engine for constraint generation
-- Rule-based control over LLM behavior
-- Per-NPC and global constraint configuration
-- Full test coverage (50 tests)
-
-**Phase 2: Structured Memory System** ✅ Complete
-- Canonical Facts (immutable, Designer-only)
-- World State (validated mutations, GameSystem+ authority)
-- Episodic Memory (decay-enabled, significance-weighted)
-- Belief/Relationship Memory (can be wrong, contradiction detection)
-- Full test coverage (~65 tests)
-
-**Phase 3: State Snapshot & Retry Logic** ✅ Complete
-- Authoritative state snapshots before inference
-- Context retrieval with relevance weighting
-- Retry logic with stricter constraints (max 3 attempts)
-- Full test coverage (~69 tests)
-
-**Phase 4: Ephemeral Working Memory** ✅ Complete
-- Bounded working memory for current inference
-- Token-aware prompt assembly
-- Explicit memory lifecycle management
-- Full test coverage
-
-**Phase 5: Output Validation System** ✅ Complete
-- Output parser for structured extraction
-- Validation gate with constraint checking
-- Automatic retry on validation failure
-- Full test coverage (60+ tests)
-
-**Phase 6: Controlled Memory Mutation** ✅ Complete
-- Validated outputs only for memory writes
-- Canonical fact protection enforcement
-- World intent emission system
-- Full test coverage (41 tests)
-
-**Phase 7: Enhanced Fallback System** ✅ Complete
-- Author-controlled fallback hierarchy
-- Context-aware emergency responses
-- Failure reason logging
-- Full test coverage
-
-**Phase 8: RedRoom Integration** 🚧 99% Complete
-- Validation metrics and export ✅
-- Architectural pattern testing ✅
-- End-to-end validation scenarios ✅
-- Testing overlays ✅ (Memory Mutation Overlay, Validation Gate Overlay - minor fixes needed)
-- Unity PlayMode integration tests ✅ (73+ tests complete)
-- Full Pipeline Integration Tests ✅ (8 tests complete)
-
-**Phase 9: Documentation** ✅ 100% Complete
-- Architecture documentation with diagrams ✅
-- Setup tutorials for new components ✅
-- API reference for all layers ✅ (100% XML documentation, zero missing member warnings)
-- Few-shot prompt priming ✅ Complete (30 tests, full integration)
-- Tutorial content ✅ Complete (4 comprehensive step-by-step tutorials)
-
-**Phase 10: Deterministic Proof Gap Testing** ✅ Complete
-- ✅ All 5 critical requirements implemented and tested
-- ✅ All 7 minimal proof suite tests complete
-- ✅ Tests A-E all complete (including Test D with 6 new byte-level prompt text tests)
-- ✅ ContextRetrievalLayer: 55 tests complete (exceeds estimate)
-- ✅ PromptAssembler: 40 tests complete
-- ✅ EphemeralWorkingMemory: 40 tests complete
-- ✅ OutputParser: 86 tests complete (includes normalization contract)
-- ✅ ValidationGate: 44 tests complete (17 basic + 27 detailed tests)
-- ✅ MemoryMutationController: 41 tests complete
-- ✅ WorldIntentDispatcher: 28 tests complete (Requirement #5 singleton lifecycle)
-- ✅ Full Pipeline deterministic tests: 25 tests complete
-- **Total: 351 tests** (exceeds original estimate of 150-180)
-- **Determinism proof now defensible at byte level** for both serialized state and prompt text assembly
-- See [VERIFICATION_REPORT.md](Documentation/VERIFICATION_REPORT.md) for Phase 10 completion status
-
-For detailed status information, see the [STATUS.md](Documentation/STATUS.md) file.
+---
 
 ### Future Features (Post-Architecture)
 - **Multi-Modal Support**: Image and audio integration
