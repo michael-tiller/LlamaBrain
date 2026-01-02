@@ -1011,7 +1011,6 @@ INPUT                  = ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/ \
                          ../../LlamaBrain/README.md \
                          ../SAFEGUARDS.md \
                          ../STATUS.md \
-                         ../PHASE10_PROOF_GAPS.md \
                          ../PIPELINE_CONTRACT.md \
                          ../VALIDATION_GATING.md \
                          ../ARCHITECTURE.md \
@@ -1021,7 +1020,9 @@ INPUT                  = ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/ \
                          ../MEMORY.md \
                          ../CHANGELOG.md \
                          ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/ \
-                         ../../LICENSE.md
+                         ../../LICENSE.md \
+                         ../../CONTRIBUTING.md \
+                         ../../CODE_OF_CONDUCT.md
 
 # This tag can be used to specify the character encoding of the source files
 # that Doxygen parses. Internally Doxygen uses the UTF-8 encoding. Doxygen uses

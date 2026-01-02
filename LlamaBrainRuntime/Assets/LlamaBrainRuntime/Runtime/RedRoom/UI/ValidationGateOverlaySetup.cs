@@ -27,18 +27,28 @@ namespace LlamaBrain.Runtime.RedRoom.UI
 
     /// <summary>
     /// Instantiates the overlay UI from prefab and wires up references.
+    /// If no prefab is assigned, auto-generates the UI.
     /// </summary>
     [ContextMenu("Setup Overlay")]
     public void SetupOverlay()
     {
+      GameObject overlayInstance;
+      
       if (_overlayPrefab == null)
       {
-        Debug.LogError("[ValidationGateOverlaySetup] Overlay prefab is not assigned!");
-        return;
+        Debug.LogWarning("[ValidationGateOverlaySetup] Overlay prefab is not assigned. Auto-generating UI...");
+        overlayInstance = GenerateUI();
+        if (overlayInstance == null)
+        {
+          Debug.LogError("[ValidationGateOverlaySetup] Failed to auto-generate UI!");
+          return;
+        }
+      }
+      else
+      {
+        overlayInstance = Instantiate(_overlayPrefab);
       }
 
-      // Instantiate prefab
-      var overlayInstance = Instantiate(_overlayPrefab);
       overlayInstance.name = "ValidationGateOverlay";
 
       // Check if prefab has its own Canvas (for editor visibility)
@@ -279,6 +289,283 @@ namespace LlamaBrain.Runtime.RedRoom.UI
       {
         Debug.LogWarning($"[ValidationGateOverlaySetup] Field '{fieldName}' not found.");
       }
+    }
+
+    /// <summary>
+    /// Auto-generates the Validation Gate Overlay UI hierarchy programmatically.
+    /// Creates a layout matching the prefab structure.
+    /// </summary>
+    private GameObject GenerateUI()
+    {
+      // Find or create canvas
+      var canvas = _targetCanvas;
+      if (canvas == null)
+      {
+        canvas = FindObjectOfType<Canvas>();
+      }
+      if (canvas == null)
+      {
+        // Create a new canvas if none exists
+        var canvasObj = new GameObject("ValidationGateOverlayCanvas");
+        canvas = canvasObj.AddComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        canvasObj.AddComponent<CanvasScaler>();
+        canvasObj.AddComponent<GraphicRaycaster>();
+      }
+
+      // Create root overlay object
+      var overlayRoot = new GameObject("ValidationGateOverlay");
+      overlayRoot.transform.SetParent(canvas.transform, false);
+      var overlay = overlayRoot.AddComponent<ValidationGateOverlay>();
+
+      // Create main overlay panel (full screen, semi-transparent background)
+      var overlayPanel = CreatePanel("OverlayPanel", overlayRoot.transform);
+      var panelRect = overlayPanel.GetComponent<RectTransform>();
+      panelRect.anchorMin = Vector2.zero;
+      panelRect.anchorMax = Vector2.one;
+      panelRect.sizeDelta = Vector2.zero;
+      panelRect.anchoredPosition = Vector2.zero;
+
+      var panelImage = overlayPanel.GetComponent<Image>();
+      panelImage.color = new Color(0.1f, 0.1f, 0.1f, 0.95f); // Dark semi-transparent background
+
+      // Create header container (top bar for stats)
+      var headerContainer = CreateContainer("HeaderContainer", overlayPanel.transform);
+      var headerRect = headerContainer.GetComponent<RectTransform>();
+      headerRect.anchorMin = new Vector2(0, 1);
+      headerRect.anchorMax = new Vector2(1, 1);
+      headerRect.pivot = new Vector2(0.5f, 1);
+      headerRect.sizeDelta = new Vector2(0, 40);
+      headerRect.anchoredPosition = Vector2.zero;
+
+      var headerLayout = headerContainer.AddComponent<HorizontalLayoutGroup>();
+      headerLayout.padding = new RectOffset(10, 10, 5, 5);
+      headerLayout.childAlignment = TextAnchor.MiddleLeft;
+      headerLayout.childControlWidth = false;
+      headerLayout.childControlHeight = true;
+      headerLayout.childForceExpandWidth = false;
+      headerLayout.childForceExpandHeight = true;
+
+      // Create stats text in header
+      var statsText = CreateText("StatsText", headerContainer.transform, "Agent: None");
+      var statsRect = statsText.GetComponent<RectTransform>();
+      statsRect.sizeDelta = new Vector2(600, 30);
+      statsText.fontSize = 14;
+      statsText.color = Color.white;
+
+      // Create content container (main split layout)
+      var contentContainer = CreateContainer("ContentContainer", overlayPanel.transform);
+      var contentRect = contentContainer.GetComponent<RectTransform>();
+      contentRect.anchorMin = new Vector2(0, 0);
+      contentRect.anchorMax = new Vector2(1, 1);
+      contentRect.sizeDelta = new Vector2(0, -40); // Leave room for header
+      contentRect.anchoredPosition = new Vector2(0, 0);
+
+      var contentLayout = contentContainer.AddComponent<HorizontalLayoutGroup>();
+      contentLayout.padding = new RectOffset(10, 10, 5, 5);
+      contentLayout.spacing = 10;
+      contentLayout.childControlWidth = true;
+      contentLayout.childControlHeight = true;
+      contentLayout.childForceExpandWidth = true;
+      contentLayout.childForceExpandHeight = true;
+
+      // Create constraints container (left side - 50%)
+      var constraintsContainer = CreateContainer("ConstraintsContainer", contentContainer.transform);
+      var constraintsRect = constraintsContainer.GetComponent<RectTransform>();
+      var constraintsLayout = constraintsContainer.AddComponent<VerticalLayoutGroup>();
+      constraintsLayout.padding = new RectOffset(5, 5, 5, 5);
+      constraintsLayout.spacing = 5;
+      constraintsLayout.childControlWidth = true;
+      constraintsLayout.childControlHeight = false;
+      constraintsLayout.childForceExpandWidth = true;
+      constraintsLayout.childForceExpandHeight = false;
+      
+      // Add layout element to control flex sizing (50%)
+      var constraintsLayoutElement = constraintsContainer.AddComponent<LayoutElement>();
+      constraintsLayoutElement.flexibleWidth = 1f;
+      constraintsLayoutElement.preferredWidth = 0.5f;
+
+      // Create constraints scroll view
+      var constraintsScrollView = CreateScrollView("ConstraintsScrollView", constraintsContainer.transform);
+      var constraintsScrollRect = constraintsScrollView.GetComponent<ScrollRect>();
+      var constraintsScrollLayout = constraintsScrollView.gameObject.AddComponent<LayoutElement>();
+      constraintsScrollLayout.flexibleHeight = 1f;
+      var constraintsText = CreateText("ConstraintsText", constraintsScrollView.content, "=== ACTIVE CONSTRAINTS ===\nNo constraints.");
+      constraintsText.fontSize = 12;
+      constraintsText.color = Color.white;
+      constraintsText.alignment = TextAlignmentOptions.TopLeft;
+      var constraintsTextRect = constraintsText.GetComponent<RectTransform>();
+      constraintsTextRect.anchorMin = new Vector2(0, 1);
+      constraintsTextRect.anchorMax = new Vector2(1, 1);
+      constraintsTextRect.pivot = new Vector2(0, 1);
+      constraintsTextRect.sizeDelta = new Vector2(0, 100);
+
+      // Create validation container (right side - 50%)
+      var validationContainer = CreateContainer("ValidationContainer", contentContainer.transform);
+      var validationRect = validationContainer.GetComponent<RectTransform>();
+      var validationLayout = validationContainer.AddComponent<VerticalLayoutGroup>();
+      validationLayout.padding = new RectOffset(5, 5, 5, 5);
+      validationLayout.spacing = 5;
+      validationLayout.childControlWidth = true;
+      validationLayout.childControlHeight = false;
+      validationLayout.childForceExpandWidth = true;
+      validationLayout.childForceExpandHeight = false;
+      
+      // Add layout element to control flex sizing (50%)
+      var validationLayoutElement = validationContainer.AddComponent<LayoutElement>();
+      validationLayoutElement.flexibleWidth = 1f;
+      validationLayoutElement.preferredWidth = 0.5f;
+
+      // Create gate status text
+      var gateStatusText = CreateText("GateStatusText", validationContainer.transform, "=== VALIDATION GATE ===\nNo validation results yet.");
+      gateStatusText.fontSize = 12;
+      gateStatusText.color = Color.white;
+      gateStatusText.alignment = TextAlignmentOptions.TopLeft;
+      var gateStatusRect = gateStatusText.GetComponent<RectTransform>();
+      gateStatusRect.sizeDelta = new Vector2(0, 80);
+
+      // Create failures scroll view
+      var failuresScrollView = CreateScrollView("FailuresScrollView", validationContainer.transform);
+      var failuresScrollRect = failuresScrollView.GetComponent<ScrollRect>();
+      var failuresScrollLayout = failuresScrollView.gameObject.AddComponent<LayoutElement>();
+      failuresScrollLayout.flexibleHeight = 1f;
+      var failuresText = CreateText("FailuresText", failuresScrollView.content, "=== VALIDATION FAILURES ===\nNo failures.");
+      failuresText.fontSize = 12;
+      failuresText.color = Color.white;
+      failuresText.alignment = TextAlignmentOptions.TopLeft;
+      var failuresTextRect = failuresText.GetComponent<RectTransform>();
+      failuresTextRect.anchorMin = new Vector2(0, 1);
+      failuresTextRect.anchorMax = new Vector2(1, 1);
+      failuresTextRect.pivot = new Vector2(0, 1);
+      failuresTextRect.sizeDelta = new Vector2(0, 150);
+
+      // Create retry status text
+      var retryStatusText = CreateText("RetryStatusText", validationContainer.transform, "=== RETRY STATUS ===\nNo inference yet.");
+      retryStatusText.fontSize = 12;
+      retryStatusText.color = Color.white;
+      retryStatusText.alignment = TextAlignmentOptions.TopLeft;
+      var retryStatusRect = retryStatusText.GetComponent<RectTransform>();
+      retryStatusRect.sizeDelta = new Vector2(0, 80);
+
+      // Create retry history scroll view
+      var retryHistoryScrollView = CreateScrollView("RetryHistoryScrollView", validationContainer.transform);
+      var retryHistoryScrollRect = retryHistoryScrollView.GetComponent<ScrollRect>();
+      var retryHistoryScrollLayout = retryHistoryScrollView.gameObject.AddComponent<LayoutElement>();
+      retryHistoryScrollLayout.flexibleHeight = 1f;
+      var retryHistoryText = CreateText("RetryHistoryText", retryHistoryScrollView.content, "=== RETRY HISTORY ===\nNo attempts recorded.");
+      retryHistoryText.fontSize = 12;
+      retryHistoryText.color = Color.white;
+      retryHistoryText.alignment = TextAlignmentOptions.TopLeft;
+      var retryHistoryTextRect = retryHistoryText.GetComponent<RectTransform>();
+      retryHistoryTextRect.anchorMin = new Vector2(0, 1);
+      retryHistoryTextRect.anchorMax = new Vector2(1, 1);
+      retryHistoryTextRect.pivot = new Vector2(0, 1);
+      retryHistoryTextRect.sizeDelta = new Vector2(0, 150);
+
+      // Wire up all references
+      WireUpReferences(overlay, overlayRoot);
+
+      Debug.Log("[ValidationGateOverlaySetup] Auto-generated Validation Gate Overlay UI successfully.");
+      return overlayRoot;
+    }
+
+    /// <summary>
+    /// Creates a UI panel with Image component.
+    /// </summary>
+    private GameObject CreatePanel(string name, Transform parent)
+    {
+      var panel = new GameObject(name);
+      panel.transform.SetParent(parent, false);
+      var rect = panel.AddComponent<RectTransform>();
+      var image = panel.AddComponent<Image>();
+      image.color = new Color(0.2f, 0.2f, 0.2f, 0.9f);
+      return panel;
+    }
+
+    /// <summary>
+    /// Creates a container with RectTransform (for layout groups).
+    /// </summary>
+    private GameObject CreateContainer(string name, Transform parent)
+    {
+      var container = new GameObject(name);
+      container.transform.SetParent(parent, false);
+      var rect = container.AddComponent<RectTransform>();
+      rect.sizeDelta = Vector2.zero;
+      return container;
+    }
+
+    /// <summary>
+    /// Creates a TextMeshProUGUI text component.
+    /// </summary>
+    private TextMeshProUGUI CreateText(string name, Transform parent, string text)
+    {
+      var textObj = new GameObject(name);
+      textObj.transform.SetParent(parent, false);
+      var rect = textObj.AddComponent<RectTransform>();
+      var textComp = textObj.AddComponent<TextMeshProUGUI>();
+      textComp.text = text;
+      textComp.fontSize = 14;
+      textComp.color = Color.white;
+      textComp.raycastTarget = false;
+      return textComp;
+    }
+
+    /// <summary>
+    /// Creates a ScrollRect with Viewport and Content.
+    /// </summary>
+    private ScrollRect CreateScrollView(string name, Transform parent)
+    {
+      var scrollView = new GameObject(name);
+      scrollView.transform.SetParent(parent, false);
+      var scrollViewRect = scrollView.AddComponent<RectTransform>();
+      scrollViewRect.anchorMin = Vector2.zero;
+      scrollViewRect.anchorMax = Vector2.one;
+      scrollViewRect.sizeDelta = Vector2.zero;
+      scrollViewRect.anchoredPosition = Vector2.zero;
+      var scrollRect = scrollView.AddComponent<ScrollRect>();
+      
+      var viewport = new GameObject("Viewport");
+      viewport.transform.SetParent(scrollView.transform, false);
+      var viewportRect = viewport.AddComponent<RectTransform>();
+      viewportRect.anchorMin = Vector2.zero;
+      viewportRect.anchorMax = Vector2.one;
+      viewportRect.sizeDelta = Vector2.zero;
+      viewportRect.anchoredPosition = Vector2.zero;
+      
+      var viewportImage = viewport.AddComponent<Image>();
+      viewportImage.color = new Color(0.15f, 0.15f, 0.15f, 1f);
+      var mask = viewport.AddComponent<Mask>();
+      mask.showMaskGraphic = false;
+
+      var content = new GameObject("Content");
+      content.transform.SetParent(viewport.transform, false);
+      var contentRect = content.AddComponent<RectTransform>();
+      contentRect.anchorMin = new Vector2(0, 1);
+      contentRect.anchorMax = new Vector2(1, 1);
+      contentRect.pivot = new Vector2(0, 1);
+      contentRect.sizeDelta = new Vector2(0, 100);
+      contentRect.anchoredPosition = Vector2.zero;
+
+      var contentLayout = content.AddComponent<VerticalLayoutGroup>();
+      contentLayout.childControlWidth = true;
+      contentLayout.childControlHeight = false;
+      contentLayout.childForceExpandWidth = true;
+      contentLayout.childForceExpandHeight = false;
+
+      var contentSizeFitter = content.AddComponent<ContentSizeFitter>();
+      contentSizeFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+      scrollRect.content = contentRect;
+      scrollRect.viewport = viewportRect;
+      scrollRect.horizontal = false;
+      scrollRect.vertical = true;
+      scrollRect.movementType = ScrollRect.MovementType.Elastic;
+      scrollRect.elasticity = 0.1f;
+      scrollRect.inertia = true;
+      scrollRect.decelerationRate = 0.135f;
+      scrollRect.scrollSensitivity = 10f;
+
+      return scrollRect;
     }
   }
 }
