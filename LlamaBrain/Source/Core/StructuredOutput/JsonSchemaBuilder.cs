@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using LlamaBrain.Core.FunctionCalling;
 using LlamaBrain.Core.Validation;
 using LlamaBrain.Utilities;
 
@@ -79,6 +80,29 @@ namespace LlamaBrain.Core.StructuredOutput
           }
         },
         ""required"": [""intentType""]
+      }
+    },
+    ""functionCalls"": {
+      ""type"": ""array"",
+      ""description"": ""Function calls to request context/data (e.g., get_memories, get_constraints)"",
+      ""items"": {
+        ""type"": ""object"",
+        ""properties"": {
+          ""functionName"": {
+            ""type"": ""string"",
+            ""description"": ""The name of the function to call (e.g., get_memories, get_constraints)""
+          },
+          ""arguments"": {
+            ""type"": ""object"",
+            ""description"": ""Arguments for the function call"",
+            ""additionalProperties"": true
+          },
+          ""callId"": {
+            ""type"": ""string"",
+            ""description"": ""Optional call ID for tracking multiple function calls""
+          }
+        },
+        ""required"": [""functionName""]
       }
     }
   },
@@ -400,6 +424,11 @@ namespace LlamaBrain.Core.StructuredOutput
         /// World intents for game actions.
         /// </summary>
         public List<StructuredIntent> WorldIntents { get; set; } = new List<StructuredIntent>();
+
+        /// <summary>
+        /// Function calls to request context/data.
+        /// </summary>
+        public List<StructuredFunctionCall> FunctionCalls { get; set; } = new List<StructuredFunctionCall>();
     }
 
     /// <summary>
@@ -487,6 +516,42 @@ namespace LlamaBrain.Core.StructuredOutput
                 Target = Target,
                 Parameters = new Dictionary<string, string>(Parameters),
                 Priority = Priority
+            };
+        }
+    }
+
+    /// <summary>
+    /// DTO for structured function call in JSON responses.
+    /// </summary>
+    [Serializable]
+    public class StructuredFunctionCall
+    {
+        /// <summary>
+        /// The name of the function to call.
+        /// </summary>
+        public string FunctionName { get; set; } = "";
+
+        /// <summary>
+        /// Arguments for the function call.
+        /// </summary>
+        public Dictionary<string, object> Arguments { get; set; } = new Dictionary<string, object>();
+
+        /// <summary>
+        /// Optional call ID for tracking.
+        /// </summary>
+        public string? CallId { get; set; }
+
+        /// <summary>
+        /// Converts to FunctionCall.
+        /// </summary>
+        /// <returns>A FunctionCall instance with the function name, arguments, and call ID.</returns>
+        public FunctionCall ToFunctionCall()
+        {
+            return new FunctionCall
+            {
+                FunctionName = FunctionName,
+                Arguments = new Dictionary<string, object>(Arguments),
+                CallId = CallId
             };
         }
     }

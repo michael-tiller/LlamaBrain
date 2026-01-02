@@ -285,7 +285,7 @@ var assembledPrompt = assembler.AssembleFromSnapshot(snapshot);
 - **Benefits**: 
   - Machine-parseable context sections reduce ambiguity
   - Better LLM understanding of context structure
-  - Enables function calling APIs (deferred for llama.cpp)
+  - Enables function calling via self-contained JSON interpretation (works with any LLM)
   - Complements structured outputs (Features 12-13) for bidirectional structured communication
 - **Hybrid Mode**: Supports mixing structured JSON context with text system prompts
 - **Fallback**: Gracefully falls back to text-based assembly if structured context fails (when configured)
@@ -348,6 +348,91 @@ var config = new StructuredContextConfig
     ContextBlockOpenTag = "<context_json>",
     ContextBlockCloseTag = "</context_json>"
 };
+```
+
+**Function Call Dispatch** (Feature 23 Extension):
+- **Purpose**: Enable LLM to trigger game actions (animations, movement, UI) via function calls in structured JSON output
+- **Implementation**: 
+  - Core: `FunctionCallDispatcher`, `FunctionCallExecutor`, `FunctionCall`, `FunctionCallResult`
+  - Unity: `FunctionCallController`, `FunctionCallConfigAsset`, `NpcFunctionCallConfig`, `FunctionCallEvents`
+- **Pattern**: Command table dispatch pattern - function names map to handler delegates
+- **Workflow**:
+  1. LLM outputs function calls in structured JSON (no native LLM support required)
+  2. `OutputParser` extracts function calls into `ParsedOutput.FunctionCalls`
+  3. `FunctionCallDispatcher` routes calls to registered handlers
+  4. Handlers execute game logic synchronously during dialogue processing
+- **Built-In Functions**: Context access functions (get_memories, get_beliefs, get_constraints, etc.)
+- **Custom Functions**: Register any game function (e.g., PlayNpcFaceAnimation, StartWalking)
+- **Unity Integration**:
+  - `FunctionCallController` (MonoBehaviour singleton) manages global functions
+  - `FunctionCallConfigAsset` (ScriptableObject) for designer-friendly configuration
+  - `NpcFunctionCallConfig` (MonoBehaviour) for per-NPC function overrides
+  - `LlamaBrainAgent` automatically executes function calls after parsing
+  - Results available via UnityEvents and `LastFunctionCallResults` property
+- **Benefits**: 
+  - Works with any LLM that outputs JSON (no native function calling required)
+  - Synchronous execution enables immediate game state changes
+  - Familiar command dispatch pattern
+  - Extensible registration system
+  - Unity integration with inspector-based and code-based handlers
+
+**Core Library Example**:
+```csharp
+// Register custom game function
+var dispatcher = new FunctionCallDispatcher();
+dispatcher.RegisterFunction(
+    "PlayNpcFaceAnimation",
+    (call) => {
+        var animation = call.GetArgumentString("animation", "neutral");
+        npcAnimationController.PlayFaceAnimation(animation);
+        return FunctionCallResult.SuccessResult(new { success = true });
+    }
+);
+
+// LLM outputs in JSON:
+// {
+//   "dialogueText": "I'm so happy!",
+//   "functionCalls": [
+//     { "functionName": "PlayNpcFaceAnimation", "arguments": { "animation": "smile" } }
+//   ]
+// }
+
+// Execute function calls
+var executor = new FunctionCallExecutor(dispatcher, snapshot, memorySystem);
+var results = executor.ExecuteAll(parsedOutput);
+// Animation executes immediately during dialogue processing
+```
+
+**Unity Integration Example**:
+```csharp
+using LlamaBrain.Runtime.Core.FunctionCalling;
+
+// FunctionCallController (singleton) manages global functions
+var controller = FunctionCallController.Instance 
+    ?? FunctionCallController.GetOrCreate();
+
+// Register function programmatically
+controller.RegisterFunction(
+    "PlayNpcFaceAnimation",
+    (call) => {
+        var animation = call.GetArgumentString("animation", "neutral");
+        npcAnimationController.PlayFaceAnimation(animation);
+        return FunctionCallResult.SuccessResult(new { success = true });
+    },
+    "Play a facial animation on the NPC",
+    @"{""type"": ""object"", ""properties"": {""animation"": {""type"": ""string""}}}"
+);
+
+// Or use ScriptableObject configs (designer-friendly)
+// 1. Create FunctionCallConfigAsset
+// 2. Assign to FunctionCallController global configs
+// 3. Register handler via UnityEvent or code
+
+// LlamaBrainAgent automatically executes function calls
+// Results available via:
+// - agent.LastFunctionCallResults (property)
+// - FunctionCallController.OnFunctionCallsExecuted (UnityEvent)
+// - FunctionCallController.OnAnyFunctionCall (UnityEvent)
 ```
 
 ### Component 6: Stateless Inference Core

@@ -27,8 +27,9 @@ This guide focuses on the **core library** (engine-agnostic .NET Standard 2.1), 
 9. [Migrating to Structured Output](#migrating-to-structured-output)
 10. [Structured Input/Context](#structured-input)
 11. [Migrating to Structured Input/Context](#migrating-to-structured-input)
-12. [Debugging & Monitoring](#debugging--monitoring)
-13. [Performance Optimization](#performance-optimization)
+12. [Function Calling](#function-calling)
+13. [Debugging & Monitoring](#debugging--monitoring)
+14. [Performance Optimization](#performance-optimization)
 
 ---
 
@@ -1142,7 +1143,7 @@ NPC:
 - Clear section boundaries
 - Type-safe context data
 - Better LLM understanding of context hierarchy
-- Enables function calling APIs (deferred for llama.cpp)
+- Enables function calling via self-contained JSON interpretation
 
 ### Hybrid Mode
 
@@ -1282,6 +1283,333 @@ var response = await apiClient.SendPromptAsync(assembledPrompt.PromptText);
 - Text-based assembly (`AssembleFromSnapshot()`) remains available
 - Structured context falls back to text automatically when configured
 - No breaking changes to existing code
+
+---
+
+<a id="function-calling"></a>
+## Function Calling
+
+LlamaBrain supports function calling through self-contained JSON interpretation. The LLM outputs function calls in structured JSON, and we dispatch them to registered handlers using a command table pattern.
+
+### How It Works
+
+1. **LLM Outputs Function Calls**: The LLM includes function calls in its structured JSON response
+2. **Parse Function Calls**: `OutputParser` extracts function calls into `ParsedOutput.FunctionCalls`
+3. **Dispatch to Handlers**: `FunctionCallDispatcher` routes calls to registered handlers
+4. **Execute Game Actions**: Handlers execute game logic (animations, movement, UI, etc.)
+
+### Basic Usage
+
+```csharp
+using LlamaBrain.Core.FunctionCalling;
+using LlamaBrain.Core.Inference;
+using LlamaBrain.Core.Validation;
+
+// Parse LLM output (includes function calls)
+var parsedOutput = outputParser.ParseStructured(jsonResponse);
+
+// Create executor with built-in context functions
+var executor = FunctionCallExecutor.CreateWithBuiltIns(snapshot, memorySystem);
+
+// Execute all function calls
+var results = executor.ExecuteAll(parsedOutput);
+
+// Access results
+foreach (var kvp in results)
+{
+    var callId = kvp.Key;
+    var result = kvp.Value;
+    if (result.Success)
+    {
+        Console.WriteLine($"Function {callId} succeeded: {result.Result}");
+    }
+    else
+    {
+        Console.WriteLine($"Function {callId} failed: {result.ErrorMessage}");
+    }
+}
+```
+
+### Registering Custom Game Functions
+
+Register your own game functions to enable LLM-initiated actions:
+
+```csharp
+var dispatcher = new FunctionCallDispatcher();
+
+// Register animation function
+dispatcher.RegisterFunction(
+    "PlayNpcFaceAnimation",
+    (call) => {
+        var animation = call.GetArgumentString("animation", "neutral");
+        npcAnimationController.PlayFaceAnimation(animation);
+        return FunctionCallResult.SuccessResult(new { success = true, animation });
+    },
+    "Play a facial animation on the NPC. Arguments: animation (string)"
+);
+
+// Register movement function
+dispatcher.RegisterFunction(
+    "StartWalking",
+    (call) => {
+        var destination = call.GetArgumentString("destination");
+        var speed = call.GetArgumentString("speed", "normal");
+        npcMovementController.StartWalking(destination, speed);
+        return FunctionCallResult.SuccessResult(new { success = true, destination, speed });
+    },
+    "Start NPC walking to a destination. Arguments: destination (string), speed (string, optional)"
+);
+
+// Create executor with custom dispatcher
+var executor = new FunctionCallExecutor(dispatcher, snapshot, memorySystem);
+```
+
+### Built-In Context Functions
+
+The system includes built-in functions for context access:
+
+```csharp
+// Built-in functions (automatically registered):
+// - get_memories(limit, minSignificance) - Get episodic memories
+// - get_beliefs(limit, minConfidence) - Get NPC beliefs
+// - get_constraints() - Get current constraints
+// - get_dialogue_history(limit) - Get recent dialogue
+// - get_world_state(keys) - Get world state entries
+// - get_canonical_facts() - Get canonical facts
+```
+
+### LLM JSON Output Format
+
+The LLM outputs function calls in structured JSON:
+
+```json
+{
+  "dialogueText": "I'll smile and walk over there.",
+  "functionCalls": [
+    {
+      "functionName": "PlayNpcFaceAnimation",
+      "arguments": {
+        "animation": "smile"
+      },
+      "callId": "call_1"
+    },
+    {
+      "functionName": "StartWalking",
+      "arguments": {
+        "destination": "pointOfInterest",
+        "speed": "normal"
+      },
+      "callId": "call_2"
+    }
+  ]
+}
+```
+
+### Function Call Argument Parsing
+
+Helper methods simplify argument extraction:
+
+```csharp
+dispatcher.RegisterFunction(
+    "MyFunction",
+    (call) => {
+        // Get string argument
+        var name = call.GetArgumentString("name", "default");
+        
+        // Get integer argument
+        var count = call.GetArgumentInt("count", 0);
+        
+        // Get boolean argument
+        var enabled = call.GetArgumentBool("enabled", false);
+        
+        // Get double argument
+        var value = call.GetArgumentDouble("value", 0.0);
+        
+        // Use arguments...
+        return FunctionCallResult.SuccessResult(new { result = "success" });
+    }
+);
+```
+
+### Common Use Cases
+
+| Use Case | Example Function | Description |
+|----------|-----------------|-------------|
+| **Animations** | `PlayNpcFaceAnimation("smile")` | NPC emotional reactions during dialogue |
+| **Movement** | `StartWalking("destination")` | NPC moves while talking |
+| **UI Actions** | `ShowDialogueOption("quest_accept")` | Dynamic UI updates |
+| **Audio** | `PlaySound("npc_laugh")` | Sound effects synchronized with dialogue |
+| **Context Queries** | `get_memories(limit: 5)` | LLM requests additional context |
+
+### Integration with Pipeline
+
+Function calls are automatically parsed from structured output:
+
+```csharp
+// In your pipeline
+var parsedOutput = outputParser.ParseStructured(jsonResponse);
+
+// Check if function calls were made
+if (parsedOutput.FunctionCalls.Count > 0)
+{
+    // Execute function calls
+    var executor = FunctionCallExecutor.CreateWithBuiltIns(snapshot, memorySystem);
+    var results = executor.ExecuteAll(parsedOutput);
+    
+    // Function calls execute synchronously during dialogue processing
+    // Game state changes happen immediately
+}
+```
+
+### Best Practices
+
+| Practice | Description |
+|----------|-------------|
+| **Register functions early** | Set up function dispatcher before processing dialogue |
+| **Use descriptive names** | Function names should be clear and self-documenting |
+| **Validate arguments** | Check argument types and ranges in handlers |
+| **Return meaningful results** | Include success/failure information in results |
+| **Handle errors gracefully** | Return `FunctionCallResult.FailureResult()` on errors |
+| **Document functions** | Provide descriptions for schema generation |
+
+### Comparison to WorldIntents
+
+**Function Calls** (synchronous, immediate):
+- Execute during dialogue processing
+- Return results synchronously
+- Best for: animations, movement, UI, audio
+- Example: `PlayNpcFaceAnimation("smile")`
+
+**WorldIntents** (asynchronous, event-based):
+- Dispatched via `WorldIntentDispatcher` (Unity component)
+- Event-based, handled later
+- Best for: quests, items, world state changes
+- Example: `give_item`, `start_quest`
+
+**Use Both**: Function calls for immediate actions, WorldIntents for deferred world effects.
+
+### Unity Function Call Integration
+
+For Unity projects, use the Unity Runtime components for designer-friendly function call configuration:
+
+#### Setup
+
+1. **Create FunctionCallController** (Global):
+   - Add `FunctionCallController` component to a GameObject in your scene
+   - Configure global function configs in the Inspector
+   - Functions registered here apply to all NPCs
+
+2. **Create FunctionCallConfigAsset** (Optional):
+   - Right-click in Project → Create → LlamaBrain → Function Call Config
+   - Configure function name, description, parameter schema
+   - Assign to `FunctionCallController` global configs list
+
+3. **Add NpcFunctionCallConfig** (Per-NPC):
+   - Add `NpcFunctionCallConfig` component to NPC GameObject
+   - Configure NPC-specific function configs
+   - NPC functions override global functions if same name
+
+4. **Configure LlamaBrainAgent**:
+   - `FunctionCallConfig` field auto-detects `NpcFunctionCallConfig` component
+   - Functions automatically registered during initialization
+   - Function calls automatically executed after parsing output
+
+#### Inspector-Based Handlers
+
+Wire up UnityEvents in the Inspector for designer-friendly function handling:
+
+```csharp
+// In FunctionCallController Inspector:
+// 1. Add function handler config
+// 2. Set function name (e.g., "PlayNpcFaceAnimation")
+// 3. Wire up UnityEvent to your game system
+```
+
+#### Code-Based Handlers
+
+Register handlers programmatically for code-based control:
+
+```csharp
+using LlamaBrain.Runtime.Core.FunctionCalling;
+
+// Get or create controller
+var controller = FunctionCallController.Instance 
+    ?? FunctionCallController.GetOrCreate();
+
+// Register function handler
+controller.RegisterFunction(
+    "PlayNpcFaceAnimation",
+    (call) => {
+        var animation = call.GetArgumentString("animation", "neutral");
+        npcAnimationController.PlayFaceAnimation(animation);
+        return FunctionCallResult.SuccessResult(new { success = true });
+    },
+    "Play a facial animation on the NPC",
+    @"{""type"": ""object"", ""properties"": {""animation"": {""type"": ""string""}}}"
+);
+
+// Or register event handler
+controller.RegisterHandler("PlayNpcFaceAnimation", (call, result) => {
+    if (result.Success)
+    {
+        Debug.Log($"Animation played: {call.GetArgumentString("animation")}");
+    }
+});
+```
+
+#### Accessing Results
+
+Function call results are available via multiple methods:
+
+```csharp
+// 1. Via Property (after execution)
+var results = agent.LastFunctionCallResults;
+if (results != null)
+{
+    foreach (var kvp in results)
+    {
+        Debug.Log($"Function {kvp.Key}: {(kvp.Value.Success ? "Success" : "Failed")}");
+    }
+}
+
+// 2. Via UnityEvent (batch)
+FunctionCallController.Instance.OnFunctionCallsExecuted.AddListener((results) => {
+    Debug.Log($"Executed {results.Count} function calls");
+});
+
+// 3. Via UnityEvent (individual)
+FunctionCallController.Instance.OnAnyFunctionCall.AddListener((call, result) => {
+    Debug.Log($"Function {call.FunctionName}: {(result.Success ? "Success" : "Failed")}");
+});
+```
+
+#### Example: NPC Animation Function
+
+```csharp
+// Register in FunctionCallController
+controller.RegisterFunction(
+    "PlayNpcFaceAnimation",
+    (call) => {
+        var animation = call.GetArgumentString("animation", "neutral");
+        var npcId = call.GetArgumentString("npcId");
+        
+        // Find NPC and play animation
+        var npc = FindNPC(npcId);
+        if (npc != null)
+        {
+            npc.PlayFaceAnimation(animation);
+            return FunctionCallResult.SuccessResult(new { animation, npcId });
+        }
+        
+        return FunctionCallResult.FailureResult($"NPC {npcId} not found");
+    },
+    "Play a facial animation on the specified NPC",
+    @"{""type"": ""object"", ""properties"": {
+        ""animation"": {""type"": ""string"", ""description"": ""Animation name""},
+        ""npcId"": {""type"": ""string"", ""description"": ""NPC identifier""}
+    }}"
+);
+```
 
 ---
 

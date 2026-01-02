@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Core Library
 
 #### Added
-- **Feature 23: Structured Input/Context - IN PROGRESS (~70%)** 🚧
+- **Feature 23: Structured Input/Context - IN PROGRESS (~95%)** 🚧
   - **Structured Context Provider Infrastructure**
     - Added `IStructuredContextProvider` interface for structured context generation
     - Added `LlamaCppStructuredContextProvider` singleton implementation
@@ -48,7 +48,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `Source/Core/StructuredInput/Schemas/ContextSection.cs`
     - `Source/Core/StructuredInput/Schemas/ConstraintSection.cs`
     - `Source/Core/StructuredInput/Schemas/DialogueSection.cs`
-  - **Deferred Items**: Function calling support deferred (llama.cpp doesn't support native function calling)
+  - **Function Calling Dispatch System** ✅
+    - Added `FunctionCallDispatcher` with command table pattern for function call routing
+    - Added `FunctionCall` and `FunctionCallResult` DTOs for function call requests/results
+    - Added `FunctionCallExecutor` for pipeline integration
+    - Extended `ParsedOutput` to include `FunctionCalls` property
+    - Extended JSON schema to include `functionCalls` array
+    - Added `BuiltInContextFunctions` with 6 built-in context access functions:
+      - `get_memories(limit, minSignificance)` - Get episodic memories
+      - `get_beliefs(limit, minConfidence)` - Get NPC beliefs
+      - `get_constraints()` - Get current constraints
+      - `get_dialogue_history(limit)` - Get recent dialogue
+      - `get_world_state(keys)` - Get world state entries
+      - `get_canonical_facts()` - Get canonical facts
+    - Supports custom game function registration (e.g., PlayNpcFaceAnimation, StartWalking)
+    - Self-contained interpretation from LLM JSON output (no native LLM function calling required)
+    - Works with any LLM that outputs structured JSON
+    - Files Added:
+      - `Source/Core/FunctionCalling/FunctionCall.cs`
+      - `Source/Core/FunctionCalling/FunctionCallResult.cs`
+      - `Source/Core/FunctionCalling/FunctionCallDispatcher.cs`
+      - `Source/Core/FunctionCalling/FunctionCallExecutor.cs`
+      - `Source/Core/FunctionCalling/BuiltInContextFunctions.cs`
+  - **Deferred Items**: Native LLM function calling APIs (OpenAI, Anthropic) - not needed, we parse JSON ourselves
+
+### Unity Runtime
+
+#### Added
+- **Unity Function Call Integration** ✅
+  - **FunctionCallController** (MonoBehaviour singleton)
+    - Manages core `FunctionCallDispatcher` instance
+    - Registers functions from ScriptableObject configs
+    - Provides UnityEvents for function call results
+    - Programmatic registration/unregistration support
+    - Scene-local singleton pattern (like `WorldIntentDispatcher`)
+  - **FunctionCallConfigAsset** (ScriptableObject)
+    - Designer-friendly function configuration
+    - Function name, description, parameter schema
+    - Enable/disable flags, priority/ordering
+    - Similar structure to `ExpectancyRuleAsset`
+  - **NpcFunctionCallConfig** (MonoBehaviour component)
+    - Per-NPC function configuration
+    - References NPC-specific `FunctionCallConfigAsset` list
+    - Overrides/extends global functions
+    - Attached to NPC GameObjects (like `NpcExpectancyConfig`)
+  - **FunctionCallEvents** (Unity Event Types)
+    - `FunctionCallEvent` - UnityEvent for individual function calls
+    - `FunctionCallResultEvent` - UnityEvent for results by function name
+    - `FunctionCallResultsEvent` - UnityEvent for batch results
+  - **LlamaBrainAgent Integration**
+    - Added `NpcFunctionCallConfig?` field (like `ExpectancyConfig`)
+    - Auto-detects `NpcFunctionCallConfig` component during initialization
+    - Registers NPC-specific functions with `FunctionCallController`
+    - Executes function calls after parsing output in `SendWithSnapshotAsync()`
+    - Stores results in `LastFunctionCallResults` property
+    - Added `HookFunctionCallController()` method (like `HookIntentDispatcher()`)
+  - **Files Added**:
+    - `LlamaBrainRuntime/.../FunctionCalling/FunctionCallEvents.cs`
+    - `LlamaBrainRuntime/.../FunctionCalling/FunctionCallConfigAsset.cs`
+    - `LlamaBrainRuntime/.../FunctionCalling/FunctionCallController.cs`
+    - `LlamaBrainRuntime/.../FunctionCalling/NpcFunctionCallConfig.cs`
+  - **Features**:
+    - Inspector-based function handlers via UnityEvents
+    - Code-based function handlers via C# Action delegates
+    - Global functions from `FunctionCallController` + NPC-specific functions from `NpcFunctionCallConfig`
+    - NPC-specific functions take precedence over global functions
+    - Results automatically sent to Unity via UnityEvents
+    - Results stored in `LlamaBrainAgent.LastFunctionCallResults` for debugging/metrics
 
 ## [0.2.0] - 2026-01-02
 

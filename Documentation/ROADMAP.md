@@ -1068,7 +1068,7 @@ Complete integration of structured output throughout the validation pipeline, mu
 ## Feature 23: Structured Input/Context
 
 **Priority**: HIGH - Completes bidirectional structured communication
-**Status**: 🚧 In Progress (~70% Complete)
+**Status**: 🚧 In Progress (~95% Complete)
 **Dependencies**: Feature 12 (Dedicated Structured Output), Feature 13 (Structured Output Integration)
 **Execution Order**: **DO AFTER Feature 13** - Builds on structured output foundation to provide structured context input. Should be done before Feature 16 (Save/Load) to ensure data structures are stable.
 
@@ -1129,17 +1129,32 @@ Provide context, memories, constraints, and dialogue history to the LLM in struc
 - [ ] Support partial structured context (e.g., structured memories, text constraints) - deferred
 
 #### 23.6 Function Calling Support
-- [ ] Implement function/tool definitions for context injection - deferred (llama.cpp doesn't support)
-- [ ] Support OpenAI function calling format - deferred
-- [ ] Support Anthropic tool use format - deferred
-- [ ] Support llama.cpp function calling (if available) - not available
-- [ ] Define context injection functions - deferred
+- [x] Implement function call dispatch system (self-contained interpretation from JSON)
+- [x] Create `FunctionCallDispatcher` with command table pattern
+- [x] Add `FunctionCall` and `FunctionCallResult` DTOs
+- [x] Integrate function calls into `ParsedOutput` and JSON schema
+- [x] Create `FunctionCallExecutor` for pipeline integration
+- [x] Implement built-in context functions (get_memories, get_beliefs, get_constraints, etc.)
+- [x] Support custom game function registration (e.g., PlayNpcFaceAnimation, StartWalking)
+- [x] **Unity Function Call Integration** ✅
+  - [x] Create `FunctionCallController` (MonoBehaviour singleton)
+  - [x] Create `FunctionCallConfigAsset` (ScriptableObject)
+  - [x] Create `NpcFunctionCallConfig` (MonoBehaviour component)
+  - [x] Create `FunctionCallEvents` (Unity Event Types)
+  - [x] Integrate with `LlamaBrainAgent` for automatic execution
+  - [x] Support inspector-based handlers via UnityEvents
+  - [x] Support code-based handlers via C# Action delegates
+  - [x] Store results in `LastFunctionCallResults` property
+  - [x] Fire UnityEvents with results for Unity integration
+- [ ] Support OpenAI function calling format - deferred (not needed, we parse JSON ourselves)
+- [ ] Support Anthropic tool use format - deferred (not needed, we parse JSON ourselves)
+- [ ] Support llama.cpp native function calling - not available (we use JSON interpretation instead)
 
 #### 23.7 Testing
 - [x] Unit tests for `IStructuredContextProvider` implementations (`StructuredContextProviderTests.cs` - 24 tests)
 - [x] Unit tests for structured context serialization (`ContextSerializerTests.cs` - 23 tests)
 - [x] Integration tests comparing structured vs text context assembly (`PromptAssemblerStructuredTests.cs` - 35 tests)
-- [ ] Tests for function calling context injection - deferred (llama.cpp doesn't support)
+- [ ] Tests for function calling dispatch system - pending (core implementation complete)
 - [x] Tests for schema validation (included in provider tests)
 - [x] Tests for fallback to text when structured context fails (included in integration tests)
 - [x] Performance tests for structured context serialization (via determinism tests)
@@ -1148,7 +1163,7 @@ Provide context, memories, constraints, and dialogue history to the LLM in struc
 #### 23.8 Documentation
 - [x] Update `ARCHITECTURE.md` with structured input section
 - [x] Document supported structured input formats (in code comments)
-- [ ] Document function calling setup and usage - deferred (not implemented)
+- [x] Document function calling setup and usage
 - [x] Document migration path from text to structured context
 - [x] Add examples showing structured vs text context differences
 - [x] Update `USAGE_GUIDE.md` with structured input setup
@@ -1157,9 +1172,16 @@ Provide context, memories, constraints, and dialogue history to the LLM in struc
 
 **Supported Formats**:
 - **JSON Context Injection**: Provide memories, constraints, dialogue as structured JSON objects
-- **Function Calling**: Use tool/function calling APIs (OpenAI, Anthropic) for context injection
+- **Function Calling**: Self-contained function call dispatch from LLM JSON output (works with any LLM)
 - **Schema-Based**: Use provider-specific structured context APIs
 - **Hybrid Mode**: Mix structured context with text system prompts
+
+**Function Calling Implementation**:
+- LLM outputs function calls in structured JSON (no native LLM support required)
+- `FunctionCallDispatcher` uses command table pattern to route calls
+- Built-in context functions: get_memories, get_beliefs, get_constraints, get_dialogue_history, get_world_state, get_canonical_facts
+- Custom game functions can be registered (e.g., PlayNpcFaceAnimation, StartWalking)
+- Synchronous execution during dialogue processing
 
 **Backward Compatibility**:
 - Maintain text-based prompt assembly as default/fallback

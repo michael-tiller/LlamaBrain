@@ -58,6 +58,14 @@ namespace LlamaBrain.Runtime.Core
     public NpcExpectancyConfig? ExpectancyConfig;
 
     /// <summary>
+    /// Optional function call configuration for NPC-specific function handlers.
+    /// If set, NPC-specific functions will be registered with FunctionCallController.
+    /// </summary>
+    [Header("Function Calling")]
+    [Tooltip("Optional NPC-specific function call configuration. If set, functions will be registered with FunctionCallController.")]
+    public NpcFunctionCallConfig? FunctionCallConfig;
+
+    /// <summary>
     /// Optional fallback configuration for author-controlled fallback responses.
     /// If not set, uses default fallback configuration.
     /// </summary>
@@ -180,6 +188,11 @@ namespace LlamaBrain.Runtime.Core
     /// The last mutation batch result (for debugging/metrics).
     /// </summary>
     public MutationBatchResult? LastMutationBatchResult { get; private set; }
+
+    /// <summary>
+    /// The last function call execution results (for debugging/metrics).
+    /// </summary>
+    public Dictionary<string, LlamaBrain.Core.FunctionCalling.FunctionCallResult>? LastFunctionCallResults { get; private set; }
 
     /// <summary>
     /// The retry policy for inference.
@@ -305,6 +318,25 @@ namespace LlamaBrain.Runtime.Core
           {
             UnityEngine.Debug.Log($"[LlamaBrainAgent] Auto-detected NpcExpectancyConfig on {ExpectancyConfig.gameObject.name}");
           }
+        }
+
+        // Auto-detect FunctionCallConfig if not set
+        if (FunctionCallConfig == null)
+        {
+          FunctionCallConfig = GetComponentInParent<NpcFunctionCallConfig>();
+          if (FunctionCallConfig != null)
+          {
+            UnityEngine.Debug.Log($"[LlamaBrainAgent] Auto-detected NpcFunctionCallConfig on {FunctionCallConfig.gameObject.name}");
+          }
+        }
+
+        // Register NPC-specific functions with FunctionCallController
+        if (FunctionCallConfig != null)
+        {
+          var functionController = FunctionCallController.Instance 
+            ?? FunctionCallController.GetOrCreate();
+          FunctionCallConfig.RegisterFunctionsWithController(functionController);
+          UnityEngine.Debug.Log($"[LlamaBrainAgent] Registered NPC-specific functions for {FunctionCallConfig.NpcId}");
         }
 
         // Initialize response validator and retry policy
@@ -545,6 +577,40 @@ namespace LlamaBrain.Runtime.Core
           if (outputParser == null) outputParser = new OutputParser();
           var parsedOutput = outputParser.Parse(metrics.Content, wasTruncated);
           LastParsedOutput = parsedOutput;
+
+          // Step 1.5: Execute function calls if any
+          if (parsedOutput.FunctionCalls.Count > 0)
+          {
+            var functionController = FunctionCallController.Instance 
+              ?? FunctionCallController.GetOrCreate();
+            
+            var memorySystem = memoryProvider?.GetOrCreateSystem(runtimeProfile?.PersonaId ?? "");
+            var functionResults = functionController.ExecuteFunctionCalls(parsedOutput, snapshot, memorySystem);
+            
+            // Store results for Unity access
+            LastFunctionCallResults = functionResults;
+            
+            UnityEngine.Debug.Log($"[LlamaBrainAgent] Executed {parsedOutput.FunctionCalls.Count} function call(s). Results: {string.Join(", ", functionResults.Keys)}");
+            
+            // Log detailed results
+            foreach (var kvp in functionResults)
+            {
+              var result = kvp.Value;
+              if (result.Success)
+              {
+                UnityEngine.Debug.Log($"[LlamaBrainAgent] Function call '{kvp.Key}' succeeded: {result.Result}");
+              }
+              else
+              {
+                UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Function call '{kvp.Key}' failed: {result.ErrorMessage}");
+              }
+            }
+          }
+          else
+          {
+            // Clear previous results if no function calls in this turn
+            LastFunctionCallResults = null;
+          }
 
           // Step 2: Validate through ValidationGate and/or ValidationPipeline
           GateResult gateResult;
@@ -1580,6 +1646,19 @@ namespace LlamaBrain.Runtime.Core
       if (mutationController != null && dispatcher != null)
       {
         dispatcher.HookToController(mutationController);
+      }
+    }
+
+    /// <summary>
+    /// Hooks a FunctionCallController to this agent for function call execution.
+    /// </summary>
+    /// <param name="controller">The function call controller to hook.</param>
+    public void HookFunctionCallController(FunctionCallController controller)
+    {
+      if (controller != null && FunctionCallConfig != null)
+      {
+        FunctionCallConfig.RegisterFunctionsWithController(controller);
+        UnityEngine.Debug.Log($"[LlamaBrainAgent] Hooked FunctionCallController and registered NPC-specific functions");
       }
     }
 

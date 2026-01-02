@@ -39,7 +39,7 @@
 | [Feature 20: Memory Change History Visualization](ROADMAP.md#feature-20) | 📋 Planned | LOW |
 | [Feature 21: Sidecar Host](ROADMAP.md#feature-21) | 📋 Planned | MEDIUM |
 | [Feature 22: Unreal Engine Support](ROADMAP.md#feature-22) | 📋 Planned | MEDIUM |
-| [Feature 23: Structured Input/Context](ROADMAP.md#feature-23) | 🚧 In Progress | ~85% |
+| [Feature 23: Structured Input/Context](ROADMAP.md#feature-23) | 🚧 In Progress | ~98% |
 | [Feature 24: "I've seen this" Recognition](ROADMAP.md#feature-24) | 📋 Planned | MEDIUM |
 
 **Note**: Detailed feature descriptions, implementation plans, and checklists are in [ROADMAP.md](ROADMAP.md). This document focuses on high-level status and progress tracking.
@@ -55,11 +55,11 @@
    - Feature 13: Structured Output Integration (1-2 weeks) - ✅ **COMPLETE**
    - **Rationale**: Fundamentally changes how data enters the pipeline. Must be done before Feature 16 to avoid rework.
 
-2. **Feature 23: Structured Input/Context** - 🚧 **IN PROGRESS (~85%)**
+2. **Feature 23: Structured Input/Context** - 🚧 **IN PROGRESS (~98%)**
    - Complete bidirectional structured communication (1-2 weeks)
    - Provide context in structured format (JSON/function calling)
    - **Rationale**: Complements structured outputs, improves context understanding, enables function calling APIs
-   - **Current**: Core infrastructure complete (providers, serializers, schemas, PromptAssembler integration), ~82 tests, documentation complete
+   - **Current**: Core infrastructure complete (providers, serializers, schemas, PromptAssembler integration), function calling dispatch system implemented, Unity function call integration complete, ~82 tests, documentation complete
 
 3. **Feature 16: Save/Load Game Integration** - **DO THIS SECOND**
    - Build persistence layer after data structures are stable (3-5 days)
@@ -157,7 +157,7 @@
 - Feature 10: Deterministic Proof Gap Testing - ✅ **COMPLETE** (all minimal proof suite tests done, architecture can claim "deterministically proven")
 - Feature 12: Dedicated Structured Output - ✅ **COMPLETE** (native llama.cpp json_schema support, 56 tests)
 - Feature 13: Structured Output Integration - ✅ **COMPLETE** (full pipeline orchestration, schema validation, metrics tracking)
-- Feature 23: Structured Input/Context - 🚧 **IN PROGRESS (~85%)** (core infrastructure complete: providers, serializers, schemas, PromptAssembler integration, ~82 tests, documentation complete)
+- Feature 23: Structured Input/Context - 🚧 **IN PROGRESS (~98%)** (core infrastructure complete: providers, serializers, schemas, PromptAssembler integration, function calling dispatch system implemented, Unity function call integration complete, ~82 tests, documentation complete)
 - Feature 16: Save/Load Game Integration - 📋 Planned (CRITICAL priority - **DO SECOND**, after 12, 13 & 23)
 - Feature 14: Deterministic Generation Seed - 📋 Planned (CRITICAL priority - **DO THIRD**, after 16)
 
