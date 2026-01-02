@@ -5,7 +5,7 @@ All notable changes to LlamaBrain will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0] - 2026-1-2
+## [0.2.0] - 2026-01-02
 
 ### Core Library
 
@@ -154,7 +154,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`USAGE_GUIDE.md`**: Fixed heading formatting issue (removed empty braces)
 - **`COVERAGE_REPORT.md`**: Updated to reflect current ApiClient coverage status (66.74%)
 
-## [0.2.0-rc.2] - 2026-1-1
+## [0.2.0-rc.2] - 2026-01-01
 
 ### Core Library
 
@@ -259,7 +259,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Phase 10 is now COMPLETE** - All 7 minimal proof suite tests verified, all 5 critical requirements implemented, 351 tests total
 
 
-## [0.2.0-rc.1] - 2026-1-1
+## [0.2.0-rc.1] - 2026-01-01
 
 ### Core Library
 
@@ -908,7 +908,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated main README.md with enhanced architecture overview, current completion status, and improved feature descriptions to help users understand the system capabilities.
   - Completed API documentation with XML comments achieving 100% coverage of all public APIs and generated Doxygen output with zero missing member warnings, ensuring comprehensive API reference documentation.
 
-## [0.1.0] - 2025-7-24
+## [0.1.0] - 2025-07-24
 
 ### Core Library
 

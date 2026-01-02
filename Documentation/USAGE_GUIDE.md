@@ -878,7 +878,7 @@ This section describes how to migrate from regex-based parsing to native structu
 
 ### Prerequisites
 
-1. **llama.cpp version**: Ensure your llama.cpp server supports `json_schema` parameter (v0.3.0+)
+1. **llama.cpp version**: Ensure your llama.cpp server supports the `json_schema` parameter. This feature was added in commit [`5b7b0ac8df`](https://github.com/ggerganov/llama.cpp/commit/5b7b0ac8df) (March 22, 2024). Verify your llama.cpp build includes this commit or later. See the [llama.cpp repository](https://github.com/ggerganov/llama.cpp) for the latest implementation.
 2. **API compatibility**: The `IApiClient.SendStructuredPromptAsync` method must be available
 
 ### Migration Steps

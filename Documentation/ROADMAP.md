@@ -2354,7 +2354,7 @@ Implement a sidecar host architecture that runs LlamaBrain as a separate process
 - [ ] Support hybrid deployment (embedded for development, sidecar for production)
 - [ ] Add configuration toggles for deployment mode
 
-#### 20.6 Testing
+#### 21.6 Testing
 - [ ] Unit tests for sidecar host process
 - [ ] Unit tests for llama.cpp process management (spawn, monitor, restart, shutdown)
 - [ ] Unit tests for JSON communication protocol
@@ -2470,7 +2470,7 @@ Create Unreal Engine integration for LlamaBrain, enabling AI-powered NPCs and di
 
 ### Definition of Done
 
-#### 21.1 Unreal Plugin Structure
+#### 22.1 Unreal Plugin Structure
 - [ ] Create Unreal Engine plugin structure (`LlamaBrainRuntime` plugin)
 - [ ] Set up module definitions (.Build.cs files)
 - [ ] Configure plugin dependencies (Core, Engine modules)
@@ -2529,7 +2529,7 @@ Create Unreal Engine integration for LlamaBrain, enabling AI-powered NPCs and di
   - [ ] `LlamaBrain_GetCanonicalFacts` - Get canonical facts
 - [ ] Support memory visualization in editor (optional)
 
-#### 21.7 RedRoom Integration (Optional)
+#### 22.7 RedRoom Integration (Optional)
 - [ ] Port RedRoom testing suite to Unreal (if applicable)
 - [ ] Create Unreal-specific RedRoom UI components
 - [ ] Support Unreal's widget system for RedRoom overlays
@@ -2543,7 +2543,7 @@ Create Unreal Engine integration for LlamaBrain, enabling AI-powered NPCs and di
 - [ ] Performance tests: Ensure acceptable overhead
 - [ ] All tests in `LlamaBrainRuntime/Tests/` passing
 
-#### 21.9 Documentation
+#### 22.9 Documentation
 - [ ] Create Unreal-specific README and setup guide
 - [ ] Document Blueprint usage and examples
 - [ ] Create tutorial: "Creating Your First AI NPC in Unreal"
