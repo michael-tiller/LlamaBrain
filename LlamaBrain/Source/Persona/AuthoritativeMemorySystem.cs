@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using LlamaBrain.Persona.MemoryTypes;
 
 namespace LlamaBrain.Persona
@@ -15,6 +16,9 @@ namespace LlamaBrain.Persona
     private readonly Dictionary<string, WorldStateEntry> _worldState = new Dictionary<string, WorldStateEntry>();
     private readonly List<EpisodicMemoryEntry> _episodicMemories = new List<EpisodicMemoryEntry>();
     private readonly Dictionary<string, BeliefMemoryEntry> _beliefs = new Dictionary<string, BeliefMemoryEntry>();
+
+    private readonly IClock _clock;
+    private readonly IIdGenerator _idGenerator;
 
     /// <summary>
     /// Monotonic counter for assigning deterministic SequenceNumbers to memory entries.
@@ -47,6 +51,26 @@ namespace LlamaBrain.Persona
     /// </summary>
     public Action<string>? OnLog { get; set; }
 
+    /// <summary>
+    /// Creates a new authoritative memory system with default providers (system clock and GUID generator).
+    /// </summary>
+    public AuthoritativeMemorySystem()
+      : this(new SystemClock(), new GuidIdGenerator())
+    {
+    }
+
+    /// <summary>
+    /// Creates a new authoritative memory system with custom providers.
+    /// Use this constructor to inject deterministic providers for testing.
+    /// </summary>
+    /// <param name="clock">Clock provider for deterministic time generation</param>
+    /// <param name="idGenerator">ID generator for deterministic ID generation</param>
+    public AuthoritativeMemorySystem(IClock clock, IIdGenerator idGenerator)
+    {
+      _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+      _idGenerator = idGenerator ?? throw new ArgumentNullException(nameof(idGenerator));
+    }
+
     #region Canonical Facts (Immutable)
 
     /// <summary>
@@ -65,8 +89,15 @@ namespace LlamaBrain.Persona
       }
 
       var entry = CanonicalFact.Create(id, fact, domain);
+      
+      // Set deterministic timestamp using injected clock
+      entry.CreatedAtTicks = _clock.UtcNowTicks;
+      
+      // Assign monotonic sequence number for deterministic ordering
+      entry.SequenceNumber = _nextSequenceNumber++;
+      
       _canonicalFacts[id] = entry;
-      OnLog?.Invoke($"[Memory] Added canonical fact: {id} = '{fact}'");
+      OnLog?.Invoke($"[Memory] Added canonical fact: {id} = '{fact}' (seq={entry.SequenceNumber})");
 
       return MutationResult.Succeeded(entry);
     }
@@ -189,8 +220,24 @@ namespace LlamaBrain.Persona
       }
 
       var entry = new WorldStateEntry(key, value) { Source = source };
+      
+      // Set deterministic ID and timestamp using injected providers
+      entry.Id = _idGenerator.GenerateId();
+      entry.CreatedAtTicks = _clock.UtcNowTicks;
+      
+      // Assign monotonic sequence number for deterministic ordering
+      entry.SequenceNumber = _nextSequenceNumber++;
+      
+      // Set ModifiedAt using reflection (private setter)
+      var modifiedAtProperty = typeof(WorldStateEntry).GetProperty("ModifiedAt", BindingFlags.Public | BindingFlags.Instance);
+      var setMethod = modifiedAtProperty?.GetSetMethod(nonPublic: true);
+      if (setMethod != null)
+      {
+        setMethod.Invoke(entry, new object[] { new DateTime(_clock.UtcNowTicks, DateTimeKind.Utc) });
+      }
+      
       _worldState[key] = entry;
-      OnLog?.Invoke($"[Memory] Added world state: {key} = '{value}'");
+      OnLog?.Invoke($"[Memory] Added world state: {key} = '{value}' (seq={entry.SequenceNumber})");
 
       return MutationResult.Succeeded(entry);
     }
@@ -237,6 +284,19 @@ namespace LlamaBrain.Persona
       }
 
       entry.Source = source;
+      
+      // Set deterministic ID and timestamp using injected providers
+      // Always use injected ID generator for determinism, unless ID was explicitly set to a non-GUID value
+      // (Default property initializer creates a GUID, which we replace for determinism)
+      if (string.IsNullOrEmpty(entry.Id) || IsDefaultGuid(entry.Id))
+      {
+        entry.Id = _idGenerator.GenerateId();
+      }
+      // Always use injected clock for determinism
+      // (Default property initializer uses system clock which is non-deterministic)
+      // Tests that need specific timestamps should use a fixed clock or set timestamps after creation
+      entry.CreatedAtTicks = _clock.UtcNowTicks;
+      
       // Assign monotonic sequence number for deterministic ordering
       entry.SequenceNumber = _nextSequenceNumber++;
       _episodicMemories.Add(entry);
@@ -348,6 +408,18 @@ namespace LlamaBrain.Persona
       }
 
       entry.Source = source;
+      
+      // Set deterministic ID and timestamp using injected providers
+      // Only override if ID looks auto-generated (8 hex chars) or is empty
+      // This allows explicit IDs to be preserved (e.g., when belief ID matches the key)
+      if (string.IsNullOrEmpty(entry.Id) || (entry.Id.Length == 8 && entry.Id.All(c => (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))))
+      {
+        // Looks like auto-generated GUID - replace with deterministic ID
+        entry.Id = _idGenerator.GenerateId();
+      }
+      // Always set timestamp from clock for determinism (even if entry had a timestamp)
+      entry.CreatedAtTicks = _clock.UtcNowTicks;
+      
       // Assign monotonic sequence number for deterministic ordering (only if new entry)
       if (entry.SequenceNumber == 0)
       {
@@ -514,6 +586,96 @@ namespace LlamaBrain.Persona
         BeliefCount = _beliefs.Count,
         ActiveBeliefCount = _beliefs.Values.Count(b => !b.IsContradicted)
       };
+    }
+
+    #endregion
+
+    #region Raw Insertion APIs (Test-Only, for Deterministic Reconstruction)
+
+    /// <summary>
+    /// Raw insertion of canonical fact without generating metadata.
+    /// Test-only API for deterministic reconstruction from serialized state.
+    /// The entry must have all fields (Id, CreatedAtTicks, SequenceNumber) already set.
+    /// </summary>
+    internal void InsertCanonicalFactRaw(CanonicalFact entry)
+    {
+      if (entry == null) throw new ArgumentNullException(nameof(entry));
+      if (string.IsNullOrEmpty(entry.Id)) throw new ArgumentException("Entry must have Id set", nameof(entry));
+      
+      if (_canonicalFacts.ContainsKey(entry.Id))
+      {
+        throw new InvalidOperationException($"Canonical fact '{entry.Id}' already exists");
+      }
+      
+      _canonicalFacts[entry.Id] = entry;
+    }
+
+    /// <summary>
+    /// Raw insertion of world state without generating metadata.
+    /// Test-only API for deterministic reconstruction from serialized state.
+    /// The entry must have all fields (Id, CreatedAtTicks, SequenceNumber, ModifiedAt) already set.
+    /// </summary>
+    internal void InsertWorldStateRaw(string key, WorldStateEntry entry)
+    {
+      if (string.IsNullOrEmpty(key)) throw new ArgumentException("Key cannot be null or empty", nameof(key));
+      if (entry == null) throw new ArgumentNullException(nameof(entry));
+      if (string.IsNullOrEmpty(entry.Id)) throw new ArgumentException("Entry must have Id set", nameof(entry));
+      
+      _worldState[key] = entry;
+    }
+
+    /// <summary>
+    /// Raw insertion of episodic memory without generating metadata.
+    /// Test-only API for deterministic reconstruction from serialized state.
+    /// The entry must have all fields (Id, CreatedAtTicks, SequenceNumber) already set.
+    /// </summary>
+    internal void InsertEpisodicRaw(EpisodicMemoryEntry entry)
+    {
+      if (entry == null) throw new ArgumentNullException(nameof(entry));
+      if (string.IsNullOrEmpty(entry.Id)) throw new ArgumentException("Entry must have Id set", nameof(entry));
+      
+      _episodicMemories.Add(entry);
+    }
+
+    /// <summary>
+    /// Raw insertion of belief without generating metadata.
+    /// Test-only API for deterministic reconstruction from serialized state.
+    /// The entry must have all fields (Id, CreatedAtTicks, SequenceNumber) already set.
+    /// </summary>
+    internal void InsertBeliefRaw(string key, BeliefMemoryEntry entry)
+    {
+      if (string.IsNullOrEmpty(key)) throw new ArgumentException("Key cannot be null or empty", nameof(key));
+      if (entry == null) throw new ArgumentNullException(nameof(entry));
+      if (string.IsNullOrEmpty(entry.Id)) throw new ArgumentException("Entry must have Id set", nameof(entry));
+      
+      _beliefs[key] = entry;
+    }
+
+    /// <summary>
+    /// Sets the next sequence number directly without validation.
+    /// Test-only API for deterministic reconstruction from serialized state.
+    /// </summary>
+    internal void SetNextSequenceNumberRaw(long nextSeq)
+    {
+      _nextSequenceNumber = nextSeq;
+    }
+
+    /// <summary>
+    /// Checks if an ID looks like a default GUID (8 hex characters).
+    /// Used to determine if we should replace it with a deterministic ID.
+    /// </summary>
+    private static bool IsDefaultGuid(string id)
+    {
+      if (string.IsNullOrEmpty(id) || id.Length != 8)
+        return false;
+      
+      // Check if all characters are hex digits (default GUID pattern)
+      foreach (char c in id)
+      {
+        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')))
+          return false;
+      }
+      return true;
     }
 
     #endregion
