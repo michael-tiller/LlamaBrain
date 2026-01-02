@@ -12,17 +12,26 @@ The validation gating system is **Component 7** of the LlamaBrain architecture. 
 
 ## Validation Pipeline
 
-The validation system consists of **five sequential gates** that must all pass for an output to be approved:
+The validation system consists of **two main stages**:
 
-1. **Output Parsing** - Extract and clean dialogue text
-2. **Constraint Validation** - Check against expectancy engine constraints
-3. **Canonical Fact Validation** - Ensure no contradictions with immutable facts
-4. **Knowledge Boundary Validation** - Prevent revealing forbidden knowledge
-5. **Mutation Validation** - Validate proposed memory changes
+1. **Output Parsing** (performed by `OutputParser`) - Extract and clean dialogue text from raw LLM output
+2. **Validation Gating** (performed by `ValidationGate`) - Five sequential gates that must all pass
+
+### Validation Gates
+
+The `ValidationGate` component performs **five sequential gates** that must all pass for an output to be approved:
+
+1. **Constraint Validation** - Check against expectancy engine constraints
+2. **Canonical Fact Validation** - Ensure no contradictions with immutable facts
+3. **Knowledge Boundary Validation** - Prevent revealing forbidden knowledge
+4. **Mutation Validation** - Validate proposed memory changes
+5. **Custom Rules** - Execute user-defined validation rules
 
 If any gate fails, the output is rejected and retry logic is triggered (unless it's a critical failure).
 
-## Gate 1: Output Parsing
+## Stage 1: Output Parsing
+
+**Note**: Output parsing is performed by `OutputParser` (a separate component) before validation gating. This section documents the parsing rules for completeness.
 
 **Purpose**: Parse raw LLM output into structured format and validate basic format requirements.
 
@@ -108,7 +117,9 @@ The `NormalizeWhitespace()` function applies deterministic normalization:
 
 **Deterministic Guarantee**: Same input always produces same normalized output (critical for determinism).
 
-## Gate 2: Constraint Validation
+## Stage 2: Validation Gates
+
+### Gate 1: Constraint Validation
 
 **Purpose**: Validate output against expectancy engine constraints (prohibitions and requirements).
 
@@ -175,7 +186,7 @@ The `NormalizeWhitespace()` function applies deterministic normalization:
 
 **Precedence**: Prohibition violations take precedence over requirement failures.
 
-## Gate 3: Canonical Fact Validation
+### Gate 2: Canonical Fact Validation
 
 **Purpose**: Ensure output does not contradict immutable canonical facts.
 
@@ -236,7 +247,7 @@ ViolatingText: "is not named Arthur"
 Severity: Critical
 ```
 
-## Gate 4: Knowledge Boundary Validation
+### Gate 3: Knowledge Boundary Validation
 
 **Purpose**: Prevent NPCs from revealing knowledge they shouldn't have.
 
@@ -267,7 +278,7 @@ Description: "NPC revealed forbidden knowledge: 'assassination'"
 ViolatingText: "assassination"
 ```
 
-## Gate 5: Mutation Validation
+### Gate 4: Mutation Validation
 
 **Purpose**: Validate proposed memory mutations before execution.
 
@@ -313,7 +324,7 @@ The system supports four mutation types (from `MutationType` enum):
 // Result: Passed = false, ApprovedMutations = [1], RejectedMutations = [2]
 ```
 
-## Gate 6: Custom Validation Rules
+### Gate 5: Custom Validation Rules
 
 **Purpose**: Allow extensible validation through custom rules.
 

@@ -1210,11 +1210,12 @@ namespace LlamaBrain.Tests.Inference
     public void SequenceNumberTieBreaker_IdenticalScoresAndTimestamps_UsesSequenceNumber()
     {
       // Phase 10.7 - Verifies SequenceNumber is the final deterministic tie-breaker
-      var memorySystem = new AuthoritativeMemorySystem();
+      // Use fixed clock to ensure all memories get the same timestamp
+      var baseTicks = DateTimeOffset.UtcNow.UtcTicks;
+      var fixedClock = new FixedClock(baseTicks);
+      var memorySystem = new AuthoritativeMemorySystem(fixedClock, new GuidIdGenerator());
 
       // Create memories with identical everything except sequence number
-      var baseTicks = DateTimeOffset.UtcNow.UtcTicks;
-
       var memories = new List<EpisodicMemoryEntry>();
       for (int i = 0; i < 5; i++)
       {
@@ -1222,7 +1223,7 @@ namespace LlamaBrain.Tests.Inference
         mem.Id = "same_id"; // All same ID to force SequenceNumber tie-breaker
         mem.Significance = 0.5f;
         mem.Strength = 1.0f;
-        mem.CreatedAtTicks = baseTicks; // All same timestamp
+        // Timestamp will be set by AddEpisodicMemory using the fixed clock (baseTicks)
         memories.Add(mem);
       }
 
