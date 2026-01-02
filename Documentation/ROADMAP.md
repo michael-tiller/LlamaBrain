@@ -27,7 +27,7 @@
 | Feature 7: Enhanced Fallback System | ✅ Complete | MEDIUM |
 | Feature 8: RedRoom Integration | 🚧 In Progress (99%) | MEDIUM |
 | Feature 9: Documentation | ✅ Complete | MEDIUM |
-| Feature 10: Deterministic Proof Gap Testing | ✅ Phase 10.7 Complete | HIGH |
+| Feature 10: Deterministic Proof Gap Testing | ✅ Complete | HIGH |
 | Feature 11: RAG-Based Memory Retrieval | 📋 Planned | MEDIUM |
 | Feature 12: Dedicated Structured Output | ✅ Complete | HIGH |
 | Feature 13: Structured Output Integration | 📋 Planned | HIGH |
@@ -66,11 +66,9 @@ The following execution order is **strongly recommended** for v0.3.0 to avoid re
    - **Rationale**: This is the "Holy Grail" of AI consistency, but requires persistence to work
 
 ### Phase 4: Proof & Validation
-4. **Feature 10 (Deterministic Proof Gap Testing)** - **Must be completed for Milestone 5**
-   - Should be ongoing throughout all phases
-   - Critical tests can be written as features are implemented
-   - **Must be finished** before Milestone 5 is considered complete
-   - **Rationale**: Proves determinism claims, required for v0.2.0. Cannot claim "deterministically proven" architecture without this.
+4. **Feature 10 (Deterministic Proof Gap Testing)** - ✅ **COMPLETE**
+   - All features, requirements, and tests implemented (351 tests total)
+   - **Rationale**: Architecture can now claim "deterministically proven" at byte level. Required for v0.2.0.
 
 ### Post-Milestone 5: Enhanced Features
 5. **Milestone 6 Features (11, 15, 17, 18, 19, 20)** - **Only after Milestone 5 complete**
@@ -619,12 +617,12 @@ The following execution order is **strongly recommended** for v0.3.0 to avoid re
 
 ---
 
-## ✅ Feature 10: Deterministic Proof Gap Testing (Phase 10.7 Complete)
+## ✅ Feature 10: Deterministic Proof Gap Testing ✅ **COMPLETE**
 
 **Priority**: HIGH - Required for v0.2.0 release  
-**Status**: ✅ Phase 10.7 Complete - All minimal proof suite tests done  
+**Status**: ✅ **Complete** - All features, requirements, and tests implemented  
 **Dependencies**: Features 1-7 (All core components must be implemented)  
-**Execution Order**: **Phase 10.7 COMPLETED** for Milestone 4. Architecture can now claim "deterministically proven" at byte level.
+**Execution Order**: ✅ **COMPLETED** for Milestone 4. Architecture can now claim "deterministically proven" at byte level.
 
 **Note**: See `VERIFICATION_REPORT.md` for Phase 10.7 completion status and `PHASE10_PROOF_GAPS.md` for remaining test backlog.
 
@@ -654,12 +652,12 @@ The following execution order is **strongly recommended** for v0.3.0 to avoid re
 
 ### Progress Summary
 
-#### Critical Requirements Implemented (4/5)
+#### Critical Requirements Implemented (5/5) ✅
 - [x] **Requirement #1**: Strict Total Order Sort Algorithm - Updated ContextRetrievalLayer with LINQ OrderBy/ThenBy chains
 - [x] **Requirement #2**: SequenceNumber Field - Added to MemoryEntry base class, monotonic counter in AuthoritativeMemorySystem
 - [x] **Requirement #3**: Score vs Tie-Breaker Logic - Implemented with ordinal Id comparison and SequenceNumber tie-breaker
 - [x] **Requirement #4**: OutputParser Normalization Contract - Added `NormalizeWhitespace()` static method with 21 tests
-- [ ] **Requirement #5**: WorldIntentDispatcher Singleton Lifecycle - Pending (not blocking Phase 10.7)
+- [x] **Requirement #5**: WorldIntentDispatcher Singleton Lifecycle - Implemented with scene-local model, 28 tests complete
 
 #### High-Leverage Determinism Tests Added (7+ tests)
 - [x] Dictionary order tripwire test
@@ -675,16 +673,16 @@ The following execution order is **strongly recommended** for v0.3.0 to avoid re
 - [x] ContextRetrievalLayer selection behavior tests (55 tests - exceeds estimate)
 - [x] PromptAssembler hard bounds & truncation priority tests (80 tests - exceeds estimate)
 - [x] OutputParser mutation extraction & malformed handling tests (86 tests - exceeds estimate)
-- [ ] ValidationGate ordering & gate execution tests (17 tests - Phase 10.4 detailed tests pending)
+- [x] ValidationGate ordering & gate execution tests (44 tests - complete)
 - [x] MemoryMutationController authority enforcement tests (41 tests - exceeds estimate)
-- [ ] WorldIntentDispatcher pure dispatcher behavior tests (0 tests - not started)
-- [x] Full pipeline determinism & policy integration tests (50+ tests - Phase 10.7 complete)
+- [x] WorldIntentDispatcher pure dispatcher behavior tests (28 tests - complete)
+- [x] Full pipeline determinism & policy integration tests (25 tests - complete)
 
 **Determinism Proof Status**: Now defensible at byte level for:
 - Serialized memory state (all types with full fidelity including belief-key dimension, float hex patterns)
 - Prompt text assembly (byte-level verification with 6 comprehensive tests)
 
-**Versioning Strategy**: Phase 10.7 complete. Architecture can now claim "deterministically proven" at byte level. Remaining work (10.4, 10.5) is for enhanced coverage but not blocking v0.2.0 release.
+**Versioning Strategy**: ✅ **Feature 10 COMPLETE**. Architecture can now claim "deterministically proven" at byte level. All critical requirements and minimal proof suite tests implemented (351 tests total).
 
 ---
 
@@ -692,11 +690,11 @@ The following execution order is **strongly recommended** for v0.3.0 to avoid re
 
 **Priority**: MEDIUM - Enhancement to existing retrieval system  
 **Status**: 📋 Planned (0% Complete)  
-**Dependencies**: Feature 3 (Context Retrieval Layer), Phase 10 (Deterministic Proof Gap Testing)
+**Dependencies**: Feature 3 (Context Retrieval Layer), Feature 10 (Deterministic Proof Gap Testing)
 
 ### Overview
 
-Enhance the `ContextRetrievalLayer` to use Retrieval-Augmented Generation (RAG) techniques instead of simple keyword matching. This will improve semantic relevance of retrieved memories by using embeddings and vector similarity search. Additionally, implement the repetition recognition feature to prove that retrieval influences generation through deterministic recognition of repeated locations, topics, and conversations.
+Enhance the `ContextRetrievalLayer` to use a **hybrid approach** combining Retrieval-Augmented Generation (RAG) techniques with existing keyword matching. This hybrid system will use both noun-based keyword matching (for safe, deterministic checks) and semantic inference via embeddings and vector similarity search (for improved relevance). Additionally, implement the repetition recognition feature to prove that retrieval influences generation through deterministic recognition of repeated locations, topics, and conversations.
 
 **Current State**: The `ContextRetrievalLayer` uses keyword overlap matching (see `CalculateRelevance()` method). A comment notes: "Simple keyword matching - could be enhanced with embeddings."
 
@@ -721,13 +719,14 @@ Enhance the `ContextRetrievalLayer` to use Retrieval-Augmented Generation (RAG) 
 - [ ] Index canonical facts with embeddings (optional, for semantic search)
 - [ ] Support incremental updates (add/remove/update vectors)
 
-#### 11.3 Semantic Retrieval
-- [ ] Replace keyword-based `CalculateRelevance()` with vector similarity search
-- [ ] Implement cosine similarity for relevance scoring
-- [ ] Support hybrid retrieval (combine vector similarity with recency/significance weights)
-- [ ] Add configurable similarity threshold
-- [ ] Maintain backward compatibility with keyword fallback option
-- [ ] Update `ContextRetrievalConfig` with embedding-related settings
+#### 11.3 Hybrid Semantic Retrieval
+- [ ] Implement hybrid retrieval system combining noun-based keyword matching with semantic vector similarity
+- [ ] Keep existing keyword-based `CalculateRelevance()` for deterministic noun-based checks
+- [ ] Add vector similarity search using cosine similarity for semantic inference
+- [ ] Combine both approaches: noun-based matching (safe, deterministic) + vector similarity (semantic relevance)
+- [ ] Support configurable weights for hybrid scoring (keyword vs semantic)
+- [ ] Add configurable similarity threshold for semantic matching
+- [ ] Update `ContextRetrievalConfig` with hybrid retrieval settings (keyword weights, semantic weights, thresholds)
 
 #### 11.4 Integration
 - [ ] Modify `ContextRetrievalLayer` to use embedding-based retrieval
@@ -799,10 +798,12 @@ Enhance the `ContextRetrievalLayer` to use Retrieval-Augmented Generation (RAG) 
 - **Persistent**: Consider lightweight vector DB (e.g., FAISS, Qdrant) for large sets
 - **Hybrid**: Start with in-memory, add persistent option later
 
-**Backward Compatibility**:
-- Maintain keyword-based retrieval as fallback option
-- Allow configuration to switch between RAG and keyword modes
-- Graceful degradation if embedding generation fails
+**Hybrid Approach**:
+- **Noun-based keyword matching**: Maintained for safe, deterministic checks (existing functionality preserved)
+- **Semantic inference**: Added via embeddings and vector similarity for improved relevance
+- **Combined scoring**: Both approaches work together, with configurable weights
+- **Graceful degradation**: If embedding generation fails, system falls back to keyword-only mode
+- **Configuration**: Allow tuning of hybrid weights (e.g., 70% semantic, 30% keyword) or keyword-only mode
 
 **Performance Targets**:
 - Embedding generation: <100ms per memory (async)
@@ -820,7 +821,7 @@ Enhance the `ContextRetrievalLayer` to use Retrieval-Augmented Generation (RAG) 
 
 ### Success Criteria
 
-- [ ] RAG retrieval retrieves semantically relevant memories that keyword matching misses
+- [ ] Hybrid retrieval (noun-based + semantic) retrieves semantically relevant memories that keyword-only matching misses, while maintaining deterministic noun-based checks
 - [ ] Performance impact is acceptable (<200ms additional latency)
 - [ ] Backward compatibility maintained (keyword mode still available)
 - [ ] All existing tests pass with RAG enabled
@@ -2014,6 +2015,427 @@ Add memory change history visualization to the RedRoom Memory Mutation Overlay. 
 
 ---
 
+## 📋 Feature 21: Sidecar Host
+
+**Priority**: MEDIUM - Enables engine-agnostic deployment  
+**Status**: 📋 Planned (0% Complete)  
+**Dependencies**: Feature 1 (Determinism Layer), Feature 2 (Structured Memory System), Feature 3 (Context Retrieval)  
+**Execution Order**: **Post-Milestone 5** - Enables deployment flexibility for any game engine
+
+### Overview
+
+Implement a sidecar host architecture that runs LlamaBrain as a separate process/service alongside the game engine. The sidecar manages both the LlamaBrain API and the underlying llama.cpp server process, providing a unified service for AI operations. This enables engine-agnostic deployment where the game engine communicates with LlamaBrain via IPC (Inter-Process Communication) or network protocols, rather than embedding the library directly in the engine process.
+
+**Current State**: LlamaBrain is embedded directly in Unity via the LlamaBrainRuntime package, and llama.cpp server management is handled by Unity components. This requires Unity-specific integration and limits deployment flexibility.
+
+**Use Cases**:
+- Deploy LlamaBrain as a separate service for any game engine (Unity, Unreal, Godot, custom engines)
+- Isolate AI processing from game engine process (improved stability, resource management)
+- Enable shared LlamaBrain instance across multiple game instances
+- Support cloud/remote deployment of LlamaBrain service
+- Enable hot-reloading of LlamaBrain without restarting game engine
+
+### Definition of Done
+
+#### 21.1 Sidecar Host Process
+- [ ] Create `SidecarHost` executable/service application
+- [ ] Implement process lifecycle management (start, stop, restart)
+- [ ] Support configuration via JSON config file (`appsettings.json` format) or command-line arguments
+- [ ] Implement graceful shutdown handling (wait for in-flight requests, cleanup resources)
+- [ ] Support Windows, Linux, and macOS platforms
+- [ ] Add logging and diagnostics infrastructure (structured logging with configurable levels)
+- [ ] Default HTTP port: 8080 (configurable)
+- [ ] Default WebSocket port: 8081 (configurable, or same as HTTP with upgrade)
+- [ ] Use ASP.NET Core/Kestrel as HTTP server framework
+
+#### 21.1.1 Llama.cpp Server Management
+- [ ] Manage llama.cpp executable lifecycle (start, stop, restart, monitor)
+- [ ] Wrap llama.cpp server process as managed subprocess
+- [ ] Support configuration for llama.cpp:
+  - [ ] Executable path (llama-server binary location)
+  - [ ] Model path(s) and model selection
+  - [ ] Server host/port (default: localhost:8080, configurable)
+  - [ ] Context window, max tokens, sampling parameters
+  - [ ] GPU/CPU configuration
+- [ ] Implement llama.cpp process monitoring:
+  - [ ] Health checks (ping llama.cpp health endpoint)
+  - [ ] Automatic restart on crash or timeout
+  - [ ] Resource monitoring (CPU, memory usage)
+  - [ ] Log aggregation from llama.cpp process
+- [ ] Support startup modes:
+  - [ ] **Managed mode**: Sidecar spawns and manages llama.cpp process (default)
+  - [ ] **External mode**: Sidecar connects to existing llama.cpp instance
+- [ ] Handle llama.cpp process lifecycle:
+  - [ ] Start llama.cpp on sidecar startup (if managed mode)
+  - [ ] Wait for llama.cpp readiness before accepting requests
+  - [ ] Graceful shutdown: Stop llama.cpp on sidecar shutdown
+  - [ ] Emergency shutdown: Kill llama.cpp if unresponsive
+- [ ] Proxy/forward requests to llama.cpp:
+  - [ ] Wrap llama.cpp HTTP API calls
+  - [ ] Maintain compatibility with llama.cpp API endpoints
+  - [ ] Add request/response transformation if needed
+  - [ ] Handle llama.cpp errors and timeouts
+- [ ] Configuration integration:
+  - [ ] Read llama.cpp settings from sidecar config file
+  - [ ] Support environment variables for llama.cpp configuration
+  - [ ] Validate llama.cpp executable and model files exist
+
+#### 21.2 Communication Protocol (JSON)
+- [ ] Design JSON-based protocol for game engine ↔ sidecar communication
+- [ ] Implement JSON-RPC 2.0 over HTTP/WebSocket for request/response operations
+- [ ] Define JSON schema for all request and response messages
+- [ ] Support request/response pattern for synchronous operations
+- [ ] Support event streaming for asynchronous notifications (WebSocket)
+- [ ] Implement connection management and reconnection logic
+- [ ] Add protocol versioning for backward compatibility
+- [ ] Ensure JSON serialization/deserialization compatibility across platforms
+
+#### 21.2.1 Input/Output DTOs
+- [ ] Define input DTOs (Data Transfer Objects) for all API operations:
+  - [ ] `SendPlayerInputRequest` - Player dialogue input with context
+  - [ ] `SendWithSnapshotRequest` - Context-aware interaction with state snapshot
+  - [ ] `GetMemoryStateRequest` - Memory query parameters
+  - [ ] `UpdateMemoryRequest` - Memory mutation operations
+  - [ ] `HealthCheckRequest` - Service health check
+  - [ ] `BatchRequest` - Multiple operations in single request
+  - [ ] `GetLlamaServerStatusRequest` - Get llama.cpp server status
+  - [ ] `RestartLlamaServerRequest` - Restart llama.cpp server
+  - [ ] `GetLlamaServerConfigRequest` - Get llama.cpp configuration
+  - [ ] `UpdateLlamaServerConfigRequest` - Update llama.cpp configuration
+- [ ] Define output DTOs (Data Transfer Objects) for all API responses:
+  - [ ] `SendPlayerInputResponse` - NPC dialogue response with metadata
+  - [ ] `SendWithSnapshotResponse` - Context-aware response with state changes
+  - [ ] `GetMemoryStateResponse` - Memory state data
+  - [ ] `UpdateMemoryResponse` - Memory mutation results
+  - [ ] `HealthCheckResponse` - Service health status
+  - [ ] `BatchResponse` - Results for batch operations
+  - [ ] `ErrorResponse` - Standardized error format
+  - [ ] `GetLlamaServerStatusResponse` - Llama.cpp server status (running, stopped, error)
+  - [ ] `RestartLlamaServerResponse` - Restart operation result
+  - [ ] `GetLlamaServerConfigResponse` - Current llama.cpp configuration
+  - [ ] `UpdateLlamaServerConfigResponse` - Configuration update result
+- [ ] Implement JSON serialization for all DTOs using `System.Text.Json` (default .NET JSON library)
+- [ ] Add validation for DTO structure and required fields (use `System.ComponentModel.DataAnnotations` or FluentValidation)
+- [ ] Support DTO versioning for schema evolution (include `Version` field in request/response headers or DTOs)
+- [ ] Document DTO schemas with JSON Schema definitions (generate from C# types)
+- [ ] Define error response structure: `ErrorResponse` with `Code`, `Message`, `Details`, `RequestId` fields
+
+#### 21.3 API Surface
+- [ ] Expose all core LlamaBrain operations via sidecar API using JSON DTOs:
+  - [ ] `SendPlayerInput()` - Accepts `SendPlayerInputRequest`, returns `SendPlayerInputResponse`
+  - [ ] `SendWithSnapshot()` - Accepts `SendWithSnapshotRequest`, returns `SendWithSnapshotResponse`
+  - [ ] `GetMemoryState()` - Accepts `GetMemoryStateRequest`, returns `GetMemoryStateResponse`
+  - [ ] `UpdateMemory()` - Accepts `UpdateMemoryRequest`, returns `UpdateMemoryResponse`
+  - [ ] `HealthCheck()` - Accepts `HealthCheckRequest`, returns `HealthCheckResponse`
+  - [ ] `Batch()` - Accepts `BatchRequest`, returns `BatchResponse`
+- [ ] Expose llama.cpp management operations (optional, for administration):
+  - [ ] `GetLlamaServerStatus()` - Get llama.cpp server status and health
+  - [ ] `RestartLlamaServer()` - Restart llama.cpp server process
+  - [ ] `GetLlamaServerConfig()` - Get current llama.cpp configuration
+  - [ ] `UpdateLlamaServerConfig()` - Update llama.cpp configuration (requires restart)
+- [ ] Implement request queuing and rate limiting:
+  - [ ] Configurable rate limits (default: 100 requests/second per client)
+  - [ ] Request queue with configurable max queue size (default: 1000)
+  - [ ] Per-client rate limiting (track by client ID or IP)
+- [ ] Support batch operations for efficiency:
+  - [ ] Max batch size: 50 operations per `BatchRequest`
+  - [ ] Batch operations execute in parallel where possible
+- [ ] Add authentication/authorization (optional, for remote deployment):
+  - [ ] API key authentication (simple header-based: `X-API-Key`)
+  - [ ] Optional JWT token support for advanced scenarios
+- [ ] Ensure all API methods use JSON DTOs for input/output
+- [ ] Connection timeout: 30 seconds (configurable)
+- [ ] Request timeout: 60 seconds (configurable, per operation)
+
+#### 21.4 Client SDK
+- [ ] Create client SDK library for game engines to communicate with sidecar
+- [ ] Implement connection management (connect, disconnect, reconnect)
+- [ ] Support async/await patterns matching core library API
+- [ ] Provide Unity-compatible client (if needed)
+- [ ] Provide Unreal-compatible client (C++ or Blueprint)
+- [ ] Add error handling and retry logic:
+  - [ ] Max retries: 3 (configurable)
+  - [ ] Exponential backoff: 100ms, 200ms, 400ms
+  - [ ] Retry on network errors, timeouts, 5xx server errors
+  - [ ] Do not retry on 4xx client errors
+- [ ] Support local and remote sidecar connections:
+  - [ ] Local: `http://localhost:8080` (default)
+  - [ ] Remote: Configurable endpoint URL
+  - [ ] Connection string format: `http://hostname:port` or `ws://hostname:port`
+
+#### 21.5 Integration & Migration
+- [ ] Create migration guide from embedded to sidecar deployment
+- [ ] Maintain backward compatibility with embedded Unity integration
+- [ ] Provide example implementations for different engines
+- [ ] Support hybrid deployment (embedded for development, sidecar for production)
+- [ ] Add configuration toggles for deployment mode
+
+#### 20.6 Testing
+- [ ] Unit tests for sidecar host process
+- [ ] Unit tests for llama.cpp process management (spawn, monitor, restart, shutdown)
+- [ ] Unit tests for JSON communication protocol
+- [ ] Unit tests for input/output DTOs (serialization, deserialization, validation)
+- [ ] Unit tests for client SDK
+- [ ] Integration tests: Game engine ↔ sidecar communication via JSON
+- [ ] Integration tests: Sidecar ↔ llama.cpp communication and proxying
+- [ ] Integration tests: Llama.cpp process lifecycle (start, health check, restart, stop)
+- [ ] JSON schema validation tests for all DTOs
+- [ ] Performance tests: Latency and throughput benchmarks
+- [ ] Stress tests: Concurrent requests, connection failures, llama.cpp crashes
+- [ ] All tests in `LlamaBrain.Tests/Sidecar/` passing
+
+#### 21.7 Documentation
+- [ ] Document sidecar architecture and deployment patterns
+- [ ] Create setup guide for sidecar host installation
+- [ ] Document llama.cpp integration and management:
+  - [ ] Configuration options for llama.cpp
+  - [ ] Managed vs external mode setup
+  - [ ] Troubleshooting llama.cpp startup issues
+  - [ ] Resource requirements and recommendations
+- [ ] Document JSON communication protocol specification
+- [ ] Document all input/output DTO schemas with JSON Schema definitions
+- [ ] Provide DTO usage examples and validation rules
+- [ ] Provide client SDK usage examples
+- [ ] Add troubleshooting guide for common issues (sidecar and llama.cpp)
+- [ ] Document performance considerations and optimization
+
+### Technical Considerations
+
+**Communication Protocol**:
+- **JSON-RPC 2.0 over HTTP/WebSocket**: Primary protocol for all communication
+  - JSON format for all messages (human-readable, easy to debug)
+  - HTTP for synchronous request/response operations (default port: 8080)
+  - WebSocket for event streaming and asynchronous notifications (default port: 8081, or HTTP upgrade)
+  - JSON Schema definitions for all input/output DTOs
+  - Type-safe DTOs with validation on both client and server
+  - JSON serialization: `System.Text.Json` (default .NET library)
+  - HTTP server: ASP.NET Core/Kestrel
+  - Use HTTP for all standard operations; WebSocket optional for real-time event streaming
+- **Future Considerations**: gRPC or custom binary protocol may be added later for performance optimization, but JSON remains the primary protocol
+
+**Deployment Models**:
+- **Local sidecar**: Sidecar runs on same machine as game engine (IPC or localhost)
+  - Manages llama.cpp process locally
+  - Low latency communication
+- **Remote sidecar**: Sidecar runs on separate machine/container (network)
+  - Manages llama.cpp process on remote machine
+  - Network latency considerations
+- **Shared sidecar**: Single sidecar instance serves multiple game instances
+  - Single llama.cpp process shared across clients
+  - Resource-efficient for multiple game instances
+
+**Llama.cpp Integration**:
+- Sidecar wraps and manages llama.cpp server process
+- Sidecar acts as proxy/gateway between game engines and llama.cpp
+- Supports both managed (sidecar spawns llama.cpp) and external (connects to existing) modes
+- Automatic health monitoring and restart of llama.cpp process
+- Unified configuration for both sidecar and llama.cpp settings
+
+**Performance Targets**:
+- IPC latency: <5ms for local sidecar
+- Network latency: <50ms for remote sidecar (same network)
+- Throughput: Support 100+ concurrent requests
+- Memory overhead: <100MB for sidecar process
+
+### Estimated Effort
+
+**Total**: 5-7 weeks
+- Feature 21.1 (Host Process & Llama.cpp Management): 1-2 weeks
+- Feature 21.2 (Communication Protocol & DTOs): 1 week
+- Feature 21.3-21.4 (API & Client SDK): 1-2 weeks
+- Feature 21.5-21.6 (Integration & Testing): 1-2 weeks
+- Feature 21.7 (Documentation): 3-5 days
+
+### Success Criteria
+
+- [ ] Sidecar host runs as standalone process/service
+- [ ] Sidecar manages llama.cpp server process (spawn, monitor, restart)
+- [ ] Llama.cpp integration functional (managed and external modes)
+- [ ] Game engine can communicate with sidecar via JSON protocol (JSON-RPC 2.0)
+- [ ] All input/output DTOs defined and documented with JSON Schema
+- [ ] All core LlamaBrain operations accessible via sidecar API using JSON DTOs
+- [ ] Client SDK provides seamless integration for game engines
+- [ ] JSON serialization/deserialization works correctly across all platforms
+- [ ] Performance overhead acceptable (<10ms additional latency for local sidecar)
+- [ ] Backward compatibility maintained (embedded Unity integration still works)
+- [ ] All tests passing (including DTO validation tests, llama.cpp management tests)
+- [ ] Documentation complete with JSON protocol spec, DTO schemas, llama.cpp management guide, examples, and migration guide
+
+---
+
+## 📋 Feature 22: Unreal Engine Support
+
+**Priority**: MEDIUM - Expands engine support beyond Unity  
+**Status**: 📋 Planned (0% Complete)  
+**Dependencies**: Feature 1 (Determinism Layer), Feature 2 (Structured Memory System), Feature 3 (Context Retrieval), **Feature 21 (Sidecar Host)** - Optional but recommended  
+**Execution Order**: **Post-Milestone 5** - After core architecture is stable. Can leverage Feature 21 (Sidecar Host) for easier integration.
+
+### Overview
+
+Create Unreal Engine integration for LlamaBrain, enabling AI-powered NPCs and dialogue systems in Unreal Engine projects. This extends LlamaBrain support beyond Unity to the second major game engine, demonstrating the engine-agnostic nature of the core library.
+
+**Current State**: LlamaBrain has Unity integration via LlamaBrainRuntime package. Unreal Engine support requires creating Unreal-specific adapters, components, and Blueprint integration.
+
+**Use Cases**:
+- AI-powered NPCs in Unreal Engine games
+- Dynamic dialogue systems with persistent memory
+- Integration with Unreal's gameplay systems (Gameplay Framework, Blueprints)
+- Support for both C++ and Blueprint workflows
+- Compatibility with Unreal's networking and multiplayer systems
+
+### Definition of Done
+
+#### 21.1 Unreal Plugin Structure
+- [ ] Create Unreal Engine plugin structure (`LlamaBrainRuntime` plugin)
+- [ ] Set up module definitions (.Build.cs files)
+- [ ] Configure plugin dependencies (Core, Engine modules)
+- [ ] Support Unreal Engine 5.0+ (LTS versions: 5.0, 5.1, 5.2, 5.3, 5.4)
+- [ ] Create plugin descriptor (.uplugin file)
+- [ ] Set up proper include paths and module organization
+- [ ] C++ standard: C++17 (minimum, C++20 if engine version supports)
+- [ ] Default integration approach: Sidecar Host (Feature 21) if available, fallback to direct integration
+
+#### 22.2 Core Integration
+- [ ] Create Unreal wrapper for `BrainAgent` (UObject-based)
+- [ ] Create Unreal wrapper for `ApiClient` and server management
+- [ ] Integrate with Unreal's async system (use `AsyncTask` or `FTaskGraph`)
+- [ ] Create Unreal-compatible configuration system (USTRUCT-based)
+- [ ] Integrate with Unreal's logging system (UE_LOG macros)
+- [ ] Support Unreal's garbage collection system
+
+#### 22.3 Actor Components
+- [ ] Create `ULlamaBrainAgentComponent` (UActorComponent) for NPCs
+- [ ] Create `UBrainServerComponent` for server management
+- [ ] Support component initialization and lifecycle
+- [ ] Integrate with Unreal's tick system (if needed)
+- [ ] Support component replication for multiplayer (optional)
+
+#### 22.4 Blueprint Integration
+- [ ] Expose core functionality to Blueprints (UFUNCTION with BlueprintCallable)
+- [ ] Create Blueprint nodes for common operations (naming convention: `LlamaBrain_<Operation>`):
+  - [ ] `LlamaBrain_SendPlayerInput` - Send player input to NPC
+  - [ ] `LlamaBrain_GetNPCResponse` - Get NPC response (async callback)
+  - [ ] `LlamaBrain_UpdateMemory` - Update memory state
+  - [ ] `LlamaBrain_CheckServerHealth` - Check server health
+  - [ ] `LlamaBrain_GetMemoryState` - Query memory state
+- [ ] Create Blueprint-friendly data structures (USTRUCT):
+  - [ ] `FLlamaBrainResponse` - NPC response data
+  - [ ] `FLlamaBrainMemoryState` - Memory state data
+  - [ ] `FLlamaBrainConfig` - Configuration data
+- [ ] Support Blueprint events for async callbacks (use `DECLARE_DYNAMIC_MULTICAST_DELEGATE`)
+- [ ] Create example Blueprint implementations
+
+#### 22.5 Configuration Assets
+- [ ] Create `UPersonaConfig` (UObject/DataAsset) for persona profiles
+- [ ] Create `UBrainSettings` (UObject/DataAsset) for server configuration
+- [ ] Support Unreal's asset system (can be created in Content Browser)
+- [ ] Create custom editor widgets for configuration (optional)
+- [ ] Support asset references and dependencies
+
+#### 22.6 Memory System Integration
+- [ ] Create Unreal wrappers for memory system components
+- [ ] Support Unreal's save/load system integration (optional):
+  - [ ] Integrate with `USaveGame` system for persistence
+  - [ ] Support save/load of memory state via Blueprint or C++
+  - [ ] Optional: Auto-save memory state on game save
+- [ ] Create Blueprint nodes for memory queries:
+  - [ ] `LlamaBrain_QueryMemory` - Query episodic memories
+  - [ ] `LlamaBrain_GetBeliefs` - Get NPC beliefs
+  - [ ] `LlamaBrain_GetCanonicalFacts` - Get canonical facts
+- [ ] Support memory visualization in editor (optional)
+
+#### 21.7 RedRoom Integration (Optional)
+- [ ] Port RedRoom testing suite to Unreal (if applicable)
+- [ ] Create Unreal-specific RedRoom UI components
+- [ ] Support Unreal's widget system for RedRoom overlays
+- [ ] Adapt metrics collection for Unreal
+
+#### 22.8 Testing
+- [ ] Create Unreal test framework integration
+- [ ] Unit tests for Unreal components
+- [ ] Integration tests: Full pipeline in Unreal
+- [ ] Blueprint functionality tests
+- [ ] Performance tests: Ensure acceptable overhead
+- [ ] All tests in `LlamaBrainRuntime/Tests/` passing
+
+#### 21.9 Documentation
+- [ ] Create Unreal-specific README and setup guide
+- [ ] Document Blueprint usage and examples
+- [ ] Create tutorial: "Creating Your First AI NPC in Unreal"
+- [ ] Document C++ integration patterns
+- [ ] Provide migration guide from Unity (if applicable)
+- [ ] Document Unreal-specific considerations and best practices
+
+#### 22.10 Samples & Examples
+- [ ] Create sample Unreal project demonstrating LlamaBrain
+- [ ] Example: Simple NPC dialogue system
+- [ ] Example: Blueprint-only implementation
+- [ ] Example: C++ integration pattern
+- [ ] Example: Multiplayer considerations (if applicable)
+
+### Technical Considerations
+
+**Unreal Engine Version Support**:
+- Target Unreal Engine 5.0+ (LTS versions)
+- Support both C++ and Blueprint workflows
+- Consider Blueprint-only users (minimize C++ requirements)
+
+**Integration Approach**:
+- **Option A**: Direct integration (embed LlamaBrain Core in Unreal plugin)
+  - Pros: Lower latency, simpler deployment
+  - Cons: Requires .NET runtime in Unreal process (use .NET hosting APIs: `hostfxr` or embed .NET runtime)
+  - Implementation: Use .NET hosting APIs to load and call .NET assemblies from C++
+  - **Default**: Not recommended unless sidecar unavailable
+- **Option B**: Sidecar integration (use Feature 21 Sidecar Host) - **RECOMMENDED**
+  - Pros: Cleaner separation, easier to maintain, works with any engine
+  - Cons: Additional latency (~5-10ms), requires sidecar process
+  - Implementation: Unreal C++ HTTP client communicating with sidecar via JSON-RPC
+  - **Default**: Yes, use sidecar if Feature 21 is available
+- **Recommendation**: Default to Option B (Sidecar), provide Option A as fallback
+
+**C++ vs Blueprint**:
+- Core functionality in C++ for performance
+- Blueprint exposure for ease of use
+- Support Blueprint-only workflows where possible
+
+**Networking Considerations**:
+- Support Unreal's replication system (if needed for multiplayer):
+  - [ ] Memory state replication: Server-authoritative (server manages memory, replicates to clients)
+  - [ ] NPC responses: Replicate from server to clients
+  - [ ] Use `Replicated` properties for memory state (if applicable)
+- Consider server-authoritative memory mutations:
+  - [ ] All memory mutations must occur on server
+  - [ ] Clients send mutation requests to server
+  - [ ] Server validates and applies mutations
+- Support client-side prediction (if applicable):
+  - [ ] Optional: Predict NPC responses locally for responsiveness
+  - [ ] Reconcile with server response when received
+
+### Estimated Effort
+
+**Total**: 6-8 weeks
+- Feature 22.1-22.3 (Plugin Structure & Core Integration): 1-2 weeks
+- Feature 22.4-22.5 (Blueprint & Configuration): 1-2 weeks
+- Feature 22.6-22.7 (Memory & RedRoom): 1 week
+- Feature 22.8-22.9 (Testing & Documentation): 1-2 weeks
+- Feature 22.10 (Samples): 1 week
+
+### Success Criteria
+
+- [ ] Unreal plugin installs and loads correctly
+- [ ] Core LlamaBrain functionality accessible from Unreal
+- [ ] Blueprint integration functional (can create NPCs without C++)
+- [ ] Actor components work correctly in Unreal projects
+- [ ] Configuration assets can be created and used
+- [ ] All tests passing
+- [ ] Documentation complete with Unreal-specific guides
+- [ ] Sample project demonstrates key features
+- [ ] Performance acceptable (no significant overhead vs Unity integration)
+
+**Note**: Feature 21 (Sidecar Host) is recommended but not strictly required. If implemented, Unreal integration can use the sidecar for cleaner separation. If not, direct integration will be required.
+
+---
+
 ## 🎯 Milestones
 
 ### Milestone 1: Core Architecture (Features 1-3) ✅
@@ -2051,7 +2473,7 @@ Add memory change history visualization to the RedRoom Memory Mutation Overlay. 
 - ✅ Feature 7: Enhanced Fallback System
 - ✅ Feature 8: RedRoom Integration (99% - overlay fixes in progress)
 - ✅ Feature 9: Documentation (100% complete)
-- ✅ Feature 10.7: Deterministic Proof Gap Testing (Phase 10.7 complete - all minimal proof suite tests done)
+- ✅ Feature 10: Deterministic Proof Gap Testing (Complete - all features, requirements, and tests implemented)
 
 **Completion Criteria**:
 - [x] Core architecture complete (Features 1-6)
@@ -2071,17 +2493,17 @@ Add memory change history visualization to the RedRoom Memory Mutation Overlay. 
 1. **Feature 12 & 13** (Structured Output) - Do first
 2. **Feature 16** (Save/Load) - Do second
 3. **Feature 14** (Deterministic Seed) - Do third
-4. **Feature 10.7** (Proof Gap Testing) - ✅ **Phase 10.7 Complete** (all minimal proof suite tests done, remaining work is optional enhancement)
+4. **Feature 10** (Proof Gap Testing) - ✅ **COMPLETE** (all features, requirements, and tests implemented)
 
 **Status**:
-- Feature 10.7: Deterministic Proof Gap Testing - ✅ Phase 10.7 Complete (all minimal proof suite tests done, architecture can claim "deterministically proven")
+- Feature 10: Deterministic Proof Gap Testing - ✅ **COMPLETE** (all features, requirements, and tests implemented, architecture can claim "deterministically proven")
 - Feature 12: Dedicated Structured Output - ✅ **COMPLETE** (native llama.cpp json_schema support, JsonSchemaBuilder, ParseStructured, 56 tests)
 - Feature 13: Structured Output Integration - 📋 Planned (HIGH priority - **DO NEXT**)
 - Feature 16: Save/Load Game Integration - 📋 Planned (CRITICAL priority - **DO AFTER 13**)
 - Feature 14: Deterministic Generation Seed - 📋 Planned (CRITICAL priority - **DO AFTER 16**)
 
 **Completion Criteria**:
-- [x] **Feature 10.7 complete** - All minimal proof suite tests passing (Phase 10.7 complete)
+- [x] **Feature 10 complete** - All features, requirements, and tests implemented (351 tests total)
 - [x] **Feature 12 complete** - Native structured output with json_schema support
 - [ ] Feature 13 complete - Structured Output Integration
 - [ ] Feature 16 complete - Save/Load persistence
@@ -2091,7 +2513,7 @@ Add memory change history visualization to the RedRoom Memory Mutation Overlay. 
 - [ ] Documentation updated with breaking changes
 - [ ] Ready for v0.3.0 release
 
-**Note**: Phase 10.7 is **complete**. The architecture can now claim to be "deterministically proven" at byte level. Remaining Feature 10 work (10.4, 10.5) is optional enhancement but not blocking.
+**Note**: Feature 10 is **complete**. The architecture can now claim to be "deterministically proven" at byte level with all critical requirements and minimal proof suite tests implemented.
 
 ### Milestone 6: Enhanced Features (Features 11, 15, 17, 18, 19, 20) 📋
 **Target**: Post-v0.3.0  
@@ -2103,7 +2525,7 @@ Add memory change history visualization to the RedRoom Memory Mutation Overlay. 
 - Feature 18: Concurrent Request Handling & Thread Safety - 📋 Planned (MEDIUM priority)
 - Feature 19: Health Check & Resilience - 📋 Planned (MEDIUM priority)
 - Feature 20: Memory Change History Visualization - 📋 Planned (LOW priority - aspirational)
-- [ ] RAG-based retrieval with embeddings
+- [ ] Hybrid RAG-based retrieval (hybrid: noun-based keyword matching + semantic inference via embeddings)
 - [ ] Vector storage and indexing
 - [ ] Memory proving through repetition recognition
 - [ ] Multi-NPC conversation support

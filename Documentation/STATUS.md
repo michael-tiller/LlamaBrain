@@ -24,7 +24,7 @@
 | Feature 7: Enhanced Fallback System | ✅ Complete | 100% |
 | Feature 8: RedRoom Integration | 🚧 In Progress | 99% |
 | Feature 9: Documentation | ✅ Complete | 100% |
-| Feature 10: Deterministic Proof Gap Testing | ✅ Phase 10.7 Complete | Phase 10.7: 100% |
+| Feature 10: Deterministic Proof Gap Testing | ✅ Complete | 100% |
 | Feature 11: RAG-Based Memory Retrieval | 📋 Planned | MEDIUM |
 | Feature 12: Dedicated Structured Output | ✅ Complete | 100% |
 | Feature 13: Structured Output Integration | 📋 Planned | HIGH |
@@ -314,13 +314,13 @@ Implement the **InteractionCount seed strategy** to achieve true cross-session d
 
 ### Overview
 
-Enhance the `ContextRetrievalLayer` to use Retrieval-Augmented Generation (RAG) techniques instead of simple keyword matching. This will improve semantic relevance of retrieved memories by using embeddings and vector similarity search. Additionally, implement the repetition recognition feature to prove that retrieval influences generation.
+Enhance the `ContextRetrievalLayer` to use a **hybrid approach** combining Retrieval-Augmented Generation (RAG) techniques with existing keyword matching. This hybrid system will use both noun-based keyword matching (for safe, deterministic checks) and semantic inference via embeddings and vector similarity search (for improved relevance). Additionally, implement the repetition recognition feature to prove that retrieval influences generation.
 
 ### Key Components
 
 - Embedding generation system (local and external APIs)
 - Vector storage and indexing (in-memory and persistent)
-- Semantic retrieval (replace keyword matching with vector similarity)
+- **Hybrid retrieval system** (combine noun-based keyword matching with semantic vector similarity)
 - Memory proving through repetition recognition (location and topic)
 - Performance optimization and testing
 
@@ -373,10 +373,9 @@ Enable support for multiple NPCs in the same conversation context, including NPC
    - Uses persisted `InteractionCount` from Feature 16
    - **Rationale**: The "Holy Grail" of AI consistency, but requires persistence to work
 
-4. **Feature 10: Deterministic Proof Gap Testing** - **MUST BE COMPLETED**
-   - Ongoing throughout all phases, but must be finished before Milestone 5 complete
-   - Complete remaining test suites (5-7 days remaining)
-   - **Rationale**: Required for v0.2.0. Cannot claim "deterministically proven" architecture without this.
+4. **Feature 10: Deterministic Proof Gap Testing** - ✅ **COMPLETE**
+   - All features, requirements, and tests implemented (351 tests total)
+   - **Rationale**: Required for v0.2.0. Architecture can now claim "deterministically proven" at byte level.
 
 5. **Feature 8: RedRoom Integration** - **Weave in as breather task** (Optional for v0.2.0)
    - Feature 8.4: Testing Overlay fixes (2-3 days)
@@ -436,7 +435,7 @@ Enable support for multiple NPCs in the same conversation context, including NPC
 - ✅ Feature 7: Enhanced Fallback System
 - ✅ Feature 8: RedRoom Integration (99% - overlay fixes in progress)
 - ✅ Feature 9: Documentation (100% complete)
-- 🚧 Feature 10: Deterministic Proof Gap Testing (~65% complete - ongoing)
+- ✅ Feature 10: Deterministic Proof Gap Testing (100% complete - all minimal proof suite tests done)
 
 **Completion Criteria**:
 - [x] Core architecture complete (Features 1-6)
@@ -455,34 +454,40 @@ Enable support for multiple NPCs in the same conversation context, including NPC
 1. **Feature 12 & 13** (Structured Output) - Do first
 2. **Feature 16** (Save/Load) - Do second
 3. **Feature 14** (Deterministic Seed) - Do third
-4. **Feature 10** (Proof Gap Testing) - **Must be completed** (ongoing throughout, but finish before Milestone 5 complete)
+4. **Feature 10** (Proof Gap Testing) - ✅ **COMPLETE** (all minimal proof suite tests done, architecture can claim "deterministically proven")
 
 **Status**:
-- Feature 10: Deterministic Proof Gap Testing - ✅ Phase 10.7 Complete (all minimal proof suite tests done)
+- Feature 10: Deterministic Proof Gap Testing - ✅ **COMPLETE** (all minimal proof suite tests done, architecture can claim "deterministically proven")
 - Feature 12: Dedicated Structured Output - ✅ **COMPLETE** (native llama.cpp json_schema support, 56 tests)
 - Feature 13: Structured Output Integration - 📋 Planned (HIGH priority - **DO NEXT**)
 - Feature 16: Save/Load Game Integration - 📋 Planned (CRITICAL priority - **DO SECOND**, after 12 & 13)
 - Feature 14: Deterministic Generation Seed - 📋 Planned (CRITICAL priority - **DO THIRD**, after 16)
 
 **Target**: Complete all high-priority features for v0.3.0 release
-- **Requires Feature 10 completion** (deterministic proof gaps) - **REQUIRED**
+- ✅ **Feature 10 complete** (deterministic proof gaps) - All minimal proof suite tests done
 - Requires Feature 12-13 completion (structured output migration) - **DO FIRST**
 - Requires Feature 16 completion (save/load persistence) - **DO SECOND**
 - Requires Feature 14 completion (cross-session determinism) - **DO THIRD**
 - Requires all tests passing
 - Requires performance benchmarks met
 
-**Note**: Feature 10 is **required** for Milestone 5 completion. The architecture cannot claim to be "deterministically proven" without completing Feature 10's test suite.
+**Note**: Feature 10 is **complete**. The architecture can now claim to be "deterministically proven" at byte level with all minimal proof suite tests passing.
 
 ### Milestone 6: Enhanced Features (Features 11, 15, 17, 18, 19) 📋
 **Status**: Planned  
 **Prerequisite**: **Milestone 5 (v0.3.0) must be complete** before starting Milestone 6 features. These are enhancements that build on a stable foundation.
 
-- Feature 11: RAG-Based Memory Retrieval & Memory Proving - 📋 Planned (MEDIUM priority)
+- Feature 11: Hybrid RAG-Based Memory Retrieval & Memory Proving (noun-based + inference) - 📋 Planned (MEDIUM priority)
 - Feature 15: Multiple NPC Support - 📋 Planned (MEDIUM priority)
 - Feature 17: Token Cost Tracking & Analytics - 📋 Planned (MEDIUM priority)
 - Feature 18: Concurrent Request Handling & Thread Safety - 📋 Planned (MEDIUM priority)
 - Feature 19: Health Check & Resilience - 📋 Planned (MEDIUM priority)
+
+
+### Milestone 6: The Epic Update (Features 20, 21) 📋
+**Status**: Planned  
+- Feature 21: Sidecar Host - 📋 Planned (MEDIUM priority)
+- Feature 22: Unreal Engine Support - 📋 Planned (MEDIUM priority)
 
 **Target**: Enhance memory retrieval with semantic search, support multi-NPC scenarios, and add production monitoring/resilience
 - RAG-based retrieval with embeddings

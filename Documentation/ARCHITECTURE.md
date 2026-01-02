@@ -1003,17 +1003,17 @@ The following features are planned to enhance the architecture's capabilities an
 **Priority**: MEDIUM  
 **Dependencies**: Feature 3 (Context Retrieval Layer), Feature 10 (Deterministic Proof Gap Testing)
 
-**Overview**: Enhance the `ContextRetrievalLayer` to use Retrieval-Augmented Generation (RAG) techniques instead of simple keyword matching. This will improve semantic relevance of retrieved memories by using embeddings and vector similarity search.
+**Overview**: Enhance the `ContextRetrievalLayer` to use a **hybrid approach** combining Retrieval-Augmented Generation (RAG) techniques with existing keyword matching. This hybrid system will use both noun-based keyword matching (for safe, deterministic checks) and semantic inference via embeddings and vector similarity search (for improved relevance).
 
 **Key Components**:
 - **Embedding Generation System**: Interface for generating embeddings from local models (llama.cpp) or external APIs (OpenAI, HuggingFace)
 - **Vector Storage & Indexing**: In-memory and persistent vector stores for episodic memories, beliefs, and canonical facts
-- **Semantic Retrieval**: Replace keyword-based `CalculateRelevance()` with cosine similarity search
+- **Hybrid Retrieval System**: Combine noun-based keyword matching (deterministic) with semantic vector similarity search (inference-based)
 - **Memory Proving**: Implement deterministic repetition recognition system to prove retrieval influences generation
   - Location repetition recognition (NPC gets tired of same tunnel)
   - Topic/conversation repetition recognition (NPC gets tired of player obsessively talking about same topic)
 
-**Architectural Impact**: Improves memory retrieval quality while maintaining determinism. The repetition recognition system provides concrete proof that retrieval influences generation.
+**Architectural Impact**: Improves memory retrieval quality through hybrid approach (noun-based + semantic) while maintaining determinism via noun-based checks. The repetition recognition system provides concrete proof that retrieval influences generation.
 
 **See**: [ROADMAP.md](ROADMAP.md#feature-11-rag-based-memory-retrieval--memory-proving) for detailed implementation plan.
 
