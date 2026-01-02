@@ -272,11 +272,11 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 **See [ROADMAP.md](Documentation/ROADMAP.md) for detailed implementation plan and progress tracking.**
 
-### Current Status: ~98% Complete
+### Current Status: ~99% Complete
 
-**Current Phase**: Phase 8 - RedRoom Integration 🚧 99% Complete | Phase 10 - Deterministic Proof Gap Testing ✅ Complete
+**Current Phase**: Feature 12 - Dedicated Structured Output ✅ Complete | Feature 8 - RedRoom Integration 🚧 99% Complete | Feature 10 - Deterministic Proof Gap Testing ✅ Complete
 
-**Next Priority**: Phase 8.4 - Testing Overlay fixes
+**Next Priority**: Feature 13 - Structured Output Integration
 
 ### Current Features (v0.2+)
 - ✅ **RedRoom Testing Suite**: Comprehensive in-game LLM testing framework
@@ -296,6 +296,12 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
   - Episodic memory with decay and significance
   - Belief contradiction detection against canonical facts
   - ~65 unit tests passing
+- ✅ **Structured Output (JSON)**: Native llama.cpp JSON schema support (Feature 12 - Complete)
+  - Native JSON schema parsing via `ParseStructured()` and `ParseAuto()` methods
+  - `JsonSchemaBuilder` for dynamic schema generation from C# types
+  - Pre-built schemas: ParsedOutputSchema, DialogueOnlySchema, AnalysisSchema
+  - Regex fallback maintained for backward compatibility
+  - 56 comprehensive tests
 
 ### In Development (Architectural Pattern Implementation)
 
