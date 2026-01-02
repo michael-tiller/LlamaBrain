@@ -38,7 +38,7 @@ namespace LlamaBrain.Persona.MemoryTypes
     /// <summary>
     /// Returns a formatted state description.
     /// </summary>
-    public override string Content => $"{Key}: {Value}";
+    public override string Content => $"{Key}={Value}";
 
     /// <summary>
     /// Creates a new world state entry.
