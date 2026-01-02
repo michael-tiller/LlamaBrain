@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 
 namespace LlamaBrain.Core.StructuredOutput
 {
@@ -9,50 +10,60 @@ namespace LlamaBrain.Core.StructuredOutput
     [Serializable]
     public sealed class StructuredPipelineMetrics
     {
+        private int _totalRequests;
+        private int _structuredSuccessCount;
+        private int _structuredFailureCount;
+        private int _regexFallbackCount;
+        private int _regexDirectCount;
+        private int _validationFailureCount;
+        private int _totalRetries;
+        private int _mutationsExecuted;
+        private int _intentsEmitted;
+
         /// <summary>
         /// Total number of pipeline requests processed.
         /// </summary>
-        public int TotalRequests { get; private set; }
+        public int TotalRequests => _totalRequests;
 
         /// <summary>
         /// Number of requests that used structured output successfully.
         /// </summary>
-        public int StructuredSuccessCount { get; private set; }
+        public int StructuredSuccessCount => _structuredSuccessCount;
 
         /// <summary>
         /// Number of requests where structured output failed.
         /// </summary>
-        public int StructuredFailureCount { get; private set; }
+        public int StructuredFailureCount => _structuredFailureCount;
 
         /// <summary>
         /// Number of requests that fell back to regex parsing.
         /// </summary>
-        public int RegexFallbackCount { get; private set; }
+        public int RegexFallbackCount => _regexFallbackCount;
 
         /// <summary>
         /// Number of requests that used regex parsing from the start.
         /// </summary>
-        public int RegexDirectCount { get; private set; }
+        public int RegexDirectCount => _regexDirectCount;
 
         /// <summary>
         /// Number of validation failures.
         /// </summary>
-        public int ValidationFailureCount { get; private set; }
+        public int ValidationFailureCount => _validationFailureCount;
 
         /// <summary>
         /// Number of retries across all requests.
         /// </summary>
-        public int TotalRetries { get; private set; }
+        public int TotalRetries => _totalRetries;
 
         /// <summary>
         /// Number of mutations successfully executed.
         /// </summary>
-        public int MutationsExecuted { get; private set; }
+        public int MutationsExecuted => _mutationsExecuted;
 
         /// <summary>
         /// Number of intents successfully emitted.
         /// </summary>
-        public int IntentsEmitted { get; private set; }
+        public int IntentsEmitted => _intentsEmitted;
 
         /// <summary>
         /// Structured output success rate as a percentage (0-100).
@@ -101,8 +112,8 @@ namespace LlamaBrain.Core.StructuredOutput
         /// </summary>
         public void RecordStructuredSuccess()
         {
-            TotalRequests++;
-            StructuredSuccessCount++;
+            Interlocked.Increment(ref _totalRequests);
+            Interlocked.Increment(ref _structuredSuccessCount);
         }
 
         /// <summary>
@@ -110,7 +121,7 @@ namespace LlamaBrain.Core.StructuredOutput
         /// </summary>
         public void RecordStructuredFailure()
         {
-            StructuredFailureCount++;
+            Interlocked.Increment(ref _structuredFailureCount);
         }
 
         /// <summary>
@@ -118,8 +129,8 @@ namespace LlamaBrain.Core.StructuredOutput
         /// </summary>
         public void RecordFallbackToRegex()
         {
-            TotalRequests++;
-            RegexFallbackCount++;
+            Interlocked.Increment(ref _totalRequests);
+            Interlocked.Increment(ref _regexFallbackCount);
         }
 
         /// <summary>
@@ -127,8 +138,8 @@ namespace LlamaBrain.Core.StructuredOutput
         /// </summary>
         public void RecordRegexDirect()
         {
-            TotalRequests++;
-            RegexDirectCount++;
+            Interlocked.Increment(ref _totalRequests);
+            Interlocked.Increment(ref _regexDirectCount);
         }
 
         /// <summary>
@@ -136,7 +147,7 @@ namespace LlamaBrain.Core.StructuredOutput
         /// </summary>
         public void RecordValidationFailure()
         {
-            ValidationFailureCount++;
+            Interlocked.Increment(ref _validationFailureCount);
         }
 
         /// <summary>
@@ -144,7 +155,7 @@ namespace LlamaBrain.Core.StructuredOutput
         /// </summary>
         public void RecordRetry()
         {
-            TotalRetries++;
+            Interlocked.Increment(ref _totalRetries);
         }
 
         /// <summary>
@@ -153,7 +164,7 @@ namespace LlamaBrain.Core.StructuredOutput
         /// <param name="count">Number of mutations executed.</param>
         public void RecordMutationsExecuted(int count)
         {
-            MutationsExecuted += count;
+            Interlocked.Add(ref _mutationsExecuted, count);
         }
 
         /// <summary>
@@ -162,7 +173,7 @@ namespace LlamaBrain.Core.StructuredOutput
         /// <param name="count">Number of intents emitted.</param>
         public void RecordIntentsEmitted(int count)
         {
-            IntentsEmitted += count;
+            Interlocked.Add(ref _intentsEmitted, count);
         }
 
         /// <summary>
@@ -170,15 +181,15 @@ namespace LlamaBrain.Core.StructuredOutput
         /// </summary>
         public void Reset()
         {
-            TotalRequests = 0;
-            StructuredSuccessCount = 0;
-            StructuredFailureCount = 0;
-            RegexFallbackCount = 0;
-            RegexDirectCount = 0;
-            ValidationFailureCount = 0;
-            TotalRetries = 0;
-            MutationsExecuted = 0;
-            IntentsEmitted = 0;
+            Interlocked.Exchange(ref _totalRequests, 0);
+            Interlocked.Exchange(ref _structuredSuccessCount, 0);
+            Interlocked.Exchange(ref _structuredFailureCount, 0);
+            Interlocked.Exchange(ref _regexFallbackCount, 0);
+            Interlocked.Exchange(ref _regexDirectCount, 0);
+            Interlocked.Exchange(ref _validationFailureCount, 0);
+            Interlocked.Exchange(ref _totalRetries, 0);
+            Interlocked.Exchange(ref _mutationsExecuted, 0);
+            Interlocked.Exchange(ref _intentsEmitted, 0);
         }
 
         /// <inheritdoc/>

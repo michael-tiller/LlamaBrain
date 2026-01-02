@@ -31,7 +31,7 @@ This guide focuses on the **core library** (engine-agnostic .NET Standard 2.1), 
 ---
 
 <a id="core-library-quick-start"></a>
-## Core Library Quick Start {}
+## Core Library Quick Start
 
 ---
 

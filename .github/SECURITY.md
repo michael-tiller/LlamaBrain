@@ -8,7 +8,7 @@
 
 ### How to Report
 
-1. Go to the [Security tab](https://github.com/YOUR_USERNAME/LlamaBrain/security/advisories) in this repository
+1. Go to the [Security tab](https://github.com/michael-tiller/LlamaBrain/security/advisories) in this repository
 2. Click "Report a vulnerability"
 3. Fill out the security advisory form
 

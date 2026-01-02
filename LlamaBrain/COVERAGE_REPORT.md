@@ -34,7 +34,7 @@
 
 1. ✅ **Eliminate all 0% coverage files** → **COMPLETED!** All files now have coverage
 2. ✅ **Complete easy wins** → `FileSystem` (100%), `LlmConfig` (91.07%), `PromptComposer` (100%) - **ALL COMPLETED!** 🎉
-3. ✅ **Eliminate all < 50% coverage files** → **COMPLETED!** `ServerManager` (74.55%) and `ApiClient` (90.54%) significantly improved! 🎉
+3. ✅ **Eliminate all < 50% coverage files** → **COMPLETED!** `ServerManager` (74.55%) significantly improved! 🎉
 4. **Push ApiClient to 80%+** → **IN PROGRESS** `ApiClient` currently at **66.74%** (needs improvement)
 5. **Push remaining medium-coverage files to 80%+** → 6 files need attention: `IIdGenerator` (64.71%), `ApiClient` (66.74%), `ServerManager` (68.8%), `BrainAgent` (68.93%), `ApiContracts` (77.78%), `ProcessUtils` (79.55%)
 6. ✅ **Overall target:** Reach 85%+ overall coverage → **ACHIEVED!** Currently at **88.96%** 🎉
@@ -44,7 +44,7 @@
 1. ✅ Achieve 85%+ overall coverage → **ACHIEVED!** Currently at **88.96%** 🎉
 2. Get all files to 80%+ coverage (currently 6 files below 80%: IIdGenerator (64.71%), ApiClient (66.74%), ServerManager (68.8%), BrainAgent (68.93%), ApiContracts (77.78%), ProcessUtils (79.55%))
 3. ✅ Focus on branch coverage for files with low branch coverage → `LlmConfig` (100% branch), `FileSystem` (0% branch but 100% line), `PromptComposer` (100% branch) - **COMPLETED!**
-4. ✅ Improve critical core classes → `ServerManager` (74.55%, 92.31% branch) and `ApiClient` (90.54%, 97.92% branch) - **MAJOR PROGRESS!** 🎉
+4. ✅ Improve critical core classes → `ServerManager` (74.55%, 92.31% branch) - **MAJOR PROGRESS!** 🎉
 5. Maintain coverage as new features are added
 6. Review detailed coverage data in `coverage-analysis.csv` regularly
 
@@ -152,7 +152,7 @@ The following files have been significantly improved with comprehensive test sui
 
 ### 📊 Coverage Impact Analysis:
 - **✅ Easy Wins Completed!** - FileSystem (100%), LlmConfig (91.07%), and PromptComposer (100%) all significantly improved
-- **✅ Major Improvements!** - ServerManager (32.81% → 74.55%) and ApiClient (36.36% → 90.54%) significantly improved! 🎉
+- **✅ Major Improvements!** - ServerManager (32.81% → 74.55%) significantly improved! 🎉
 - **Remaining Priority:** Focus on the 2 files between 50-80% coverage (ServerManager, ProcessUtils)
 - **Overall Coverage Improvement:** +11.11% (from 81.26% to 92.37%) 🎉
 
@@ -178,12 +178,6 @@ The following files have been significantly improved with comprehensive test sui
   - **Status:** Excellent progress - core infrastructure well-tested
   - **Action:** Continue improving to reach 80%+
 
-- ✅ `Core\ApiClient.cs` - **90.54%** coverage (287/317 lines, 97.92% branch) - **MAJOR IMPROVEMENT!** 🎉
-  - **Previous:** 36.36% coverage, 42.55% branch coverage
-  - **Current:** 90.54% line coverage, 97.92% branch coverage
-  - **Status:** Excellent progress - HTTP client operations well-tested
-  - **Action:** Continue improving to reach 100%
-
 ### 🟢 Medium Coverage (50-80%) - Priority: **MEDIUM**
 
 These files have decent coverage but could benefit from additional tests to reach 80%+:
@@ -198,7 +192,7 @@ These files have decent coverage but could benefit from additional tests to reac
    - **Action:** High priority - small file, quick win to improve coverage
 
 2. **`Core\ApiClient.cs`** - **NEEDS ATTENTION** 🟡
-   - Line Coverage: **66.74%** 🟡
+   - Line Coverage: **66.74%** 🟡 (287/430 lines)
    - Branch Coverage: **73.44%** 🟡
    - Complexity: 157
    - Total Lines: 430
@@ -253,7 +247,7 @@ These files have decent coverage but could benefit from additional tests to reac
 **Status:** All files now have test coverage! Excellent work!
 
 **✅ Phase 2: Low Coverage Files - MAJOR PROGRESS!** 🎉
-**Status:** FileSystem.cs (100%), LlmConfig.cs (91.07%), PromptComposer.cs (100%), ServerManager.cs (74.55%), and ApiClient.cs (90.54%) all significantly improved! ✅
+**Status:** FileSystem.cs (100%), LlmConfig.cs (91.07%), PromptComposer.cs (100%), and ServerManager.cs (74.55%) all significantly improved! ✅
 **Goal:** Get all files between 50-80% coverage to 80%+
 **Expected Gain:** ~1.5% overall coverage improvement if remaining files reach 80%+
 
@@ -262,7 +256,6 @@ These files have decent coverage but could benefit from additional tests to reac
 - `Core\LlmConfig.cs` - **91.07%** line coverage, **100%** branch coverage (42 tests added) ✅
 - `Core\PromptComposer.cs` - **100%** line coverage, **100%** branch coverage (54 tests added) ✅
 - `Core\ServerManager.cs` - **74.55%** line coverage, **92.31%** branch coverage - **MAJOR IMPROVEMENT!** 🎉
-- `Core\ApiClient.cs` - **90.54%** line coverage, **97.92%** branch coverage - **MAJOR IMPROVEMENT!** 🎉
 
 **🟡 Remaining Medium Priority:**
 1. **`Persona\IIdGenerator.cs`** - **HIGH PRIORITY** (Priority #1)
@@ -272,7 +265,7 @@ These files have decent coverage but could benefit from additional tests to reac
    - **Time estimate:** 1-2 hours (quick win)
 
 2. **`Core\ApiClient.cs`** - **HIGH PRIORITY** (Priority #2)
-   - **Current:** 66.74% coverage, 73.44% branch coverage, 430 lines, Complexity: 157
+   - **Current:** 66.74% coverage (287/430 lines), 73.44% branch coverage, Complexity: 157
    - **Action:** Core HTTP client operations need thorough testing
    - **Expected gain:** +5.0% overall coverage if pushed to 100%
    - **Time estimate:** 3-5 days (critical component)
@@ -372,7 +365,7 @@ The following **42 files** have good test coverage (>= 80%):
 
 **Files Below 80% Coverage (Need Attention):**
 - `Persona\IIdGenerator.cs` - **64.71%** (11/17 lines, 0% branch) - **HIGH PRIORITY** 🔴 (Small file, quick win)
-- `Core\ApiClient.cs` - **66.74%** (287/430 lines, 73.44% branch) - **HIGH PRIORITY** 🔴 (Critical component)
+- `Core\ApiClient.cs` - **66.74%** (287/430 lines, 73.44% branch) - **HIGH PRIORITY** 🔴 (Critical component, needs improvement from current 66.74%)
 - `Core\ServerManager.cs` - **68.8%** (333/484 lines, 89.55% branch) - **MEDIUM PRIORITY** 🟡 (Good branch coverage)
 - `Core\BrainAgent.cs` - **68.93%** (193/280 lines, 80% branch) - **MEDIUM PRIORITY** 🟡 (Core component)
 - `Core\ApiContracts.cs` - **77.78%** (35/45 lines, 100% branch) - **LOW PRIORITY** ✅ (Very close to 80%!)

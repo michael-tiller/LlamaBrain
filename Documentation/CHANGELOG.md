@@ -102,6 +102,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Test Coverage**: Comprehensive integration tests covering all pipeline modes, fallback scenarios, retry logic, and schema validation
   - **Documentation**: Updated `ARCHITECTURE.md` with complete Feature 13 section including pipeline flow, configuration, and usage examples
 
+#### Changed
+- **`StructuredPipelineMetrics` thread-safety**
+  - Refactored all metric properties to use `Interlocked` operations for thread-safe concurrent access
+  - Changed property setters to private backing fields with `Interlocked.Increment`, `Interlocked.Add`, and `Interlocked.Exchange`
+  - Properties now use expression-bodied getters returning backing field values
+  - Ensures safe concurrent metric tracking in multi-threaded scenarios
+
 ### Project Infrastructure
 
 #### Added
@@ -141,6 +148,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`STATUS.md`**: Updated with current implementation status
 - **`USAGE_GUIDE.md`**: Updated usage documentation
 - **Doxygen Configuration**: Updated doxygen configs for documentation generation
+
+#### Fixed
+- **`.github/SECURITY.md`**: Updated GitHub username placeholder to actual repository owner
+- **`USAGE_GUIDE.md`**: Fixed heading formatting issue (removed empty braces)
+- **`COVERAGE_REPORT.md`**: Updated to reflect current ApiClient coverage status (66.74%)
 
 ## [0.2.0-rc.2] - 2026-1-1
 
