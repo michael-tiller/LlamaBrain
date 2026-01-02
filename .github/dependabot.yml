@@ -14,7 +14,6 @@ updates:
     reviewers:
       - "michael-tiller"
     labels:
-      - "dependencies"
       - ".net"
     commit-message:
       prefix: "deps"
@@ -42,9 +41,6 @@ updates:
     open-pull-requests-limit: 3
     reviewers:
       - "michael-tiller"
-    labels:
-      - "dependencies"
-      - "github-actions"
     commit-message:
       prefix: "ci"
       include: "scope"
