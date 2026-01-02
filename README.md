@@ -1,6 +1,6 @@
 # LlamaBrain
 
-[![CI](https://github.com/michael-tiller/llamabrain/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/michael-tiller/llamabrain/actions/workflows/ci-cd.yml)
+[![CI](https://github.com/michael-tiller/llamabrain/actions/workflows/ci-cd.yml/badge.svg?branch=main&event=push)](https://github.com/michael-tiller/llamabrain/actions/workflows/ci-cd.yml)
 [![C#](https://img.shields.io/badge/C%23-239120?logo=c-sharp&logoColor=white)](https://docs.microsoft.com/en-us/dotnet/csharp/)
 [![.NET Standard](https://img.shields.io/badge/.NET%20Standard-2.1-512BD4?logo=dotnet&logoColor=white)](https://docs.microsoft.com/en-us/dotnet/standard/net-standard)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -216,6 +216,8 @@ LlamaBrain implements comprehensive security measures:
 See [SAFEGUARDS.md](Documentation/SAFEGUARDS.md) for detailed security information.
 
 ## 🧪 Testing
+
+[![Tests](https://github.com/michael-tiller/llamabrain/actions/workflows/ci-cd.yml/badge.svg?branch=main&event=push)](https://github.com/michael-tiller/llamabrain/actions/workflows/ci-cd.yml)
 
 ### Core Library
 - Comprehensive unit tests
