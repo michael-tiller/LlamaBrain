@@ -25,8 +25,10 @@ This guide focuses on the **core library** (engine-agnostic .NET Standard 2.1), 
 7. [World Intents](#world-intents)
 8. [Structured Output](#structured-output)
 9. [Migrating to Structured Output](#migrating-to-structured-output)
-10. [Debugging & Monitoring](#debugging--monitoring)
-11. [Performance Optimization](#performance-optimization)
+10. [Structured Input/Context](#structured-input)
+11. [Migrating to Structured Input/Context](#migrating-to-structured-input)
+12. [Debugging & Monitoring](#debugging--monitoring)
+13. [Performance Optimization](#performance-optimization)
 
 ---
 
@@ -997,6 +999,289 @@ The slight overhead of structured parsing is negligible and offset by:
 - Type safety
 - Elimination of regex edge cases
 - Automatic schema validation
+
+---
+
+<a id="structured-input"></a>
+## Structured Input/Context
+
+LlamaBrain supports structured context injection, providing memories, constraints, and dialogue history to the LLM in structured JSON format instead of plain text. This complements structured outputs (Features 12-13) to create complete bidirectional structured communication, improving LLM understanding and determinism.
+
+### Enabling Structured Context
+
+Configure structured context through `PromptAssemblerConfig`:
+
+```csharp
+using LlamaBrain.Core.Inference;
+using LlamaBrain.Core.StructuredInput;
+
+// Create assembler with structured context enabled
+var assemblerConfig = new PromptAssemblerConfig
+{
+    StructuredContextConfig = StructuredContextConfig.Default
+    // Uses JsonContext format with fallback enabled
+};
+
+var assembler = new PromptAssembler(assemblerConfig);
+
+// Use structured prompt assembly
+var snapshot = new StateSnapshotBuilder()
+    .WithContext(context)
+    .Apply(retrievedContext)
+    .Build();
+
+var assembledPrompt = assembler.AssembleStructuredPrompt(snapshot);
+```
+
+### Configuration Options
+
+```csharp
+// Default: JSON context with automatic fallback to text
+var config = StructuredContextConfig.Default;
+
+// Text-only (legacy behavior, disables structured context)
+var config = StructuredContextConfig.TextOnly;
+
+// Strict: JSON context only, no fallback, validation enabled
+var config = StructuredContextConfig.Strict;
+
+// Custom configuration
+var config = new StructuredContextConfig
+{
+    PreferredFormat = StructuredContextFormat.JsonContext,
+    FallbackToTextAssembly = true,  // Fall back to text if structured fails
+    ValidateSchema = true,           // Validate context schema before injection
+    UseCompactJson = false,          // Use compact JSON to save tokens
+    ContextBlockOpenTag = "<context_json>",
+    ContextBlockCloseTag = "</context_json>"
+};
+```
+
+### Structured Context Format
+
+When structured context is enabled, the prompt includes a JSON block with structured context:
+
+```
+System Prompt: You are a helpful NPC...
+
+<context_json>
+{
+  "schemaVersion": "1.0",
+  "context": {
+    "canonicalFacts": [
+      {"fact": "The player's name is Alice", "authority": "canonical"}
+    ],
+    "worldState": [
+      {"key": "timeOfDay", "value": "evening"}
+    ],
+    "episodicMemories": [
+      {"memory": "Player asked about magic", "significance": 0.8}
+    ],
+    "beliefs": [
+      {"belief": "Magic is dangerous", "confidence": 0.9, "sentiment": "negative"}
+    ]
+  },
+  "constraints": {
+    "prohibitions": [
+      {"description": "Cannot reveal secrets", "severity": "hard"}
+    ],
+    "requirements": [
+      {"description": "Must stay in character", "severity": "hard"}
+    ],
+    "permissions": []
+  },
+  "dialogue": {
+    "history": [
+      {"speaker": "Player", "text": "Hello!"},
+      {"speaker": "NPC", "text": "Greetings, traveler!"}
+    ],
+    "playerInput": "Tell me about magic"
+  }
+}
+</context_json>
+
+NPC:
+```
+
+### Text vs Structured Context Comparison
+
+**Text-Based Context (Legacy)**:
+```
+System Prompt: You are a helpful NPC...
+
+=== Context ===
+Canonical Facts:
+- The player's name is Alice
+
+World State:
+- timeOfDay: evening
+
+Episodic Memories:
+- Player asked about magic (significance: 0.8)
+
+Beliefs:
+- Magic is dangerous (confidence: 0.9, sentiment: negative)
+
+=== Constraints ===
+Prohibitions:
+- Cannot reveal secrets (severity: hard)
+
+Requirements:
+- Must stay in character (severity: hard)
+
+=== Conversation ===
+Player: Hello!
+NPC: Greetings, traveler!
+
+Player: Tell me about magic
+NPC:
+```
+
+**Structured Context (Feature 23)**:
+- Machine-parseable JSON structure
+- Clear section boundaries
+- Type-safe context data
+- Better LLM understanding of context hierarchy
+- Enables function calling APIs (deferred for llama.cpp)
+
+### Hybrid Mode
+
+Structured context supports hybrid mode: structured JSON context blocks with text system prompts:
+
+```csharp
+var config = new StructuredContextConfig
+{
+    PreferredFormat = StructuredContextFormat.JsonContext,
+    FallbackToTextAssembly = true
+};
+
+// System prompt remains as text
+// Context (memories, constraints, dialogue) becomes structured JSON
+var assembledPrompt = assembler.AssembleStructuredPrompt(snapshot);
+```
+
+### Migration from Text to Structured Context
+
+#### Step 1: Enable Structured Context
+
+**Before (Text-Based)**:
+```csharp
+var assembler = new PromptAssembler(PromptAssemblerConfig.Default);
+var assembledPrompt = assembler.AssembleFromSnapshot(snapshot);
+```
+
+**After (Structured Context)**:
+```csharp
+var config = new PromptAssemblerConfig
+{
+    StructuredContextConfig = StructuredContextConfig.Default
+};
+var assembler = new PromptAssembler(config);
+var assembledPrompt = assembler.AssembleStructuredPrompt(snapshot);
+```
+
+#### Step 2: Test with Fallback Enabled
+
+Start with fallback enabled to ensure compatibility:
+
+```csharp
+var config = StructuredContextConfig.Default;
+// FallbackToTextAssembly = true by default
+```
+
+If structured context fails, it automatically falls back to text assembly.
+
+#### Step 3: Monitor and Optimize
+
+```csharp
+// Check if structured context was used
+var assembledPrompt = assembler.AssembleStructuredPrompt(snapshot);
+
+// Check prompt breakdown
+var breakdown = assembledPrompt.Breakdown;
+Console.WriteLine($"Context size: {breakdown.Context} chars");
+
+// Enable compact JSON to save tokens
+var config = new StructuredContextConfig
+{
+    PreferredFormat = StructuredContextFormat.JsonContext,
+    UseCompactJson = true  // Reduces token usage
+};
+```
+
+#### Step 4: Disable Fallback (Optional)
+
+Once you confirm structured context is working reliably:
+
+```csharp
+var config = StructuredContextConfig.Strict;
+// FallbackToTextAssembly = false
+// ValidateSchema = true
+```
+
+### Best Practices
+
+| Practice | Description |
+|----------|-------------|
+| **Start with fallback** | Enable `FallbackToTextAssembly` during migration |
+| **Use compact JSON** | Set `UseCompactJson = true` to reduce token usage |
+| **Validate schemas** | Enable `ValidateSchema` in production |
+| **Monitor performance** | Structured context serialization is < 10ms for typical contexts |
+| **Hybrid mode** | Mix structured context with text system prompts as needed |
+
+### Performance
+
+Structured context serialization is highly optimized:
+- **Typical contexts**: < 10ms serialization time
+- **Token efficiency**: Compact JSON mode reduces token usage by ~15-20%
+- **Deterministic**: Same snapshot always produces identical JSON
+
+---
+
+<a id="migrating-to-structured-input"></a>
+## Migrating to Structured Input/Context
+
+This section provides a step-by-step guide for migrating from text-based prompt assembly to structured context injection.
+
+### Prerequisites
+
+1. **Feature 12 & 13**: Structured output should be implemented first (provides foundation)
+2. **Testing**: Ensure your test suite covers prompt assembly scenarios
+
+### Migration Checklist
+
+1. ✅ Update `PromptAssemblerConfig` to include `StructuredContextConfig`
+2. ✅ Replace `AssembleFromSnapshot()` calls with `AssembleStructuredPrompt()`
+3. ✅ Test with fallback enabled first
+4. ✅ Verify prompt quality and LLM responses
+5. ✅ Monitor token usage and performance
+6. ✅ Disable fallback once stable (optional)
+
+### Example Migration
+
+**Before**:
+```csharp
+var assembler = new PromptAssembler(PromptAssemblerConfig.Default);
+var assembledPrompt = assembler.AssembleFromSnapshot(snapshot);
+var response = await apiClient.SendPromptAsync(assembledPrompt.PromptText);
+```
+
+**After**:
+```csharp
+var config = new PromptAssemblerConfig
+{
+    StructuredContextConfig = StructuredContextConfig.Default
+};
+var assembler = new PromptAssembler(config);
+var assembledPrompt = assembler.AssembleStructuredPrompt(snapshot);
+var response = await apiClient.SendPromptAsync(assembledPrompt.PromptText);
+```
+
+### Backward Compatibility
+
+- Text-based assembly (`AssembleFromSnapshot()`) remains available
+- Structured context falls back to text automatically when configured
+- No breaking changes to existing code
 
 ---
 

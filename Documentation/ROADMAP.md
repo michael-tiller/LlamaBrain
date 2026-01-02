@@ -1146,12 +1146,12 @@ Provide context, memories, constraints, and dialogue history to the LLM in struc
 - **Total**: ~82 tests across 3 test files
 
 #### 23.8 Documentation
-- [ ] Update `ARCHITECTURE.md` with structured input section
+- [x] Update `ARCHITECTURE.md` with structured input section
 - [x] Document supported structured input formats (in code comments)
 - [ ] Document function calling setup and usage - deferred (not implemented)
-- [ ] Document migration path from text to structured context
-- [ ] Add examples showing structured vs text context differences
-- [ ] Update `USAGE_GUIDE.md` with structured input setup
+- [x] Document migration path from text to structured context
+- [x] Add examples showing structured vs text context differences
+- [x] Update `USAGE_GUIDE.md` with structured input setup
 
 ### Technical Considerations
 

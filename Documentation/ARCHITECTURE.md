@@ -278,6 +278,78 @@ var assembledPrompt = assembler.AssembleFromSnapshot(snapshot);
 // assembledPrompt.PromptText now includes few-shot examples in the configured location
 ```
 
+**Structured Context Injection** (Feature 23):
+- **Purpose**: Provide context, memories, constraints, and dialogue history to the LLM in structured JSON format instead of plain text, improving LLM understanding and determinism
+- **Implementation**: `IStructuredContextProvider`, `LlamaCppStructuredContextProvider`, `ContextSerializer`, `StructuredContextConfig`
+- **Format**: JSON context blocks with XML-style delimiters (`<context_json>...</context_json>`) embedded in prompts
+- **Benefits**: 
+  - Machine-parseable context sections reduce ambiguity
+  - Better LLM understanding of context structure
+  - Enables function calling APIs (deferred for llama.cpp)
+  - Complements structured outputs (Features 12-13) for bidirectional structured communication
+- **Hybrid Mode**: Supports mixing structured JSON context with text system prompts
+- **Fallback**: Gracefully falls back to text-based assembly if structured context fails (when configured)
+
+**Example**:
+```csharp
+// Configure structured context
+var assemblerConfig = new PromptAssemblerConfig
+{
+    StructuredContextConfig = StructuredContextConfig.Default
+    // Uses JsonContext format with fallback enabled
+};
+
+var assembler = new PromptAssembler(assemblerConfig);
+
+// Assemble prompt with structured context
+var assembledPrompt = assembler.AssembleStructuredPrompt(snapshot);
+
+// Prompt now contains structured JSON context block:
+// <context_json>
+// {
+//   "schemaVersion": "1.0",
+//   "context": {
+//     "canonicalFacts": [...],
+//     "worldState": [...],
+//     "episodicMemories": [...],
+//     "beliefs": [...]
+//   },
+//   "constraints": {
+//     "prohibitions": [...],
+//     "requirements": [...],
+//     "permissions": [...]
+//   },
+//   "dialogue": {
+//     "history": [...],
+//     "playerInput": "Hello!"
+//   }
+// }
+// </context_json>
+```
+
+**Configuration Options**:
+```csharp
+// Default: JSON context with fallback
+var config = StructuredContextConfig.Default;
+
+// Text-only (legacy behavior)
+var config = StructuredContextConfig.TextOnly;
+
+// Strict: JSON context, no fallback, validation enabled
+var config = StructuredContextConfig.Strict;
+
+// Custom configuration
+var config = new StructuredContextConfig
+{
+    PreferredFormat = StructuredContextFormat.JsonContext,
+    FallbackToTextAssembly = true,
+    ValidateSchema = true,
+    UseCompactJson = false,  // Use compact JSON to save tokens
+    ContextBlockOpenTag = "<context_json>",
+    ContextBlockCloseTag = "</context_json>"
+};
+```
+
 ### Component 6: Stateless Inference Core
 
 **Purpose**: Pure stateless text generation - the LLM has no memory, authority, or world access.
