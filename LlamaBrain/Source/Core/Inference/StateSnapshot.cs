@@ -23,6 +23,13 @@ namespace LlamaBrain.Core.Inference
     public DateTime CreatedAt { get; }
 
     /// <summary>
+    /// The snapshot time in UTC ticks. Used for deterministic recency calculations.
+    /// This is the reference time for all time-based operations (decay, recency scoring).
+    /// Must be set explicitly to ensure determinism - no wall-clock dependency.
+    /// </summary>
+    public long SnapshotTimeUtcTicks { get; }
+
+    /// <summary>
     /// The interaction context that triggered this inference.
     /// </summary>
     public InteractionContext Context { get; }
@@ -99,6 +106,7 @@ namespace LlamaBrain.Core.Inference
     /// <param name="attemptNumber">Current retry attempt (0 = first attempt)</param>
     /// <param name="maxAttempts">Maximum allowed retry attempts</param>
     /// <param name="metadata">Additional metadata for debugging/logging (optional)</param>
+    /// <param name="snapshotTimeUtcTicks">The snapshot time in UTC ticks for deterministic recency calculations (optional, defaults to current time)</param>
     internal StateSnapshot(
       string snapshotId,
       InteractionContext context,
@@ -112,10 +120,12 @@ namespace LlamaBrain.Core.Inference
       string playerInput,
       int attemptNumber,
       int maxAttempts,
-      IReadOnlyDictionary<string, string>? metadata)
+      IReadOnlyDictionary<string, string>? metadata,
+      long? snapshotTimeUtcTicks = null)
     {
       SnapshotId = snapshotId;
-      CreatedAt = DateTime.UtcNow;
+      SnapshotTimeUtcTicks = snapshotTimeUtcTicks ?? DateTimeOffset.UtcNow.UtcTicks;
+      CreatedAt = new DateTime(SnapshotTimeUtcTicks, DateTimeKind.Utc);
       Context = context;
       Constraints = constraints;
       CanonicalFacts = canonicalFacts;
@@ -160,7 +170,8 @@ namespace LlamaBrain.Core.Inference
         playerInput: PlayerInput,
         attemptNumber: AttemptNumber + 1,
         maxAttempts: MaxAttempts,
-        metadata: Metadata
+        metadata: Metadata,
+        snapshotTimeUtcTicks: SnapshotTimeUtcTicks // Preserve snapshot time for retry
       );
     }
 
@@ -217,6 +228,7 @@ namespace LlamaBrain.Core.Inference
     private int _attemptNumber = 0;
     private int _maxAttempts = 3;
     private Dictionary<string, string> _metadata = new Dictionary<string, string>();
+    private long? _snapshotTimeUtcTicks;
 
     /// <summary>
     /// Sets the interaction context that triggered this inference.
@@ -356,6 +368,18 @@ namespace LlamaBrain.Core.Inference
     }
 
     /// <summary>
+    /// Sets the snapshot time in UTC ticks for deterministic recency calculations.
+    /// If not set, defaults to current time when Build() is called.
+    /// </summary>
+    /// <param name="snapshotTimeUtcTicks">The snapshot time in UTC ticks</param>
+    /// <returns>This builder instance for method chaining</returns>
+    public StateSnapshotBuilder WithSnapshotTimeUtcTicks(long snapshotTimeUtcTicks)
+    {
+      _snapshotTimeUtcTicks = snapshotTimeUtcTicks;
+      return this;
+    }
+
+    /// <summary>
     /// Builds and returns a new immutable StateSnapshot instance.
     /// If no context was provided, creates a default InteractionContext.
     /// Generates a new unique snapshot ID automatically.
@@ -381,7 +405,8 @@ namespace LlamaBrain.Core.Inference
         playerInput: _playerInput,
         attemptNumber: _attemptNumber,
         maxAttempts: _maxAttempts,
-        metadata: _metadata
+        metadata: _metadata,
+        snapshotTimeUtcTicks: _snapshotTimeUtcTicks
       );
     }
   }

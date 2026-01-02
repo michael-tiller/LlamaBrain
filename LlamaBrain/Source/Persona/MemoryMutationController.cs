@@ -278,6 +278,13 @@ namespace LlamaBrain.Persona
     public MutationStatistics Statistics => statistics;
 
     /// <summary>
+    /// Test-only counter for world intent emissions (for policy boundary testing).
+    /// Incremented whenever EmitWorldIntent is called.
+    /// Always available to ensure cross-assembly test access.
+    /// </summary>
+    public int WorldIntentEmitsForTests { get; private set; }
+
+    /// <summary>
     /// Creates a new mutation controller with default configuration.
     /// </summary>
     public MemoryMutationController() : this(MutationControllerConfig.Default) { }
@@ -627,6 +634,17 @@ namespace LlamaBrain.Persona
 
     private void EmitWorldIntent(WorldIntent intent, string? npcId)
     {
+      WorldIntentEmitsForTests++;
+      OnWorldIntentEmitted?.Invoke(this, new WorldIntentEventArgs(intent, npcId));
+    }
+
+    /// <summary>
+    /// Raises the OnWorldIntentEmitted event for testing purposes.
+    /// This method is intended for use in tests only.
+    /// </summary>
+    public void RaiseWorldIntentEmittedForTests(WorldIntent intent, string? npcId)
+    {
+      WorldIntentEmitsForTests++;
       OnWorldIntentEmitted?.Invoke(this, new WorldIntentEventArgs(intent, npcId));
     }
 
