@@ -48,7 +48,7 @@ PROJECT_NAME           = LlamaBrain
 # could be handy for archiving the generated documentation or if some version
 # control system is used.
 
-PROJECT_NUMBER         = 0.2.0-rc.1
+PROJECT_NUMBER         = 0.2.0
 
 # Using the PROJECT_BRIEF tag one can provide an optional one line description
 # for a project that appears at the top of each page and should give viewers a
@@ -1012,14 +1012,18 @@ INPUT                  = ../../README.md \
                          ../CHANGELOG.md \
                          ../STATUS.md \
                          ../MEMORY.md \
-                         ../PHASE10_PROOF_GAPS.md \
-                         ../MEMORY.md \
                          ../PIPELINE_CONTRACT.md \
                          ../VALIDATION_GATING.md \
                          ../ARCHITECTURE.md \
                          ../USAGE_GUIDE.md \
                          ../DETERMINISM_CONTRACT.md \
-                         ../../LICENSE.md
+                         ../../LICENSE.md \
+                         ../../CONTRIBUTING.md \
+                         ../../CODE_OF_CONDUCT.md \
+                         ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/Documentation/THIRD_PARTY_PACKAGES.md \
+                         ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/README.md \
+                         ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/Documentation/USAGE_GUIDE.md \
+                         ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/Documentation/QUICK_START.md
 
 # This tag can be used to specify the character encoding of the source files
 # that Doxygen parses. Internally Doxygen uses the UTF-8 encoding. Doxygen uses

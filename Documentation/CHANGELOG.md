@@ -5,7 +5,156 @@ All notable changes to LlamaBrain will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0-rc.2] - 2026-1-1
+## [0.2.0] - 2026-01-02
+
+### Core Library
+
+#### Added
+- **Feature 12: Dedicated Structured Output - COMPLETE** ✅
+- **Feature 13: Structured Output Integration - COMPLETE** ✅
+  - **Native llama.cpp Structured Output Support**
+    - Added `StructuredOutputFormat` enum with JsonSchema, Grammar, ResponseFormat, and None options
+    - Added `StructuredOutputConfig` for configuring structured output behavior
+    - Added `IStructuredOutputProvider` interface and `LlamaCppStructuredOutputProvider` implementation
+    - Extended `CompletionRequest` with `json_schema`, `grammar`, and `response_format` parameters
+    - Extended `IApiClient` with `SendStructuredPromptAsync` and `SendStructuredPromptWithMetricsAsync` methods
+    - Implemented `ApiClient.SendStructuredPromptWithMetricsAsync` for native llama.cpp structured output
+  - **JSON Schema Generation**
+    - Added `JsonSchemaBuilder` for generating JSON schemas from C# types
+    - Pre-built schemas: `ParsedOutputSchema`, `DialogueOnlySchema`, `AnalysisSchema`
+    - Schema validation with `ValidateSchema()` method
+    - Dynamic schema generation from C# types via `BuildFromType<T>()`
+  - **Structured Output Parsing**
+    - Added `OutputParser.ParseStructured()` for direct JSON parsing of structured responses
+    - Added `OutputParser.ParseAuto()` for automatic detection of structured vs free-form responses
+    - Added `OutputParserConfig.NativeStructured` preset for native structured output mode
+    - Added `StructuredDialogueResponse`, `StructuredMutation`, `StructuredIntent` DTOs for JSON deserialization
+  - **BrainAgent Integration**
+    - Added `SendNativeStructuredMessageAsync()` for native structured output with custom schema
+    - Added `SendNativeDialogueAsync()` for dialogue with built-in ParsedOutput schema
+    - Added `SendNativeStructuredInstructionAsync()` for instructions with structured output
+    - Generic versions with `<T>` for automatic deserialization to custom types
+  - **Test Coverage**: 56 new tests across 3 test files
+    - `JsonSchemaBuilderTests.cs`: Schema generation and validation tests
+    - `StructuredOutputProviderTests.cs`: Provider and configuration tests
+    - `OutputParserStructuredTests.cs`: Structured parsing tests
+  - **Documentation**: Updated `ARCHITECTURE.md` with Feature 12 section
+
+- **Feature 13: Structured Output Integration - COMPLETE** ✅
+  - **StructuredDialoguePipeline**: Complete orchestration layer for structured output processing
+    - Unified pipeline orchestrating LLM request → parsing → validation → mutation execution
+    - Automatic retry logic with constraint escalation via `StateSnapshot.ForRetry()`
+    - Automatic fallback to regex parsing on structured output failure
+    - Comprehensive metrics tracking for success rates and performance
+    - Full integration with `ValidationGate` and `MemoryMutationController`
+    - Three configuration modes: Default (structured + fallback), StructuredOnly, RegexOnly
+  - **StructuredSchemaValidator**: Pre-execution schema validation
+    - Validates mutation schemas (type, content, target, confidence requirements)
+    - Validates intent schemas (intentType, priority, parameters)
+    - Filters invalid mutations/intents before execution
+    - Supports both `StructuredMutation`/`ProposedMutation` and `StructuredIntent`/`WorldIntent` types
+    - Optional logging callbacks for invalid items
+  - **StructuredPipelineConfig**: Configurable pipeline modes
+    - `Default`: Structured output with automatic regex fallback (recommended for production)
+    - `StructuredOnly`: Native structured output only, no fallback
+    - `RegexOnly`: Legacy regex parsing only (for backward compatibility)
+    - Configurable schema validation flags (`ValidateMutationSchemas`, `ValidateIntentSchemas`)
+    - Configurable retry limits (`MaxRetries`)
+  - **StructuredPipelineMetrics**: Performance and success tracking
+    - Tracks structured output success/failure rates
+    - Tracks fallback usage rates
+    - Tracks validation failure counts
+    - Tracks mutation and intent execution counts
+    - Tracks retry attempt counts
+    - Calculated success rates (structured, overall, fallback)
+    - Reset capability for session-based tracking
+  - **StructuredPipelineResult**: Unified result reporting
+    - Success/failure status with detailed error messages
+    - Parse mode tracking (Structured, Regex, Fallback)
+    - Complete validation and mutation results
+    - Retry count tracking
+    - Convenience properties for common queries (MutationsExecuted, IntentsEmitted, ValidationPassed)
+  - **Validation Pipeline Integration**
+    - Full integration with `ValidationGate` for constraint and canonical fact validation
+    - Pre-validation schema checking before reaching validation gate
+    - Retry logic with constraint escalation on validation failures
+    - Handles structured output validation failures gracefully
+  - **Mutation Extraction Enhancement**
+    - Pipeline integration with `MemoryMutationController.ExecuteMutations`
+    - Mutations parsed via `OutputParser.ParseStructured()` before reaching controller
+    - Support for all mutation types in structured format (AppendEpisodic, TransformBelief, TransformRelationship, EmitWorldIntent)
+    - Schema validation integrated in pipeline via `ValidateMutationSchemas` config
+  - **World Intent Integration**
+    - `WorldIntentDispatcher` handles structured intents via event-based hookup
+    - Parse structured intent parameters correctly (flat Dictionary<string, string>)
+    - Validate intent schemas before dispatch via `ValidateIntentSchemas` config
+  - **Error Handling & Fallback**
+    - Comprehensive error handling for malformed structured outputs
+    - Automatic fallback to regex parsing on structured output failure
+    - Logging and metrics for structured output success/failure rates
+    - User-friendly error messages via `StructuredPipelineResult.ErrorMessage`
+  - **Migration & Compatibility**
+    - Configuration to enable/disable structured output per pipeline (`StructuredPipelineConfig`)
+    - Support for regex-only mode (`StructuredPipelineConfig.RegexOnly`)
+    - A/B testing support via configurable modes (Structured, Regex, Fallback)
+    - 100% backward compatibility maintained (all existing tests pass)
+  - **Performance**: Sub-millisecond parsing for all paths (~0.01ms structured, ~0.00ms regex)
+  - **Test Coverage**: Comprehensive integration tests covering all pipeline modes, fallback scenarios, retry logic, and schema validation
+  - **Documentation**: Updated `ARCHITECTURE.md` with complete Feature 13 section including pipeline flow, configuration, and usage examples
+
+#### Changed
+- **`StructuredPipelineMetrics` thread-safety**
+  - Refactored all metric properties to use `Interlocked` operations for thread-safe concurrent access
+  - Changed property setters to private backing fields with `Interlocked.Increment`, `Interlocked.Add`, and `Interlocked.Exchange`
+  - Properties now use expression-bodied getters returning backing field values
+  - Ensures safe concurrent metric tracking in multi-threaded scenarios
+
+### Project Infrastructure
+
+#### Added
+- **GitHub Issue Templates**
+  - Added bug report template (`.github/ISSUE_TEMPLATE/bug_report.md`) with comprehensive bug reporting fields
+  - Added feature request template (`.github/ISSUE_TEMPLATE/feature_request.md`) with use case and implementation guidance
+  - Added issue template configuration (`.github/ISSUE_TEMPLATE/config.yml`) with security advisory and community links
+- **Pull Request Template** (`.github/PULL_REQUEST_TEMPLATE.md`)
+  - Comprehensive PR template with architecture compliance checklist
+  - Security considerations section
+  - Code quality and testing checklists
+  - Documentation update requirements
+- **Dependabot Configuration** (`.github/dependabot.yml`)
+  - Automated dependency updates for NuGet packages (monthly schedule)
+  - Automated dependency updates for GitHub Actions (monthly schedule)
+  - Grouped updates for patch and minor versions
+  - Configurable PR limits and reviewers
+- **Security Policy** (`.github/SECURITY.md` and `SECURITY.md`)
+  - GitHub security policy with vulnerability reporting guidelines
+  - Root-level security policy with detailed reporting procedures
+  - Discord community contact information for security issues
+- **Code of Conduct** (`CODE_OF_CONDUCT.md`)
+  - Contributor Covenant Code of Conduct (version 2.1)
+  - Community standards and enforcement guidelines
+  - Reporting procedures and enforcement escalation
+
+#### Changed
+- **`.gitignore`**
+  - Added `claude.md` to ignore patterns
+- **`CONTRIBUTING.md`**
+  - Removed completed test coverage item from roadmap section
+
+### Documentation
+
+#### Changed
+- **`ROADMAP.md`**: Updated with latest feature status and progress
+- **`STATUS.md`**: Updated with current implementation status
+- **`USAGE_GUIDE.md`**: Updated usage documentation
+- **Doxygen Configuration**: Updated doxygen configs for documentation generation
+
+#### Fixed
+- **`.github/SECURITY.md`**: Updated GitHub username placeholder to actual repository owner
+- **`USAGE_GUIDE.md`**: Fixed heading formatting issue (removed empty braces)
+- **`COVERAGE_REPORT.md`**: Updated to reflect current ApiClient coverage status (66.74%)
+
+## [0.2.0-rc.2] - 2026-01-01
 
 ### Core Library
 
@@ -110,7 +259,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Phase 10 is now COMPLETE** - All 7 minimal proof suite tests verified, all 5 critical requirements implemented, 351 tests total
 
 
-## [0.2.0-rc.1] - 2026-1-1
+## [0.2.0-rc.1] - 2026-01-01
 
 ### Core Library
 
@@ -759,7 +908,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated main README.md with enhanced architecture overview, current completion status, and improved feature descriptions to help users understand the system capabilities.
   - Completed API documentation with XML comments achieving 100% coverage of all public APIs and generated Doxygen output with zero missing member warnings, ensuring comprehensive API reference documentation.
 
-## [0.1.0] - 2025-7-24
+## [0.1.0] - 2025-07-24
 
 ### Core Library
 
@@ -824,8 +973,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Version History
 
 ### Current Version
-- **0.2.0-rc.1**: Features 1-9 Complete - Determinism Layer (Expectancy Engine), Structured Memory System, State Snapshots & Context Retrieval, Ephemeral Working Memory (with Few-Shot Prompt Priming), Output Validation, Controlled Memory Mutation (MemoryMutationController & World Intent Dispatcher), Enhanced Fallback System, RedRoom Integration (with Memory Mutation Overlay and Validation Gate Overlay), Documentation & Polish (comprehensive documentation suite with 4 tutorials), Comprehensive Testing Infrastructure (92.37% coverage with integration tests), Testability Improvements (IFileSystem, IApiClient interfaces), Major Test Coverage Improvements (ApiClient 90.54%, ServerManager 74.55%), Full Pipeline Integration Tests, and Complete Documentation Suite (ARCHITECTURE.md, DETERMINISM_CONTRACT.md, PIPELINE_CONTRACT.md, MEMORY.md, VALIDATION_GATING.md, SAFEGUARDS.md, USAGE_GUIDE.md with tutorials, STATUS.md, ROADMAP.md, and more)
+- **0.2.0-rc.2**: Feature 10 Complete - Deterministic Proof Gap Testing (Phase 10 COMPLETE), WorldIntentDispatcher Singleton Lifecycle (Requirement #5), Pipeline Proof Gaps (double-hook safety, policy boundary proof), Snapshot-time driven context retrieval for deterministic behavior, Comprehensive regression tests for memory serialization (1,000+ lines), Byte-level prompt text determinism tests (Test D complete), 353 total tests (exceeds original estimate), All 7 minimal proof suite tests complete, All 5 critical requirements implemented, Determinism proof now defensible at byte level for serialized state and prompt text assembly
 
 ### Previous Versions
+- **0.2.0-rc.1**: Features 1-9 Complete - Determinism Layer (Expectancy Engine), Structured Memory System, State Snapshots & Context Retrieval, Ephemeral Working Memory (with Few-Shot Prompt Priming), Output Validation, Controlled Memory Mutation (MemoryMutationController & World Intent Dispatcher), Enhanced Fallback System, RedRoom Integration (with Memory Mutation Overlay and Validation Gate Overlay), Documentation & Polish (comprehensive documentation suite with 4 tutorials), Comprehensive Testing Infrastructure (92.37% coverage with integration tests), Testability Improvements (IFileSystem, IApiClient interfaces), Major Test Coverage Improvements (ApiClient 90.54%, ServerManager 74.55%), Full Pipeline Integration Tests, and Complete Documentation Suite (ARCHITECTURE.md, DETERMINISM_CONTRACT.md, PIPELINE_CONTRACT.md, MEMORY.md, VALIDATION_GATING.md, SAFEGUARDS.md, USAGE_GUIDE.md with tutorials, STATUS.md, ROADMAP.md, and more)
 - **0.1.0**: Initial Unity integration
 
