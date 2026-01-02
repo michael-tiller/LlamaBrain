@@ -32,6 +32,8 @@ namespace LlamaBrain.Core.StructuredOutput
         /// <summary>
         /// Creates parameters for JsonSchema format.
         /// </summary>
+        /// <param name="jsonSchema">The JSON schema string to use for structured output.</param>
+        /// <returns>A new StructuredOutputParameters instance configured for JsonSchema format.</returns>
         public static StructuredOutputParameters ForJsonSchema(string jsonSchema)
         {
             return new StructuredOutputParameters
@@ -44,6 +46,8 @@ namespace LlamaBrain.Core.StructuredOutput
         /// <summary>
         /// Creates parameters for Grammar format.
         /// </summary>
+        /// <param name="grammar">The GBNF grammar string to use for structured output.</param>
+        /// <returns>A new StructuredOutputParameters instance configured for Grammar format.</returns>
         public static StructuredOutputParameters ForGrammar(string grammar)
         {
             return new StructuredOutputParameters
@@ -56,6 +60,7 @@ namespace LlamaBrain.Core.StructuredOutput
         /// <summary>
         /// Creates parameters for ResponseFormat (JSON mode).
         /// </summary>
+        /// <returns>A new StructuredOutputParameters instance configured for JSON mode using ResponseFormat.</returns>
         public static StructuredOutputParameters ForJsonMode()
         {
             return new StructuredOutputParameters

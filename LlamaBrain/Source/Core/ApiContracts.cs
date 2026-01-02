@@ -91,6 +91,8 @@ namespace LlamaBrain.Core
     /// <summary>
     /// Creates a ResponseFormat with an embedded schema.
     /// </summary>
+    /// <param name="schema">The JSON schema object to embed in the response format.</param>
+    /// <returns>A new ResponseFormat instance configured for JSON object mode with the specified schema.</returns>
     public static ResponseFormat WithSchema(object schema)
     {
       return new ResponseFormat

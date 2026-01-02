@@ -39,6 +39,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `OutputParserStructuredTests.cs`: Structured parsing tests
   - **Documentation**: Updated `ARCHITECTURE.md` with Feature 12 section
 
+- **Feature 13: Structured Output Integration - IN PROGRESS** 🚧
+  - **Validation Pipeline Integration**
+    - Added `StructuredDialoguePipeline` to orchestrate full structured output flow
+    - Integrated structured output with `ValidationGate` for constraint validation
+    - Constraint validation works with structured format
+    - Handles structured output validation failures gracefully
+  - **Mutation Extraction Enhancement**
+    - Pipeline integration with `MemoryMutationController.ExecuteMutations`
+  - **Error Handling & Fallback**
+    - Comprehensive error handling for malformed structured outputs
+    - Automatic fallback to regex parsing on structured output failure (`StructuredPipelineConfig.FallbackToRegex`)
+    - Logging and metrics for structured output success/failure rates (`StructuredPipelineMetrics`)
+    - User-friendly error messages via `StructuredPipelineResult.ErrorMessage`
+  - **Migration & Compatibility**
+    - Configuration to enable/disable structured output per NPC (`StructuredPipelineConfig`)
+    - Support for regex-only mode (`StructuredPipelineConfig.RegexOnly`)
+    - A/B testing support via configurable modes (Structured, Regex, Fallback)
+  - **Test Coverage**: 30 new tests
+    - `StructuredPipelineConfigTests.cs`: Configuration tests (7 tests)
+    - `StructuredPipelineResultTests.cs`: Result handling tests (6 tests)
+    - `StructuredPipelineMetricsTests.cs`: Metrics tracking tests (10 tests)
+    - `StructuredDialoguePipelineTests.cs`: Pipeline construction tests (7 tests)
+    - All tests in `LlamaBrain.Tests/` passing (1685 tests)
+
+### Project Infrastructure
+
+#### Added
+- **GitHub Issue Templates**
+  - Added bug report template (`.github/ISSUE_TEMPLATE/bug_report.md`) with comprehensive bug reporting fields
+  - Added feature request template (`.github/ISSUE_TEMPLATE/feature_request.md`) with use case and implementation guidance
+  - Added issue template configuration (`.github/ISSUE_TEMPLATE/config.yml`) with security advisory and community links
+- **Pull Request Template** (`.github/PULL_REQUEST_TEMPLATE.md`)
+  - Comprehensive PR template with architecture compliance checklist
+  - Security considerations section
+  - Code quality and testing checklists
+  - Documentation update requirements
+- **Dependabot Configuration** (`.github/dependabot.yml`)
+  - Automated dependency updates for NuGet packages (monthly schedule)
+  - Automated dependency updates for GitHub Actions (monthly schedule)
+  - Grouped updates for patch and minor versions
+  - Configurable PR limits and reviewers
+- **Security Policy** (`.github/SECURITY.md` and `SECURITY.md`)
+  - GitHub security policy with vulnerability reporting guidelines
+  - Root-level security policy with detailed reporting procedures
+  - Discord community contact information for security issues
+- **Code of Conduct** (`CODE_OF_CONDUCT.md`)
+  - Contributor Covenant Code of Conduct (version 2.1)
+  - Community standards and enforcement guidelines
+  - Reporting procedures and enforcement escalation
+
+#### Changed
+- **`.gitignore`**
+  - Added `claude.md` to ignore patterns
+- **`CONTRIBUTING.md`**
+  - Removed completed test coverage item from roadmap section
+
+### Documentation
+
+#### Changed
+- **`ROADMAP.md`**: Updated with latest feature status and progress
+- **`STATUS.md`**: Updated with current implementation status
+- **`USAGE_GUIDE.md`**: Updated usage documentation
+- **Doxygen Configuration**: Updated doxygen configs for documentation generation
+
 ## [0.2.0-rc.2] - 2026-1-1
 
 ### Core Library
@@ -858,8 +922,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Version History
 
 ### Current Version
-- **0.2.0-rc.1**: Features 1-9 Complete - Determinism Layer (Expectancy Engine), Structured Memory System, State Snapshots & Context Retrieval, Ephemeral Working Memory (with Few-Shot Prompt Priming), Output Validation, Controlled Memory Mutation (MemoryMutationController & World Intent Dispatcher), Enhanced Fallback System, RedRoom Integration (with Memory Mutation Overlay and Validation Gate Overlay), Documentation & Polish (comprehensive documentation suite with 4 tutorials), Comprehensive Testing Infrastructure (92.37% coverage with integration tests), Testability Improvements (IFileSystem, IApiClient interfaces), Major Test Coverage Improvements (ApiClient 90.54%, ServerManager 74.55%), Full Pipeline Integration Tests, and Complete Documentation Suite (ARCHITECTURE.md, DETERMINISM_CONTRACT.md, PIPELINE_CONTRACT.md, MEMORY.md, VALIDATION_GATING.md, SAFEGUARDS.md, USAGE_GUIDE.md with tutorials, STATUS.md, ROADMAP.md, and more)
+- **0.2.0-rc.2**: Feature 10 Complete - Deterministic Proof Gap Testing (Phase 10 COMPLETE), WorldIntentDispatcher Singleton Lifecycle (Requirement #5), Pipeline Proof Gaps (double-hook safety, policy boundary proof), Snapshot-time driven context retrieval for deterministic behavior, Comprehensive regression tests for memory serialization (1,000+ lines), Byte-level prompt text determinism tests (Test D complete), 353 total tests (exceeds original estimate), All 7 minimal proof suite tests complete, All 5 critical requirements implemented, Determinism proof now defensible at byte level for serialized state and prompt text assembly
 
 ### Previous Versions
+- **0.2.0-rc.1**: Features 1-9 Complete - Determinism Layer (Expectancy Engine), Structured Memory System, State Snapshots & Context Retrieval, Ephemeral Working Memory (with Few-Shot Prompt Priming), Output Validation, Controlled Memory Mutation (MemoryMutationController & World Intent Dispatcher), Enhanced Fallback System, RedRoom Integration (with Memory Mutation Overlay and Validation Gate Overlay), Documentation & Polish (comprehensive documentation suite with 4 tutorials), Comprehensive Testing Infrastructure (92.37% coverage with integration tests), Testability Improvements (IFileSystem, IApiClient interfaces), Major Test Coverage Improvements (ApiClient 90.54%, ServerManager 74.55%), Full Pipeline Integration Tests, and Complete Documentation Suite (ARCHITECTURE.md, DETERMINISM_CONTRACT.md, PIPELINE_CONTRACT.md, MEMORY.md, VALIDATION_GATING.md, SAFEGUARDS.md, USAGE_GUIDE.md with tutorials, STATUS.md, ROADMAP.md, and more)
 - **0.1.0**: Initial Unity integration
 

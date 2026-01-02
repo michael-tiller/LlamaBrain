@@ -409,6 +409,7 @@ namespace LlamaBrain.Core.StructuredOutput
         /// <summary>
         /// Converts to ProposedMutation.
         /// </summary>
+        /// <returns>A ProposedMutation instance with the parsed mutation type and content.</returns>
         public ProposedMutation ToProposedMutation()
         {
             if (!Enum.TryParse<MutationType>(Type, true, out var mutationType))
@@ -455,6 +456,7 @@ namespace LlamaBrain.Core.StructuredOutput
         /// <summary>
         /// Converts to WorldIntent.
         /// </summary>
+        /// <returns>A WorldIntent instance with the intent type, target, parameters, and priority.</returns>
         public WorldIntent ToWorldIntent()
         {
             return new WorldIntent
