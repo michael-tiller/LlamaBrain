@@ -286,7 +286,15 @@ namespace LlamaBrain.Persona
       entry.Source = source;
       
       // Set deterministic ID and timestamp using injected providers
-      entry.Id = _idGenerator.GenerateId();
+      // Always use injected ID generator for determinism, unless ID was explicitly set to a non-GUID value
+      // (Default property initializer creates a GUID, which we replace for determinism)
+      if (string.IsNullOrEmpty(entry.Id) || IsDefaultGuid(entry.Id))
+      {
+        entry.Id = _idGenerator.GenerateId();
+      }
+      // Always use injected clock for determinism
+      // (Default property initializer uses system clock which is non-deterministic)
+      // Tests that need specific timestamps should use a fixed clock or set timestamps after creation
       entry.CreatedAtTicks = _clock.UtcNowTicks;
       
       // Assign monotonic sequence number for deterministic ordering
@@ -650,6 +658,24 @@ namespace LlamaBrain.Persona
     internal void SetNextSequenceNumberRaw(long nextSeq)
     {
       _nextSequenceNumber = nextSeq;
+    }
+
+    /// <summary>
+    /// Checks if an ID looks like a default GUID (8 hex characters).
+    /// Used to determine if we should replace it with a deterministic ID.
+    /// </summary>
+    private static bool IsDefaultGuid(string id)
+    {
+      if (string.IsNullOrEmpty(id) || id.Length != 8)
+        return false;
+      
+      // Check if all characters are hex digits (default GUID pattern)
+      foreach (char c in id)
+      {
+        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')))
+          return false;
+      }
+      return true;
     }
 
     #endregion

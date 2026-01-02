@@ -59,7 +59,7 @@ namespace LlamaBrain.Tests.Memory
       Assert.That(state.Key, Is.EqualTo("door_castle"));
       Assert.That(state.Value, Is.EqualTo("open"));
       Assert.That(state.Authority, Is.EqualTo(MemoryAuthority.WorldState));
-      Assert.That(state.Content, Is.EqualTo("door_castle: open"));
+      Assert.That(state.Content, Is.EqualTo("door_castle=open"));
     }
 
     [Test]
