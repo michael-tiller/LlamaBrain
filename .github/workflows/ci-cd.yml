@@ -157,7 +157,7 @@ jobs:
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_OUTPUT
 
       - name: Create/Update Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag_info.outputs.TAG_NAME }}
           name: LlamaBrain ${{ steps.tag_info.outputs.VERSION }}
