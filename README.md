@@ -1,12 +1,25 @@
 # LlamaBrain
 
-A comprehensive AI integration solution for Unity and .NET applications, providing secure, feature-rich integration with llama.cpp servers.
+**Deterministic Neuro-Symbolic Authoritative State Management**
 
-[![LlamaBrain R&D: Trigger Pre-caching + Episodic Logging](https://img.youtube.com/vi/RT2v9199gfM/0.jpg)](https://www.youtube.com/watch?v=RT2v9199gfM)
+A production-ready architecture that enforces a strict validation boundary between untrusted LLM outputs and your authoritative game state. The model is treated as a stateless generator—continuity emerges from deterministic state reconstruction, not from trusting the AI's memory.
+
+[![Deterministic Reconstruction + Validation Boundary](https://img.youtube.com/vi/RT2v9199gfM/0.jpg)](https://www.youtube.com/watch?v=RT2v9199gfM)
+
+## The Core Innovation
+
+**The Model is Untrusted.** LLMs are stochastic generators that hallucinate. LlamaBrain enforces a strict validation boundary: all LLM outputs are validated against constraints and canonical facts before any memory mutations occur. The model has no direct access to game state—it's a pure, stateless generator. Continuity emerges from deterministic state reconstruction, not from trusting the AI's memory.
+
+**The Validation Gate** prevents hallucinations from corrupting authoritative state. Every output is checked against:
+- Constraint sets from the expectancy engine
+- Immutable canonical facts (world truths that cannot be modified)
+- Authority hierarchy (canonical > world state > episodic > beliefs)
+
+Only validated outputs can trigger memory mutations. Invalid outputs trigger retries with stricter constraints, never corrupting state.
 
 LlamaBrain consists of two main components:
 
-- **LlamaBrain Core** - A robust .NET Standard 2.1 library for AI integration
+- **LlamaBrain Core** - A robust .NET Standard 2.1 library implementing the determinism boundary architecture
 - **LlamaBrain Runtime** - A Unity package providing seamless integration with Unity projects
 
 ## 🏗️ Project Structure
@@ -272,11 +285,11 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 **See [ROADMAP.md](Documentation/ROADMAP.md) for detailed implementation plan and progress tracking.**
 
-### Current Status: ~99% Complete
+### Current Status
 
-**Current Phase**: Feature 12 - Dedicated Structured Output ✅ Complete | Feature 8 - RedRoom Integration 🚧 99% Complete | Feature 10 - Deterministic Proof Gap Testing ✅ Complete
+**Core Architecture**: Complete and production-ready. The determinism boundary, validation gate, and authoritative memory system are fully implemented and tested.
 
-**Next Priority**: Feature 13 - Structured Output Integration
+**Current Focus**: Structured Output Integration (Feature 13) and cross-session determinism (Feature 14, 16)
 
 ### Current Features (v0.2+)
 - ✅ **RedRoom Testing Suite**: Comprehensive in-game LLM testing framework
@@ -348,15 +361,15 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 - Failure reason logging
 - Full test coverage
 
-**Phase 8: RedRoom Integration** 🚧 99% Complete
-- Validation metrics and export ✅
-- Architectural pattern testing ✅
-- End-to-end validation scenarios ✅
-- Testing overlays ✅ (Memory Mutation Overlay, Validation Gate Overlay - minor fixes needed)
-- Unity PlayMode integration tests ✅ (73+ tests complete)
-- Full Pipeline Integration Tests ✅ (8 tests complete)
+**Phase 8: RedRoom Integration** ✅ Complete
+- Validation metrics and export
+- Architectural pattern testing
+- End-to-end validation scenarios
+- Testing overlays (Memory Mutation Overlay, Validation Gate Overlay)
+- Unity PlayMode integration tests (73+ tests)
+- Full Pipeline Integration Tests (8 tests)
 
-**Phase 9: Documentation** ✅ 100% Complete
+**Phase 9: Documentation** ✅ Complete
 - Architecture documentation with diagrams ✅
 - Setup tutorials for new components ✅
 - API reference for all layers ✅ (100% XML documentation, zero missing member warnings)
@@ -364,20 +377,19 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 - Tutorial content ✅ Complete (4 comprehensive step-by-step tutorials)
 
 **Phase 10: Deterministic Proof Gap Testing** ✅ Complete
-- ✅ All 5 critical requirements implemented and tested
-- ✅ All 7 minimal proof suite tests complete
-- ✅ Tests A-E all complete (including Test D with 6 new byte-level prompt text tests)
-- ✅ ContextRetrievalLayer: 55 tests complete (exceeds estimate)
-- ✅ PromptAssembler: 40 tests complete
-- ✅ EphemeralWorkingMemory: 40 tests complete
-- ✅ OutputParser: 86 tests complete (includes normalization contract)
-- ✅ ValidationGate: 44 tests complete (17 basic + 27 detailed tests)
-- ✅ MemoryMutationController: 41 tests complete
-- ✅ WorldIntentDispatcher: 28 tests complete (Requirement #5 singleton lifecycle)
-- ✅ Full Pipeline deterministic tests: 25 tests complete
-- **Total: 351 tests** (exceeds original estimate of 150-180)
-- **Determinism proof now defensible at byte level** for both serialized state and prompt text assembly
-- See [VERIFICATION_REPORT.md](Documentation/VERIFICATION_REPORT.md) for Phase 10 completion status
+- All 5 critical requirements implemented and tested
+- All 7 minimal proof suite tests complete
+- Tests A-E complete (including Test D with byte-level prompt text validation)
+- ContextRetrievalLayer: 55 tests
+- PromptAssembler: 40 tests
+- EphemeralWorkingMemory: 40 tests
+- OutputParser: 86 tests (includes normalization contract)
+- ValidationGate: 44 tests
+- MemoryMutationController: 41 tests
+- WorldIntentDispatcher: 28 tests
+- Full Pipeline deterministic tests: 25 tests
+- **Total: 351 tests** - Determinism proof defensible at byte level for both serialized state and prompt text assembly
+- See [VERIFICATION_REPORT.md](Documentation/VERIFICATION_REPORT.md) for completion status
 
 For detailed status information, see the [STATUS.md](Documentation/STATUS.md) file.
 
