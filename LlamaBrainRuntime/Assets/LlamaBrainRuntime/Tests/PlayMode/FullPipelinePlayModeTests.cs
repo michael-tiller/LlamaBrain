@@ -11,6 +11,7 @@ using LlamaBrain.Runtime.Core.Validation;
 using LlamaBrain.Core.Expectancy;
 using LlamaBrain.Core.Inference;
 using LlamaBrain.Core.Validation;
+using LlamaBrain.Core.StructuredOutput;
 using System.Collections;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
@@ -85,6 +86,80 @@ namespace LlamaBrain.Tests.PlayMode
       // Pass attempt number to enable deterministic "attempt 1 throws, attempt 2 succeeds" behaviors
       if (OnSendMetrics != null)
       {
+        return OnSendMetrics(prompt, attempt, maxTokens, temperature, cachePrompt, cancellationToken);
+      }
+      
+      // Validate responses list is not empty (unless OnSendMetrics is provided)
+      if (responses.Count == 0)
+      {
+        throw new InvalidOperationException("StubApiClient requires at least one response, or OnSendMetrics must be set");
+      }
+      
+      // Get response for current attempt (attempt 1 = responses[0], attempt 2 = responses[1], etc.)
+      var response = GetResponse(attempt);
+      
+      var metrics = new CompletionMetrics
+      {
+        Content = response.Content,
+        PromptTokenCount = response.PromptTokenCount,
+        GeneratedTokenCount = response.GeneratedTokenCount,
+        TotalTimeMs = response.TotalTimeMs,
+        TtftMs = response.TtftMs,
+        PrefillTimeMs = response.PrefillTimeMs,
+        DecodeTimeMs = response.DecodeTimeMs,
+        CachedTokenCount = response.CachedTokenCount
+      };
+      
+      // Raise event if subscribed
+      OnMetricsAvailable?.Invoke(metrics);
+      
+      return Task.FromResult(metrics);
+    }
+
+    /// <summary>
+    /// Sends a structured prompt and returns just the content string.
+    /// Routes through SendStructuredPromptWithMetricsAsync to ensure single attempt counter.
+    /// </summary>
+    public async Task<string> SendStructuredPromptAsync(
+      string prompt,
+      string jsonSchema,
+      StructuredOutputFormat format = StructuredOutputFormat.JsonSchema,
+      int? maxTokens = null,
+      float? temperature = null,
+      bool cachePrompt = false,
+      CancellationToken cancellationToken = default)
+    {
+      var metrics = await SendStructuredPromptWithMetricsAsync(prompt, jsonSchema, format, maxTokens, temperature, cachePrompt, cancellationToken);
+      return metrics.Content;
+    }
+
+    /// <summary>
+    /// Sends a structured prompt and returns detailed metrics.
+    /// This uses the same attempt counter as SendPromptWithMetricsAsync to ensure consistent counting.
+    /// </summary>
+    public Task<CompletionMetrics> SendStructuredPromptWithMetricsAsync(
+      string prompt,
+      string jsonSchema,
+      StructuredOutputFormat format = StructuredOutputFormat.JsonSchema,
+      int? maxTokens = null,
+      float? temperature = null,
+      bool cachePrompt = false,
+      CancellationToken cancellationToken = default)
+    {
+      if (disposed) throw new ObjectDisposedException(nameof(StubApiClient));
+      
+      // Increment atomically to ensure thread-safety if concurrent calls occur
+      // This ensures consistent attempt counting whether OnSendMetrics throws or returns normally
+      var attempt = Interlocked.Increment(ref llmCallCount);
+      
+      // Use custom handler if provided (for throwing exceptions, etc.)
+      // Pass attempt number to enable deterministic "attempt 1 throws, attempt 2 succeeds" behaviors
+      // Note: For structured prompts, we'll use the same handler but it won't receive jsonSchema/format
+      // This is acceptable for stub testing - the handler can ignore those parameters
+      if (OnSendMetrics != null)
+      {
+        // For structured prompts, we'll route through the same handler but it won't have schema info
+        // This is fine for stub testing - the handler can work with just prompt/attempt
         return OnSendMetrics(prompt, attempt, maxTokens, temperature, cachePrompt, cancellationToken);
       }
       

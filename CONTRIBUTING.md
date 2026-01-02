@@ -396,7 +396,6 @@ LlamaBrain has extensive documentation. When contributing:
 
 - **Feature 12 & 13: Structured Output (JSON)**: Replace regex parser with LLM-native structured output
 - **Feature 16: Save/Load Game Integration**: Game state persistence system
-- **Test Coverage**: Additional determinism tests (see [PHASE10_PROOF_GAPS.md](Documentation/PHASE10_PROOF_GAPS.md))
 
 ### Core Library
 
