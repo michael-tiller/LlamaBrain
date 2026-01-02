@@ -2,7 +2,7 @@
 
 This guide provides practical examples and best practices for using LlamaBrain's deterministic NPC dialogue system across different game engines.
 
-**Last Updated**: December 31, 2025
+**Last Updated**: January 2, 2026
 
 ---
 
@@ -23,8 +23,10 @@ This guide focuses on the **core library** (engine-agnostic .NET Standard 2.1), 
 5. [Validation Rules](#validation-rules)
 6. [Fallback System](#fallback-system)
 7. [World Intents](#world-intents)
-8. [Debugging & Monitoring](#debugging--monitoring)
-9. [Performance Optimization](#performance-optimization)
+8. [Structured Output](#structured-output)
+9. [Migrating to Structured Output](#migrating-to-structured-output)
+10. [Debugging & Monitoring](#debugging--monitoring)
+11. [Performance Optimization](#performance-optimization)
 
 ---
 
@@ -787,6 +789,214 @@ Common intent types and their usage:
 // Intents are emitted via MemoryMutationController.OnWorldIntentEmitted event
 // You must subscribe to this event to handle intents in your game system
 ```
+
+---
+
+<a id="structured-output"></a>
+## Structured Output
+
+LlamaBrain supports native structured output via llama.cpp's `json_schema` parameter. This ensures LLM responses conform to a strict JSON schema, eliminating regex parsing errors and improving reliability.
+
+### Using StructuredDialoguePipeline
+
+The `StructuredDialoguePipeline` provides a complete orchestration layer for structured output:
+
+```csharp
+using LlamaBrain.Core;
+using LlamaBrain.Core.StructuredOutput;
+using LlamaBrain.Core.Validation;
+using LlamaBrain.Persona;
+
+// Create components
+var agent = new BrainAgent(profile, apiClient, memoryStore);
+var validationGate = new ValidationGate();
+var mutationController = new MemoryMutationController();
+var memorySystem = memoryStore.GetOrCreateSystem(profile.PersonaId);
+
+// Create pipeline with default config (structured with regex fallback)
+var pipeline = new StructuredDialoguePipeline(
+    agent,
+    validationGate,
+    mutationController,
+    memorySystem);
+
+// Process dialogue
+var result = await pipeline.ProcessDialogueAsync("Hello shopkeeper!");
+
+if (result.Success)
+{
+    Console.WriteLine($"Dialogue: {result.DialogueText}");
+    Console.WriteLine($"Parse Mode: {result.ParseMode}"); // Structured, Regex, or Fallback
+    Console.WriteLine($"Mutations Executed: {result.MutationResult?.SuccessCount ?? 0}");
+}
+```
+
+### Pipeline Configuration
+
+```csharp
+// Structured output only (no fallback)
+var config = StructuredPipelineConfig.StructuredOnly;
+
+// Regex parsing only (for older llama.cpp versions)
+var config = StructuredPipelineConfig.RegexOnly;
+
+// Custom configuration
+var config = new StructuredPipelineConfig
+{
+    UseStructuredOutput = true,
+    FallbackToRegex = true,
+    MaxRetries = 3,
+    TrackMetrics = true,
+    ValidateMutationSchemas = true,  // Enable schema validation
+    ValidateIntentSchemas = true
+};
+
+var pipeline = new StructuredDialoguePipeline(agent, validationGate, null, null, config);
+```
+
+### Metrics Tracking
+
+```csharp
+// Get metrics after processing
+var metrics = pipeline.Metrics;
+
+Console.WriteLine($"Total Requests: {metrics.TotalRequests}");
+Console.WriteLine($"Structured Success: {metrics.StructuredSuccessCount}");
+Console.WriteLine($"Fallback Count: {metrics.RegexFallbackCount}");
+Console.WriteLine($"Success Rate: {metrics.StructuredSuccessRate:F1}%");
+
+// Reset metrics
+pipeline.ResetMetrics();
+```
+
+---
+
+<a id="migrating-to-structured-output"></a>
+## Migrating to Structured Output
+
+This section describes how to migrate from regex-based parsing to native structured output.
+
+### Prerequisites
+
+1. **llama.cpp version**: Ensure your llama.cpp server supports the `json_schema` parameter. This feature was added in commit [`5b7b0ac8df`](https://github.com/ggerganov/llama.cpp/commit/5b7b0ac8df) (March 22, 2024). Verify your llama.cpp build includes this commit or later. See the [llama.cpp repository](https://github.com/ggerganov/llama.cpp) for the latest implementation.
+2. **API compatibility**: The `IApiClient.SendStructuredPromptAsync` method must be available
+
+### Migration Steps
+
+#### Step 1: Update BrainAgent Calls
+
+**Before (Regex Parsing):**
+```csharp
+var agent = new BrainAgent(profile, apiClient, memoryStore);
+var response = await agent.SendMessageAsync("Hello!");
+
+// Manual parsing
+var parser = new OutputParser();
+var parsed = parser.Parse(response);
+```
+
+**After (Structured Output):**
+```csharp
+var agent = new BrainAgent(profile, apiClient, memoryStore);
+
+// Direct structured output
+var parsed = await agent.SendNativeDialogueAsync("Hello!");
+
+// Or use the full pipeline
+var pipeline = new StructuredDialoguePipeline(agent, validationGate);
+var result = await pipeline.ProcessDialogueAsync("Hello!");
+```
+
+#### Step 2: Update Validation Integration
+
+**Before:**
+```csharp
+var parser = new OutputParser();
+var parsed = parser.Parse(rawResponse);
+var gateResult = validationGate.Validate(parsed, context);
+
+// Manual mutation execution
+if (gateResult.Passed)
+{
+    foreach (var mutation in gateResult.ApprovedMutations)
+    {
+        // Execute mutation...
+    }
+}
+```
+
+**After:**
+```csharp
+// Pipeline handles everything
+var result = await pipeline.ProcessDialogueAsync("Hello!");
+
+// Access results
+if (result.Success)
+{
+    var gateResult = result.GateResult;
+    var mutationResult = result.MutationResult;
+}
+```
+
+#### Step 3: Gradual Migration with Fallback
+
+For safety, use the fallback configuration during migration:
+
+```csharp
+var config = StructuredPipelineConfig.Default; // Uses fallback
+config.TrackMetrics = true;
+
+var pipeline = new StructuredDialoguePipeline(agent, validationGate, null, null, config);
+
+// Process requests and monitor metrics
+var result = await pipeline.ProcessDialogueAsync("Hello!");
+
+// Check how often fallback is used
+var fallbackRate = pipeline.Metrics.FallbackRate;
+Console.WriteLine($"Fallback Rate: {fallbackRate:F1}%");
+```
+
+#### Step 4: Disable Fallback When Stable
+
+Once you confirm structured output is working reliably:
+
+```csharp
+var config = StructuredPipelineConfig.StructuredOnly;
+var pipeline = new StructuredDialoguePipeline(agent, validationGate, null, null, config);
+```
+
+### Schema Validation
+
+Enable schema validation to filter invalid mutations/intents before execution:
+
+```csharp
+var config = StructuredPipelineConfig.Default;
+config.ValidateMutationSchemas = true;
+config.ValidateIntentSchemas = true;
+
+// Invalid mutations are filtered out and logged
+// e.g., TransformBelief without a target, empty content, etc.
+```
+
+### Prompt Considerations
+
+Structured output doesn't require special prompt formatting. The JSON schema is sent to the LLM as a constraint, not embedded in the prompt.
+
+**No changes needed** to your existing prompts. The LLM will automatically format its response to match the schema.
+
+### Performance Comparison
+
+Both structured and regex parsing complete in sub-millisecond times:
+
+| Parse Type | Simple Response | Complex Response |
+|------------|-----------------|------------------|
+| Structured | ~0.01ms | ~0.07ms |
+| Regex | ~0.00ms | ~0.01ms |
+
+The slight overhead of structured parsing is negligible and offset by:
+- Type safety
+- Elimination of regex edge cases
+- Automatic schema validation
 
 ---
 

@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using LlamaBrain.Core.StructuredOutput;
+using LlamaBrain.Core.Validation;
 using LlamaBrain.Persona;
 using LlamaBrain.Utilities;
 
@@ -413,6 +415,214 @@ namespace LlamaBrain.Core
     public async Task<T?> SendStructuredInstructionAsync<T>(string instruction, string jsonSchema, string? context = null, CancellationToken cancellationToken = default) where T : class
     {
       var jsonResponse = await SendStructuredInstructionAsync(instruction, jsonSchema, context, cancellationToken);
+      return JsonUtils.Deserialize<T>(jsonResponse);
+    }
+
+    // =========================================================================
+    // Native Structured Output Methods (llama.cpp json_schema support)
+    // =========================================================================
+
+    /// <summary>
+    /// Sends a message using native structured output (llama.cpp json_schema).
+    /// The LLM is constrained to output valid JSON matching the schema.
+    /// </summary>
+    /// <param name="message">The message to send</param>
+    /// <param name="jsonSchema">The JSON schema the response must conform to</param>
+    /// <param name="format">The structured output format (default: JsonSchema)</param>
+    /// <param name="cancellationToken">Optional cancellation token</param>
+    /// <returns>The structured JSON response</returns>
+    public async Task<string> SendNativeStructuredMessageAsync(
+      string message,
+      string jsonSchema,
+      StructuredOutputFormat format = StructuredOutputFormat.JsonSchema,
+      CancellationToken cancellationToken = default)
+    {
+      if (_disposed)
+        throw new ObjectDisposedException(nameof(BrainAgent));
+
+      if (string.IsNullOrWhiteSpace(message))
+        throw new ArgumentException("Message cannot be null or empty", nameof(message));
+
+      if (string.IsNullOrWhiteSpace(jsonSchema))
+        throw new ArgumentException("JSON schema cannot be null or empty", nameof(jsonSchema));
+
+      try
+      {
+        // Add the user message to the dialogue session
+        _dialogueSession.AppendPlayer(message);
+
+        // Compose the prompt (without structured output instructions - the API enforces structure)
+        var prompt = _promptComposer.ComposePrompt(_profile, _dialogueSession, message);
+
+        // Send with native structured output
+        var response = await _apiClient.SendStructuredPromptAsync(
+          prompt,
+          jsonSchema,
+          format,
+          cancellationToken: cancellationToken);
+
+        // Check for null/empty response
+        if (string.IsNullOrWhiteSpace(response))
+        {
+          Logger.Error("Unexpected null or empty response from SendStructuredPromptAsync");
+          throw new InvalidOperationException("Received null or empty response from LLM");
+        }
+
+        // Check for errors
+        if (response.StartsWith("Error:"))
+          throw new InvalidOperationException($"LLM returned an error: {response}");
+
+        // Add the response to the dialogue session
+        _dialogueSession.AppendNpc(response);
+
+        return response;
+      }
+      catch (Exception ex)
+      {
+        Logger.Error($"Error in SendNativeStructuredMessageAsync: {ex.Message}");
+        throw;
+      }
+    }
+
+    /// <summary>
+    /// Sends a message using native structured output and parses the result.
+    /// Uses the ParsedOutput schema for dialogue with mutations and intents.
+    /// </summary>
+    /// <param name="message">The message to send</param>
+    /// <param name="format">The structured output format (default: JsonSchema)</param>
+    /// <param name="cancellationToken">Optional cancellation token</param>
+    /// <returns>Parsed output with dialogue, mutations, and intents</returns>
+    public async Task<ParsedOutput> SendNativeDialogueAsync(
+      string message,
+      StructuredOutputFormat format = StructuredOutputFormat.JsonSchema,
+      CancellationToken cancellationToken = default)
+    {
+      if (_disposed)
+        throw new ObjectDisposedException(nameof(BrainAgent));
+
+      if (string.IsNullOrWhiteSpace(message))
+        throw new ArgumentException("Message cannot be null or empty", nameof(message));
+
+      try
+      {
+        // Use the pre-built ParsedOutput schema
+        var schema = JsonSchemaBuilder.ParsedOutputSchema;
+
+        // Send with native structured output
+        var jsonResponse = await SendNativeStructuredMessageAsync(
+          message,
+          schema,
+          format,
+          cancellationToken);
+
+        // Parse the structured response
+        var parser = new OutputParser(OutputParserConfig.NativeStructured);
+        var result = parser.ParseStructured(jsonResponse);
+
+        return result;
+      }
+      catch (Exception ex)
+      {
+        Logger.Error($"Error in SendNativeDialogueAsync: {ex.Message}");
+        return ParsedOutput.Failed($"Error: {ex.Message}", "");
+      }
+    }
+
+    /// <summary>
+    /// Sends a message using native structured output and deserializes to a specific type.
+    /// </summary>
+    /// <typeparam name="T">The type to deserialize to</typeparam>
+    /// <param name="message">The message to send</param>
+    /// <param name="jsonSchema">The JSON schema the response must conform to</param>
+    /// <param name="format">The structured output format (default: JsonSchema)</param>
+    /// <param name="cancellationToken">Optional cancellation token</param>
+    /// <returns>The deserialized response object</returns>
+    public async Task<T?> SendNativeStructuredMessageAsync<T>(
+      string message,
+      string jsonSchema,
+      StructuredOutputFormat format = StructuredOutputFormat.JsonSchema,
+      CancellationToken cancellationToken = default) where T : class
+    {
+      var jsonResponse = await SendNativeStructuredMessageAsync(message, jsonSchema, format, cancellationToken);
+      return JsonUtils.Deserialize<T>(jsonResponse);
+    }
+
+    /// <summary>
+    /// Sends a simple instruction using native structured output.
+    /// Uses the provided schema to constrain the LLM output.
+    /// </summary>
+    /// <param name="instruction">The instruction to send</param>
+    /// <param name="jsonSchema">The JSON schema the response must conform to</param>
+    /// <param name="context">Optional additional context</param>
+    /// <param name="format">The structured output format (default: JsonSchema)</param>
+    /// <param name="cancellationToken">Optional cancellation token</param>
+    /// <returns>The structured JSON response</returns>
+    public async Task<string> SendNativeStructuredInstructionAsync(
+      string instruction,
+      string jsonSchema,
+      string? context = null,
+      StructuredOutputFormat format = StructuredOutputFormat.JsonSchema,
+      CancellationToken cancellationToken = default)
+    {
+      if (_disposed)
+        throw new ObjectDisposedException(nameof(BrainAgent));
+
+      if (string.IsNullOrWhiteSpace(instruction))
+        throw new ArgumentException("Instruction cannot be null or empty", nameof(instruction));
+
+      if (string.IsNullOrWhiteSpace(jsonSchema))
+        throw new ArgumentException("JSON schema cannot be null or empty", nameof(jsonSchema));
+
+      try
+      {
+        // Compose the instruction prompt (without structured output instructions)
+        var prompt = _promptComposer.ComposeInstructionPrompt(_profile, instruction, context);
+
+        // Send with native structured output
+        var response = await _apiClient.SendStructuredPromptAsync(
+          prompt,
+          jsonSchema,
+          format,
+          cancellationToken: cancellationToken);
+
+        // Check for null/empty response
+        if (string.IsNullOrWhiteSpace(response))
+        {
+          Logger.Error("Unexpected null or empty response from SendStructuredPromptAsync");
+          throw new InvalidOperationException("Received null or empty response from LLM");
+        }
+
+        // Check for errors
+        if (response.StartsWith("Error:"))
+          throw new InvalidOperationException($"LLM returned an error: {response}");
+
+        return response;
+      }
+      catch (Exception ex)
+      {
+        Logger.Error($"Error in SendNativeStructuredInstructionAsync: {ex.Message}");
+        throw;
+      }
+    }
+
+    /// <summary>
+    /// Sends an instruction using native structured output and deserializes to a specific type.
+    /// </summary>
+    /// <typeparam name="T">The type to deserialize to</typeparam>
+    /// <param name="instruction">The instruction to send</param>
+    /// <param name="jsonSchema">The JSON schema the response must conform to</param>
+    /// <param name="context">Optional additional context</param>
+    /// <param name="format">The structured output format (default: JsonSchema)</param>
+    /// <param name="cancellationToken">Optional cancellation token</param>
+    /// <returns>The deserialized response object</returns>
+    public async Task<T?> SendNativeStructuredInstructionAsync<T>(
+      string instruction,
+      string jsonSchema,
+      string? context = null,
+      StructuredOutputFormat format = StructuredOutputFormat.JsonSchema,
+      CancellationToken cancellationToken = default) where T : class
+    {
+      var jsonResponse = await SendNativeStructuredInstructionAsync(instruction, jsonSchema, context, format, cancellationToken);
       return JsonUtils.Deserialize<T>(jsonResponse);
     }
 

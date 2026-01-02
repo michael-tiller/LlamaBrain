@@ -1943,11 +1943,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 2f7f3dde7ae722a4aafffe20691ad702, type: 3}
---- !u!1 &2066848813 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 4857377203615635700, guid: 65337913c4f5a19418e0847cb2de6544, type: 3}
-  m_PrefabInstance: {fileID: 1762449139698897364}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &2136854165 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 5475875840202900849, guid: 09aade0ecefd01e4b8f7661acf64f5c2, type: 3}
@@ -2076,17 +2071,9 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 2669952312470225669, guid: 65337913c4f5a19418e0847cb2de6544, type: 3}
-      propertyPath: _overlayPrefab
-      value: 
-      objectReference: {fileID: 5732997126875414157, guid: 80882182aa7d2aa4688af2561ff4553e, type: 3}
     - target: {fileID: 4857377203615635700, guid: 65337913c4f5a19418e0847cb2de6544, type: 3}
       propertyPath: m_Name
       value: RedRoom_Canvas
-      objectReference: {fileID: 0}
-    - target: {fileID: 8497530750118964675, guid: 65337913c4f5a19418e0847cb2de6544, type: 3}
-      propertyPath: m_AdditionalShaderChannelsFlag
-      value: 25
       objectReference: {fileID: 0}
     - target: {fileID: 8827309958798681494, guid: 65337913c4f5a19418e0847cb2de6544, type: 3}
       propertyPath: m_Pivot.x
@@ -2171,37 +2158,19 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 4857377203615635700, guid: 65337913c4f5a19418e0847cb2de6544, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1762449139698897369}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 65337913c4f5a19418e0847cb2de6544, type: 3}
 --- !u!114 &1762449139698897368 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1729518606394773526, guid: 65337913c4f5a19418e0847cb2de6544, type: 3}
   m_PrefabInstance: {fileID: 1762449139698897364}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2066848813}
+  m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: eb76a5051f8a5d1478d647029f9fb83d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &1762449139698897369
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2066848813}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d4e5f6a7b8c9012345678901234567b8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _autoSetup: 1
-  _targetCanvas: {fileID: 0}
-  _overlayPrefab: {fileID: 0}
 --- !u!1001 &1959462311978496851
 PrefabInstance:
   m_ObjectHideFlags: 0
