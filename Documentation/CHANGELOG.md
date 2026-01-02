@@ -5,6 +5,51 @@ All notable changes to LlamaBrain will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0-rc.1] (Unreleased)
+
+### Core Library
+
+#### Added
+- **Feature 23: Structured Input/Context - IN PROGRESS (~70%)** 🚧
+  - **Structured Context Provider Infrastructure**
+    - Added `IStructuredContextProvider` interface for structured context generation
+    - Added `LlamaCppStructuredContextProvider` singleton implementation
+    - Added `StructuredContextFormat` enum with None, JsonContext, and FunctionCalling options
+    - Added `StructuredContextConfig` for configuring context injection behavior
+    - Static presets: Default, TextOnly, Strict
+  - **JSON Schema DTOs for Context**
+    - Added `ContextJsonSchema` root DTO with versioning support
+    - Added `ContextSection` for memories (canonical facts, world state, episodic, beliefs)
+    - Added `ConstraintSection` for prohibitions, requirements, permissions
+    - Added `DialogueSection` with history and player input
+    - Added helper DTOs: `WorldStateEntry`, `EpisodicMemoryEntry`, `BeliefEntry`, `StructuredDialogueEntry`
+  - **Context Serialization**
+    - Added `ContextSerializer` with deterministic JSON serialization
+    - Supports compact JSON mode for token efficiency
+    - XML-style delimiters (`<context_json>`) for prompt injection
+    - Schema version tracking for forward compatibility
+  - **PromptAssembler Integration**
+    - Added `StructuredContextConfig` property to `PromptAssemblerConfig`
+    - Added `UseStructuredContext` computed property
+    - Added `AssembleStructuredPrompt()` method for structured context assembly
+    - Automatic fallback to text assembly on failure (when configured)
+    - Hybrid mode: structured JSON context + text system prompt
+  - **Test Coverage**: ~82 new tests across 3 test files
+    - `ContextSerializerTests.cs`: Serialization, determinism, and round-trip tests (23 tests)
+    - `StructuredContextProviderTests.cs`: Provider, config, and context building tests (24 tests)
+    - `PromptAssemblerStructuredTests.cs`: Integration and fallback behavior tests (35 tests)
+  - **Files Added**:
+    - `Source/Core/StructuredInput/StructuredContextFormat.cs`
+    - `Source/Core/StructuredInput/StructuredContextConfig.cs`
+    - `Source/Core/StructuredInput/IStructuredContextProvider.cs`
+    - `Source/Core/StructuredInput/LlamaCppStructuredContextProvider.cs`
+    - `Source/Core/StructuredInput/ContextSerializer.cs`
+    - `Source/Core/StructuredInput/Schemas/ContextJsonSchema.cs`
+    - `Source/Core/StructuredInput/Schemas/ContextSection.cs`
+    - `Source/Core/StructuredInput/Schemas/ConstraintSection.cs`
+    - `Source/Core/StructuredInput/Schemas/DialogueSection.cs`
+  - **Deferred Items**: Function calling support deferred (llama.cpp doesn't support native function calling)
+
 ## [0.2.0] - 2026-01-02
 
 ### Core Library

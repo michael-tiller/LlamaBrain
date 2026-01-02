@@ -1,4 +1,4 @@
-# LlamaBrain Core Library 0.2.0-rc.1
+# LlamaBrain Core Library 0.3.0-rc.1
 
 **Deterministic State Management for Stochastic AI**
 

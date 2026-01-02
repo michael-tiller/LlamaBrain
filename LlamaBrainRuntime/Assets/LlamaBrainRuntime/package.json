@@ -1,6 +1,6 @@
 {
   "name": "com.llamabrain.unity",
-  "version": "0.2.0",
+  "version": "0.3.0-rc.1",
   "displayName": "LlamaBrain Managed Host",
   "description": "LlamaBrain Managed Host for Unity. This is the runtime library for LlamaBrain. It is used to host the LlamaBrain engine and manage the LlamaBrain agent.",
   "unity": "2022.3",

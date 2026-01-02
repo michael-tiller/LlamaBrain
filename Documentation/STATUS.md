@@ -1,12 +1,13 @@
 # LlamaBrain Implementation Status
 
-**Last Updated**: January 2, 2026 (Feature 13 Complete)  
+**Last Updated**: January 2, 2026 (Feature 23 In Progress - 0.3.0-rc.1)  
 
 ## Current Status
 
 **Core Features**: ✅ **COMPLETE** (Features 1-10, 12, 13)
 **Overall Progress**: Core architecture complete, enhancements in progress
-**Test Coverage**: 92.37% line coverage (5,100 of 5,521 lines), ~95% branch coverage
+**Test Coverage**: 88.96% line coverage (5,824 of 6,547 lines), ~95% branch coverage
+**Coverage Note**: Coverage regressed from 92.37% due to Features 12-13 adding 1,026 new lines. Recovery plan in progress (see COVERAGE_REPORT.md).
 **Total Tests**: 1,758 tests (all passing)
 **FullPipelineIntegrationTests**: 22 tests complete
 
@@ -38,7 +39,7 @@
 | [Feature 20: Memory Change History Visualization](ROADMAP.md#feature-20) | 📋 Planned | LOW |
 | [Feature 21: Sidecar Host](ROADMAP.md#feature-21) | 📋 Planned | MEDIUM |
 | [Feature 22: Unreal Engine Support](ROADMAP.md#feature-22) | 📋 Planned | MEDIUM |
-| [Feature 23: Structured Input/Context](ROADMAP.md#feature-23) | 📋 Planned | HIGH |
+| [Feature 23: Structured Input/Context](ROADMAP.md#feature-23) | 🚧 In Progress | ~70% |
 | [Feature 24: "I've seen this" Recognition](ROADMAP.md#feature-24) | 📋 Planned | MEDIUM |
 
 **Note**: Detailed feature descriptions, implementation plans, and checklists are in [ROADMAP.md](ROADMAP.md). This document focuses on high-level status and progress tracking.
@@ -49,15 +50,16 @@
 
 **Critical Path for Milestone 5 (v0.3.0):**
 
-1. **Feature 12 & 13: Structured Output** - **DO THIS FIRST**
+1. **Feature 12 & 13: Structured Output** - ✅ **COMPLETE**
    - Feature 12: Dedicated Structured Output (2-3 weeks) - ✅ **COMPLETE**
-   - Feature 13: Structured Output Integration (1-2 weeks)
+   - Feature 13: Structured Output Integration (1-2 weeks) - ✅ **COMPLETE**
    - **Rationale**: Fundamentally changes how data enters the pipeline. Must be done before Feature 16 to avoid rework.
 
-2. **Feature 23: Structured Input/Context** - **DO AFTER 13**
+2. **Feature 23: Structured Input/Context** - 🚧 **IN PROGRESS (~70%)**
    - Complete bidirectional structured communication (1-2 weeks)
    - Provide context in structured format (JSON/function calling)
    - **Rationale**: Complements structured outputs, improves context understanding, enables function calling APIs
+   - **Current**: Core infrastructure complete (providers, serializers, schemas, PromptAssembler integration), testing in progress
 
 3. **Feature 16: Save/Load Game Integration** - **DO THIS SECOND**
    - Build persistence layer after data structures are stable (3-5 days)
@@ -77,7 +79,7 @@
    - All components implemented including Memory Mutation Overlay and Validation Gate Overlay
    - **Rationale**: Complete testing infrastructure for the architecture
 
-**Note**: ✅ **Milestone 4 (v0.2.0) is COMPLETE** - All core features are implemented and tested. The architecture is production-ready. The tasks above apply to Milestone 5 (v0.3.0) which focuses on enhancements and additional capabilities.
+**Note**: Milestone 5 (v0.3.0) focuses on enhancements and additional capabilities around making it a game ready architecture - structured I/O, persistence, and determinism governance.
 
 ---
 
@@ -87,7 +89,8 @@
 - **Command**: `dotnet test --collect:"XPlat code coverage" --settings coverlet.runsettings`
 - **Artifact**: `LlamaBrain/coverage/coverage-analysis.csv`
 - **Report**: `LlamaBrain/COVERAGE_REPORT.md`
-- **Current**: 92.37% line coverage (5,100 of 5,521 lines), ~95% branch coverage
+- **Current**: 88.96% line coverage (5,824 of 6,547 lines), ~95% branch coverage
+- **Note**: Coverage regressed from 92.37% after Features 12-13. Recovery plan documented in COVERAGE_REPORT.md.
 
 ### Test Execution
 - **Command**: `dotnet test`
@@ -130,7 +133,8 @@
 - Deterministic Proof Gap Testing ✅
 - Dedicated Structured Output ✅
 
-**Test Coverage**: 92.37% line coverage (5,100 of 5,521 lines), ~95% branch coverage
+**Test Coverage**: 88.96% line coverage (5,824 of 6,547 lines), ~95% branch coverage
+**Coverage Note**: Coverage regressed from 92.37% after Features 12-13 added new code. Recovery plan in progress.
 **Total Tests**: 1,758 tests (all passing)
 **Documentation**: 100% API coverage, zero missing member warnings
 
@@ -139,7 +143,7 @@
 **Note**: Feature 12 (Dedicated Structured Output) is complete with native llama.cpp JSON schema support. Feature 13 (Structured Output Integration) is complete with full pipeline orchestration, schema validation, and comprehensive metrics tracking.
 
 ### Milestone 5: v0.3.0 - The Production Update (Features 12, 13, 23, 14, 16, 10 completion) 🚧
-**Status**: 🚧 Planned  
+**Status**: 🚧 In Progress (0.3.0-rc.1)  
 **Prerequisite**: **Milestone 4 (v0.2.0) must be released** before starting Milestone 5 features.
 
 **Recommended Execution Order** (see "Next 5 Tasks" section above):
@@ -153,7 +157,7 @@
 - Feature 10: Deterministic Proof Gap Testing - ✅ **COMPLETE** (all minimal proof suite tests done, architecture can claim "deterministically proven")
 - Feature 12: Dedicated Structured Output - ✅ **COMPLETE** (native llama.cpp json_schema support, 56 tests)
 - Feature 13: Structured Output Integration - ✅ **COMPLETE** (full pipeline orchestration, schema validation, metrics tracking)
-- Feature 23: Structured Input/Context - 📋 Planned (HIGH priority - **DO AFTER 13**)
+- Feature 23: Structured Input/Context - 🚧 **IN PROGRESS (~70%)** (core infrastructure complete: providers, serializers, schemas, PromptAssembler integration, ~50 tests)
 - Feature 16: Save/Load Game Integration - 📋 Planned (CRITICAL priority - **DO SECOND**, after 12, 13 & 23)
 - Feature 14: Deterministic Generation Seed - 📋 Planned (CRITICAL priority - **DO THIRD**, after 16)
 
@@ -163,6 +167,7 @@
 - Requires Feature 23 completion (structured input/context) - **DO AFTER 13**
 - Requires Feature 16 completion (save/load persistence) - **DO SECOND**
 - Requires Feature 14 completion (cross-session determinism) - **DO THIRD**
+- Recover line test coverage to 90%+
 - Requires all tests passing
 - Requires performance benchmarks met
 
@@ -213,4 +218,4 @@
 
 ---
 
-**Next Review**: Core features complete. Focus on Feature 13 completion and Milestone 5 enhancements.
+**Next Review**: Core features complete. Feature 23 (Structured Input/Context) in progress for 0.3.0-rc.1. Focus on completing Feature 23 and Milestone 5 enhancements.
