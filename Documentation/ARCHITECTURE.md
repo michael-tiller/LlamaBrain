@@ -714,7 +714,7 @@ string finalResponse = gateResult.Passed
     : fallbackSystem.GetFallback(context.TriggerReason, failureReason);
 ```
 
-**Alternative: Using StructuredDialoguePipeline (Recommended)**
+### Alternative: Using StructuredDialoguePipeline (Recommended)
 
 For production use, the `StructuredDialoguePipeline` orchestrates steps 6-9 automatically with structured output, retry logic, and comprehensive validation:
 
@@ -1227,6 +1227,7 @@ The following features are planned to enhance the architecture's capabilities an
   - Convenience properties for common queries
 
 **Parsing Performance** (sub-millisecond for all paths):
+
 | Parse Type | Simple Response | Complex Response |
 |------------|-----------------|------------------|
 | Structured | ~0.01ms | ~0.07ms |
@@ -1410,4 +1411,4 @@ Guard: My duty never ends, but I can spare a moment for a citizen." // Guides to
 ---
 
 **Last Updated**: December 31, 2025  
-**Architecture Version**: 0.2.0-rc.1
+**Architecture Version**: 0.2.0

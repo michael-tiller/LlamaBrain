@@ -293,7 +293,29 @@ namespace LlamaBrain.Core.StructuredOutput
 
                 if (genericDef == typeof(Dictionary<,>) || genericDef == typeof(IDictionary<,>))
                 {
-                    return "{ \"type\": \"object\", \"additionalProperties\": { \"type\": \"string\" } }";
+                    var genericArgs = type.GetGenericArguments();
+                    if (genericArgs.Length >= 2)
+                    {
+                        // Get the value type (second generic argument)
+                        var valueType = genericArgs[1];
+                        visitedTypes.Add(type);
+                        try
+                        {
+                            // Recursively generate schema for the value type
+                            var valueSchema = BuildSchemaForType(valueType, visitedTypes);
+                            return $"{{ \"type\": \"object\", \"additionalProperties\": {valueSchema} }}";
+                        }
+                        catch
+                        {
+                            // Fallback to generic object schema if value type cannot be resolved
+                            return "{ \"type\": \"object\", \"additionalProperties\": {} }";
+                        }
+                    }
+                    else
+                    {
+                        // Fallback to generic object schema if generic arguments cannot be resolved
+                        return "{ \"type\": \"object\", \"additionalProperties\": {} }";
+                    }
                 }
             }
 

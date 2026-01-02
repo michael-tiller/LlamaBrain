@@ -461,6 +461,13 @@ namespace LlamaBrain.Core
           format,
           cancellationToken: cancellationToken);
 
+        // Check for null/empty response
+        if (string.IsNullOrWhiteSpace(response))
+        {
+          Logger.Error("Unexpected null or empty response from SendStructuredPromptAsync");
+          throw new InvalidOperationException("Received null or empty response from LLM");
+        }
+
         // Check for errors
         if (response.StartsWith("Error:"))
           throw new InvalidOperationException($"LLM returned an error: {response}");
@@ -577,6 +584,13 @@ namespace LlamaBrain.Core
           jsonSchema,
           format,
           cancellationToken: cancellationToken);
+
+        // Check for null/empty response
+        if (string.IsNullOrWhiteSpace(response))
+        {
+          Logger.Error("Unexpected null or empty response from SendStructuredPromptAsync");
+          throw new InvalidOperationException("Received null or empty response from LLM");
+        }
 
         // Check for errors
         if (response.StartsWith("Error:"))
