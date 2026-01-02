@@ -303,6 +303,36 @@ namespace LlamaBrain.Core.StructuredOutput
             ValidationContext? context,
             ParseMode parseMode)
         {
+            // Pre-validate mutation schemas if enabled
+            if (_config.ValidateMutationSchemas && parsedOutput.ProposedMutations.Count > 0)
+            {
+                var validMutations = StructuredSchemaValidator.FilterValidMutations(
+                    parsedOutput.ProposedMutations,
+                    (index, mutation, result) =>
+                    {
+                        Logger.Warn($"Schema validation failed for mutation {index}: {result.ErrorMessage}");
+                        _metrics.RecordValidationFailure();
+                    });
+
+                // Replace with validated mutations only
+                parsedOutput = parsedOutput.WithMutationsReplaced(validMutations);
+            }
+
+            // Pre-validate intent schemas if enabled
+            if (_config.ValidateIntentSchemas && parsedOutput.WorldIntents.Count > 0)
+            {
+                var validIntents = StructuredSchemaValidator.FilterValidIntents(
+                    parsedOutput.WorldIntents,
+                    (index, intent, result) =>
+                    {
+                        Logger.Warn($"Schema validation failed for intent {index}: {result.ErrorMessage}");
+                        _metrics.RecordValidationFailure();
+                    });
+
+                // Replace with validated intents only
+                parsedOutput = parsedOutput.WithIntentsReplaced(validIntents);
+            }
+
             // Run validation gate
             var gateResult = _validationGate.Validate(parsedOutput, context);
 
