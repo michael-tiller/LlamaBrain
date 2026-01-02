@@ -26,15 +26,16 @@
   "license": "See LICENSE.md file",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-repo/llamabrain.git"
+    "url": "https://github.com/michael-tiller/llamabrain.git",
+    "directory": "LlamaBrainRuntime/Assets/LlamaBrainRuntime"
   },
   "bugs": {
-    "url": "https://github.com/your-repo/llamabrain/issues"
+    "url": "https://github.com/michael-tiller/llamabrain/issues"
   },
-  "homepage": "https://github.com/your-repo/llamabrain#readme",
-  "documentationUrl": "https://github.com/your-repo/llamabrain/blob/main/LlamaBrainForUnity/LLAMABRAINFORUNITY.md",
-  "changelogUrl": "https://github.com/your-repo/llamabrain/blob/main/CHANGELOG.md",
-  "licensesUrl": "https://github.com/your-repo/llamabrain/blob/main/LICENSE.md",
+  "homepage": "https://github.com/michael-tiller/llamabrain#readme",
+  "documentationUrl": "https://github.com/michael-tiller/llamabrain/blob/main/LlamaBrainRuntime/Assets/LlamaBrainRuntime/README.md",
+  "changelogUrl": "https://github.com/michael-tiller/llamabrain/blob/main/Documentation/CHANGELOG.md",
+  "licensesUrl": "https://github.com/michael-tiller/llamabrain/blob/main/LICENSE.md",
   "samples": [
     {
       "displayName": "Getting Started",

@@ -253,12 +253,12 @@ namespace LlamaBrain.Runtime.Core
         return string.Join("\n", memorySystem.GetAllMemoriesForPrompt(maxEpisodic: 20));
       }
     }
-    
+
     /// <summary>
     /// The last completion metrics from the most recent request (for metrics collection).
     /// </summary>
     public CompletionMetrics? LastMetrics { get; private set; }
-    
+
     /// <summary>
     /// Gets the maximum response tokens setting (for metrics collection).
     /// </summary>
@@ -334,7 +334,7 @@ namespace LlamaBrain.Runtime.Core
         // Register NPC-specific functions with FunctionCallController
         if (FunctionCallConfig != null)
         {
-          var functionController = FunctionCallController.Instance 
+          var functionController = FunctionCallController.Instance
             ?? FunctionCallController.GetOrCreate();
           FunctionCallConfig.RegisterFunctionsWithController(functionController);
           UnityEngine.Debug.Log($"[LlamaBrainAgent] Registered NPC-specific functions for {FunctionCallConfig.NpcId}");
@@ -363,8 +363,8 @@ namespace LlamaBrain.Runtime.Core
         LoadValidationRules();
 
         // Initialize fallback system
-        var fallbackConfigInstance = fallbackConfig != null 
-          ? fallbackConfig.ToFallbackConfig() 
+        var fallbackConfigInstance = fallbackConfig != null
+          ? fallbackConfig.ToFallbackConfig()
           : new AuthorControlledFallback.FallbackConfig();
         fallbackSystem = new AuthorControlledFallback(fallbackConfigInstance);
         UnityEngine.Debug.Log($"[LlamaBrainAgent] Fallback system initialized{(fallbackConfig != null ? " with custom config" : " with default config")}");
@@ -582,17 +582,17 @@ namespace LlamaBrain.Runtime.Core
           // Step 1.5: Execute function calls if any
           if (parsedOutput.FunctionCalls.Count > 0)
           {
-            var functionController = FunctionCallController.Instance 
+            var functionController = FunctionCallController.Instance
               ?? FunctionCallController.GetOrCreate();
-            
+
             var memorySystem = memoryProvider?.GetOrCreateSystem(runtimeProfile?.PersonaId ?? "");
             var functionResults = functionController.ExecuteFunctionCalls(parsedOutput, snapshot, memorySystem);
-            
+
             // Store results for Unity access
             LastFunctionCallResults = functionResults;
-            
+
             UnityEngine.Debug.Log($"[LlamaBrainAgent] Executed {parsedOutput.FunctionCalls.Count} function call(s). Results: {string.Join(", ", functionResults.Keys)}");
-            
+
             // Log detailed results
             foreach (var kvp in functionResults)
             {
@@ -629,7 +629,7 @@ namespace LlamaBrain.Runtime.Core
             // ValidationPipeline handles global rules automatically and does its own parsing
             // We need to pass the raw output, not the parsed output
             gateResult = globalPipeline.ProcessWithSnapshot(metrics.Content, snapshot, validationContext.MemorySystem, wasTruncated);
-            
+
             // Update LastParsedOutput from pipeline if available
             if (globalPipeline.LastParsedOutput != null)
             {
@@ -642,7 +642,7 @@ namespace LlamaBrain.Runtime.Core
             {
               if (validationGate == null) validationGate = new ValidationGate();
               var localGateResult = validationGate.Validate(parsedOutput, validationContext);
-              
+
               // Merge results: both must pass
               if (!localGateResult.Passed)
               {
@@ -659,7 +659,7 @@ namespace LlamaBrain.Runtime.Core
             if (validationGate == null) validationGate = new ValidationGate();
             gateResult = validationGate.Validate(parsedOutput, validationContext);
           }
-          
+
           LastGateResult = gateResult;
 
           // Also run the constraint validator for backwards compatibility
@@ -799,8 +799,8 @@ namespace LlamaBrain.Runtime.Core
         // Initialize fallback if needed
         if (fallbackSystem == null)
         {
-          var fallbackConfigInstance = fallbackConfig != null 
-            ? fallbackConfig.ToFallbackConfig() 
+          var fallbackConfigInstance = fallbackConfig != null
+            ? fallbackConfig.ToFallbackConfig()
             : new AuthorControlledFallback.FallbackConfig();
           fallbackSystem = new AuthorControlledFallback(fallbackConfigInstance);
         }
@@ -808,10 +808,10 @@ namespace LlamaBrain.Runtime.Core
         // Get interaction context from snapshot
         var context = snapshot.Context;
         var failureReason = BuildFailureReason(finalResult);
-        
+
         // Get fallback response (use trigger fallbacks if available)
         var fallbackResponse = fallbackSystem.GetFallbackResponse(context, failureReason, finalResult, currentTriggerFallbacks);
-        
+
         UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] All retries exhausted ({finalResult.AttemptCount} attempts). Using fallback: '{fallbackResponse}'");
 
         // Create a successful result with the fallback response
@@ -872,7 +872,7 @@ namespace LlamaBrain.Runtime.Core
         var interactionContext = ExpectancyConfig.CreatePlayerUtteranceContext(playerInput);
         var evaluatedConstraints = ExpectancyConfig.Evaluate(interactionContext, currentTriggerRules);
         LastConstraints = evaluatedConstraints; // Store constraints for debugging/metrics
-        
+
         var snapshot = UnityStateSnapshotBuilder.BuildForNpcDialogue(
           npcConfig: ExpectancyConfig,
           memorySystem: memorySystem,
@@ -1003,7 +1003,7 @@ namespace LlamaBrain.Runtime.Core
       }
 
       UnityEngine.Debug.Log($"Adding memory: {memoryEntry}");
-      
+
       // Use structured memory system - store as episodic memory with default significance
       var memorySystem = memoryProvider.GetOrCreateSystem(runtimeProfile.PersonaId);
       var entry = EpisodicMemoryEntry.FromLearnedInfo(memoryEntry, "Player", significance: 0.5f);
@@ -1026,7 +1026,7 @@ namespace LlamaBrain.Runtime.Core
       // Use structured memory system
       var memorySystem = memoryProvider.GetOrCreateSystem(runtimeProfile.PersonaId);
       var categoryLower = category.ToLower();
-      
+
       // Categorize based on memory type
       if (categoryLower.Contains("belief") || categoryLower.Contains("opinion") || categoryLower.Contains("relationship"))
       {
@@ -1134,7 +1134,7 @@ namespace LlamaBrain.Runtime.Core
       // Only extract from player input, not NPC responses (to avoid junk)
       if (MemoryCategoryManager == null)
         return;
-      
+
       var playerExtractions = MemoryCategoryManager.ExtractInformationFromText(playerInput);
 
       // Use structured memory system
@@ -1142,7 +1142,7 @@ namespace LlamaBrain.Runtime.Core
         return;
 
       var memorySystem = memoryProvider.GetOrCreateSystem(runtimeProfile.PersonaId);
-      
+
       foreach (var kvp in playerExtractions)
       {
         var category = MemoryCategoryManager.GetCategory(kvp.Key);
@@ -1156,7 +1156,7 @@ namespace LlamaBrain.Runtime.Core
               // Categorize based on memory type
               var categoryName = category.CategoryName.ToLower();
               var significance = category.Importance;
-              
+
               if (categoryName.Contains("belief") || categoryName.Contains("opinion") || categoryName.Contains("relationship"))
               {
                 // Store as Belief
@@ -1577,7 +1577,7 @@ namespace LlamaBrain.Runtime.Core
       if (!result.Success)
       {
         var final = result.FinalResult;
-        
+
         if (!string.IsNullOrEmpty(final.ErrorMessage))
         {
           reasons.Add($"API Error: {final.ErrorMessage}");
@@ -1606,8 +1606,8 @@ namespace LlamaBrain.Runtime.Core
       // Initialize fallback if needed
       if (fallbackSystem == null)
       {
-        var fallbackConfigInstance = fallbackConfig != null 
-          ? fallbackConfig.ToFallbackConfig() 
+        var fallbackConfigInstance = fallbackConfig != null
+          ? fallbackConfig.ToFallbackConfig()
           : new AuthorControlledFallback.FallbackConfig();
         fallbackSystem = new AuthorControlledFallback(fallbackConfigInstance);
       }

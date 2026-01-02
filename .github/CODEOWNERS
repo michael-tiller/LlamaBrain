@@ -1,0 +1,14 @@
+# Critical directories require BDFL approval
+/LlamaBrain/Source/Core/Validation/ @michael-tiller
+/LlamaBrain/Source/Core/Inference/ @michael-tiller
+/LlamaBrain/Source/Persona/AuthoritativeMemorySystem.cs @michael-tiller
+/LlamaBrainRuntime/Assets/LlamaBrainRuntime/Runtime/Core/ @michael-tiller
+
+# Security-sensitive files
+/.github/SECURITY.md @michael-tiller
+/SECURITY.md @michael-tiller
+/Documentation/SAFEGUARDS.md @michael-tiller
+
+# Documentation (maintainers can merge, but BDFL should review)
+/Documentation/ @michael-tiller
+/README.md @michael-tiller

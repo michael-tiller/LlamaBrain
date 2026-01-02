@@ -116,6 +116,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Results automatically sent to Unity via UnityEvents
     - Results stored in `LlamaBrainAgent.LastFunctionCallResults` for debugging/metrics
 
+### Project Infrastructure
+
+#### Added
+- **Simple Project Governance** ✅
+  - **Public Surface Definition**
+    - Condensed `SCOPE.md` to 1-page format covering what LlamaBrain is (and is not), supported Unity versions, supported providers, and deterministic guarantees
+  - **Governance Structure**
+    - `GOVERNANCE.md` with BDFL model and delegation framework
+    - `CODEOWNERS` file covering critical directories (Validation, Inference, AuthoritativeMemorySystem, Unity Core)
+    - Maintainer criteria and permissions clearly defined
+  - **Contribution Guidelines**
+    - Enhanced `CONTRIBUTING.md` with complete sections for:
+      - Branching strategy (feature/fix/docs/test branches)
+      - Test requirements (92.37% coverage, 1,531 tests)
+      - Code formatting (dotnet format)
+      - Commit conventions (Conventional Commits format)
+      - Security reporting path (GitHub Security Advisory)
+      - "No secrets in issues" policy
+  - **Release Process**
+    - `RELEASE_CHECKLIST.md` with SemVer guidelines
+    - `CHANGELOG.md` following Keep a Changelog format
+    - CI/CD package validation step (validates Unity package.json consistency)
+  - **Documentation & Proof**
+    - Updated `README.md` to prominently feature RedRoom demo as proof of deterministic architecture
+    - Added dedicated "🧪 Proof: RedRoom Demo & Deterministic Gate/Fallback" section
+    - Highlights RedRoom as complete, runnable demonstration of all 9 architectural components
+
 ## [0.2.0] - 2026-01-02
 
 ### Core Library

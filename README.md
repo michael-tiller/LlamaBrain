@@ -22,6 +22,21 @@ A production-ready architecture that enforces a strict validation boundary betwe
 
 Only validated outputs can trigger memory mutations. Invalid outputs trigger retries with stricter constraints, never corrupting state.
 
+## 🧪 Proof: RedRoom Demo & Deterministic Gate/Fallback
+
+**See it in action:** The **RedRoom** testing suite is a complete, runnable demonstration of LlamaBrain's deterministic architecture and validation gates. It serves as both a "Hello World" example and a comprehensive testing framework.
+
+**What RedRoom Demonstrates:**
+- ✅ **Complete 9-Component Architecture**: All architectural components working together in a single, runnable example
+- ✅ **Deterministic State Reconstruction**: Byte-level determinism in state serialization and prompt assembly
+- ✅ **Validation Gate & Fallback**: Invalid outputs trigger retries with stricter constraints—never corrupting state
+- ✅ **Production-Ready Components**: Uses the same components as production games, not simplified examples
+- ✅ **Comprehensive Testing**: Multiple trigger zones, metrics collection, and adversarial testing capabilities
+
+**Location:** `LlamaBrainRuntime/Assets/LlamaBrainRuntime/Runtime/RedRoom/`
+
+The RedRoom demo proves the architecture works in practice, not just theory. It's the fastest way to understand LlamaBrain's deterministic guarantees and see the validation boundary in action.
+
 LlamaBrain consists of two main components:
 
 - **LlamaBrain Core** - A robust .NET Standard 2.1 library implementing the determinism boundary architecture
@@ -72,11 +87,12 @@ LlamaBrain/
    - Add LlamaBrainAgent to a GameObject
    - Start building AI-powered characters
 
-4. **Test LLM Performance (Optional)**
-   - Use the RedRoom testing suite for comprehensive LLM evaluation
-   - Set up multiple trigger zones with different prompts
-   - Collect and analyze metrics automatically
-   - See the RedRoom testing suite documentation for details
+4. **See the Proof: RedRoom Demo** ⭐
+   - **Start here**: RedRoom is the complete, runnable demonstration of LlamaBrain's deterministic architecture
+   - Open the RedRoom scene in Unity to see all 9 architectural components working together
+   - Test the validation gate and fallback system with multiple trigger zones
+   - Collect metrics and verify deterministic behavior
+   - See [RedRoom README](LlamaBrainRuntime/Assets/LlamaBrainRuntime/Runtime/RedRoom/README.md) for complete documentation
 
 ### For .NET Developers
 1. **Install the Core Library**

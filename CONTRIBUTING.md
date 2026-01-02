@@ -137,8 +137,10 @@ dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
 - ✅ All new features must include unit tests
 - ✅ Bug fixes should include regression tests
 - ✅ Tests must pass before submitting a PR
-- ✅ Maintain or improve code coverage (currently 92.37%)
+- ✅ Maintain or improve code coverage (currently 88.96%)
 - ✅ Follow existing test patterns and naming conventions
+- ✅ Integration tests required for pipeline changes
+- ✅ Unity PlayMode tests for Unity runtime changes
 
 ## 🎮 Unity Development
 
@@ -295,6 +297,36 @@ LlamaBrain includes comprehensive Unity tests using Unity Test Runner:
 - **Naming**: Use clear, descriptive names following C# conventions
 - **Error Handling**: Use appropriate exception types and include meaningful error messages
 
+### Code Formatting
+
+LlamaBrain uses standard C# formatting. Before committing:
+
+1. **Run dotnet format**:
+   ```bash
+   dotnet format LlamaBrain/LlamaBrain.sln
+   ```
+
+2. **IDE Settings**: Use default C# formatting in your IDE:
+   - Visual Studio: Default C# formatting
+   - VS Code: C# extension with default settings
+   - Rider: Default formatting
+
+3. **XML Documentation**: All public APIs must have XML documentation:
+   ```csharp
+   /// <summary>
+   /// Validates LLM output against constraints and canonical facts.
+   /// </summary>
+   /// <param name="output">The parsed LLM output to validate</param>
+   /// <returns>Validation result with pass/fail status</returns>
+   public ValidationResult Validate(ParsedOutput output) { ... }
+   ```
+
+4. **Code Style Checks**: The project enforces:
+   - Consistent indentation (spaces, not tabs)
+   - Proper brace placement
+   - Naming conventions (PascalCase for public, camelCase for private)
+   - No unused using statements
+
 ### Architecture Principles
 
 LlamaBrain follows a **9-component architectural pattern** for deterministic state management:
@@ -315,6 +347,23 @@ When contributing, ensure your changes align with these principles. See [ARCHITE
 - **Utilities**: Place in `LlamaBrain/Source/Utilities/`
 - **Tests**: Mirror source structure in `LlamaBrain.Tests/`
 
+## 🌿 Branching Strategy
+
+LlamaBrain uses a simple branching model:
+
+- **`main`**: Stable, release-ready code. All code must be merged via Pull Request.
+- **`feature/name`**: New features and enhancements
+- **`fix/name`**: Bug fixes
+- **`docs/name`**: Documentation-only changes
+- **`test/name`**: Test additions or improvements
+
+### Branch Rules
+
+- **No direct commits to `main`**: All changes must go through Pull Requests
+- **Keep branches focused**: One feature/fix per branch
+- **Update from main regularly**: Rebase or merge `main` into your branch to stay current
+- **Delete branches after merge**: Clean up merged branches to keep the repo tidy
+
 ## 🔄 Development Workflow
 
 ### 1. Create a Branch
@@ -323,6 +372,8 @@ When contributing, ensure your changes align with these principles. See [ARCHITE
 git checkout -b feature/your-feature-name
 # or
 git checkout -b fix/your-bug-fix
+# or
+git checkout -b docs/update-readme
 ```
 
 ### 2. Make Your Changes
@@ -334,12 +385,40 @@ git checkout -b fix/your-bug-fix
 
 ### 3. Commit Your Changes
 
-Use clear, descriptive commit messages:
+Use clear, descriptive commit messages following conventional commit format:
 
-```bash
-git commit -m "Add feature: Description of what you added"
-git commit -m "Fix bug: Description of what you fixed"
+**Commit Message Format:**
 ```
+type(scope): description
+
+[optional body]
+
+[optional footer]
+```
+
+**Types:**
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation changes
+- `test`: Test additions or changes
+- `refactor`: Code refactoring (no behavior change)
+- `chore`: Maintenance tasks (dependencies, build, etc.)
+
+**Examples:**
+```bash
+git commit -m "feat(core): Add structured output support"
+git commit -m "fix(validation): Correct constraint escalation logic"
+git commit -m "docs(readme): Update Unity version requirements"
+git commit -m "test(inference): Add snapshot determinism tests"
+git commit -m "refactor(memory): Simplify memory retrieval logic"
+git commit -m "chore(deps): Update Newtonsoft.Json to 13.0.4"
+```
+
+**Best Practices:**
+- Use present tense ("Add" not "Added")
+- Keep first line under 72 characters
+- Reference issues: `fix(validation): Correct constraint escalation (#123)`
+- Be specific: "Add validation" not "Update code"
 
 ### 4. Run Tests
 
@@ -431,7 +510,40 @@ LlamaBrain implements comprehensive security measures. When contributing:
 - **Input Validation**: Always validate and sanitize inputs
 - **Path Security**: Use `PathUtils` for file operations
 - **Rate Limiting**: Respect rate limits in API clients
-- **Report Vulnerabilities**: Report security issues privately
+
+### Security Reporting Path
+
+**DO NOT create public GitHub issues for security vulnerabilities.**
+
+Security issues must be reported privately:
+
+1. **Preferred Method**: [GitHub Security Advisory](https://github.com/michael-tiller/llamabrain/security/advisories)
+   - Go to the Security tab
+   - Click "Report a vulnerability"
+   - Fill out the security advisory form
+
+2. **Alternative Methods**:
+   - **Email**: [contact@michaeltiller.com](mailto:contact@michaeltiller.com)
+   - **Discord**: Contact maintainers privately on the [LlamaBrain Discord](https://discord.gg/9ruBad4nrN)
+
+3. **Response Timeline**:
+   - Initial response: Within 48 hours
+   - Status update: Within 7 days
+   - Resolution: Depends on severity
+
+See [SECURITY.md](SECURITY.md) for detailed security reporting procedures.
+
+### No Secrets in Issues
+
+**Never paste secrets, API keys, tokens, or credentials in GitHub issues or PRs.**
+
+- Use placeholder values: `[REDACTED]` or `your-api-key-here`
+- If you accidentally commit secrets:
+  1. Rotate the secret immediately
+  2. Remove from git history (if possible)
+  3. Contact maintainers privately
+- Issues containing secrets may be automatically closed
+- Use environment variables or configuration files (not committed) for secrets
 
 ## 📄 License
 

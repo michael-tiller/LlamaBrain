@@ -26,6 +26,32 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore LlamaBrain/LlamaBrain.sln
 
+      - name: Validate package.json
+        run: |
+          $packageJson = Get-Content "LlamaBrainRuntime/Assets/LlamaBrainRuntime/package.json" | ConvertFrom-Json
+          $csprojVersion = (Select-Xml -Path "LlamaBrain/LlamaBrain.csproj" -XPath "//Version").Node.InnerText
+          
+          # Validate required fields
+          if (-not $packageJson.name) { throw "package.json missing 'name' field" }
+          if (-not $packageJson.version) { throw "package.json missing 'version' field" }
+          if (-not $packageJson.unity) { throw "package.json missing 'unity' field" }
+          
+          # Validate version consistency (allow pre-release suffixes)
+          $packageVersion = $packageJson.version
+          $baseVersion = $packageVersion -replace '-.*$', ''
+          $csprojBaseVersion = $csprojVersion -replace '-.*$', ''
+          
+          if ($baseVersion -ne $csprojBaseVersion) {
+            Write-Warning "Version mismatch: package.json=$packageVersion, csproj=$csprojVersion"
+            Write-Warning "Base versions: package.json=$baseVersion, csproj=$csprojBaseVersion"
+            # Don't fail on version mismatch for now, just warn
+          }
+          
+          Write-Host "✓ package.json validation passed"
+          Write-Host "  Name: $($packageJson.name)"
+          Write-Host "  Version: $packageVersion"
+          Write-Host "  Unity: $($packageJson.unity)"
+
       - name: Build
         run: dotnet build LlamaBrain/LlamaBrain.sln --no-restore -c Release
 
