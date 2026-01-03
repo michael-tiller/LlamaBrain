@@ -1,3 +1,5 @@
+using Newtonsoft.Json;
+
 namespace LlamaBrain.Core
 {
   /// <summary>
@@ -41,6 +43,14 @@ namespace LlamaBrain.Core
     /// Cache the prompt to reuse KV cache (for prefix caching)
     /// </summary>
     public bool cache_prompt { get; set; } = false;
+
+    /// <summary>
+    /// Random seed for deterministic generation.
+    /// -1 = random (non-deterministic), 0+ = use this exact seed.
+    /// null = omit from request (server default behavior).
+    /// </summary>
+    [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+    public int? seed { get; set; }
 
     // --- Structured Output Parameters (llama.cpp native support) ---
 

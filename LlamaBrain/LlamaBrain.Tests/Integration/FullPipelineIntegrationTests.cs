@@ -108,10 +108,10 @@ namespace LlamaBrain.Tests.Integration
 
       // Component 6: Mocked Stateless Inference Core
       var mockResponse = "Hello! The king is named Arthur. He's a wise ruler.";
-      _mockApiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _mockApiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult(mockResponse));
 
-      var llmResponse = await _mockApiClient.SendPromptAsync(assembledPrompt.Text, null, null, CancellationToken.None);
+      var llmResponse = await _mockApiClient.SendPromptAsync(assembledPrompt.Text, null, null, null, CancellationToken.None);
 
       // Component 7: Output Parsing & Validation
       var parsedOutput = _outputParser.Parse(llmResponse);
@@ -186,10 +186,10 @@ namespace LlamaBrain.Tests.Integration
 
       // Mock LLM response that violates constraint
       var violatingResponse = "I'll tell you a secret: the treasure is hidden in the cave.";
-      _mockApiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _mockApiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult(violatingResponse));
 
-      var llmResponse = await _mockApiClient.SendPromptAsync(assembledPrompt.Text, null, null, CancellationToken.None);
+      var llmResponse = await _mockApiClient.SendPromptAsync(assembledPrompt.Text, null, null, null, CancellationToken.None);
 
       // Parse and validate
       var parsedOutput = _outputParser.Parse(llmResponse);
@@ -236,10 +236,10 @@ namespace LlamaBrain.Tests.Integration
       // Mock LLM response that contradicts canonical fact
       // Must match the validator's negation pattern: "the king is not named arthur" or "the king isn't named arthur"
       var contradictingResponse = "The king is not named Arthur. His name is Bob.";
-      _mockApiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _mockApiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult(contradictingResponse));
 
-      var llmResponse = await _mockApiClient.SendPromptAsync(assembledPrompt.Text, null, null, CancellationToken.None);
+      var llmResponse = await _mockApiClient.SendPromptAsync(assembledPrompt.Text, null, null, null, CancellationToken.None);
 
       // Parse and validate
       var parsedOutput = _outputParser.Parse(llmResponse);
@@ -308,10 +308,10 @@ namespace LlamaBrain.Tests.Integration
 
       // Mock first response that violates constraint
       var violatingResponse = "What the hell do you want?";
-      _mockApiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _mockApiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult(violatingResponse));
 
-      var llmResponse = await _mockApiClient.SendPromptAsync(assembledPrompt.Text, null, null, CancellationToken.None);
+      var llmResponse = await _mockApiClient.SendPromptAsync(assembledPrompt.Text, null, null, null, CancellationToken.None);
       var parsedOutput = _outputParser.Parse(llmResponse);
 
       var validationContext = new ValidationContext
@@ -332,10 +332,10 @@ namespace LlamaBrain.Tests.Integration
 
       // Mock second response that passes (must not contain "hell" as substring - "Hello" contains "hell"!)
       var validResponse = "Hi there! How can I help you today?";
-      _mockApiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _mockApiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult(validResponse));
 
-      var retryResponse = await _mockApiClient.SendPromptAsync(assembledPrompt.Text, null, null, CancellationToken.None);
+      var retryResponse = await _mockApiClient.SendPromptAsync(assembledPrompt.Text, null, null, null, CancellationToken.None);
       var retryParsed = _outputParser.Parse(retryResponse);
 
       // Assert - Parsed output should be successful
@@ -387,10 +387,10 @@ namespace LlamaBrain.Tests.Integration
 
       // Mock response that fails parsing (contains meta-text pattern)
       var invalidResponse = "Example answer: This is how you should respond";
-      _mockApiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _mockApiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult(invalidResponse));
 
-      var llmResponse = await _mockApiClient.SendPromptAsync("test", null, null, CancellationToken.None);
+      var llmResponse = await _mockApiClient.SendPromptAsync("test", null, null, null, CancellationToken.None);
       var parsedOutput = _outputParser.Parse(llmResponse);
 
       // Assert - Parsing should fail (meta-text detected)
@@ -446,10 +446,10 @@ namespace LlamaBrain.Tests.Integration
       var responseWithMutations = @"Player saved my life. I'm very grateful.
 [MUTATION: AppendEpisodic] Player saved my life
 [MUTATION: TransformBelief] player is a hero (confidence: 0.95)";
-      _mockApiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _mockApiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult(responseWithMutations));
 
-      var llmResponse = await _mockApiClient.SendPromptAsync(assembledPrompt.Text, null, null, CancellationToken.None);
+      var llmResponse = await _mockApiClient.SendPromptAsync(assembledPrompt.Text, null, null, null, CancellationToken.None);
       var parsedOutput = _outputParser.Parse(llmResponse);
 
       var validationContext = new ValidationContext
@@ -544,10 +544,10 @@ namespace LlamaBrain.Tests.Integration
       // OutputParser expects [INTENT: ...] or [ACTION: ...] format
       var responseWithIntent = @"I'll help you with that!
 [INTENT: OpenShop] Open the shop interface";
-      _mockApiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _mockApiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult(responseWithIntent));
 
-      var llmResponse = await _mockApiClient.SendPromptAsync(assembledPrompt.Text, null, null, CancellationToken.None);
+      var llmResponse = await _mockApiClient.SendPromptAsync(assembledPrompt.Text, null, null, null, CancellationToken.None);
       var parsedOutput = _outputParser.Parse(llmResponse);
 
       var validationContext = new ValidationContext

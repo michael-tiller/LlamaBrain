@@ -1162,7 +1162,7 @@ namespace LlamaBrain.Tests.Integration
 
         // Component 6: Stateless Inference Core
         CallOrder.Add("LLMGeneration");
-        var llmResponse = await _apiClient.SendPromptAsync(assembledPrompt.Text, null, null, CancellationToken.None);
+        var llmResponse = await _apiClient.SendPromptAsync(assembledPrompt.Text, null, null, null, CancellationToken.None);
 
         // Component 7: Output Parsing & Validation
         CallOrder.Add("OutputParsing");
@@ -1206,7 +1206,7 @@ namespace LlamaBrain.Tests.Integration
       const long snapshotTime = 638400000000000000L; // Fixed tick value: 2024-01-01 00:00:00 UTC
 
       // Mock API client
-      _mockApiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _mockApiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult("Hello! Welcome to my shop."));
 
       // Create orchestrator with real components
@@ -1292,10 +1292,10 @@ namespace LlamaBrain.Tests.Integration
         .Build();
 
       // First attempt - violating response
-      _mockApiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _mockApiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult("Hi there friend!"));
 
-      var response1 = await _mockApiClient.SendPromptAsync("prompt", null, null, CancellationToken.None);
+      var response1 = await _mockApiClient.SendPromptAsync("prompt", null, null, null, CancellationToken.None);
       var parsed1 = _outputParser.Parse(response1);
       var validationContext = new ValidationContext { Constraints = constraints, MemorySystem = _memorySystem };
       var result1 = _validationGate.Validate(parsed1, validationContext);
