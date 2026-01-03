@@ -4,11 +4,16 @@ on:
   push:
     branches: [ main, dev ]
     tags:
-      - '*'
+      - 'v*'
   pull_request:
     # Run on all PRs regardless of target branch
-  release:
-    types: [ created ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
   dco:
@@ -24,22 +29,36 @@ jobs:
       - name: Check DCO
         run: |
           # Get the base and head SHAs for the PR
+          BASE_REF="${{ github.event.pull_request.base.ref }}"
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
           HEAD_SHA="${{ github.event.pull_request.head.sha }}"
           
-          echo "Checking commits from $BASE_SHA to $HEAD_SHA"
+          # Explicitly fetch the base ref to ensure we have the full range
+          git fetch origin "$BASE_REF" --depth=0
+          
+          # Fetch PR head explicitly to handle fork PRs
+          git fetch origin "refs/pull/${{ github.event.pull_request.number }}/head:pr-head" --depth=0 || true
+          
+          # Resolve head SHA (prefer pr-head if fetched)
+          if git rev-parse --verify pr-head >/dev/null 2>&1; then
+            HEAD_SHA_LOCAL="$(git rev-parse pr-head)"
+          else
+            HEAD_SHA_LOCAL="$HEAD_SHA"
+          fi
+          
+          echo "Checking commits from $BASE_SHA to $HEAD_SHA_LOCAL"
           
           # Check that all commits have Signed-off-by
           missing_dco=""
           while IFS= read -r commit_hash; do
             if [ -n "$commit_hash" ]; then
               commit_msg=$(git log -1 --pretty=format:"%B" "$commit_hash")
-              if ! echo "$commit_msg" | grep -q "Signed-off-by:"; then
+              if ! echo "$commit_msg" | grep -qiE '^Signed-off-by:'; then
                 commit_subject=$(git log -1 --pretty=format:"%s" "$commit_hash")
                 missing_dco="${missing_dco}${commit_hash} - ${commit_subject}\n"
               fi
             fi
-          done < <(git rev-list --no-merges "$BASE_SHA".."$HEAD_SHA")
+          done < <(git rev-list --no-merges "$BASE_SHA".."$HEAD_SHA_LOCAL")
           
           if [ -n "$missing_dco" ]; then
             echo "::error::❌ The following commits are missing DCO sign-off:"
@@ -63,6 +82,9 @@ jobs:
     runs-on: windows-latest
     needs: [dco]
     if: always() && (needs.dco.result == 'success' || needs.dco.result == 'skipped')
+    permissions:
+      contents: read
+      checks: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -78,7 +100,22 @@ jobs:
       - name: Validate package.json
         run: |
           $packageJson = Get-Content "LlamaBrainRuntime/Assets/LlamaBrainRuntime/package.json" | ConvertFrom-Json
-          $csprojVersion = (Select-Xml -Path "LlamaBrain/LlamaBrain.csproj" -XPath "//Version").Node.InnerText
+          
+          # Read version from csproj, handling VersionPrefix/VersionSuffix
+          $xml = [xml](Get-Content "LlamaBrain/LlamaBrain.csproj")
+          $pg = $xml.Project.PropertyGroup
+          
+          $ver = ($pg | ForEach-Object { $_.Version } | Where-Object { $_ })[0]
+          if (-not $ver) {
+            $prefix = ($pg | ForEach-Object { $_.VersionPrefix } | Where-Object { $_ })[0]
+            $suffix = ($pg | ForEach-Object { $_.VersionSuffix } | Where-Object { $_ })[0]
+            if ($prefix) {
+              $ver = $prefix + $(if ($suffix) { "-$suffix" } else { "" })
+            }
+          }
+          
+          if (-not $ver) { throw "No Version/VersionPrefix found in csproj" }
+          $csprojVersion = $ver
           
           # Validate required fields
           if (-not $packageJson.name) { throw "package.json missing 'name' field" }
@@ -90,10 +127,17 @@ jobs:
           $baseVersion = $packageVersion -replace '-.*$', ''
           $csprojBaseVersion = $csprojVersion -replace '-.*$', ''
           
+          $isTagBuild = "${{ github.event_name }}" -eq "push" -and "${{ github.ref_type }}" -eq "tag"
+          
           if ($baseVersion -ne $csprojBaseVersion) {
-            Write-Warning "Version mismatch: package.json=$packageVersion, csproj=$csprojVersion"
-            Write-Warning "Base versions: package.json=$baseVersion, csproj=$csprojBaseVersion"
-            # Don't fail on version mismatch for now, just warn
+            if ($isTagBuild) {
+              Write-Error "Version mismatch: package.json=$packageVersion, csproj=$csprojVersion"
+              Write-Error "Base versions: package.json=$baseVersion, csproj=$csprojBaseVersion"
+              exit 1
+            } else {
+              Write-Warning "Version mismatch: package.json=$packageVersion, csproj=$csprojVersion"
+              Write-Warning "Base versions: package.json=$baseVersion, csproj=$csprojBaseVersion"
+            }
           }
           
           Write-Host "✓ package.json validation passed"
@@ -117,13 +161,11 @@ jobs:
     name: Build Release DLL
     runs-on: windows-latest
     needs: test
-    if: github.ref_type == 'tag' || github.event_name == 'release'
+    if: github.event_name == 'push' && github.ref_type == 'tag'
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
@@ -136,18 +178,7 @@ jobs:
       - name: Get version
         id: version
         run: |
-          if ("${{ github.event_name }}" -eq "release") {
-            # For release events, get tag from event
-            $tag = "${{ github.event.release.tag_name }}"
-            $version = $tag -replace '^v', ''
-          } elseif ("${{ github.ref_type }}" -eq "tag") {
-            $tag = "${{ github.ref }}"
-            # Remove 'refs/tags/' prefix, then remove optional 'v' prefix
-            $version = $tag -replace 'refs/tags/', '' -replace '^v', ''
-          } else {
-            # For push events, use version from csproj or default
-            $version = "1.0.0"
-          }
+          $version = "${{ github.ref_name }}" -replace '^v', ''
           echo "VERSION=$version" >> $env:GITHUB_ENV
           echo "VERSION=$version" >> $env:GITHUB_OUTPUT
 
@@ -203,13 +234,11 @@ jobs:
     name: Publish NuGet Package
     runs-on: windows-latest
     needs: build
-    if: github.ref_type == 'tag' || github.event_name == 'release'
+    if: github.event_name == 'push' && github.ref_type == 'tag'
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
@@ -222,15 +251,7 @@ jobs:
       - name: Get version
         id: version
         run: |
-          if ("${{ github.event_name }}" -eq "release") {
-            $tag = "${{ github.event.release.tag_name }}"
-            $version = $tag -replace '^v', ''
-          } elseif ("${{ github.ref_type }}" -eq "tag") {
-            $tag = "${{ github.ref }}"
-            $version = $tag -replace 'refs/tags/', '' -replace '^v', ''
-          } else {
-            $version = "1.0.0"
-          }
+          $version = "${{ github.ref_name }}" -replace '^v', ''
           echo "VERSION=$version" >> $env:GITHUB_ENV
           echo "VERSION=$version" >> $env:GITHUB_OUTPUT
 
@@ -259,15 +280,19 @@ jobs:
 
       - name: Push to NuGet.org
         run: |
-          # Push the main package
-          dotnet nuget push artifacts/*.nupkg `
-            --source https://api.nuget.org/v3/index.json `
-            --api-key $env:NUGET_API_KEY `
-            --skip-duplicate
+          # Push the main packages (exclude symbol packages)
+          $nupkgs = Get-ChildItem artifacts -Filter *.nupkg | Where-Object { $_.Name -notlike '*.snupkg' }
+          foreach ($p in $nupkgs) {
+            dotnet nuget push $p.FullName `
+              --source https://api.nuget.org/v3/index.json `
+              --api-key $env:NUGET_API_KEY `
+              --skip-duplicate
+          }
           
-          # Push the symbol package if it exists
-          if (Test-Path artifacts/*.snupkg) {
-            dotnet nuget push artifacts/*.snupkg `
+          # Push the symbol packages if they exist
+          $snupkgs = Get-ChildItem artifacts -Filter *.snupkg
+          foreach ($p in $snupkgs) {
+            dotnet nuget push $p.FullName `
               --source https://api.nuget.org/v3/index.json `
               --api-key $env:NUGET_API_KEY `
               --skip-duplicate
@@ -279,7 +304,7 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     needs: [build, publish-nuget]
-    if: github.ref_type == 'tag' || github.event_name == 'release'
+    if: github.event_name == 'push' && github.ref_type == 'tag'
     permissions:
       contents: write
     
@@ -288,24 +313,28 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v4
         with:
           path: artifacts
 
       - name: Get version and tag from event
         id: tag_info
         run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
-            TAG_NAME="${{ github.event.release.tag_name }}"
-            VERSION="${{ github.event.release.tag_name }}"
-          else
-            TAG_NAME="${{ github.ref_name }}"
-            VERSION=${GITHUB_REF#refs/tags/}
-          fi
+          TAG_NAME="${{ github.ref_name }}"
+          VERSION="${{ github.ref_name }}"
           # Remove optional 'v' prefix if present
           VERSION=${VERSION#v}
+          
+          # Determine if this is a prerelease based on SemVer (contains '-')
+          if [[ "$VERSION" == *"-"* ]]; then
+            PRERELEASE=true
+          else
+            PRERELEASE=false
+          fi
+          
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "PRERELEASE=$PRERELEASE" >> $GITHUB_OUTPUT
 
       - name: Create/Update Release
         uses: softprops/action-gh-release@v2
@@ -353,7 +382,7 @@ jobs:
             
             See [README.md](https://github.com/${{ github.repository }}/blob/main/README.md) for more information.
           draft: false
-          prerelease: false
+          prerelease: ${{ steps.tag_info.outputs.PRERELEASE == 'true' }}
           generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

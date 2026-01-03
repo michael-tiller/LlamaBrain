@@ -10,7 +10,7 @@
     <Title>LlamaBrain</Title>
     <Authors>Michael Tiller</Authors>
     <Description>Deterministic Neuro-Symbolic Authoritative State Management - A production-ready architecture that enforces a strict validation boundary between untrusted LLM outputs and your authoritative game state.</Description>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     <PackageProjectUrl>https://github.com/michael-tiller/llamabrain</PackageProjectUrl>
     <RepositoryUrl>https://github.com/michael-tiller/llamabrain</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
@@ -43,6 +43,16 @@
     <Compile Remove="LlamaBrain.Tests\**" />
     <EmbeddedResource Remove="LlamaBrain.Tests\**" />
     <None Remove="LlamaBrain.Tests\**" />
+  </ItemGroup>
+
+  <!-- Include license file in NuGet package -->
+  <ItemGroup>
+    <None Include="..\LICENSE.md" Pack="true" PackagePath="LICENSE.txt" />
+  </ItemGroup>
+
+  <!-- Include Unity README in NuGet package -->
+  <ItemGroup>
+    <None Include="..\LlamaBrainRuntime\Assets\LlamaBrainRuntime\README.md" Pack="true" PackagePath="README.md" />
   </ItemGroup>
 
 </Project>
