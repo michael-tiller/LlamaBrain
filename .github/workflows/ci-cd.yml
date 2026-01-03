@@ -4,16 +4,87 @@ on:
   push:
     branches: [ main, dev ]
     tags:
-      - '*'
+      - 'v*'
   pull_request:
     # Run on all PRs regardless of target branch
-  release:
-    types: [ created ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
+  dco:
+    name: DCO Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch full history for DCO check
+      
+      - name: Check DCO
+        run: |
+          # Get the base and head SHAs for the PR
+          BASE_REF="${{ github.event.pull_request.base.ref }}"
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          
+          # Explicitly fetch the base ref to ensure we have the full range
+          git fetch origin "$BASE_REF"
+          
+          # Fetch PR head explicitly to handle fork PRs
+          git fetch origin "refs/pull/${{ github.event.pull_request.number }}/head:pr-head" || true
+          
+          # Resolve head SHA (prefer pr-head if fetched)
+          if git rev-parse --verify pr-head >/dev/null 2>&1; then
+            HEAD_SHA_LOCAL="$(git rev-parse pr-head)"
+          else
+            HEAD_SHA_LOCAL="$HEAD_SHA"
+          fi
+          
+          echo "Checking commits from $BASE_SHA to $HEAD_SHA_LOCAL"
+          
+          # Check that all commits have Signed-off-by
+          missing_dco=""
+          while IFS= read -r commit_hash; do
+            if [ -n "$commit_hash" ]; then
+              commit_msg=$(git log -1 --pretty=format:"%B" "$commit_hash")
+              if ! echo "$commit_msg" | grep -qiE '^Signed-off-by:'; then
+                commit_subject=$(git log -1 --pretty=format:"%s" "$commit_hash")
+                missing_dco="${missing_dco}${commit_hash} - ${commit_subject}\n"
+              fi
+            fi
+          done < <(git rev-list --no-merges "$BASE_SHA".."$HEAD_SHA_LOCAL")
+          
+          if [ -n "$missing_dco" ]; then
+            echo "::error::❌ The following commits are missing DCO sign-off:"
+            echo -e "$missing_dco"
+            echo ""
+            echo "Please add 'Signed-off-by' to your commits using:"
+            echo "  git commit -s -m 'Your commit message'"
+            echo ""
+            echo "Or amend existing commits:"
+            echo "  git commit --amend --signoff"
+            echo "  git push --force-with-lease"
+            echo ""
+            echo "See DCO.md for more information."
+            exit 1
+          else
+            echo "✅ All commits have DCO sign-off"
+          fi
+
   test:
     name: Run Tests
     runs-on: windows-latest
+    needs: [dco]
+    if: always() && (needs.dco.result == 'success' || needs.dco.result == 'skipped')
+    permissions:
+      contents: read
+      checks: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -25,6 +96,54 @@ jobs:
 
       - name: Restore dependencies
         run: dotnet restore LlamaBrain/LlamaBrain.sln
+
+      - name: Validate package.json
+        run: |
+          $packageJson = Get-Content "LlamaBrainRuntime/Assets/LlamaBrainRuntime/package.json" | ConvertFrom-Json
+          
+          # Read version from csproj, handling VersionPrefix/VersionSuffix
+          $xml = [xml](Get-Content "LlamaBrain/LlamaBrain.csproj")
+          $pg = $xml.Project.PropertyGroup
+          
+          $ver = ($pg | ForEach-Object { $_.Version } | Where-Object { $_ })[0]
+          if (-not $ver) {
+            $prefix = ($pg | ForEach-Object { $_.VersionPrefix } | Where-Object { $_ })[0]
+            $suffix = ($pg | ForEach-Object { $_.VersionSuffix } | Where-Object { $_ })[0]
+            if ($prefix) {
+              $ver = $prefix + $(if ($suffix) { "-$suffix" } else { "" })
+            }
+          }
+          
+          if (-not $ver) { throw "No Version/VersionPrefix found in csproj" }
+          $csprojVersion = $ver
+          
+          # Validate required fields
+          if (-not $packageJson.name) { throw "package.json missing 'name' field" }
+          if (-not $packageJson.version) { throw "package.json missing 'version' field" }
+          if (-not $packageJson.unity) { throw "package.json missing 'unity' field" }
+          
+          # Validate version consistency (allow pre-release suffixes)
+          $packageVersion = $packageJson.version
+          $baseVersion = $packageVersion -replace '-.*$', ''
+          $csprojBaseVersion = $csprojVersion -replace '-.*$', ''
+          
+          $isTagBuild = "${{ github.event_name }}" -eq "push" -and "${{ github.ref_type }}" -eq "tag"
+          
+          if ($baseVersion -ne $csprojBaseVersion) {
+            if ($isTagBuild) {
+              Write-Error "Version mismatch: package.json=$packageVersion, csproj=$csprojVersion"
+              Write-Error "Base versions: package.json=$baseVersion, csproj=$csprojBaseVersion"
+              exit 1
+            } else {
+              Write-Warning "Version mismatch: package.json=$packageVersion, csproj=$csprojVersion"
+              Write-Warning "Base versions: package.json=$baseVersion, csproj=$csprojBaseVersion"
+            }
+          }
+          
+          Write-Host "✓ package.json validation passed"
+          Write-Host "  Name: $($packageJson.name)"
+          Write-Host "  Version: $packageVersion"
+          Write-Host "  Unity: $($packageJson.unity)"
 
       - name: Build
         run: dotnet build LlamaBrain/LlamaBrain.sln --no-restore -c Release
@@ -42,13 +161,11 @@ jobs:
     name: Build Release DLL
     runs-on: windows-latest
     needs: test
-    if: github.ref_type == 'tag' || github.event_name == 'release'
+    if: github.event_name == 'push' && github.ref_type == 'tag'
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref }}
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v5
@@ -61,18 +178,7 @@ jobs:
       - name: Get version
         id: version
         run: |
-          if ("${{ github.event_name }}" -eq "release") {
-            # For release events, get tag from event
-            $tag = "${{ github.event.release.tag_name }}"
-            $version = $tag -replace '^v', ''
-          } elseif ("${{ github.ref_type }}" -eq "tag") {
-            $tag = "${{ github.ref }}"
-            # Remove 'refs/tags/' prefix, then remove optional 'v' prefix
-            $version = $tag -replace 'refs/tags/', '' -replace '^v', ''
-          } else {
-            # For push events, use version from csproj or default
-            $version = "1.0.0"
-          }
+          $version = "${{ github.ref_name }}" -replace '^v', ''
           echo "VERSION=$version" >> $env:GITHUB_ENV
           echo "VERSION=$version" >> $env:GITHUB_OUTPUT
 
@@ -120,15 +226,85 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: llamabrain-dll-${{ github.sha }}
+          name: LlamaBrain-dll-${{ github.sha }}
           path: artifacts/*.zip
           retention-days: 7
+
+  publish-nuget:
+    name: Publish NuGet Package
+    runs-on: windows-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore LlamaBrain/LlamaBrain.sln
+
+      - name: Get version
+        id: version
+        run: |
+          $version = "${{ github.ref_name }}" -replace '^v', ''
+          echo "VERSION=$version" >> $env:GITHUB_ENV
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Create artifacts directory
+        run: |
+          New-Item -ItemType Directory -Path artifacts -Force | Out-Null
+
+      - name: Pack NuGet package
+        run: |
+          dotnet pack LlamaBrain/LlamaBrain.csproj `
+            -c Release `
+            -p:Version=$env:VERSION `
+            -p:IncludeSymbols=true `
+            -p:SymbolPackageFormat=snupkg `
+            --no-restore `
+            --output artifacts
+
+      - name: Upload NuGet packages as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: LlamaBrain-nuget-${{ github.sha }}
+          path: |
+            artifacts/*.nupkg
+            artifacts/*.snupkg
+          retention-days: 7
+
+      - name: Push to NuGet.org
+        run: |
+          # Push the main packages (exclude symbol packages)
+          $nupkgs = Get-ChildItem artifacts -Filter *.nupkg | Where-Object { $_.Name -notlike '*.snupkg' }
+          foreach ($p in $nupkgs) {
+            dotnet nuget push $p.FullName `
+              --source https://api.nuget.org/v3/index.json `
+              --api-key $env:NUGET_API_KEY `
+              --skip-duplicate
+          }
+          
+          # Push the symbol packages if they exist
+          $snupkgs = Get-ChildItem artifacts -Filter *.snupkg
+          foreach ($p in $snupkgs) {
+            dotnet nuget push $p.FullName `
+              --source https://api.nuget.org/v3/index.json `
+              --api-key $env:NUGET_API_KEY `
+              --skip-duplicate
+          }
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
 
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: build
-    if: github.ref_type == 'tag' || github.event_name == 'release'
+    needs: [build, publish-nuget]
+    if: github.event_name == 'push' && github.ref_type == 'tag'
     permissions:
       contents: write
     
@@ -144,28 +320,47 @@ jobs:
       - name: Get version and tag from event
         id: tag_info
         run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
-            TAG_NAME="${{ github.event.release.tag_name }}"
-            VERSION="${{ github.event.release.tag_name }}"
-          else
-            TAG_NAME="${{ github.ref_name }}"
-            VERSION=${GITHUB_REF#refs/tags/}
-          fi
+          TAG_NAME="${{ github.ref_name }}"
+          VERSION="${{ github.ref_name }}"
           # Remove optional 'v' prefix if present
           VERSION=${VERSION#v}
+          
+          # Determine if this is a prerelease based on SemVer (contains '-')
+          if [[ "$VERSION" == *"-"* ]]; then
+            PRERELEASE=true
+          else
+            PRERELEASE=false
+          fi
+          
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_OUTPUT
+          echo "PRERELEASE=$PRERELEASE" >> $GITHUB_OUTPUT
 
       - name: Create/Update Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag_info.outputs.TAG_NAME }}
           name: LlamaBrain ${{ steps.tag_info.outputs.VERSION }}
-          files: artifacts/**/*.zip
+          files: |
+            artifacts/**/*.zip
+            artifacts/**/*.nupkg
+            artifacts/**/*.snupkg
           body: |
             ## LlamaBrain ${{ steps.tag_info.outputs.VERSION }}
             
-            ### Downloads
+            ### NuGet Package
+            This release is available on [NuGet.org](https://www.nuget.org/packages/LlamaBrain/):
+            
+            ```bash
+            dotnet add package LlamaBrain --version ${{ steps.tag_info.outputs.VERSION }}
+            ```
+            
+            The NuGet package includes:
+            - `LlamaBrain.dll` - The main library assembly
+            - `LlamaBrain.xml` - XML documentation
+            - Symbol package (`.snupkg`) for debugging support
+            
+            ### Manual Downloads
             - **DLL Package**: `LlamaBrain-${{ steps.tag_info.outputs.VERSION }}.zip`
             
             The ZIP file contains:
@@ -175,13 +370,19 @@ jobs:
             - Required dependencies (if any)
             
             ### Installation
+            **Via NuGet (Recommended):**
+            ```bash
+            dotnet add package LlamaBrain --version ${{ steps.tag_info.outputs.VERSION }}
+            ```
+            
+            **Manual Installation:**
             1. Download the ZIP file
             2. Extract the DLL and dependencies to your project
             3. Reference the DLL in your .NET project
             
             See [README.md](https://github.com/${{ github.repository }}/blob/main/README.md) for more information.
           draft: false
-          prerelease: false
+          prerelease: ${{ steps.tag_info.outputs.PRERELEASE == 'true' }}
           generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
