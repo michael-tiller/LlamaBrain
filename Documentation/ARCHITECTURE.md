@@ -344,7 +344,7 @@ var config = new StructuredContextConfig
     PreferredFormat = StructuredContextFormat.JsonContext,
     FallbackToTextAssembly = true,
     ValidateSchema = true,
-    UseCompactJson = false,  // Use compact JSON to save tokens
+    UseCompactJson = true,  // Use compact JSON to save tokens
     ContextBlockOpenTag = "<context_json>",
     ContextBlockCloseTag = "</context_json>"
 };

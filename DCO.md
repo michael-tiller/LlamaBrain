@@ -61,15 +61,25 @@ A CI check verifies that all commits in a Pull Request include the "Signed-off-b
 
 ### Manual Verification
 
-You can verify sign-offs on commits:
+You can verify sign-offs on commits by inspecting commit messages:
 
 ```bash
-# Check if a commit has a sign-off
-git log --show-signature
+# View commit messages with full body to see sign-off lines
+git log --show-body
 
-# Check all commits in a branch
+# Search for commits containing "Signed-off-by" in the commit message
 git log --grep="Signed-off-by"
+
+# View a specific commit's message body
+git show <commit-hash>
+
+# Check all commits in current branch for sign-offs
+git log --format="%H %s" | while read hash subject; do
+  git show -s --format="%B" $hash | grep -q "Signed-off-by" && echo "✓ $hash $subject" || echo "✗ $hash $subject"
+done
 ```
+
+**Note**: `git log --show-signature` only shows GPG signatures, not DCO sign-offs. To verify DCO sign-offs, you must inspect the commit message body where the "Signed-off-by" line appears.
 
 ## FAQ
 

@@ -31,31 +31,14 @@ namespace LlamaBrain.Tests.FunctionCalling
         public void Constructor_NullDispatcher_ThrowsArgumentNullException()
         {
             // Act & Assert
-            Assert.Throws<ArgumentNullException>(() => new FunctionCallExecutor(null!, _snapshot));
-        }
-
-        [Test]
-        public void Constructor_NullSnapshot_ThrowsArgumentNullException()
-        {
-            // Act & Assert
-            Assert.Throws<ArgumentNullException>(() => new FunctionCallExecutor(_dispatcher, null!));
+            Assert.Throws<ArgumentNullException>(() => new FunctionCallExecutor(null!));
         }
 
         [Test]
         public void Constructor_ValidArguments_CreatesExecutor()
         {
             // Act
-            var executor = new FunctionCallExecutor(_dispatcher, _snapshot);
-
-            // Assert
-            Assert.That(executor, Is.Not.Null);
-        }
-
-        [Test]
-        public void Constructor_NullMemorySystem_IsOptional()
-        {
-            // Act
-            var executor = new FunctionCallExecutor(_dispatcher, _snapshot, null);
+            var executor = new FunctionCallExecutor(_dispatcher);
 
             // Assert
             Assert.That(executor, Is.Not.Null);
@@ -70,7 +53,7 @@ namespace LlamaBrain.Tests.FunctionCalling
         {
             // Arrange
             _dispatcher.RegisterFunction("test_func", call => FunctionCallResult.SuccessResult("result", call.CallId));
-            var executor = new FunctionCallExecutor(_dispatcher, _snapshot);
+            var executor = new FunctionCallExecutor(_dispatcher);
             var functionCall = FunctionCall.Create("test_func");
 
             // Act
@@ -85,7 +68,7 @@ namespace LlamaBrain.Tests.FunctionCalling
         public void Execute_UnregisteredFunction_ReturnsFailureResult()
         {
             // Arrange
-            var executor = new FunctionCallExecutor(_dispatcher, _snapshot);
+            var executor = new FunctionCallExecutor(_dispatcher);
             var functionCall = FunctionCall.Create("unknown_func");
 
             // Act
@@ -107,7 +90,7 @@ namespace LlamaBrain.Tests.FunctionCalling
                 return FunctionCallResult.SuccessResult(null);
             });
 
-            var executor = new FunctionCallExecutor(_dispatcher, _snapshot);
+            var executor = new FunctionCallExecutor(_dispatcher);
             var functionCall = FunctionCall.Create("with_args", new Dictionary<string, object>
             {
                 { "key1", "value1" },
@@ -131,7 +114,7 @@ namespace LlamaBrain.Tests.FunctionCalling
         public void ExecuteAll_NullParsedOutput_ReturnsEmptyDictionary()
         {
             // Arrange
-            var executor = new FunctionCallExecutor(_dispatcher, _snapshot);
+            var executor = new FunctionCallExecutor(_dispatcher);
 
             // Act
             var results = executor.ExecuteAll(null!);
@@ -144,7 +127,7 @@ namespace LlamaBrain.Tests.FunctionCalling
         public void ExecuteAll_NoFunctionCalls_ReturnsEmptyDictionary()
         {
             // Arrange
-            var executor = new FunctionCallExecutor(_dispatcher, _snapshot);
+            var executor = new FunctionCallExecutor(_dispatcher);
             var parsedOutput = ParsedOutput.Dialogue("Hello", "Hello");
 
             // Act
@@ -158,7 +141,7 @@ namespace LlamaBrain.Tests.FunctionCalling
         public void ExecuteAll_NullFunctionCallsList_ReturnsEmptyDictionary()
         {
             // Arrange
-            var executor = new FunctionCallExecutor(_dispatcher, _snapshot);
+            var executor = new FunctionCallExecutor(_dispatcher);
             var parsedOutput = ParsedOutput.Dialogue("Hello", "Hello");
             parsedOutput.FunctionCalls = null!;
 
@@ -175,7 +158,7 @@ namespace LlamaBrain.Tests.FunctionCalling
             // Arrange
             _dispatcher.RegisterFunction("get_data", call => FunctionCallResult.SuccessResult("data_result", call.CallId));
 
-            var executor = new FunctionCallExecutor(_dispatcher, _snapshot);
+            var executor = new FunctionCallExecutor(_dispatcher);
             var parsedOutput = ParsedOutput.Dialogue("Hello", "Hello")
                 .WithFunctionCall(FunctionCall.Create("get_data", null, "call_1"));
 
@@ -196,7 +179,7 @@ namespace LlamaBrain.Tests.FunctionCalling
             _dispatcher.RegisterFunction("func_a", call => FunctionCallResult.SuccessResult("result_a", call.CallId));
             _dispatcher.RegisterFunction("func_b", call => FunctionCallResult.SuccessResult("result_b", call.CallId));
 
-            var executor = new FunctionCallExecutor(_dispatcher, _snapshot);
+            var executor = new FunctionCallExecutor(_dispatcher);
             var parsedOutput = ParsedOutput.Dialogue("Hello", "Hello")
                 .WithFunctionCall(FunctionCall.Create("func_a", null, "call_a"))
                 .WithFunctionCall(FunctionCall.Create("func_b", null, "call_b"));
@@ -216,7 +199,7 @@ namespace LlamaBrain.Tests.FunctionCalling
             // Arrange
             _dispatcher.RegisterFunction("my_function", call => FunctionCallResult.SuccessResult("result"));
 
-            var executor = new FunctionCallExecutor(_dispatcher, _snapshot);
+            var executor = new FunctionCallExecutor(_dispatcher);
             var parsedOutput = ParsedOutput.Dialogue("Hello", "Hello")
                 .WithFunctionCall(FunctionCall.Create("my_function")); // No call ID
 
@@ -235,7 +218,7 @@ namespace LlamaBrain.Tests.FunctionCalling
             _dispatcher.RegisterFunction("succeed", call => FunctionCallResult.SuccessResult("ok", call.CallId));
             // "fail" is not registered
 
-            var executor = new FunctionCallExecutor(_dispatcher, _snapshot);
+            var executor = new FunctionCallExecutor(_dispatcher);
             var parsedOutput = ParsedOutput.Dialogue("Hello", "Hello")
                 .WithFunctionCall(FunctionCall.Create("succeed", null, "success_call"))
                 .WithFunctionCall(FunctionCall.Create("fail", null, "fail_call"));
@@ -260,7 +243,7 @@ namespace LlamaBrain.Tests.FunctionCalling
                 return FunctionCallResult.SuccessResult($"call_{callCount}", call.CallId);
             });
 
-            var executor = new FunctionCallExecutor(_dispatcher, _snapshot);
+            var executor = new FunctionCallExecutor(_dispatcher);
             var parsedOutput = ParsedOutput.Dialogue("Hello", "Hello")
                 .WithFunctionCall(FunctionCall.Create("counter", null, "same_id"))
                 .WithFunctionCall(FunctionCall.Create("counter", null, "same_id"));
@@ -431,7 +414,7 @@ namespace LlamaBrain.Tests.FunctionCalling
             // Arrange
             _dispatcher.RegisterFunction("get_info", call => FunctionCallResult.SuccessResult(new { info = "test_info" }, call.CallId));
 
-            var executor = new FunctionCallExecutor(_dispatcher, _snapshot);
+            var executor = new FunctionCallExecutor(_dispatcher);
             var parsedOutput = new ParsedOutput
             {
                 Success = true,
@@ -454,7 +437,7 @@ namespace LlamaBrain.Tests.FunctionCalling
             // Arrange
             _dispatcher.RegisterFunction("fallback_func", call => FunctionCallResult.SuccessResult("fallback", call.CallId));
 
-            var executor = new FunctionCallExecutor(_dispatcher, _snapshot);
+            var executor = new FunctionCallExecutor(_dispatcher);
             var parsedOutput = ParsedOutput.Failed("Parse error", "raw output");
             parsedOutput.FunctionCalls.Add(FunctionCall.Create("fallback_func", null, "fallback_call"));
 
@@ -464,6 +447,20 @@ namespace LlamaBrain.Tests.FunctionCalling
             // Assert
             Assert.That(results.Count, Is.EqualTo(1));
             Assert.That(results["fallback_call"].Success, Is.True);
+        }
+
+        [Test]
+        public void ExecuteAll_NullCallIdAndFunctionName_ThrowsArgumentException()
+        {
+            // Arrange
+            var executor = new FunctionCallExecutor(_dispatcher);
+            var parsedOutput = new ParsedOutput { Success = true };
+            // Manually add a call with both null to bypass Create validation if any
+            parsedOutput.FunctionCalls.Add(new FunctionCall { FunctionName = null!, CallId = null! });
+
+            // Act & Assert
+            var ex = Assert.Throws<ArgumentException>(() => executor.ExecuteAll(parsedOutput));
+            Assert.That(ex?.Message, Does.Contain("index 0"));
         }
 
         #endregion
