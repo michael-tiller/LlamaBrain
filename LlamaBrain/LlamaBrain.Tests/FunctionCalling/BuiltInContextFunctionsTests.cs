@@ -201,8 +201,9 @@ namespace LlamaBrain.Tests.FunctionCalling
             var firstMemory = memories!.First() as Dictionary<string, object>;
             Assert.That(firstMemory, Is.Not.Null);
             Assert.That(firstMemory!.ContainsKey("content"), Is.True);
+            // When memory system is not available (fallback), returns recency and significance
             Assert.That(firstMemory.ContainsKey("recency"), Is.True);
-            Assert.That(firstMemory.ContainsKey("importance"), Is.True);
+            Assert.That(firstMemory.ContainsKey("significance"), Is.True);
             Assert.That(firstMemory["content"], Is.EqualTo("Test memory content"));
         }
 

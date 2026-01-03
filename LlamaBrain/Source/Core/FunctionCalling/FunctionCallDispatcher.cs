@@ -112,6 +112,9 @@ namespace LlamaBrain.Core.FunctionCalling
     /// <returns>A list of results, one per function call</returns>
     public List<FunctionCallResult> DispatchCalls(IEnumerable<FunctionCall> functionCalls)
     {
+      if (functionCalls == null)
+        throw new ArgumentNullException(nameof(functionCalls));
+
       var results = new List<FunctionCallResult>();
       foreach (var call in functionCalls)
       {

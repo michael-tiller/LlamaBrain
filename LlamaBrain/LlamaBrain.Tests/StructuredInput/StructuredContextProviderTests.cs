@@ -235,7 +235,12 @@ namespace LlamaBrain.Tests.StructuredInput
         {
             // Arrange
             var provider = LlamaCppStructuredContextProvider.Instance;
-            var context = new ContextJsonSchema();
+            var context = new ContextJsonSchema
+            {
+                SchemaVersion = "1.0",
+                Context = new ContextSection(),
+                Dialogue = new DialogueSection()
+            };
 
             // Act
             var result = provider.ValidateContext(context, out var error);

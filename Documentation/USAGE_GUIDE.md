@@ -1062,7 +1062,7 @@ var config = new StructuredContextConfig
 
 When structured context is enabled, the prompt includes a JSON block with structured context:
 
-```
+```text
 System Prompt: You are a helpful NPC...
 
 <context_json>
@@ -1107,7 +1107,7 @@ NPC:
 ### Text vs Structured Context Comparison
 
 **Text-Based Context (Legacy)**:
-```
+```text
 System Prompt: You are a helpful NPC...
 
 === Context ===

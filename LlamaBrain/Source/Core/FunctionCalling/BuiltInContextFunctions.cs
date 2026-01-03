@@ -100,6 +100,25 @@ namespace LlamaBrain.Core.FunctionCalling
       var limit = call.GetArgumentInt("limit", 10);
       var minSignificance = (float)call.GetArgumentDouble("minSignificance", 0.0);
 
+      // If memory system is available, use it to get memories with significance scores
+      if (memorySystem != null)
+      {
+        var memoryEntries = memorySystem.GetActiveEpisodicMemories()
+          .Where(m => m.Significance >= minSignificance)
+          .OrderByDescending(m => m.CreatedAt)
+          .Take(limit)
+          .Select(m => new Dictionary<string, object>
+          {
+            { "content", m.Content },
+            { "significance", m.Significance },
+            { "strength", m.Strength }
+          })
+          .ToList();
+
+        return FunctionCallResult.SuccessResult(memoryEntries, call.CallId);
+      }
+
+      // Fallback to snapshot: calculate recency from position (no significance available)
       var memories = snapshot.EpisodicMemories ?? new List<string>();
       var result = memories
           .Take(limit)
@@ -109,12 +128,11 @@ namespace LlamaBrain.Core.FunctionCalling
             index = i,
             recency = memories.Count > 1 ? (float)i / (memories.Count - 1) : 1.0f
           })
-          .Where(m => m.recency >= minSignificance)
           .Select(m => new Dictionary<string, object>
           {
-                    { "content", m.content },
-                    { "recency", m.recency },
-                    { "importance", 0.5f } // Default importance
+            { "content", m.content },
+            { "recency", m.recency },
+            { "significance", 0.5f } // Default significance when memory system not available
           })
           .ToList();
 
@@ -126,15 +144,42 @@ namespace LlamaBrain.Core.FunctionCalling
       var limit = call.GetArgumentInt("limit", 10);
       var minConfidence = (float)call.GetArgumentDouble("minConfidence", 0.0);
 
-      var beliefs = snapshot.Beliefs ?? new List<string>();
-      var result = beliefs
+      // If memory system is available, use it to get beliefs with confidence scores
+      if (memorySystem != null)
+      {
+        var beliefEntries = memorySystem.GetActiveBeliefs()
+          .Where(b => b.Confidence >= minConfidence)
+          .OrderByDescending(b => b.CreatedAt)
           .Take(limit)
           .Select((b, i) => new Dictionary<string, object>
           {
-                    { "id", $"belief_{i}" },
-                    { "content", b },
-                    { "confidence", 0.7f }, // Default confidence
-                    { "sentiment", 0.0f }   // Neutral sentiment
+            { "id", $"belief_{i}" },
+            { "content", b.Content },
+            { "confidence", b.Confidence },
+            { "sentiment", b.Sentiment }
+          })
+          .ToList();
+
+        return FunctionCallResult.SuccessResult(beliefEntries, call.CallId);
+      }
+
+      // Fallback to snapshot: assign default confidence and filter
+      var beliefs = snapshot.Beliefs ?? new List<string>();
+      const float defaultConfidence = 0.7f;
+      var result = beliefs
+          .Select(b => new
+          {
+            content = b,
+            confidence = defaultConfidence
+          })
+          .Where(b => b.confidence >= minConfidence)
+          .Take(limit)
+          .Select((b, i) => new Dictionary<string, object>
+          {
+            { "id", $"belief_{i}" },
+            { "content", b.content },
+            { "confidence", b.confidence },
+            { "sentiment", 0.0f }   // Neutral sentiment when memory system not available
           })
           .ToList();
 

@@ -580,7 +580,7 @@ namespace LlamaBrain.Runtime.Core
           LastParsedOutput = parsedOutput;
 
           // Step 1.5: Execute function calls if any
-          if (parsedOutput.FunctionCalls.Count > 0)
+          if (parsedOutput.FunctionCalls != null && parsedOutput.FunctionCalls.Count > 0)
           {
             var functionController = FunctionCallController.Instance
               ?? FunctionCallController.GetOrCreate();

@@ -219,13 +219,19 @@ namespace LlamaBrain.Runtime.Core.FunctionCalling
       var allFunctionCalls = new List<FunctionCall>();
       var allResults = new List<FunctionCallResult>();
 
-      foreach (var functionCall in parsedOutput.FunctionCalls)
+      for (int i = 0; i < parsedOutput.FunctionCalls.Count; i++)
       {
+        var functionCall = parsedOutput.FunctionCalls[i];
         try
         {
           // Execute via core dispatcher
           var result = _coreDispatcher.DispatchCall(functionCall);
-          var key = functionCall.CallId ?? functionCall.FunctionName;
+          
+          // Build unique key: CallId > FunctionName_index > index
+          var key = functionCall.CallId 
+            ?? (!string.IsNullOrEmpty(functionCall.FunctionName) 
+                ? $"{functionCall.FunctionName}_{i}" 
+                : i.ToString());
           results[key] = result;
           allFunctionCalls.Add(functionCall);
           allResults.Add(result);

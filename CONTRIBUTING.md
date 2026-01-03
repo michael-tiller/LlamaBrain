@@ -451,6 +451,110 @@ If your changes affect:
    - Test results and coverage information
    - Any breaking changes or migration notes
 
+## 🔐 CI Secrets / Publishing
+
+The CI/CD workflow requires secrets to publish packages to NuGet.org. This section documents how to configure and manage these secrets.
+
+### Required Secret: `NUGET_API_KEY`
+
+The `NUGET_API_KEY` secret is required for the "Push to NuGet.org" step in the CI/CD workflow (see `.github/workflows/ci-cd.yml` lines 281-301). This secret contains a NuGet.org API token that allows the workflow to publish packages.
+
+### Adding the Secret
+
+To add the `NUGET_API_KEY` secret to the repository:
+
+1. **Navigate to Repository Settings**
+   - Go to the repository on GitHub
+   - Click **Settings** (requires admin/owner permissions)
+
+2. **Access Secrets and Variables**
+   - In the left sidebar, click **Secrets and variables** → **Actions**
+
+3. **Add New Secret**
+   - Click **New repository secret**
+   - **Name**: `NUGET_API_KEY` (must match exactly)
+   - **Secret**: Paste your NuGet.org API token
+   - Click **Add secret**
+
+### NuGet.org API Token Requirements
+
+**Required Scopes/Permissions:**
+- **Push/Publish packages**: The token must have permission to push packages to NuGet.org
+- **Organization access** (if applicable): If the package is published under an organization account, the token must have access to that organization
+
+**Creating a NuGet.org API Token:**
+
+1. **Log in to NuGet.org**
+   - Go to [nuget.org](https://www.nuget.org)
+   - Sign in with your account (or the organization account that owns the package)
+
+2. **Generate API Key**
+   - Click on your profile → **API Keys**
+   - Click **Create** → **Create**
+   - **Package Owner**: Select the package owner (your account or organization)
+   - **Expiration**: Set an appropriate expiration (recommended: 1-2 years for CI/CD tokens)
+   - **Glob Pattern**: Leave empty or use `*` to allow all packages
+   - Click **Create**
+
+3. **Copy the Token**
+   - **Important**: Copy the token immediately - it will only be shown once
+   - The token format is: `oy2[alphanumeric string]`
+
+4. **Add to GitHub Secrets**
+   - Follow the steps in "Adding the Secret" above
+   - Paste the token as the secret value
+
+### Token Rotation and Renewal
+
+**When to Rotate:**
+- Token is approaching expiration
+- Token has been compromised or exposed
+- Security best practices recommend periodic rotation (annually or bi-annually)
+
+**Rotation Steps:**
+
+1. **Create New Token on NuGet.org**
+   - Follow the steps in "Creating a NuGet.org API Token" above
+   - Generate a new token with appropriate expiration
+
+2. **Update GitHub Secret**
+   - Go to **Settings** → **Secrets and variables** → **Actions**
+   - Click on `NUGET_API_KEY` secret
+   - Click **Update**
+   - Paste the new token
+   - Click **Update secret**
+
+3. **Revoke Old Token (Optional but Recommended)**
+   - On NuGet.org, go to **API Keys**
+   - Find the old token
+   - Click **Delete** to revoke it
+   - **Note**: Wait until after verifying the new token works before revoking the old one
+
+4. **Verify Workflow Run**
+   - Trigger a workflow run (push a tag or merge to main)
+   - Check the "Push to NuGet.org" step in the workflow run
+   - Verify it completes successfully without authentication errors
+   - If successful, you can safely revoke the old token
+
+### Security Best Practices
+
+**Least-Privilege Principle:**
+- The token should only have the minimum permissions necessary
+- Use package-specific glob patterns if possible (e.g., `LlamaBrain.*` instead of `*`)
+- Set appropriate expiration dates (not "never expires" unless absolutely necessary)
+
+**Secret Management:**
+- **Who should manage**: Only repository owners/admins should have access to manage secrets
+- **Access Control**: Limit who can view/edit secrets in GitHub Settings
+- **Audit Trail**: GitHub Actions logs will show when secrets are used, but not their values
+- **Never commit secrets**: Secrets should only exist in GitHub Secrets, never in code, commits, or issues
+
+**Token Security:**
+- Store tokens securely (use a password manager)
+- Never share tokens in issues, PRs, or public channels
+- Rotate tokens if they may have been exposed
+- Use separate tokens for different purposes (CI/CD vs. manual publishing)
+
 ## 🐛 Reporting Issues
 
 When reporting bugs or requesting features:

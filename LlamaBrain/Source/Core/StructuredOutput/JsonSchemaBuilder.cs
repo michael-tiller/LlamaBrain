@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using Newtonsoft.Json.Linq;
 using LlamaBrain.Core.FunctionCalling;
 using LlamaBrain.Core.Validation;
 using LlamaBrain.Utilities;
@@ -209,10 +210,28 @@ namespace LlamaBrain.Core.StructuredOutput
         return false;
       }
 
-      // Basic structural validation
-      if (!schema.Contains("\"type\""))
+      // Parse JSON and validate top-level "type" property
+      try
       {
-        error = "Schema must contain a 'type' property";
+        var jsonObject = JObject.Parse(schema);
+        
+        // Check if root is a JSON object
+        if (jsonObject == null)
+        {
+          error = "Schema root must be a JSON object";
+          return false;
+        }
+
+        // Check for direct "type" property on root (not nested)
+        if (!jsonObject.ContainsKey("type"))
+        {
+          error = "Schema must contain a top-level 'type' property";
+          return false;
+        }
+      }
+      catch (Exception ex)
+      {
+        error = $"Failed to parse schema JSON: {ex.Message}";
         return false;
       }
 
@@ -381,16 +400,58 @@ namespace LlamaBrain.Core.StructuredOutput
     }
 
     /// <summary>
-    /// Escapes a string for JSON.
+    /// Escapes a string for JSON, handling all control characters (U+0000-U+001F).
+    /// Ensures full JSON compliance by escaping all control characters.
     /// </summary>
     private static string EscapeJsonString(string str)
     {
-      return str
-          .Replace("\\", "\\\\")
-          .Replace("\"", "\\\"")
-          .Replace("\n", "\\n")
-          .Replace("\r", "\\r")
-          .Replace("\t", "\\t");
+      if (string.IsNullOrEmpty(str))
+        return str;
+
+      var sb = new StringBuilder(str.Length * 2); // Pre-allocate with extra capacity for escapes
+      
+      foreach (char c in str)
+      {
+        // Handle standard JSON escape sequences first
+        switch (c)
+        {
+          case '\\':
+            sb.Append("\\\\");
+            break;
+          case '"':
+            sb.Append("\\\"");
+            break;
+          case '\b':  // Backspace (U+0008)
+            sb.Append("\\b");
+            break;
+          case '\f':  // Form feed (U+000C)
+            sb.Append("\\f");
+            break;
+          case '\n':  // Line feed (U+000A)
+            sb.Append("\\n");
+            break;
+          case '\r':  // Carriage return (U+000D)
+            sb.Append("\\r");
+            break;
+          case '\t':  // Tab (U+0009)
+            sb.Append("\\t");
+            break;
+          default:
+            // Escape all other control characters (U+0000-U+001F) as \u00XX
+            if (c <= 0x1F)
+            {
+              sb.AppendFormat("\\u{0:X4}", (int)c);
+            }
+            else
+            {
+              // Regular character, no escaping needed
+              sb.Append(c);
+            }
+            break;
+        }
+      }
+      
+      return sb.ToString();
     }
 
     /// <summary>
@@ -465,6 +526,10 @@ namespace LlamaBrain.Core.StructuredOutput
     {
       if (!Enum.TryParse<MutationType>(Type, true, out var mutationType))
       {
+        // Log warning when LLM outputs invalid mutation type
+        Logger.Warn($"[StructuredMutation] Failed to parse mutation type '{Type}'. " +
+                    $"Falling back to AppendEpisodic. " +
+                    $"Content: '{Content}', Target: '{Target ?? "null"}', Confidence: {Confidence}");
         mutationType = MutationType.AppendEpisodic;
       }
 

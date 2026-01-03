@@ -34,10 +34,10 @@ jobs:
           HEAD_SHA="${{ github.event.pull_request.head.sha }}"
           
           # Explicitly fetch the base ref to ensure we have the full range
-          git fetch origin "$BASE_REF" --depth=0
+          git fetch origin "$BASE_REF"
           
           # Fetch PR head explicitly to handle fork PRs
-          git fetch origin "refs/pull/${{ github.event.pull_request.number }}/head:pr-head" --depth=0 || true
+          git fetch origin "refs/pull/${{ github.event.pull_request.number }}/head:pr-head" || true
           
           # Resolve head SHA (prefer pr-head if fetched)
           if git rev-parse --verify pr-head >/dev/null 2>&1; then
