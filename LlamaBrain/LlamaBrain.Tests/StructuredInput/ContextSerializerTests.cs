@@ -358,6 +358,329 @@ namespace LlamaBrain.Tests.StructuredInput
 
         #endregion
 
+        #region Null Argument Exception Tests
+
+        [Test]
+        public void Serialize_NullContext_ThrowsArgumentNullException()
+        {
+            // Act & Assert
+            var ex = Assert.Throws<System.ArgumentNullException>(() => ContextSerializer.Serialize(null!));
+            Assert.That(ex!.ParamName, Is.EqualTo("context"));
+        }
+
+        [Test]
+        public void Deserialize_NullJson_ThrowsArgumentNullException()
+        {
+            // Act & Assert
+            var ex = Assert.Throws<System.ArgumentNullException>(() => ContextSerializer.Deserialize(null!));
+            Assert.That(ex!.ParamName, Is.EqualTo("json"));
+        }
+
+        [Test]
+        public void SerializeCompact_NullContext_ThrowsArgumentNullException()
+        {
+            // Act & Assert
+            var ex = Assert.Throws<System.ArgumentNullException>(() => ContextSerializer.SerializeCompact(null!));
+            Assert.That(ex!.ParamName, Is.EqualTo("context"));
+        }
+
+        [Test]
+        public void SerializeWithDelimiters_NullContext_ThrowsArgumentNullException()
+        {
+            // Act & Assert
+            var ex = Assert.Throws<System.ArgumentNullException>(() => ContextSerializer.SerializeWithDelimiters(null!));
+            Assert.That(ex!.ParamName, Is.EqualTo("context"));
+        }
+
+        #endregion
+
+        #region SerializeCompact Tests
+
+        [Test]
+        public void SerializeCompact_EmptyContext_ReturnsValidCompactJson()
+        {
+            // Arrange
+            var context = new ContextJsonSchema();
+
+            // Act
+            var json = ContextSerializer.SerializeCompact(context);
+
+            // Assert
+            Assert.That(json, Is.Not.Null);
+            Assert.That(json, Is.Not.Empty);
+            Assert.That(JsonUtils.IsValidJson(json), Is.True);
+            // Compact JSON should not have newlines or indentation
+            Assert.That(json, Does.Not.Contain("\n"));
+        }
+
+        [Test]
+        public void SerializeCompact_WithData_ProducesCompactOutput()
+        {
+            // Arrange
+            var context = CreateTestContext();
+
+            // Act
+            var compactJson = ContextSerializer.SerializeCompact(context);
+            var normalJson = ContextSerializer.Serialize(context);
+
+            // Assert
+            Assert.That(compactJson.Length, Is.LessThan(normalJson.Length), "Compact JSON should be shorter");
+            Assert.That(compactJson, Does.Not.Contain("\n"), "Compact JSON should not have newlines");
+            Assert.That(compactJson, Does.Not.Contain("  "), "Compact JSON should not have indentation");
+        }
+
+        [Test]
+        public void SerializeCompact_PreservesAllData()
+        {
+            // Arrange
+            var original = CreateTestContext();
+
+            // Act
+            var compactJson = ContextSerializer.SerializeCompact(original);
+            var deserialized = ContextSerializer.Deserialize(compactJson);
+
+            // Assert
+            Assert.That(deserialized, Is.Not.Null);
+            Assert.That(deserialized!.SchemaVersion, Is.EqualTo(original.SchemaVersion));
+            Assert.That(deserialized.Context.CanonicalFacts, Is.EqualTo(original.Context.CanonicalFacts));
+            Assert.That(deserialized.Dialogue.PlayerInput, Is.EqualTo(original.Dialogue.PlayerInput));
+        }
+
+        [Test]
+        public void SerializeCompact_SameInput_ProducesSameOutput()
+        {
+            // Arrange
+            var context1 = CreateTestContext();
+            var context2 = CreateTestContext();
+
+            // Act
+            var json1 = ContextSerializer.SerializeCompact(context1);
+            var json2 = ContextSerializer.SerializeCompact(context2);
+
+            // Assert
+            Assert.That(json1, Is.EqualTo(json2), "Same input should produce identical compact JSON output");
+        }
+
+        [Test]
+        public void SerializeCompact_OmitsNullValues()
+        {
+            // Arrange
+            var context = new ContextJsonSchema
+            {
+                Context = new ContextSection
+                {
+                    CanonicalFacts = new List<string> { "Test fact" }
+                    // Other properties are null
+                }
+            };
+
+            // Act
+            var json = ContextSerializer.SerializeCompact(context);
+
+            // Assert
+            Assert.That(JsonUtils.IsValidJson(json), Is.True);
+            // Null values should be omitted due to NullValueHandling.Ignore
+        }
+
+        #endregion
+
+        #region SerializeWithDelimiters Tests
+
+        [Test]
+        public void SerializeWithDelimiters_DefaultTags_WrapsJsonCorrectly()
+        {
+            // Arrange
+            var context = new ContextJsonSchema();
+
+            // Act
+            var result = ContextSerializer.SerializeWithDelimiters(context);
+
+            // Assert
+            Assert.That(result, Does.StartWith("<context_json>"));
+            Assert.That(result, Does.EndWith("</context_json>"));
+            Assert.That(result, Does.Contain("schemaVersion"));
+        }
+
+        [Test]
+        public void SerializeWithDelimiters_CustomTags_UsesProvidedTags()
+        {
+            // Arrange
+            var context = new ContextJsonSchema();
+            var openTag = "<game_context>";
+            var closeTag = "</game_context>";
+
+            // Act
+            var result = ContextSerializer.SerializeWithDelimiters(context, openTag, closeTag);
+
+            // Assert
+            Assert.That(result, Does.StartWith("<game_context>"));
+            Assert.That(result, Does.EndWith("</game_context>"));
+            Assert.That(result, Does.Not.Contain("<context_json>"));
+        }
+
+        [Test]
+        public void SerializeWithDelimiters_CompactFalse_UsesIndentedJson()
+        {
+            // Arrange
+            var context = CreateTestContext();
+
+            // Act
+            var result = ContextSerializer.SerializeWithDelimiters(context, compact: false);
+
+            // Assert
+            // Indented JSON will have newlines between properties
+            var jsonContent = result.Replace("<context_json>", "").Replace("</context_json>", "").Trim();
+            Assert.That(jsonContent, Does.Contain("\n"), "Non-compact output should have newlines");
+        }
+
+        [Test]
+        public void SerializeWithDelimiters_CompactTrue_UsesCompactJson()
+        {
+            // Arrange
+            var context = CreateTestContext();
+
+            // Act
+            var result = ContextSerializer.SerializeWithDelimiters(context, compact: true);
+
+            // Assert
+            // Extract the JSON between delimiters
+            var lines = result.Split('\n');
+            // With compact=true, structure is: openTag\njson\ncloseTag (3 lines)
+            Assert.That(lines.Length, Is.EqualTo(3), "Compact output should have exactly 3 lines (open tag, json, close tag)");
+        }
+
+        [Test]
+        public void SerializeWithDelimiters_PreservesDataIntegrity()
+        {
+            // Arrange
+            var context = CreateTestContext();
+
+            // Act
+            var result = ContextSerializer.SerializeWithDelimiters(context);
+
+            // Assert
+            Assert.That(result, Does.Contain("The king is Arthur"));
+            Assert.That(result, Does.Contain("How are you?"));
+            Assert.That(result, Does.Contain("trust"));
+        }
+
+        [Test]
+        public void SerializeWithDelimiters_EmptyTags_StillWorks()
+        {
+            // Arrange
+            var context = new ContextJsonSchema();
+
+            // Act
+            var result = ContextSerializer.SerializeWithDelimiters(context, "", "");
+
+            // Assert
+            Assert.That(result, Does.Contain("schemaVersion"));
+        }
+
+        [Test]
+        public void SerializeWithDelimiters_XmlStyleTags_FormatsCorrectly()
+        {
+            // Arrange
+            var context = new ContextJsonSchema { SchemaVersion = "1.0" };
+
+            // Act
+            var result = ContextSerializer.SerializeWithDelimiters(
+                context,
+                "<!-- BEGIN CONTEXT -->",
+                "<!-- END CONTEXT -->");
+
+            // Assert
+            Assert.That(result, Does.StartWith("<!-- BEGIN CONTEXT -->"));
+            Assert.That(result, Does.EndWith("<!-- END CONTEXT -->"));
+        }
+
+        #endregion
+
+        #region Deserialize Edge Cases
+
+        [Test]
+        public void Deserialize_EmptyString_ReturnsNull()
+        {
+            // Act
+            var result = ContextSerializer.Deserialize("");
+
+            // Assert
+            Assert.That(result, Is.Null);
+        }
+
+        [Test]
+        public void Deserialize_WhitespaceOnly_ReturnsNull()
+        {
+            // Act
+            var result = ContextSerializer.Deserialize("   \n\t  ");
+
+            // Assert
+            Assert.That(result, Is.Null);
+        }
+
+        [Test]
+        public void Deserialize_InvalidJson_ThrowsJsonException()
+        {
+            // Arrange
+            var invalidJson = "{ this is not valid json }";
+
+            // Act & Assert
+            Assert.Throws<Newtonsoft.Json.JsonReaderException>(() => ContextSerializer.Deserialize(invalidJson));
+        }
+
+        [Test]
+        public void Deserialize_ValidJsonWrongSchema_ReturnsObjectWithDefaults()
+        {
+            // Arrange - Valid JSON but not matching our schema
+            var wrongSchemaJson = @"{ ""foo"": ""bar"", ""number"": 42 }";
+
+            // Act
+            var result = ContextSerializer.Deserialize(wrongSchemaJson);
+
+            // Assert - Should deserialize but with default values
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result!.SchemaVersion, Is.EqualTo("1.0")); // Default value
+        }
+
+        [Test]
+        public void Deserialize_PartialSchema_PreservesProvidedValues()
+        {
+            // Arrange - Only some fields provided
+            var partialJson = @"{ ""schemaVersion"": ""2.0"" }";
+
+            // Act
+            var result = ContextSerializer.Deserialize(partialJson);
+
+            // Assert
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result!.SchemaVersion, Is.EqualTo("2.0"));
+        }
+
+        [Test]
+        public void Deserialize_JsonArray_ThrowsException()
+        {
+            // Arrange - Array instead of object
+            var arrayJson = @"[1, 2, 3]";
+
+            // Act & Assert
+            Assert.Throws<Newtonsoft.Json.JsonSerializationException>(() => ContextSerializer.Deserialize(arrayJson));
+        }
+
+        [Test]
+        public void Deserialize_NullJsonValue_ReturnsNull()
+        {
+            // Arrange
+            var nullJson = "null";
+
+            // Act
+            var result = ContextSerializer.Deserialize(nullJson);
+
+            // Assert
+            Assert.That(result, Is.Null);
+        }
+
+        #endregion
+
         #region Helper Methods
 
         private static ContextJsonSchema CreateTestContext()

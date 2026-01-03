@@ -1639,6 +1639,495 @@ namespace LlamaBrain.Tests
     }
 
     #endregion
+
+    #region SendStructuredPromptAsync Tests
+
+    [Test]
+    public async Task SendStructuredPromptAsync_WithValidSchemaAndPrompt_ReturnsContent()
+    {
+      // Arrange
+      var responseJson = CreateSuccessResponse(@"{""name"": ""John"", ""age"": 30}");
+      var mockClient = CreateMockHttpClient(HttpStatusCode.OK, responseJson);
+      var client = new ApiClient("localhost", 5000, "test-model", null, 30, mockClient);
+      var schema = @"{""type"": ""object"", ""properties"": {""name"": {""type"": ""string""}, ""age"": {""type"": ""integer""}}}";
+
+      // Act
+      var result = await client.SendStructuredPromptAsync("Generate a person", schema);
+
+      // Assert
+      Assert.That(result, Does.Contain("John"));
+    }
+
+    [Test]
+    public async Task SendStructuredPromptAsync_WithEmptyPrompt_ReturnsError()
+    {
+      // Arrange
+      var mockClient = CreateMockHttpClient(HttpStatusCode.OK, CreateSuccessResponse("{}"));
+      var client = new ApiClient("localhost", 5000, "test-model", null, 30, mockClient);
+      var schema = @"{""type"": ""object""}";
+
+      // Act
+      var result = await client.SendStructuredPromptAsync("", schema);
+
+      // Assert
+      Assert.That(result, Does.Contain("Error:"));
+      Assert.That(result, Does.Contain("Prompt cannot be null or empty"));
+    }
+
+    [Test]
+    public async Task SendStructuredPromptAsync_WithNullPrompt_ReturnsError()
+    {
+      // Arrange
+      var mockClient = CreateMockHttpClient(HttpStatusCode.OK, CreateSuccessResponse("{}"));
+      var client = new ApiClient("localhost", 5000, "test-model", null, 30, mockClient);
+      var schema = @"{""type"": ""object""}";
+
+      // Act
+      var result = await client.SendStructuredPromptAsync(null!, schema);
+
+      // Assert
+      Assert.That(result, Does.Contain("Error:"));
+    }
+
+    [Test]
+    public async Task SendStructuredPromptAsync_WithLongPrompt_ReturnsError()
+    {
+      // Arrange
+      var mockClient = CreateMockHttpClient(HttpStatusCode.OK, CreateSuccessResponse("{}"));
+      var client = new ApiClient("localhost", 5000, "test-model", null, 30, mockClient);
+      var longPrompt = new string('a', 15000);
+      var schema = @"{""type"": ""object""}";
+
+      // Act
+      var result = await client.SendStructuredPromptAsync(longPrompt, schema);
+
+      // Assert
+      Assert.That(result, Does.Contain("Error:"));
+      Assert.That(result, Does.Contain("Prompt too long"));
+    }
+
+    [Test]
+    public async Task SendStructuredPromptAsync_WithEmptySchema_ReturnsError()
+    {
+      // Arrange
+      var mockClient = CreateMockHttpClient(HttpStatusCode.OK, CreateSuccessResponse("{}"));
+      var client = new ApiClient("localhost", 5000, "test-model", null, 30, mockClient);
+
+      // Act
+      var result = await client.SendStructuredPromptAsync("Test prompt", "");
+
+      // Assert
+      Assert.That(result, Does.Contain("Error:"));
+      Assert.That(result, Does.Contain("JSON schema cannot be null or empty"));
+    }
+
+    [Test]
+    public async Task SendStructuredPromptAsync_WithNullSchema_ReturnsError()
+    {
+      // Arrange
+      var mockClient = CreateMockHttpClient(HttpStatusCode.OK, CreateSuccessResponse("{}"));
+      var client = new ApiClient("localhost", 5000, "test-model", null, 30, mockClient);
+
+      // Act
+      var result = await client.SendStructuredPromptAsync("Test prompt", null!);
+
+      // Assert
+      Assert.That(result, Does.Contain("Error:"));
+    }
+
+    [Test]
+    public async Task SendStructuredPromptAsync_WithInvalidSchema_ReturnsError()
+    {
+      // Arrange
+      var mockClient = CreateMockHttpClient(HttpStatusCode.OK, CreateSuccessResponse("{}"));
+      var client = new ApiClient("localhost", 5000, "test-model", null, 30, mockClient);
+      var invalidSchema = "not valid json {{{";
+
+      // Act
+      var result = await client.SendStructuredPromptAsync("Test prompt", invalidSchema);
+
+      // Assert
+      Assert.That(result, Does.Contain("Error:"));
+      Assert.That(result, Does.Contain("Invalid JSON schema"));
+    }
+
+    [Test]
+    public async Task SendStructuredPromptAsync_AfterDispose_ThrowsObjectDisposedException()
+    {
+      // Arrange
+      var client = new ApiClient("localhost", 5000, "test-model");
+      client.Dispose();
+
+      // Act & Assert
+      Assert.ThrowsAsync<ObjectDisposedException>(async () =>
+        await client.SendStructuredPromptAsync("test", @"{""type"": ""object""}"));
+    }
+
+    [Test]
+    public async Task SendStructuredPromptAsync_WithCancellation_ReturnsError()
+    {
+      // Arrange
+      var mockClient = CreateMockHttpClient(HttpStatusCode.OK, CreateSuccessResponse("{}"));
+      var client = new ApiClient("localhost", 5000, "test-model", null, 30, mockClient);
+      var cts = new CancellationTokenSource();
+      cts.Cancel();
+
+      // Act
+      var result = await client.SendStructuredPromptAsync("Test", @"{""type"": ""object""}", cancellationToken: cts.Token);
+
+      // Assert
+      Assert.That(result, Does.Contain("Error:"));
+    }
+
+    #endregion
+
+    #region SendStructuredPromptWithMetricsAsync Tests
+
+    [Test]
+    public async Task SendStructuredPromptWithMetricsAsync_WithValidInput_ReturnsMetrics()
+    {
+      // Arrange
+      var responseJson = CreateSuccessResponse(@"{""result"": ""success""}", true, 20, 30);
+      var mockClient = CreateMockHttpClient(HttpStatusCode.OK, responseJson);
+      var client = new ApiClient("localhost", 5000, "test-model", null, 30, mockClient);
+      var schema = @"{""type"": ""object"", ""properties"": {""result"": {""type"": ""string""}}}";
+
+      // Act
+      var result = await client.SendStructuredPromptWithMetricsAsync("Generate result", schema);
+
+      // Assert
+      Assert.That(result.Content, Does.Contain("success"));
+      Assert.That(result.PromptTokenCount, Is.EqualTo(20));
+      Assert.That(result.GeneratedTokenCount, Is.EqualTo(30));
+    }
+
+    [Test]
+    public async Task SendStructuredPromptWithMetricsAsync_WithEmptyPrompt_ReturnsErrorMetrics()
+    {
+      // Arrange
+      var mockClient = CreateMockHttpClient(HttpStatusCode.OK, CreateSuccessResponse("{}"));
+      var client = new ApiClient("localhost", 5000, "test-model", null, 30, mockClient);
+
+      // Act
+      var result = await client.SendStructuredPromptWithMetricsAsync("", @"{""type"": ""object""}");
+
+      // Assert
+      Assert.That(result.Content, Does.Contain("Error:"));
+      Assert.That(result.Content, Does.Contain("Prompt cannot be null or empty"));
+    }
+
+    [Test]
+    public async Task SendStructuredPromptWithMetricsAsync_WithEmptySchema_ReturnsErrorMetrics()
+    {
+      // Arrange
+      var mockClient = CreateMockHttpClient(HttpStatusCode.OK, CreateSuccessResponse("{}"));
+      var client = new ApiClient("localhost", 5000, "test-model", null, 30, mockClient);
+
+      // Act
+      var result = await client.SendStructuredPromptWithMetricsAsync("Test", "");
+
+      // Assert
+      Assert.That(result.Content, Does.Contain("Error:"));
+      Assert.That(result.Content, Does.Contain("JSON schema cannot be null or empty"));
+    }
+
+    [Test]
+    public async Task SendStructuredPromptWithMetricsAsync_WithHttpError_ReturnsErrorMetrics()
+    {
+      // Arrange
+      var mockClient = CreateMockHttpClient(HttpStatusCode.InternalServerError, "Server error");
+      var client = new ApiClient("localhost", 5000, "test-model", null, 30, mockClient);
+
+      // Act
+      var result = await client.SendStructuredPromptWithMetricsAsync("Test", @"{""type"": ""object""}");
+
+      // Assert
+      Assert.That(result.Content, Does.Contain("Error:"));
+      Assert.That(result.TotalTimeMs, Is.GreaterThanOrEqualTo(0));
+    }
+
+    [Test]
+    public async Task SendStructuredPromptWithMetricsAsync_WithEmptyResponse_ReturnsErrorMetrics()
+    {
+      // Arrange
+      var mockClient = CreateMockHttpClient(HttpStatusCode.OK, "");
+      var client = new ApiClient("localhost", 5000, "test-model", null, 30, mockClient);
+
+      // Act
+      var result = await client.SendStructuredPromptWithMetricsAsync("Test", @"{""type"": ""object""}");
+
+      // Assert
+      Assert.That(result.Content, Does.Contain("Error:"));
+      Assert.That(result.Content, Does.Contain("Empty response"));
+    }
+
+    [Test]
+    public async Task SendStructuredPromptWithMetricsAsync_WithNullContent_ReturnsErrorMetrics()
+    {
+      // Arrange
+      var response = new { content = (string?)null };
+      var mockClient = CreateMockHttpClient(HttpStatusCode.OK, JsonConvert.SerializeObject(response));
+      var client = new ApiClient("localhost", 5000, "test-model", null, 30, mockClient);
+
+      // Act
+      var result = await client.SendStructuredPromptWithMetricsAsync("Test", @"{""type"": ""object""}");
+
+      // Assert
+      Assert.That(result.Content, Does.Contain("Error:"));
+      Assert.That(result.Content, Does.Contain("Invalid response format"));
+    }
+
+    [Test]
+    public async Task SendStructuredPromptWithMetricsAsync_WithNoTimings_EstimatesMetrics()
+    {
+      // Arrange
+      var response = new { content = @"{""data"": ""test""}", stop = true };
+      var mockClient = CreateMockHttpClient(HttpStatusCode.OK, JsonConvert.SerializeObject(response));
+      var client = new ApiClient("localhost", 5000, "test-model", null, 30, mockClient);
+
+      // Act
+      var result = await client.SendStructuredPromptWithMetricsAsync("Test", @"{""type"": ""object""}");
+
+      // Assert
+      Assert.That(result.Content, Does.Contain("data"));
+      Assert.That(result.PrefillTimeMs, Is.GreaterThanOrEqualTo(0));
+      Assert.That(result.DecodeTimeMs, Is.GreaterThanOrEqualTo(0));
+    }
+
+    [Test]
+    public async Task SendStructuredPromptWithMetricsAsync_RaisesOnMetricsAvailableEvent()
+    {
+      // Arrange
+      var responseJson = CreateSuccessResponse(@"{""test"": true}");
+      var mockClient = CreateMockHttpClient(HttpStatusCode.OK, responseJson);
+      var client = new ApiClient("localhost", 5000, "test-model", null, 30, mockClient);
+      CompletionMetrics? receivedMetrics = null;
+      client.OnMetricsAvailable += m => receivedMetrics = m;
+
+      // Act
+      await client.SendStructuredPromptWithMetricsAsync("Test", @"{""type"": ""object""}");
+
+      // Assert
+      Assert.IsNotNull(receivedMetrics);
+    }
+
+    [Test]
+    public async Task SendStructuredPromptWithMetricsAsync_AfterDispose_ThrowsObjectDisposedException()
+    {
+      // Arrange
+      var client = new ApiClient("localhost", 5000, "test-model");
+      client.Dispose();
+
+      // Act & Assert
+      Assert.ThrowsAsync<ObjectDisposedException>(async () =>
+        await client.SendStructuredPromptWithMetricsAsync("test", @"{""type"": ""object""}"));
+    }
+
+    [Test]
+    public async Task SendStructuredPromptWithMetricsAsync_WithLongResponse_TruncatesContent()
+    {
+      // Arrange
+      var longContent = new string('x', 60000);
+      var response = new { content = longContent, stop = true };
+      var mockClient = CreateMockHttpClient(HttpStatusCode.OK, JsonConvert.SerializeObject(response));
+      var client = new ApiClient("localhost", 5000, "test-model", null, 30, mockClient);
+
+      // Act
+      var result = await client.SendStructuredPromptWithMetricsAsync("Test", @"{""type"": ""object""}");
+
+      // Assert
+      Assert.That(result.Content.Length, Is.LessThanOrEqualTo(50020));
+      Assert.That(result.Content, Does.EndWith("... [truncated]"));
+    }
+
+    #endregion
+
+    #region Structured Output Format Tests
+
+    [Test]
+    public async Task SendStructuredPromptWithMetricsAsync_JsonSchemaFormat_IncludesJsonSchemaInRequest()
+    {
+      // Arrange
+      string? capturedBody = null;
+      var handler = new MockHttpMessageHandler(req =>
+      {
+        capturedBody = req.Content?.ReadAsStringAsync().Result;
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+          Content = new StringContent(CreateSuccessResponse(@"{""test"": true}"))
+        };
+      });
+      var mockClient = new HttpClient(handler);
+      var client = new ApiClient("localhost", 5000, "test-model", null, 30, mockClient);
+      var schema = @"{""type"": ""object"", ""properties"": {""test"": {""type"": ""boolean""}}}";
+
+      // Act
+      await client.SendStructuredPromptWithMetricsAsync("Test", schema, LlamaBrain.Core.StructuredOutput.StructuredOutputFormat.JsonSchema);
+
+      // Assert
+      Assert.IsNotNull(capturedBody);
+      Assert.That(capturedBody, Does.Contain("json_schema"));
+    }
+
+    [Test]
+    public async Task SendStructuredPromptWithMetricsAsync_GrammarFormat_IncludesGrammarInRequest()
+    {
+      // Arrange
+      string? capturedBody = null;
+      var handler = new MockHttpMessageHandler(req =>
+      {
+        capturedBody = req.Content?.ReadAsStringAsync().Result;
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+          Content = new StringContent(CreateSuccessResponse(@"{""value"": 42}"))
+        };
+      });
+      var mockClient = new HttpClient(handler);
+      var client = new ApiClient("localhost", 5000, "test-model", null, 30, mockClient);
+      var schema = @"{""type"": ""object"", ""properties"": {""value"": {""type"": ""integer""}}}";
+
+      // Act
+      await client.SendStructuredPromptWithMetricsAsync("Test", schema, LlamaBrain.Core.StructuredOutput.StructuredOutputFormat.Grammar);
+
+      // Assert
+      Assert.IsNotNull(capturedBody);
+      Assert.That(capturedBody, Does.Contain("grammar"));
+    }
+
+    [Test]
+    public async Task SendStructuredPromptWithMetricsAsync_ResponseFormatMode_IncludesResponseFormatInRequest()
+    {
+      // Arrange
+      string? capturedBody = null;
+      var handler = new MockHttpMessageHandler(req =>
+      {
+        capturedBody = req.Content?.ReadAsStringAsync().Result;
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+          Content = new StringContent(CreateSuccessResponse(@"{""data"": ""test""}"))
+        };
+      });
+      var mockClient = new HttpClient(handler);
+      var client = new ApiClient("localhost", 5000, "test-model", null, 30, mockClient);
+      var schema = @"{""type"": ""object""}";
+
+      // Act
+      await client.SendStructuredPromptWithMetricsAsync("Test", schema, LlamaBrain.Core.StructuredOutput.StructuredOutputFormat.ResponseFormat);
+
+      // Assert
+      Assert.IsNotNull(capturedBody);
+      Assert.That(capturedBody, Does.Contain("response_format"));
+    }
+
+    [Test]
+    public async Task SendStructuredPromptWithMetricsAsync_NoneFormat_NoStructuredOutputParameters()
+    {
+      // Arrange
+      string? capturedBody = null;
+      var handler = new MockHttpMessageHandler(req =>
+      {
+        capturedBody = req.Content?.ReadAsStringAsync().Result;
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+          Content = new StringContent(CreateSuccessResponse(@"{""simple"": true}"))
+        };
+      });
+      var mockClient = new HttpClient(handler);
+      var client = new ApiClient("localhost", 5000, "test-model", null, 30, mockClient);
+      var schema = @"{""type"": ""object""}";
+
+      // Act
+      await client.SendStructuredPromptWithMetricsAsync("Test", schema, LlamaBrain.Core.StructuredOutput.StructuredOutputFormat.None);
+
+      // Assert
+      Assert.IsNotNull(capturedBody);
+      // None format should not include json_schema, grammar, or response_format with actual values
+      // (they may be present as null)
+    }
+
+    [Test]
+    public async Task SendStructuredPromptWithMetricsAsync_WithCachePrompt_IncludesCachePromptInRequest()
+    {
+      // Arrange
+      string? capturedBody = null;
+      var handler = new MockHttpMessageHandler(req =>
+      {
+        capturedBody = req.Content?.ReadAsStringAsync().Result;
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+          Content = new StringContent(CreateSuccessResponse(@"{}"))
+        };
+      });
+      var mockClient = new HttpClient(handler);
+      var client = new ApiClient("localhost", 5000, "test-model", null, 30, mockClient);
+
+      // Act
+      await client.SendStructuredPromptWithMetricsAsync("Test", @"{""type"": ""object""}", cachePrompt: true);
+
+      // Assert
+      Assert.IsNotNull(capturedBody);
+      Assert.That(capturedBody, Does.Contain("\"cache_prompt\":true"));
+    }
+
+    [Test]
+    public async Task SendStructuredPromptWithMetricsAsync_WithCustomParameters_SendsCorrectValues()
+    {
+      // Arrange
+      string? capturedBody = null;
+      var handler = new MockHttpMessageHandler(req =>
+      {
+        capturedBody = req.Content?.ReadAsStringAsync().Result;
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+          Content = new StringContent(CreateSuccessResponse(@"{}"))
+        };
+      });
+      var mockClient = new HttpClient(handler);
+      var client = new ApiClient("localhost", 5000, "test-model", null, 30, mockClient);
+
+      // Act
+      await client.SendStructuredPromptWithMetricsAsync("Test", @"{""type"": ""object""}", maxTokens: 256, temperature: 0.5f);
+
+      // Assert
+      Assert.IsNotNull(capturedBody);
+      Assert.That(capturedBody, Does.Contain("\"n_predict\":256"));
+      Assert.That(capturedBody, Does.Contain("\"temperature\":0.5"));
+    }
+
+    #endregion
+
+    #region Network Error Tests
+
+    [Test]
+    public async Task SendStructuredPromptWithMetricsAsync_WithNetworkError_ReturnsErrorMetrics()
+    {
+      // Arrange
+      using var client = new ApiClient("localhost", 59998, "test-model"); // Port unlikely to be in use
+
+      // Act
+      var result = await client.SendStructuredPromptWithMetricsAsync("Test", @"{""type"": ""object""}");
+
+      // Assert
+      Assert.That(result.Content, Does.Contain("Error:"));
+    }
+
+    [Test]
+    public async Task SendStructuredPromptWithMetricsAsync_WithCancellation_ReturnsErrorMetrics()
+    {
+      // Arrange
+      var mockClient = CreateMockHttpClient(HttpStatusCode.OK, CreateSuccessResponse("{}"));
+      var client = new ApiClient("localhost", 5000, "test-model", null, 30, mockClient);
+      var cts = new CancellationTokenSource();
+      cts.Cancel();
+
+      // Act
+      var result = await client.SendStructuredPromptWithMetricsAsync("Test", @"{""type"": ""object""}", cancellationToken: cts.Token);
+
+      // Assert
+      Assert.That(result.Content, Does.Contain("Error:"));
+    }
+
+    #endregion
   }
 }
 
