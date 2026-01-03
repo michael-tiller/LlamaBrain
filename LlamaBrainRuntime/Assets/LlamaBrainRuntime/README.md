@@ -1,4 +1,4 @@
-# LlamaBrain Managed Host 0.2.0-rc.1
+# LlamaBrain Managed Host 0.3.0-rc.1
 
 A Unity package that provides seamless integration with the LlamaBrain core library, enabling AI-powered NPCs, dialogue systems, and intelligent game interactions in Unity projects.
 

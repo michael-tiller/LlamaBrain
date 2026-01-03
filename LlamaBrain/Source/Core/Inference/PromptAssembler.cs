@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using LlamaBrain.Core.Expectancy;
+using LlamaBrain.Core.StructuredInput;
+using LlamaBrain.Core.StructuredInput.Schemas;
 
 namespace LlamaBrain.Core.Inference
 {
@@ -83,6 +85,18 @@ namespace LlamaBrain.Core.Inference
     /// Default NPC name if not specified.
     /// </summary>
     public string DefaultNpcName { get; set; } = "NPC";
+
+    /// <summary>
+    /// Optional structured context configuration.
+    /// When set, enables structured JSON context injection in prompts.
+    /// </summary>
+    public StructuredContextConfig? StructuredContextConfig { get; set; }
+
+    /// <summary>
+    /// Whether structured context mode is enabled.
+    /// </summary>
+    public bool UseStructuredContext => StructuredContextConfig != null &&
+        StructuredContextConfig.PreferredFormat != StructuredContextFormat.None;
 
     /// <summary>
     /// Creates a default configuration.
@@ -254,6 +268,112 @@ namespace LlamaBrain.Core.Inference
         workingMemory.Dispose();
         throw;
       }
+    }
+
+    /// <summary>
+    /// Assembles a prompt with structured JSON context block.
+    /// Uses structured context provider to build JSON from snapshot.
+    /// Falls back to text assembly if structured context is disabled or fails.
+    /// </summary>
+    /// <param name="snapshot">The state snapshot</param>
+    /// <param name="npcName">Optional NPC name for the response prompt</param>
+    /// <param name="structuredConfig">Optional structured context configuration override</param>
+    /// <returns>The assembled prompt with structured JSON context</returns>
+    public AssembledPrompt AssembleStructuredPrompt(
+      StateSnapshot snapshot,
+      string? npcName = null,
+      StructuredContextConfig? structuredConfig = null)
+    {
+      if (snapshot == null) throw new ArgumentNullException(nameof(snapshot));
+
+      var effectiveConfig = structuredConfig ?? _config.StructuredContextConfig ?? StructuredContextConfig.Default;
+
+      // Fall back to text assembly if structured context is disabled
+      if (effectiveConfig.PreferredFormat == StructuredContextFormat.None)
+      {
+        return AssembleFromSnapshot(snapshot, npcName);
+      }
+
+      try
+      {
+        return AssembleStructuredPromptCore(snapshot, npcName, effectiveConfig);
+      }
+      catch (Exception ex)
+      {
+        // Fall back to text assembly if configured
+        if (effectiveConfig.FallbackToTextAssembly)
+        {
+          OnLog?.Invoke($"Structured context assembly failed, falling back to text: {ex.Message}");
+          return AssembleFromSnapshot(snapshot, npcName);
+        }
+        throw;
+      }
+    }
+
+    /// <summary>
+    /// Core implementation of structured prompt assembly.
+    /// </summary>
+    private AssembledPrompt AssembleStructuredPromptCore(
+      StateSnapshot snapshot,
+      string? npcName,
+      StructuredContextConfig config)
+    {
+      var effectiveNpcName = npcName ?? _config.DefaultNpcName;
+      var builder = new StringBuilder();
+      var breakdown = new PromptSectionBreakdown();
+
+      // 1. System prompt
+      if (!string.IsNullOrEmpty(snapshot.SystemPrompt))
+      {
+        var systemSection = string.Format(_config.SystemPromptFormat, snapshot.SystemPrompt);
+        builder.Append(systemSection);
+        breakdown.SystemPrompt = systemSection.Length;
+      }
+
+      // 2. Structured JSON context block
+      var provider = LlamaCppStructuredContextProvider.Instance;
+      var contextSchema = provider.BuildContext(snapshot);
+
+      // Validate if configured
+      if (config.ValidateSchema)
+      {
+        if (!provider.ValidateContext(contextSchema, out var error))
+        {
+          throw new InvalidOperationException($"Context validation failed: {error}");
+        }
+      }
+
+      var contextJson = config.UseCompactJson
+        ? ContextSerializer.SerializeCompact(contextSchema)
+        : ContextSerializer.Serialize(contextSchema);
+
+      builder.Append("\n");
+      builder.Append(config.ContextBlockOpenTag);
+      builder.Append("\n");
+      builder.Append(contextJson);
+      builder.Append("\n");
+      builder.Append(config.ContextBlockCloseTag);
+
+      breakdown.Context = contextJson.Length;
+      breakdown.Formatting += config.ContextBlockOpenTag.Length + config.ContextBlockCloseTag.Length + 3;
+
+      // 3. NPC response prompt
+      var npcPrompt = string.Format(_config.NpcPromptFormat, effectiveNpcName);
+      builder.Append(npcPrompt);
+      breakdown.Formatting += npcPrompt.Length;
+
+      var promptText = builder.ToString();
+      var estimatedTokens = (int)(promptText.Length / _config.CharsPerToken);
+
+      return new AssembledPrompt
+      {
+        Text = promptText,
+        EstimatedTokens = estimatedTokens,
+        CharacterCount = promptText.Length,
+        WasTruncated = false, // Structured context doesn't truncate
+        Breakdown = breakdown,
+        WorkingMemory = null // No working memory in structured mode
+      };
     }
 
     /// <summary>

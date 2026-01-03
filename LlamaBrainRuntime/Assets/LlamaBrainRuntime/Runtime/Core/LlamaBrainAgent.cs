@@ -10,6 +10,7 @@ using LlamaBrain.Core.Metrics;
 using LlamaBrain.Persona;
 using LlamaBrain.Persona.MemoryTypes;
 using LlamaBrain.Runtime.Core.Expectancy;
+using LlamaBrain.Runtime.Core.FunctionCalling;
 using LlamaBrain.Runtime.Core.Inference;
 using LlamaBrain.Runtime.Core.Validation;
 using LlamaBrain.Core.Inference;
@@ -56,6 +57,14 @@ namespace LlamaBrain.Runtime.Core
     [Header("Expectancy (Determinism Layer)")]
     [Tooltip("Optional NPC-specific expectancy rules. If set, constraints will be evaluated and injected into prompts.")]
     public NpcExpectancyConfig? ExpectancyConfig;
+
+    /// <summary>
+    /// Optional function call configuration for NPC-specific function handlers.
+    /// If set, NPC-specific functions will be registered with FunctionCallController.
+    /// </summary>
+    [Header("Function Calling")]
+    [Tooltip("Optional NPC-specific function call configuration. If set, functions will be registered with FunctionCallController.")]
+    public NpcFunctionCallConfig? FunctionCallConfig;
 
     /// <summary>
     /// Optional fallback configuration for author-controlled fallback responses.
@@ -182,6 +191,11 @@ namespace LlamaBrain.Runtime.Core
     public MutationBatchResult? LastMutationBatchResult { get; private set; }
 
     /// <summary>
+    /// The last function call execution results (for debugging/metrics).
+    /// </summary>
+    public Dictionary<string, LlamaBrain.Core.FunctionCalling.FunctionCallResult>? LastFunctionCallResults { get; private set; }
+
+    /// <summary>
     /// The retry policy for inference.
     /// </summary>
     private RetryPolicy? retryPolicy;
@@ -239,12 +253,12 @@ namespace LlamaBrain.Runtime.Core
         return string.Join("\n", memorySystem.GetAllMemoriesForPrompt(maxEpisodic: 20));
       }
     }
-    
+
     /// <summary>
     /// The last completion metrics from the most recent request (for metrics collection).
     /// </summary>
     public CompletionMetrics? LastMetrics { get; private set; }
-    
+
     /// <summary>
     /// Gets the maximum response tokens setting (for metrics collection).
     /// </summary>
@@ -307,6 +321,25 @@ namespace LlamaBrain.Runtime.Core
           }
         }
 
+        // Auto-detect FunctionCallConfig if not set
+        if (FunctionCallConfig == null)
+        {
+          FunctionCallConfig = GetComponentInParent<NpcFunctionCallConfig>();
+          if (FunctionCallConfig != null)
+          {
+            UnityEngine.Debug.Log($"[LlamaBrainAgent] Auto-detected NpcFunctionCallConfig on {FunctionCallConfig.gameObject.name}");
+          }
+        }
+
+        // Register NPC-specific functions with FunctionCallController
+        if (FunctionCallConfig != null)
+        {
+          var functionController = FunctionCallController.Instance
+            ?? FunctionCallController.GetOrCreate();
+          FunctionCallConfig.RegisterFunctionsWithController(functionController);
+          UnityEngine.Debug.Log($"[LlamaBrainAgent] Registered NPC-specific functions for {FunctionCallConfig.NpcId}");
+        }
+
         // Initialize response validator and retry policy
         responseValidator = new ResponseValidator();
         retryPolicy = RetryPolicy.Default;
@@ -330,8 +363,8 @@ namespace LlamaBrain.Runtime.Core
         LoadValidationRules();
 
         // Initialize fallback system
-        var fallbackConfigInstance = fallbackConfig != null 
-          ? fallbackConfig.ToFallbackConfig() 
+        var fallbackConfigInstance = fallbackConfig != null
+          ? fallbackConfig.ToFallbackConfig()
           : new AuthorControlledFallback.FallbackConfig();
         fallbackSystem = new AuthorControlledFallback(fallbackConfigInstance);
         UnityEngine.Debug.Log($"[LlamaBrainAgent] Fallback system initialized{(fallbackConfig != null ? " with custom config" : " with default config")}");
@@ -546,6 +579,40 @@ namespace LlamaBrain.Runtime.Core
           var parsedOutput = outputParser.Parse(metrics.Content, wasTruncated);
           LastParsedOutput = parsedOutput;
 
+          // Step 1.5: Execute function calls if any
+          if (parsedOutput.FunctionCalls != null && parsedOutput.FunctionCalls.Count > 0)
+          {
+            var functionController = FunctionCallController.Instance
+              ?? FunctionCallController.GetOrCreate();
+
+            var memorySystem = memoryProvider?.GetOrCreateSystem(runtimeProfile?.PersonaId ?? "");
+            var functionResults = functionController.ExecuteFunctionCalls(parsedOutput, snapshot, memorySystem);
+
+            // Store results for Unity access
+            LastFunctionCallResults = functionResults;
+
+            UnityEngine.Debug.Log($"[LlamaBrainAgent] Executed {parsedOutput.FunctionCalls.Count} function call(s). Results: {string.Join(", ", functionResults.Keys)}");
+
+            // Log detailed results
+            foreach (var kvp in functionResults)
+            {
+              var functionResult = kvp.Value;
+              if (functionResult.Success)
+              {
+                UnityEngine.Debug.Log($"[LlamaBrainAgent] Function call '{kvp.Key}' succeeded: {functionResult.Result}");
+              }
+              else
+              {
+                UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Function call '{kvp.Key}' failed: {functionResult.ErrorMessage}");
+              }
+            }
+          }
+          else
+          {
+            // Clear previous results if no function calls in this turn
+            LastFunctionCallResults = null;
+          }
+
           // Step 2: Validate through ValidationGate and/or ValidationPipeline
           GateResult gateResult;
           var validationContext = new ValidationContext
@@ -562,7 +629,7 @@ namespace LlamaBrain.Runtime.Core
             // ValidationPipeline handles global rules automatically and does its own parsing
             // We need to pass the raw output, not the parsed output
             gateResult = globalPipeline.ProcessWithSnapshot(metrics.Content, snapshot, validationContext.MemorySystem, wasTruncated);
-            
+
             // Update LastParsedOutput from pipeline if available
             if (globalPipeline.LastParsedOutput != null)
             {
@@ -575,7 +642,7 @@ namespace LlamaBrain.Runtime.Core
             {
               if (validationGate == null) validationGate = new ValidationGate();
               var localGateResult = validationGate.Validate(parsedOutput, validationContext);
-              
+
               // Merge results: both must pass
               if (!localGateResult.Passed)
               {
@@ -592,7 +659,7 @@ namespace LlamaBrain.Runtime.Core
             if (validationGate == null) validationGate = new ValidationGate();
             gateResult = validationGate.Validate(parsedOutput, validationContext);
           }
-          
+
           LastGateResult = gateResult;
 
           // Also run the constraint validator for backwards compatibility
@@ -732,8 +799,8 @@ namespace LlamaBrain.Runtime.Core
         // Initialize fallback if needed
         if (fallbackSystem == null)
         {
-          var fallbackConfigInstance = fallbackConfig != null 
-            ? fallbackConfig.ToFallbackConfig() 
+          var fallbackConfigInstance = fallbackConfig != null
+            ? fallbackConfig.ToFallbackConfig()
             : new AuthorControlledFallback.FallbackConfig();
           fallbackSystem = new AuthorControlledFallback(fallbackConfigInstance);
         }
@@ -741,10 +808,10 @@ namespace LlamaBrain.Runtime.Core
         // Get interaction context from snapshot
         var context = snapshot.Context;
         var failureReason = BuildFailureReason(finalResult);
-        
+
         // Get fallback response (use trigger fallbacks if available)
         var fallbackResponse = fallbackSystem.GetFallbackResponse(context, failureReason, finalResult, currentTriggerFallbacks);
-        
+
         UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] All retries exhausted ({finalResult.AttemptCount} attempts). Using fallback: '{fallbackResponse}'");
 
         // Create a successful result with the fallback response
@@ -805,7 +872,7 @@ namespace LlamaBrain.Runtime.Core
         var interactionContext = ExpectancyConfig.CreatePlayerUtteranceContext(playerInput);
         var evaluatedConstraints = ExpectancyConfig.Evaluate(interactionContext, currentTriggerRules);
         LastConstraints = evaluatedConstraints; // Store constraints for debugging/metrics
-        
+
         var snapshot = UnityStateSnapshotBuilder.BuildForNpcDialogue(
           npcConfig: ExpectancyConfig,
           memorySystem: memorySystem,
@@ -936,7 +1003,7 @@ namespace LlamaBrain.Runtime.Core
       }
 
       UnityEngine.Debug.Log($"Adding memory: {memoryEntry}");
-      
+
       // Use structured memory system - store as episodic memory with default significance
       var memorySystem = memoryProvider.GetOrCreateSystem(runtimeProfile.PersonaId);
       var entry = EpisodicMemoryEntry.FromLearnedInfo(memoryEntry, "Player", significance: 0.5f);
@@ -959,7 +1026,7 @@ namespace LlamaBrain.Runtime.Core
       // Use structured memory system
       var memorySystem = memoryProvider.GetOrCreateSystem(runtimeProfile.PersonaId);
       var categoryLower = category.ToLower();
-      
+
       // Categorize based on memory type
       if (categoryLower.Contains("belief") || categoryLower.Contains("opinion") || categoryLower.Contains("relationship"))
       {
@@ -1067,7 +1134,7 @@ namespace LlamaBrain.Runtime.Core
       // Only extract from player input, not NPC responses (to avoid junk)
       if (MemoryCategoryManager == null)
         return;
-      
+
       var playerExtractions = MemoryCategoryManager.ExtractInformationFromText(playerInput);
 
       // Use structured memory system
@@ -1075,7 +1142,7 @@ namespace LlamaBrain.Runtime.Core
         return;
 
       var memorySystem = memoryProvider.GetOrCreateSystem(runtimeProfile.PersonaId);
-      
+
       foreach (var kvp in playerExtractions)
       {
         var category = MemoryCategoryManager.GetCategory(kvp.Key);
@@ -1089,7 +1156,7 @@ namespace LlamaBrain.Runtime.Core
               // Categorize based on memory type
               var categoryName = category.CategoryName.ToLower();
               var significance = category.Importance;
-              
+
               if (categoryName.Contains("belief") || categoryName.Contains("opinion") || categoryName.Contains("relationship"))
               {
                 // Store as Belief
@@ -1510,7 +1577,7 @@ namespace LlamaBrain.Runtime.Core
       if (!result.Success)
       {
         var final = result.FinalResult;
-        
+
         if (!string.IsNullOrEmpty(final.ErrorMessage))
         {
           reasons.Add($"API Error: {final.ErrorMessage}");
@@ -1539,8 +1606,8 @@ namespace LlamaBrain.Runtime.Core
       // Initialize fallback if needed
       if (fallbackSystem == null)
       {
-        var fallbackConfigInstance = fallbackConfig != null 
-          ? fallbackConfig.ToFallbackConfig() 
+        var fallbackConfigInstance = fallbackConfig != null
+          ? fallbackConfig.ToFallbackConfig()
           : new AuthorControlledFallback.FallbackConfig();
         fallbackSystem = new AuthorControlledFallback(fallbackConfigInstance);
       }
@@ -1580,6 +1647,19 @@ namespace LlamaBrain.Runtime.Core
       if (mutationController != null && dispatcher != null)
       {
         dispatcher.HookToController(mutationController);
+      }
+    }
+
+    /// <summary>
+    /// Hooks a FunctionCallController to this agent for function call execution.
+    /// </summary>
+    /// <param name="controller">The function call controller to hook.</param>
+    public void HookFunctionCallController(FunctionCallController controller)
+    {
+      if (controller != null && FunctionCallConfig != null)
+      {
+        FunctionCallConfig.RegisterFunctionsWithController(controller);
+        UnityEngine.Debug.Log($"[LlamaBrainAgent] Hooked FunctionCallController and registered NPC-specific functions");
       }
     }
 

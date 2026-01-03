@@ -1,6 +1,6 @@
 {
   "name": "com.llamabrain.unity",
-  "version": "0.2.0",
+  "version": "0.3.0-rc.1",
   "displayName": "LlamaBrain Managed Host",
   "description": "LlamaBrain Managed Host for Unity. This is the runtime library for LlamaBrain. It is used to host the LlamaBrain engine and manage the LlamaBrain agent.",
   "unity": "2022.3",
@@ -26,15 +26,16 @@
   "license": "See LICENSE.md file",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-repo/llamabrain.git"
+    "url": "https://github.com/michael-tiller/llamabrain.git",
+    "directory": "LlamaBrainRuntime/Assets/LlamaBrainRuntime"
   },
   "bugs": {
-    "url": "https://github.com/your-repo/llamabrain/issues"
+    "url": "https://github.com/michael-tiller/llamabrain/issues"
   },
-  "homepage": "https://github.com/your-repo/llamabrain#readme",
-  "documentationUrl": "https://github.com/your-repo/llamabrain/blob/main/LlamaBrainForUnity/LLAMABRAINFORUNITY.md",
-  "changelogUrl": "https://github.com/your-repo/llamabrain/blob/main/CHANGELOG.md",
-  "licensesUrl": "https://github.com/your-repo/llamabrain/blob/main/LICENSE.md",
+  "homepage": "https://github.com/michael-tiller/llamabrain#readme",
+  "documentationUrl": "https://github.com/michael-tiller/llamabrain/blob/main/LlamaBrainRuntime/Assets/LlamaBrainRuntime/README.md",
+  "changelogUrl": "https://github.com/michael-tiller/llamabrain/blob/main/Documentation/CHANGELOG.md",
+  "licensesUrl": "https://github.com/michael-tiller/llamabrain/blob/main/LICENSE.md",
   "samples": [
     {
       "displayName": "Getting Started",

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Michael Tiller and contributors
+
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;

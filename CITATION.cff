@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+title: "LlamaBrain"
+message: "If you use this software, cite it as below."
+type: software
+version: "0.3.0-rc.1"
+authors:
+  - family-names: "Tiller"
+    given-names: "Michael"
+repository-code: "https://github.com/michael-tiller/llamabrain"
+license: MIT
+url: "https://github.com/michael-tiller/llamabrain"
+date-released: 2026-01-01
