@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Core Library
 
 #### Added
-- **Feature 23: Structured Input/Context - IN PROGRESS (~95%)** 🚧
+- **Feature 23: Structured Input/Context - COMPLETE** ✅
   - **Structured Context Provider Infrastructure**
     - Added `IStructuredContextProvider` interface for structured context generation
     - Added `LlamaCppStructuredContextProvider` singleton implementation
@@ -34,10 +34,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Added `AssembleStructuredPrompt()` method for structured context assembly
     - Automatic fallback to text assembly on failure (when configured)
     - Hybrid mode: structured JSON context + text system prompt
-  - **Test Coverage**: ~82 new tests across 3 test files
+  - **Test Coverage**: ~246 new tests across 8 test files
     - `ContextSerializerTests.cs`: Serialization, determinism, and round-trip tests (23 tests)
     - `StructuredContextProviderTests.cs`: Provider, config, and context building tests (24 tests)
     - `PromptAssemblerStructuredTests.cs`: Integration and fallback behavior tests (35 tests)
+    - `FunctionCallDispatcherTests.cs`: Dispatch, registration, case-insensitivity, error handling (51 tests)
+    - `FunctionCallExecutorTests.cs`: Execution, factory methods, integration tests (30 tests)
+    - `BuiltInContextFunctionsTests.cs`: All 6 built-in functions, argument parsing (37 tests)
+    - `FunctionCallTests.cs`: Model tests, argument extraction (30 tests)
+    - `FunctionCallResultTests.cs`: Result factory methods, serialization (16 tests)
   - **Files Added**:
     - `Source/Core/StructuredInput/StructuredContextFormat.cs`
     - `Source/Core/StructuredInput/StructuredContextConfig.cs`
@@ -70,6 +75,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
       - `Source/Core/FunctionCalling/FunctionCallDispatcher.cs`
       - `Source/Core/FunctionCalling/FunctionCallExecutor.cs`
       - `Source/Core/FunctionCalling/BuiltInContextFunctions.cs`
+    - Tests Added:
+      - `LlamaBrain.Tests/FunctionCalling/FunctionCallDispatcherTests.cs`
+      - `LlamaBrain.Tests/FunctionCalling/FunctionCallExecutorTests.cs`
+      - `LlamaBrain.Tests/FunctionCalling/BuiltInContextFunctionsTests.cs`
+      - `LlamaBrain.Tests/FunctionCalling/FunctionCallTests.cs`
+      - `LlamaBrain.Tests/FunctionCalling/FunctionCallResultTests.cs`
   - **Deferred Items**: Native LLM function calling APIs (OpenAI, Anthropic) - not needed, we parse JSON ourselves
 
 ### Unity Runtime
