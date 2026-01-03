@@ -30,7 +30,7 @@
 | [Feature 11: RAG-Based Memory Retrieval](ROADMAP.md#feature-11) | 📋 Planned | MEDIUM |
 | [Feature 12: Dedicated Structured Output](ROADMAP.md#feature-12) | ✅ Complete | 100% |
 | [Feature 13: Structured Output Integration](ROADMAP.md#feature-13) | ✅ Complete | 100% |
-| [Feature 14: Deterministic Generation Seed](ROADMAP.md#feature-14) | 📋 Planned | CRITICAL |
+| [Feature 14: Deterministic Generation Seed](ROADMAP.md#feature-14) | ✅ Complete | 100% |
 | [Feature 15: Multiple NPC Support](ROADMAP.md#feature-15) | 📋 Planned | MEDIUM |
 | [Feature 16: Save/Load Game Integration](ROADMAP.md#feature-16) | 📋 Planned | CRITICAL |
 | [Feature 17: Token Cost Tracking & Analytics](ROADMAP.md#feature-17) | 📋 Planned | MEDIUM |
@@ -192,7 +192,7 @@
 - ✅ **COMPLETE** Feature 12-13 (structured output migration)
 - ✅ **COMPLETE** Feature 23 (structured input/context)
 - Requires Feature 16 completion (save/load persistence) - **DO NEXT** (CRITICAL priority)
-- Requires Feature 14 completion (cross-session determinism) - **DO AFTER 16** (CRITICAL priority)
+- ✅ **COMPLETE** Requires Feature 14 completion (cross-session determinism)
 - Requires Feature 27 completion (KV cache optimization) - **DO AFTER Phase 3** (latency critical)
 - Requires Feature 28 completion (audit recorder) - **DO AFTER Phase 3** (ops critical)
 - Requires Feature 29 completion (hot reload) - **DO AFTER Phase 1** (developer experience)

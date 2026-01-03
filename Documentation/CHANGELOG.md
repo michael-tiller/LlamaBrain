@@ -21,7 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Updated `ApiClient` implementation to include seed in request JSON
     - Seed semantics: `null` = omit (server default), `-1` = random, `0+` = deterministic
   - **Test Coverage**
-    - Added `ApiClientSeedTests.cs` with 11 unit tests covering:
+    - Added `ApiClientSeedTests.cs` with 10 unit tests covering:
       - Seed inclusion in all API methods
       - Null seed omission from requests
       - Negative seed (-1) pass-through
