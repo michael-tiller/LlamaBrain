@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Michael Tiller and contributors
+
 using System;
 using System.Threading;
 using System.Threading.Tasks;

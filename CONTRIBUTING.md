@@ -137,8 +137,10 @@ dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
 - ✅ All new features must include unit tests
 - ✅ Bug fixes should include regression tests
 - ✅ Tests must pass before submitting a PR
-- ✅ Maintain or improve code coverage (currently 92.37%)
+- ✅ Maintain or improve code coverage (currently 88.96%)
 - ✅ Follow existing test patterns and naming conventions
+- ✅ Integration tests required for pipeline changes
+- ✅ Unity PlayMode tests for Unity runtime changes
 
 ## 🎮 Unity Development
 
@@ -295,6 +297,36 @@ LlamaBrain includes comprehensive Unity tests using Unity Test Runner:
 - **Naming**: Use clear, descriptive names following C# conventions
 - **Error Handling**: Use appropriate exception types and include meaningful error messages
 
+### Code Formatting
+
+LlamaBrain uses standard C# formatting. Before committing:
+
+1. **Run dotnet format**:
+   ```bash
+   dotnet format LlamaBrain/LlamaBrain.sln
+   ```
+
+2. **IDE Settings**: Use default C# formatting in your IDE:
+   - Visual Studio: Default C# formatting
+   - VS Code: C# extension with default settings
+   - Rider: Default formatting
+
+3. **XML Documentation**: All public APIs must have XML documentation:
+   ```csharp
+   /// <summary>
+   /// Validates LLM output against constraints and canonical facts.
+   /// </summary>
+   /// <param name="output">The parsed LLM output to validate</param>
+   /// <returns>Validation result with pass/fail status</returns>
+   public ValidationResult Validate(ParsedOutput output) { ... }
+   ```
+
+4. **Code Style Checks**: The project enforces:
+   - Consistent indentation (spaces, not tabs)
+   - Proper brace placement
+   - Naming conventions (PascalCase for public, camelCase for private)
+   - No unused using statements
+
 ### Architecture Principles
 
 LlamaBrain follows a **9-component architectural pattern** for deterministic state management:
@@ -315,6 +347,23 @@ When contributing, ensure your changes align with these principles. See [ARCHITE
 - **Utilities**: Place in `LlamaBrain/Source/Utilities/`
 - **Tests**: Mirror source structure in `LlamaBrain.Tests/`
 
+## 🌿 Branching Strategy
+
+LlamaBrain uses a simple branching model:
+
+- **`main`**: Stable, release-ready code. All code must be merged via Pull Request.
+- **`feature/name`**: New features and enhancements
+- **`fix/name`**: Bug fixes
+- **`docs/name`**: Documentation-only changes
+- **`test/name`**: Test additions or improvements
+
+### Branch Rules
+
+- **No direct commits to `main`**: All changes must go through Pull Requests
+- **Keep branches focused**: One feature/fix per branch
+- **Update from main regularly**: Rebase or merge `main` into your branch to stay current
+- **Delete branches after merge**: Clean up merged branches to keep the repo tidy
+
 ## 🔄 Development Workflow
 
 ### 1. Create a Branch
@@ -323,6 +372,8 @@ When contributing, ensure your changes align with these principles. See [ARCHITE
 git checkout -b feature/your-feature-name
 # or
 git checkout -b fix/your-bug-fix
+# or
+git checkout -b docs/update-readme
 ```
 
 ### 2. Make Your Changes
@@ -334,12 +385,44 @@ git checkout -b fix/your-bug-fix
 
 ### 3. Commit Your Changes
 
-Use clear, descriptive commit messages:
+Use clear, descriptive commit messages following conventional commit format. **All commits must be signed off** (see DCO requirements below).
 
-```bash
-git commit -m "Add feature: Description of what you added"
-git commit -m "Fix bug: Description of what you fixed"
+**Commit Message Format:**
 ```
+type(scope): description
+
+[optional body]
+
+[optional footer]
+
+Signed-off-by: Your Name <your.email@example.com>
+```
+
+**Types:**
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation changes
+- `test`: Test additions or changes
+- `refactor`: Code refactoring (no behavior change)
+- `chore`: Maintenance tasks (dependencies, build, etc.)
+
+**Examples:**
+```bash
+# Use -s flag to automatically add Signed-off-by
+git commit -s -m "feat(core): Add structured output support"
+git commit -s -m "fix(validation): Correct constraint escalation logic"
+git commit -s -m "docs(readme): Update Unity version requirements"
+git commit -s -m "test(inference): Add snapshot determinism tests"
+git commit -s -m "refactor(memory): Simplify memory retrieval logic"
+git commit -s -m "chore(deps): Update Newtonsoft.Json to 13.0.4"
+```
+
+**Best Practices:**
+- Use present tense ("Add" not "Added")
+- Keep first line under 72 characters
+- Reference issues: `fix(validation): Correct constraint escalation (#123)`
+- Be specific: "Add validation" not "Update code"
+- **Always use `-s` flag** to sign off commits (required for DCO)
 
 ### 4. Run Tests
 
@@ -367,6 +450,110 @@ If your changes affect:
    - Reference to related issues (if any)
    - Test results and coverage information
    - Any breaking changes or migration notes
+
+## 🔐 CI Secrets / Publishing
+
+The CI/CD workflow requires secrets to publish packages to NuGet.org. This section documents how to configure and manage these secrets.
+
+### Required Secret: `NUGET_API_KEY`
+
+The `NUGET_API_KEY` secret is required for the "Push to NuGet.org" step in the CI/CD workflow (see `.github/workflows/ci-cd.yml` lines 281-301). This secret contains a NuGet.org API token that allows the workflow to publish packages.
+
+### Adding the Secret
+
+To add the `NUGET_API_KEY` secret to the repository:
+
+1. **Navigate to Repository Settings**
+   - Go to the repository on GitHub
+   - Click **Settings** (requires admin/owner permissions)
+
+2. **Access Secrets and Variables**
+   - In the left sidebar, click **Secrets and variables** → **Actions**
+
+3. **Add New Secret**
+   - Click **New repository secret**
+   - **Name**: `NUGET_API_KEY` (must match exactly)
+   - **Secret**: Paste your NuGet.org API token
+   - Click **Add secret**
+
+### NuGet.org API Token Requirements
+
+**Required Scopes/Permissions:**
+- **Push/Publish packages**: The token must have permission to push packages to NuGet.org
+- **Organization access** (if applicable): If the package is published under an organization account, the token must have access to that organization
+
+**Creating a NuGet.org API Token:**
+
+1. **Log in to NuGet.org**
+   - Go to [nuget.org](https://www.nuget.org)
+   - Sign in with your account (or the organization account that owns the package)
+
+2. **Generate API Key**
+   - Click on your profile → **API Keys**
+   - Click **Create** → **Create**
+   - **Package Owner**: Select the package owner (your account or organization)
+   - **Expiration**: Set an appropriate expiration (recommended: 1-2 years for CI/CD tokens)
+   - **Glob Pattern**: Leave empty or use `*` to allow all packages
+   - Click **Create**
+
+3. **Copy the Token**
+   - **Important**: Copy the token immediately - it will only be shown once
+   - The token format is: `oy2[alphanumeric string]`
+
+4. **Add to GitHub Secrets**
+   - Follow the steps in "Adding the Secret" above
+   - Paste the token as the secret value
+
+### Token Rotation and Renewal
+
+**When to Rotate:**
+- Token is approaching expiration
+- Token has been compromised or exposed
+- Security best practices recommend periodic rotation (annually or bi-annually)
+
+**Rotation Steps:**
+
+1. **Create New Token on NuGet.org**
+   - Follow the steps in "Creating a NuGet.org API Token" above
+   - Generate a new token with appropriate expiration
+
+2. **Update GitHub Secret**
+   - Go to **Settings** → **Secrets and variables** → **Actions**
+   - Click on `NUGET_API_KEY` secret
+   - Click **Update**
+   - Paste the new token
+   - Click **Update secret**
+
+3. **Revoke Old Token (Optional but Recommended)**
+   - On NuGet.org, go to **API Keys**
+   - Find the old token
+   - Click **Delete** to revoke it
+   - **Note**: Wait until after verifying the new token works before revoking the old one
+
+4. **Verify Workflow Run**
+   - Trigger a workflow run (push a tag or merge to main)
+   - Check the "Push to NuGet.org" step in the workflow run
+   - Verify it completes successfully without authentication errors
+   - If successful, you can safely revoke the old token
+
+### Security Best Practices
+
+**Least-Privilege Principle:**
+- The token should only have the minimum permissions necessary
+- Use package-specific glob patterns if possible (e.g., `LlamaBrain.*` instead of `*`)
+- Set appropriate expiration dates (not "never expires" unless absolutely necessary)
+
+**Secret Management:**
+- **Who should manage**: Only repository owners/admins should have access to manage secrets
+- **Access Control**: Limit who can view/edit secrets in GitHub Settings
+- **Audit Trail**: GitHub Actions logs will show when secrets are used, but not their values
+- **Never commit secrets**: Secrets should only exist in GitHub Secrets, never in code, commits, or issues
+
+**Token Security:**
+- Store tokens securely (use a password manager)
+- Never share tokens in issues, PRs, or public channels
+- Rotate tokens if they may have been exposed
+- Use separate tokens for different purposes (CI/CD vs. manual publishing)
 
 ## 🐛 Reporting Issues
 
@@ -431,7 +618,104 @@ LlamaBrain implements comprehensive security measures. When contributing:
 - **Input Validation**: Always validate and sanitize inputs
 - **Path Security**: Use `PathUtils` for file operations
 - **Rate Limiting**: Respect rate limits in API clients
-- **Report Vulnerabilities**: Report security issues privately
+
+### Security Reporting Path
+
+**DO NOT create public GitHub issues for security vulnerabilities.**
+
+Security issues must be reported privately:
+
+1. **Preferred Method**: [GitHub Security Advisory](https://github.com/michael-tiller/llamabrain/security/advisories)
+   - Go to the Security tab
+   - Click "Report a vulnerability"
+   - Fill out the security advisory form
+
+2. **Alternative Methods**:
+   - **Email**: [contact@michaeltiller.com](mailto:contact@michaeltiller.com)
+   - **Discord**: Contact maintainers privately on the [LlamaBrain Discord](https://discord.gg/9ruBad4nrN)
+
+3. **Response Timeline**:
+   - Initial response: Within 48 hours
+   - Status update: Within 7 days
+   - Resolution: Depends on severity
+
+See [SECURITY.md](SECURITY.md) for detailed security reporting procedures.
+
+### No Secrets in Issues
+
+**Never paste secrets, API keys, tokens, or credentials in GitHub issues or PRs.**
+
+- Use placeholder values: `[REDACTED]` or `your-api-key-here`
+- If you accidentally commit secrets:
+  1. Rotate the secret immediately
+  2. Remove from git history (if possible)
+  3. Contact maintainers privately
+- Issues containing secrets may be automatically closed
+- Use environment variables or configuration files (not committed) for secrets
+
+## 📝 Attribution & Credit
+
+### Developer Certificate of Origin (DCO)
+
+All contributions to LlamaBrain must include a "Signed-off-by" line in the commit message. This certifies that you have the right to submit the code under the project license.
+
+**Required for every commit:**
+```bash
+git commit -s -m "Your commit message"
+```
+
+The `-s` flag automatically adds:
+```
+Signed-off-by: Your Name <your.email@example.com>
+```
+
+**What you're certifying:**
+- You have the right to contribute the code (it's your original work or you have permission)
+- You understand the contribution will be licensed under the MIT License
+- You're not violating any third-party intellectual property rights
+
+**Enforcement:**
+- All Pull Requests must have commits with valid "Signed-off-by" lines
+- CI checks will block PRs without sign-offs
+- See [DCO.md](DCO.md) for complete details
+
+### Copyright & Attribution
+
+**Contributors retain copyright** to their contributions. By contributing, you grant LlamaBrain the right to use your contribution under the MIT License, but you maintain ownership of your code.
+
+**Adding yourself to CONTRIBUTORS:**
+- If you make a non-trivial contribution (beyond typo fixes), you may add yourself to [CONTRIBUTORS](CONTRIBUTORS)
+- Submit a PR adding your name and a brief description of your contribution
+- This is optional; your contributions are tracked in Git history regardless
+
+### SPDX License Headers
+
+**New source files must include SPDX license identifiers:**
+
+```csharp
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Michael Tiller and contributors
+
+namespace LlamaBrain.Core
+{
+    // Your code here
+}
+```
+
+**Why SPDX headers?**
+- Makes license scanning and compliance easier
+- Clearly identifies license terms in source code
+- Required for downstream compliance and tooling
+
+**Existing files:** We're gradually adding SPDX headers to existing files. New files must include them.
+
+### Third-Party Attribution
+
+If you include third-party code, assets, or libraries:
+- Ensure they're compatible with MIT License
+- Add attribution to [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+- Include license information and source URLs
+- Follow the third-party's license requirements
 
 ## 📄 License
 

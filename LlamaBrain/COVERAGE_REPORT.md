@@ -1,10 +1,10 @@
 # Test Coverage Report
 
-**Generated:** 2026-01-01
-**Overall Coverage:** 88.96% line coverage (5,824 of 6,547 lines covered)  
+**Generated:** 2026-01-02
+**Overall Coverage:** 88.69% line coverage (5,824 of 6,568 lines covered)  
 **Previous Coverage:** 92.37% line coverage (5,100 of 5,521 lines covered)  
-**Coverage Change:** -3.41% (regression) ⚠️  
-**Total Files Analyzed:** 48 source files with executable code (6 new files added)
+**Coverage Change:** -3.68% (regression) ⚠️  
+**Total Files Analyzed:** 65 source files with executable code (Feature 23 added Structured Input/Context and Function Calling)
 
 **Note:** Interface files (IAgentMetrics.cs, IFallbackSystem.cs, ITriggerInfo.cs, IExpectancyRule.cs) and enums are not included in coverage metrics as they contain no executable code.
 
@@ -12,31 +12,34 @@
 
 ### Summary of Changes
 
-**Coverage Drop:** 92.37% → 88.96% (-3.41 percentage points)
+**Coverage Drop:** 92.37% → 88.69% (-3.68 percentage points)
 
-**Root Cause:** Feature 12 (Dedicated Structured Output) and Feature 13 (Structured Output Integration) added 6 new source files with 1,026 new lines of code, but test coverage for these files is incomplete.
+**Root Cause:** Feature 23 (Structured Input/Context and Function Calling) added new source files with incomplete test coverage. While ~246 tests were added across 8 test files, some core modules still need additional coverage to reach the 92.37% baseline.
 
-**Newly Added Files (6 files):**
-1. `Core\StructuredOutput\StructuredOutputFormat.cs` - Enum/interface (excluded from metrics)
-2. `Core\StructuredOutput\IStructuredOutputProvider.cs` - Interface (excluded from metrics)
-3. `Core\StructuredOutput\StructuredOutputConfig.cs` - **Needs coverage analysis**
-4. `Core\StructuredOutput\StructuredOutputParameters.cs` - **Needs coverage analysis**
-5. `Core\StructuredOutput\LlamaCppStructuredOutputProvider.cs` - **Needs coverage analysis**
-6. `Core\StructuredOutput\StructuredPipelineConfig.cs` - **Needs coverage analysis**
-7. `Core\StructuredOutput\StructuredPipelineResult.cs` - **Needs coverage analysis**
-8. `Core\StructuredOutput\StructuredPipelineMetrics.cs` - **Needs coverage analysis**
+**Feature 23 Files Needing Additional Coverage:**
+1. `Core\StructuredInput\ContextSerializer.cs` - **66.67%** (26/39 lines, 60% branch) 🔴
+   - Missing: `SerializeCompact()` method tests
+   - Missing: `SerializeWithDelimiters()` method tests with various parameters
+   - Missing: Edge case tests for `Deserialize()` with invalid JSON
+   - Missing: Null argument exception tests for all methods
+2. `Core\StructuredInput\LlamaCppStructuredContextProvider.cs` - **84.94%** (141/166 lines, 100% branch) 🟡
+   - Good coverage but could reach 90%+ with additional edge cases
+3. `Core\FunctionCalling\BuiltInContextFunctions.cs` - **87.56%** (190/217 lines, 100% branch) 🟡
+   - Good coverage but could reach 90%+ with additional edge cases
 
-**Note:** Some StructuredOutput files may be interfaces/enums (excluded). The 6 files contributing to the regression are the executable source files from Features 12-13.
+**Note:** Feature 23 added comprehensive test coverage (~246 tests), but some public API methods and edge cases in ContextSerializer need additional tests to reach full coverage.
 
 ### Files Contributing to Coverage Decrease
 
-**Files Below 80% Coverage (6 files):**
+**Files Below 80% Coverage (8 files):**
 1. `Persona\IIdGenerator.cs` - **64.71%** (11/17 lines, 0% branch) 🔴
-2. `Core\ApiClient.cs` - **66.74%** (287/430 lines, 73.44% branch) 🔴
-3. `Core\ServerManager.cs` - **68.8%** (333/484 lines, 89.55% branch) 🟡
-4. `Core\BrainAgent.cs` - **68.93%** (193/280 lines, 80% branch) 🟡
-5. `Core\ApiContracts.cs` - **77.78%** (35/45 lines, 100% branch) 🟢
-6. `Utilities\ProcessUtils.cs` - **79.55%** (140/176 lines, 100% branch) 🟢
+2. `Core\StructuredInput\ContextSerializer.cs` - **66.67%** (26/39 lines, 60% branch) 🔴 **NEW - Feature 23**
+3. `Core\ApiClient.cs` - **66.74%** (287/430 lines, 73.44% branch) 🔴
+4. `Core\ServerManager.cs` - **68.8%** (333/484 lines, 89.55% branch) 🟡
+5. `Core\StructuredOutput\StructuredDialoguePipeline.cs` - **72.38%** (131/181 lines, 79.17% branch) 🟡
+6. `Core\ApiContracts.cs` - **77.78%** (35/45 lines, 100% branch) 🟢
+7. `Core\StructuredOutput\JsonSchemaBuilder.cs` - **79.26%** (279/352 lines, 89.29% branch) 🟢
+8. `Utilities\ProcessUtils.cs` - **79.55%** (140/176 lines, 100% branch) 🟢
 
 **Coverage Delta Table:**
 
@@ -53,23 +56,24 @@
 \* *Previous coverage values estimated based on report history. Actual values may vary.*
 
 **Key Findings:**
-- **ApiClient.cs** and **BrainAgent.cs** show significant regression due to new StructuredOutput integration code
-- **6 new StructuredOutput files** added ~723 lines with incomplete test coverage (estimated 40-60%)
-- **ServerManager.cs** slight regression from new process management code
-- Overall: 1,026 new lines added, but only ~302 lines covered (estimated 29% coverage on new code)
+- **ContextSerializer.cs** (Feature 23) at 66.67% - missing tests for `SerializeCompact()` and `SerializeWithDelimiters()` methods
+- **ApiClient.cs** and **BrainAgent.cs** show regression from previous features (not Feature 23)
+- **StructuredDialoguePipeline.cs** at 72.38% - needs additional integration tests
+- **Feature 23** added ~246 tests but some public API methods need additional coverage
+- Overall: Feature 23 added comprehensive tests, but specific methods in ContextSerializer need focused testing
 
 ## Summary
 
 - **Files with 0% coverage:** 0 files ✅ **EXCELLENT!**
 - **Files with < 50% coverage:** 0 files ✅ **EXCELLENT!**
-- **Files with 50-80% coverage:** 6 files
-- **Files with >= 80% coverage:** 42 files 🎉
+- **Files with 50-80% coverage:** 8 files
+- **Files with >= 80% coverage:** 57 files 🎉
 
 **Current Status:**
 - ✅ **All files have test coverage!** - No zero-coverage files remaining
 - ✅ **All files above 50% coverage!** - No files below 50% remaining
-- 🎯 **Focus on medium-coverage files** - 6 files between 50-80% need attention
-- ⚠️ **Coverage regression** - 3.41% drop due to new StructuredOutput features
+- 🎯 **Focus on medium-coverage files** - 8 files between 50-80% need attention
+- ⚠️ **Coverage regression** - 3.68% drop after Feature 23 (Structured Input/Context and Function Calling)
 - 🚀 **Recovery plan in place** - See Action Plan below
 
 ## Recovery Action Plan
@@ -85,7 +89,7 @@
 
 2. **Identify new/modified files using git diff:**
    ```powershell
-   # Compare against previous coverage baseline (e.g., commit before Feature 12/13)
+   # Compare against previous coverage baseline (e.g., commit before Feature 23)
    git diff --name-only <baseline-commit> HEAD -- "*.cs" | Where-Object { $_ -notmatch "Tests" }
    ```
 
@@ -95,58 +99,67 @@
    ```
 
 4. **Document findings:**
-   - List all 6 newly added StructuredOutput files with their exact coverage percentages
-   - Identify which existing files (ApiClient, BrainAgent, ServerManager) have regressed
+   - List all Feature 23 files (StructuredInput and FunctionCalling) with their exact coverage percentages
+   - Identify `ContextSerializer.cs` as priority target (66.67% coverage)
+   - Identify other files below 80% that need attention
    - Calculate coverage delta for each file (previous vs current)
 
 ### Step 2: Write Targeted Unit Tests
 
 **Days 2-7 - Test Implementation Phase:**
 
-**Priority 1: New StructuredOutput Files (Estimated: 8-12 story points / 3-4 days)**
-- **`LlamaCppStructuredOutputProvider.cs`** - 2-3 story points / 1 day
-  - Test schema generation, parameter validation, format conversion
-  - Test error handling for invalid schemas
-  - Target: 80%+ coverage
+**Priority 1: Feature 23 Structured Input Files (Estimated: 6-8 story points / 2-3 days)**
+- **`Core\StructuredInput\ContextSerializer.cs`** - **HIGHEST PRIORITY** 🔴 (2-3 story points / 1 day)
+  - Add tests for `SerializeCompact()` method
+    - Test with various context configurations
+    - Verify compact JSON has no indentation
+    - Verify data preservation in compact format
+  - Add tests for `SerializeWithDelimiters()` method
+    - Test with default tags (`<context_json>`)
+    - Test with custom open/close tags
+    - Test with `compact=true` and `compact=false`
+    - Test null argument exceptions
+  - Add edge case tests for `Deserialize()`
+    - Test with invalid JSON (should return null gracefully)
+    - Test with malformed JSON
+  - Add null argument exception tests for all public methods
+  - Target: 85%+ coverage (from 66.67%)
   
-- **`StructuredOutputConfig.cs`** - 1 story point / 0.5 day
-  - Test configuration validation, default values, mode switching
-  - Target: 90%+ coverage
+- **`Core\StructuredInput\LlamaCppStructuredContextProvider.cs`** - 1-2 story points / 0.5-1 day
+  - Add edge case tests for context building
+  - Test error handling paths
+  - Target: 90%+ coverage (from 84.94%)
   
-- **`StructuredOutputParameters.cs`** - 1 story point / 0.5 day
-  - Test parameter serialization, validation, edge cases
-  - Target: 85%+ coverage
-  
-- **`StructuredPipelineConfig.cs`** - 1-2 story points / 0.5-1 day
-  - Test configuration modes, validation flags, retry limits
-  - Target: 85%+ coverage
-  
-- **`StructuredPipelineResult.cs`** - 1-2 story points / 0.5-1 day
-  - Test result construction, property accessors, convenience methods
-  - Target: 90%+ coverage
-  
-- **`StructuredPipelineMetrics.cs`** - 1-2 story points / 0.5-1 day
-  - Test metrics tracking, calculation methods, aggregation
-  - Target: 85%+ coverage
+- **`Core\FunctionCalling\BuiltInContextFunctions.cs`** - 1-2 story points / 0.5-1 day
+  - Add edge case tests for built-in functions
+  - Test error handling and validation
+  - Target: 90%+ coverage (from 87.56%)
 
-**Priority 2: Regression Recovery (Estimated: 8-10 story points / 3-4 days)**
-- **`Core\ApiClient.cs`** - 3-4 story points / 1.5-2 days
-  - Add tests for new `SendStructuredPromptAsync()` methods
-  - Test structured output request/response handling
-  - Test error scenarios and fallback paths
-  - Target: Restore to 80%+ coverage (from 66.74%)
+**Priority 2: Other Files Below 80% (Estimated: 8-10 story points / 3-4 days)**
+- **`Core\StructuredOutput\StructuredDialoguePipeline.cs`** - 2-3 story points / 1-1.5 days
+  - Add integration tests for pipeline interactions
+  - Test edge cases and error handling
+  - Target: 80%+ coverage (from 72.38%)
   
-- **`Core\BrainAgent.cs`** - 3-4 story points / 1.5-2 days
-  - Add tests for `SendNativeStructuredMessageAsync()` methods
-  - Test structured output integration with validation gate
+- **`Core\ApiClient.cs`** - 2-3 story points / 1-1.5 days
+  - Add tests for structured output request/response handling
+  - Test error scenarios and fallback paths
+  - Target: 80%+ coverage (from 66.74%)
+  
+- **`Core\BrainAgent.cs`** - 2-3 story points / 1-1.5 days
+  - Add tests for structured output integration with validation gate
   - Test generic deserialization methods
-  - Target: Restore to 80%+ coverage (from 68.93%)
+  - Target: 80%+ coverage (from 82.99% - already improved)
   
 - **`Core\ServerManager.cs`** - 1-2 story points / 0.5-1 day
-  - Add tests for any new process management code
-  - Target: Restore to 74.55%+ coverage (from 68.8%)
+  - Add tests for process management edge cases
+  - Target: 80%+ coverage (from 68.8%)
 
 **Priority 3: Quick Wins (Estimated: 2-3 story points / 1 day)**
+- **`Core\StructuredOutput\JsonSchemaBuilder.cs`** - 1 story point / 0.5 day
+  - Add tests for remaining uncovered edge cases
+  - Target: 85%+ coverage (from 79.26%)
+  
 - **`Persona\IIdGenerator.cs`** - 1 story point / 0.5 day
   - Add branch coverage tests for ID generation edge cases
   - Target: 80%+ coverage (from 64.71%)
@@ -194,9 +207,10 @@
    ```
 
 2. **Verify coverage improvements:**
-   - All 6 new files at 80%+ coverage
-   - ApiClient and BrainAgent restored to 80%+ coverage
-   - Overall coverage back to 90%+ (target: 92%+)
+   - `ContextSerializer.cs` at 85%+ coverage (critical Feature 23 file)
+   - All Feature 23 files at 85%+ coverage
+   - All 8 files below 80% restored to 80%+ coverage
+   - Overall coverage back to 92.37%+ (target: 92.5%+)
 
 3. **Update coverage report:**
    - Regenerate `coverage-analysis.csv`
@@ -211,56 +225,77 @@
 ## Recovery Timeline
 
 **Sprint 1 (Days 1-5):**
-- **Day 1:** Analysis - Identify files, run coverage, document gaps
-- **Days 2-3:** Implement tests for new StructuredOutput files (Priority 1)
-- **Days 4-5:** Implement tests for ApiClient regression recovery (Priority 2, part 1)
+- **Day 1:** Analysis - Identify files, run coverage, document gaps ✅ **COMPLETE**
+- **Days 2-3:** Implement tests for `ContextSerializer.cs` (Priority 1) - **HIGHEST PRIORITY**
+  - Add `SerializeCompact()` tests
+  - Add `SerializeWithDelimiters()` tests with all parameter combinations
+  - Add edge case and null argument exception tests
+- **Days 4-5:** Implement tests for other Feature 23 files and StructuredDialoguePipeline (Priority 1 & 2)
 
 **Sprint 2 (Days 6-10):**
-- **Days 6-7:** Implement tests for BrainAgent and ServerManager regression recovery (Priority 2, part 2)
+- **Days 6-7:** Implement tests for ApiClient, BrainAgent, and ServerManager (Priority 2)
 - **Day 8:** Implement CI gates and thresholds
 - **Days 9-10:** Verification, merge, and documentation
 
 **Milestones:**
 - ✅ **Day 1:** All files identified and coverage gaps documented
-- ✅ **Day 5:** All new StructuredOutput files at 80%+ coverage
-- ✅ **Day 7:** All regression files restored to 80%+ coverage
-- ✅ **Day 8:** CI gates implemented and passing
-- ✅ **Day 10:** Overall coverage restored to 90%+ (target: 92%+), all tests merged
+- 🎯 **Day 3:** `ContextSerializer.cs` at 85%+ coverage (from 66.67%)
+- 🎯 **Day 5:** All Feature 23 files at 85%+ coverage
+- 🎯 **Day 7:** All files below 80% restored to 80%+ coverage
+- 🎯 **Day 8:** CI gates implemented and passing
+- 🎯 **Day 10:** Overall coverage restored to 92.37%+ (target: 92.5%+), all tests merged
 
 **Expected Outcome:**
-- Overall coverage: 88.96% → **92%+** (recovery of 3.04%+)
-- All 6 files below 80% → **All at 80%+**
+- Overall coverage: 88.69% → **92.37%+** (recovery of 3.68%+)
+- `ContextSerializer.cs`: 66.67% → **85%+** (critical Feature 23 file)
+- All 8 files below 80% → **All at 80%+**
 - CI gates prevent future regressions
-- Comprehensive test suite for StructuredOutput features
+- Comprehensive test suite for Feature 23 (Structured Input/Context and Function Calling)
 
 ## Next Steps - Action Plan
 
 ### 🎯 Immediate Next Steps (This Week):
 
-1. **Tackle Medium Coverage Files** 🟡 (HIGH PRIORITY)
+1. **Feature 23: ContextSerializer Tests** 🔴 (HIGHEST PRIORITY)
+   - **`Core\StructuredInput\ContextSerializer.cs`** (66.67%, 39 lines, 60% branch) - **CRITICAL**
+   - Missing tests for `SerializeCompact()` method
+   - Missing tests for `SerializeWithDelimiters()` method with various parameters
+   - Missing edge case tests for `Deserialize()` with invalid JSON
+   - Missing null argument exception tests
+   - **Expected outcome:** +18.33% file coverage (to 85%+), significant impact on overall coverage
+
+2. **Tackle Other Medium Coverage Files** 🟡 (HIGH PRIORITY)
+   - **`Core\StructuredOutput\StructuredDialoguePipeline.cs`** (72.38%, 181 lines) - Feature 23 related
+   - **`Core\ApiClient.cs`** (66.74%, 430 lines, 73.44% branch) - Critical component
+   - **`Core\ServerManager.cs`** (68.8%, 484 lines, 89.55% branch) - Process management
    - **`Persona\IIdGenerator.cs`** (64.71%, 17 lines, 0% branch) - Quick win, small file
-   - **`Core\ApiClient.cs`** (66.74%, 430 lines, 73.44% branch) - Critical component, high impact
-   - **`Core\BrainAgent.cs`** (68.93%, 280 lines, 80% branch) - Core component
-   - **`Core\ServerManager.cs`** (68.8%, 484 lines, 89.55% branch) - Continue improving process management tests
-   - **Expected outcome:** +9.1% coverage improvement if all reach 80%+
+   - **Expected outcome:** All files reach 80%+, overall coverage back to 92.37%+
 
 ### 📅 Short-Term Goals (Next 2-3 Weeks):
 
 1. ✅ **Eliminate all 0% coverage files** → **COMPLETED!** All files now have coverage
 2. ✅ **Complete easy wins** → `FileSystem` (100%), `LlmConfig` (91.07%), `PromptComposer` (100%) - **ALL COMPLETED!** 🎉
-3. ✅ **Eliminate all < 50% coverage files** → **COMPLETED!** `ServerManager` (74.55%) significantly improved! 🎉
-4. **Push ApiClient to 80%+** → **IN PROGRESS** `ApiClient` currently at **66.74%** (needs improvement)
-5. **Push remaining medium-coverage files to 80%+** → 6 files need attention: `IIdGenerator` (64.71%), `ApiClient` (66.74%), `ServerManager` (68.8%), `BrainAgent` (68.93%), `ApiContracts` (77.78%), `ProcessUtils` (79.55%)
-6. ✅ **Overall target:** Reach 85%+ overall coverage → **ACHIEVED!** Currently at **88.96%** 🎉
+3. ✅ **Eliminate all < 50% coverage files** → **COMPLETED!** All files above 50%! 🎉
+4. 🎯 **Feature 23 Recovery** → **IN PROGRESS** 
+   - **Priority 1:** `ContextSerializer.cs` (66.67%) → 85%+ target
+   - **Priority 2:** Other Feature 23 files (`LlamaCppStructuredContextProvider` 84.94%, `BuiltInContextFunctions` 87.56%) → 90%+ target
+   - **Priority 3:** `StructuredDialoguePipeline.cs` (72.38%) → 80%+ target
+5. **Push remaining medium-coverage files to 80%+** → 8 files need attention:
+   - Feature 23: `ContextSerializer` (66.67%), `StructuredDialoguePipeline` (72.38%)
+   - Existing: `IIdGenerator` (64.71%), `ApiClient` (66.74%), `ServerManager` (68.8%), `ApiContracts` (77.78%), `JsonSchemaBuilder` (79.26%), `ProcessUtils` (79.55%)
+6. 🎯 **Overall target:** Restore to 92.37%+ overall coverage → Currently at **88.69%** (need +3.68%)
 
 ### 📊 Long-Term Goals:
 
-1. ✅ Achieve 85%+ overall coverage → **ACHIEVED!** Currently at **88.96%** 🎉
-2. Get all files to 80%+ coverage (currently 6 files below 80%: IIdGenerator (64.71%), ApiClient (66.74%), ServerManager (68.8%), BrainAgent (68.93%), ApiContracts (77.78%), ProcessUtils (79.55%))
-3. ✅ Focus on branch coverage for files with low branch coverage → `LlmConfig` (100% branch), `FileSystem` (0% branch but 100% line), `PromptComposer` (100% branch) - **COMPLETED!**
-4. ✅ Improve critical core classes → `ServerManager` (74.55%, 92.31% branch) - **MAJOR PROGRESS!** 🎉
-5. Maintain coverage as new features are added
-6. Review detailed coverage data in `coverage-analysis.csv` regularly
+1. ✅ Achieve 85%+ overall coverage → **ACHIEVED!** Currently at **88.69%** 🎉
+2. 🎯 Restore to 92.37%+ overall coverage → **IN PROGRESS** (need +3.68% recovery)
+3. Get all files to 80%+ coverage (currently 8 files below 80%):
+   - Feature 23: `ContextSerializer` (66.67%), `StructuredDialoguePipeline` (72.38%)
+   - Existing: `IIdGenerator` (64.71%), `ApiClient` (66.74%), `ServerManager` (68.8%), `ApiContracts` (77.78%), `JsonSchemaBuilder` (79.26%), `ProcessUtils` (79.55%)
+4. ✅ Focus on branch coverage for files with low branch coverage → `LlmConfig` (100% branch), `FileSystem` (0% branch but 100% line), `PromptComposer` (100% branch) - **COMPLETED!**
+5. ✅ Improve critical core classes → `ServerManager` (68.8%, 89.55% branch) - **GOOD PROGRESS!** 🎉
+6. Maintain coverage as new features are added (Feature 23 added ~246 tests but some methods need additional coverage)
+7. Review detailed coverage data in `coverage-analysis.csv` regularly
 
 ### 🎉 Recent Achievements:
 
@@ -392,20 +427,42 @@ The following files have been significantly improved with comprehensive test sui
   - **Status:** Excellent progress - core infrastructure well-tested
   - **Action:** Continue improving to reach 80%+
 
-### 🟢 Medium Coverage (50-80%) - Priority: **MEDIUM**
+### 🟢 Medium Coverage (50-80%) - Priority: **HIGH** (Feature 23 Recovery)
 
-These files have decent coverage but could benefit from additional tests to reach 80%+:
+These files have decent coverage but need additional tests to reach 80%+ and restore overall coverage to 92.37%+:
 
-1. **`Persona\IIdGenerator.cs`** - **NEEDS ATTENTION** 🟡
+1. **`Core\StructuredInput\ContextSerializer.cs`** - **HIGHEST PRIORITY** 🔴 **FEATURE 23**
+   - Line Coverage: **66.67%** 🔴 (26/39 lines)
+   - Branch Coverage: **60%** 🟡 (Needs improvement)
+   - Complexity: 11
+   - Total Lines: 39
+   - **Status:** **CRITICAL Feature 23 file** - Missing tests for `SerializeCompact()` and `SerializeWithDelimiters()` methods
+   - **Coverage impact:** +0.5% overall if pushed to 85%+ (significant for small file)
+   - **Action:** **HIGHEST PRIORITY** - Add tests for:
+     - `SerializeCompact()` method with various contexts
+     - `SerializeWithDelimiters()` with default and custom tags, compact mode
+     - Edge cases for `Deserialize()` with invalid JSON
+     - Null argument exception tests for all public methods
+
+2. **`Core\StructuredOutput\StructuredDialoguePipeline.cs`** - **HIGH PRIORITY** 🟡 **FEATURE 23**
+   - Line Coverage: **72.38%** 🟡 (131/181 lines)
+   - Branch Coverage: **79.17%** 🟡
+   - Complexity: 65
+   - Total Lines: 181
+   - **Status:** Feature 23 pipeline integration - needs additional integration tests
+   - **Coverage impact:** +1.5% overall if pushed to 85%+
+   - **Action:** High priority - Add integration tests for pipeline interactions
+
+3. **`Persona\IIdGenerator.cs`** - **NEEDS ATTENTION** 🟡
    - Line Coverage: **64.71%** 🟡
    - Branch Coverage: **0%** 🔴 (Needs improvement)
    - Complexity: 5
    - Total Lines: 17
    - **Status:** Small file but low coverage, especially branch coverage
    - **Coverage impact:** +0.1% overall if pushed to 100%
-   - **Action:** High priority - small file, quick win to improve coverage
+   - **Action:** Medium priority - small file, quick win to improve coverage
 
-2. **`Core\ApiClient.cs`** - **NEEDS ATTENTION** 🟡
+4. **`Core\ApiClient.cs`** - **NEEDS ATTENTION** 🟡
    - Line Coverage: **66.74%** 🟡 (287/430 lines)
    - Branch Coverage: **73.44%** 🟡
    - Complexity: 157

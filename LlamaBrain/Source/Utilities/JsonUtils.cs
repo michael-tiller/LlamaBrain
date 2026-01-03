@@ -3,9 +3,6 @@ using System;
 using System.Text;
 using System.Collections.Generic;
 
-/// <summary>
-/// This namespace contains utility classes
-/// </summary>
 namespace LlamaBrain.Utilities
 {
   /// <summary>

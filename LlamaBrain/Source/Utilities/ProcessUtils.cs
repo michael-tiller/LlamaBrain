@@ -4,9 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-/// <summary>
-/// This namespace contains utility classes for process operations
-/// </summary>
 namespace LlamaBrain.Utilities
 {
 

@@ -5,12 +5,10 @@ All notable changes to LlamaBrain will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.0-rc.1] (Unreleased)
-
-### Core Library
+## [0.3.0-rc.2] (Unreleased)
 
 #### Added
-- **Feature 14.1: Seed Parameter Support - COMPLETE** ✅
+- **Feature 14.1: Seed Parameter Support**
   - **API Layer Seed Support**
     - Added `seed` field to `CompletionRequest` in `ApiContracts.cs`
     - Updated `IApiClient` interface with `seed` parameter on all 4 methods:
@@ -35,7 +33,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `LlamaBrain.Tests/Core/ApiClientSeedTests.cs` - Seed parameter unit tests
   - **Documentation**: Updated `ROADMAP.md` with 14.1 completion status
 
-- **Feature 23: Structured Input/Context - COMPLETE** ✅
+## [0.3.0-rc.1] 2026-01-03
+
+### Core Library
+
+#### Added
+- **Feature 23: Structured Input/Context**
   - **Structured Context Provider Infrastructure**
     - Added `IStructuredContextProvider` interface for structured context generation
     - Added `LlamaCppStructuredContextProvider` singleton implementation
@@ -78,7 +81,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `Source/Core/StructuredInput/Schemas/ContextSection.cs`
     - `Source/Core/StructuredInput/Schemas/ConstraintSection.cs`
     - `Source/Core/StructuredInput/Schemas/DialogueSection.cs`
-  - **Function Calling Dispatch System** ✅
+  - **Function Calling Dispatch System**
     - Added `FunctionCallDispatcher` with command table pattern for function call routing
     - Added `FunctionCall` and `FunctionCallResult` DTOs for function call requests/results
     - Added `FunctionCallExecutor` for pipeline integration
@@ -111,7 +114,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Unity Runtime
 
 #### Added
-- **Unity Function Call Integration** ✅
+- **Unity Function Call Integration**
   - **FunctionCallController** (MonoBehaviour singleton)
     - Manages core `FunctionCallDispatcher` instance
     - Registers functions from ScriptableObject configs
@@ -155,7 +158,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Project Infrastructure
 
 #### Added
-- **Simple Project Governance** ✅
+- **Simple Project Governance**
   - **Public Surface Definition**
     - Condensed `SCOPE.md` to 1-page format covering what LlamaBrain is (and is not), supported Unity versions, supported providers, and deterministic guarantees
   - **Governance Structure**
@@ -178,7 +181,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Updated `README.md` to prominently feature RedRoom demo as proof of deterministic architecture
     - Added dedicated "🧪 Proof: RedRoom Demo & Deterministic Gate/Fallback" section
     - Highlights RedRoom as complete, runnable demonstration of all 9 architectural components
-- **Formal Attribution & Trademark Policy** ✅
+- **Formal Attribution & Trademark Policy**
   - **Citation Support**
     - Added `CITATION.cff` for GitHub citation tooling and academic attribution
     - Enables "Cite this repository" feature on GitHub
@@ -210,8 +213,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Core Library
 
 #### Added
-- **Feature 12: Dedicated Structured Output - COMPLETE** ✅
-- **Feature 13: Structured Output Integration - COMPLETE** ✅
+- **Feature 12: Dedicated Structured Output** 
+- **Feature 13: Structured Output Integration**
   - **Native llama.cpp Structured Output Support**
     - Added `StructuredOutputFormat` enum with JsonSchema, Grammar, ResponseFormat, and None options
     - Added `StructuredOutputConfig` for configuring structured output behavior
@@ -240,7 +243,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `OutputParserStructuredTests.cs`: Structured parsing tests
   - **Documentation**: Updated `ARCHITECTURE.md` with Feature 12 section
 
-- **Feature 13: Structured Output Integration - COMPLETE** ✅
+- **Feature 13: Structured Output Integration**
   - **StructuredDialoguePipeline**: Complete orchestration layer for structured output processing
     - Unified pipeline orchestrating LLM request → parsing → validation → mutation execution
     - Automatic retry logic with constraint escalation via `StateSnapshot.ForRetry()`
@@ -359,13 +362,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Core Library
 
 #### Added
-- **Phase 10: Deterministic Proof Gap Testing - COMPLETE** ✅
+- **Phase 10: Deterministic Proof Gap Testing**
   - **WorldIntentDispatcher Singleton Lifecycle (Requirement #5)** - Complete implementation and testing
     - Implemented scene-local singleton pattern with duplicate detection and destruction
     - Added `IsDuplicateInstance` property for test verification
     - Comprehensive PlayMode test suite: 30 tests covering singleton lifecycle, intent dispatch, handler execution, history tracking, statistics, integration, and edge cases
     - All 5 critical requirements now complete (Requirements #1-5)
-  - **Pipeline Proof Gaps - COMPLETE** ✅
+  - **Pipeline Proof Gaps**
     - **Double-hook safety**: Made `HookToController()` idempotent to prevent double-subscription
       - Added `HashSet<MemoryMutationController>` to track hooked controllers
       - `HookToController()` now checks if already hooked before subscribing

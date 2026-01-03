@@ -1,0 +1,34 @@
+# Contributors
+
+This file lists contributors to LlamaBrain who have made non-trivial contributions to the project.
+
+## Criteria for Inclusion
+
+Contributors are added to this file when they:
+- Submit non-trivial code changes (beyond typo fixes or minor documentation updates)
+- Contribute significant features, bug fixes, or architectural improvements
+- Provide substantial documentation, testing, or other project contributions
+
+Minor contributions (typo fixes, small documentation updates) are appreciated but may not result in listing here.
+
+## Current Contributors
+
+### Project Maintainer
+
+- **Michael Tiller** - Project creator and maintainer
+
+---
+
+## How to Add Yourself
+
+If you've made a non-trivial contribution and would like to be added to this file:
+
+1. Submit a Pull Request adding your name and a brief description of your contribution
+2. Ensure your commits are signed off (see [DCO.md](DCO.md))
+3. The maintainer will review and merge if appropriate
+
+**Note**: Adding yourself to this file is optional. Your contributions are tracked in Git history regardless.
+
+## Attribution
+
+All contributors retain copyright to their contributions. Contributions are licensed under the MIT License (see [LICENSE.md](LICENSE.md)).
