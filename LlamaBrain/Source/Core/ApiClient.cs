@@ -11,9 +11,6 @@ using System.Collections.Generic;
 using LlamaBrain.Utilities;
 using LlamaBrain.Core.StructuredOutput;
 
-/// <summary>
-/// API client for the llama.cpp API
-/// </summary>
 namespace LlamaBrain.Core
 {
   /// <summary>
