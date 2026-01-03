@@ -21,10 +21,11 @@ namespace LlamaBrain.Core
     /// <param name="prompt">The prompt to send</param>
     /// <param name="maxTokens">The maximum number of tokens to generate (overrides config if specified)</param>
     /// <param name="temperature">The temperature to use (overrides config if specified)</param>
+    /// <param name="seed">Random seed for deterministic generation (-1 = random, 0+ = deterministic, null = server default)</param>
     /// <param name="cachePrompt">Whether to cache the prompt for KV cache reuse</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Detailed completion metrics</returns>
-    Task<CompletionMetrics> SendPromptWithMetricsAsync(string prompt, int? maxTokens = null, float? temperature = null, bool cachePrompt = false, CancellationToken cancellationToken = default);
+    Task<CompletionMetrics> SendPromptWithMetricsAsync(string prompt, int? maxTokens = null, float? temperature = null, int? seed = null, bool cachePrompt = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Sends a prompt to the LLM and returns the response
@@ -32,9 +33,10 @@ namespace LlamaBrain.Core
     /// <param name="prompt">The prompt to send</param>
     /// <param name="maxTokens">Optional maximum tokens</param>
     /// <param name="temperature">Optional temperature</param>
+    /// <param name="seed">Random seed for deterministic generation (-1 = random, 0+ = deterministic, null = server default)</param>
     /// <param name="cancellationToken">Optional cancellation token</param>
     /// <returns>The response from the LLM</returns>
-    Task<string> SendPromptAsync(string prompt, int? maxTokens = null, float? temperature = null, CancellationToken cancellationToken = default);
+    Task<string> SendPromptAsync(string prompt, int? maxTokens = null, float? temperature = null, int? seed = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Sends a prompt with structured output enforcement using native LLM support.
@@ -45,6 +47,7 @@ namespace LlamaBrain.Core
     /// <param name="format">The structured output format to use (default: JsonSchema)</param>
     /// <param name="maxTokens">Optional maximum tokens</param>
     /// <param name="temperature">Optional temperature</param>
+    /// <param name="seed">Random seed for deterministic generation (-1 = random, 0+ = deterministic, null = server default)</param>
     /// <param name="cachePrompt">Whether to cache the prompt for KV cache reuse</param>
     /// <param name="cancellationToken">Optional cancellation token</param>
     /// <returns>The structured JSON response from the LLM</returns>
@@ -54,6 +57,7 @@ namespace LlamaBrain.Core
       StructuredOutputFormat format = StructuredOutputFormat.JsonSchema,
       int? maxTokens = null,
       float? temperature = null,
+      int? seed = null,
       bool cachePrompt = false,
       CancellationToken cancellationToken = default);
 
@@ -66,6 +70,7 @@ namespace LlamaBrain.Core
     /// <param name="format">The structured output format to use (default: JsonSchema)</param>
     /// <param name="maxTokens">Optional maximum tokens</param>
     /// <param name="temperature">Optional temperature</param>
+    /// <param name="seed">Random seed for deterministic generation (-1 = random, 0+ = deterministic, null = server default)</param>
     /// <param name="cachePrompt">Whether to cache the prompt for KV cache reuse</param>
     /// <param name="cancellationToken">Optional cancellation token</param>
     /// <returns>Detailed completion metrics including the structured response</returns>
@@ -75,6 +80,7 @@ namespace LlamaBrain.Core
       StructuredOutputFormat format = StructuredOutputFormat.JsonSchema,
       int? maxTokens = null,
       float? temperature = null,
+      int? seed = null,
       bool cachePrompt = false,
       CancellationToken cancellationToken = default);
   }

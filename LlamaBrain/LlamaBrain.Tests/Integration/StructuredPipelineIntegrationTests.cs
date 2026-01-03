@@ -210,6 +210,7 @@ namespace LlamaBrain.Tests.Integration
                 Arg.Any<StructuredOutputFormat>(),
                 Arg.Any<int?>(),
                 Arg.Any<float?>(),
+                Arg.Any<int?>(),
                 Arg.Any<bool>(),
                 Arg.Any<System.Threading.CancellationToken>())
                 .Returns(Task.FromResult(validJsonResponse));
@@ -256,6 +257,7 @@ namespace LlamaBrain.Tests.Integration
                 Arg.Any<StructuredOutputFormat>(),
                 Arg.Any<int?>(),
                 Arg.Any<float?>(),
+                Arg.Any<int?>(),
                 Arg.Any<bool>(),
                 Arg.Any<System.Threading.CancellationToken>())
                 .Returns(Task.FromResult(jsonWithMutation));
@@ -297,6 +299,7 @@ namespace LlamaBrain.Tests.Integration
                 Arg.Any<StructuredOutputFormat>(),
                 Arg.Any<int?>(),
                 Arg.Any<float?>(),
+                Arg.Any<int?>(),
                 Arg.Any<bool>(),
                 Arg.Any<System.Threading.CancellationToken>())
                 .Returns(Task.FromResult(jsonWithIntent));
@@ -346,6 +349,7 @@ namespace LlamaBrain.Tests.Integration
                 Arg.Any<StructuredOutputFormat>(),
                 Arg.Any<int?>(),
                 Arg.Any<float?>(),
+                Arg.Any<int?>(),
                 Arg.Any<bool>(),
                 Arg.Any<System.Threading.CancellationToken>())
                 .Returns(Task.FromResult(jsonWithInvalidMutation));
@@ -396,6 +400,7 @@ namespace LlamaBrain.Tests.Integration
                 Arg.Any<StructuredOutputFormat>(),
                 Arg.Any<int?>(),
                 Arg.Any<float?>(),
+                Arg.Any<int?>(),
                 Arg.Any<bool>(),
                 Arg.Any<System.Threading.CancellationToken>())
                 .Returns(Task.FromResult(jsonWithEmptyContent));
@@ -445,6 +450,7 @@ namespace LlamaBrain.Tests.Integration
                 Arg.Any<StructuredOutputFormat>(),
                 Arg.Any<int?>(),
                 Arg.Any<float?>(),
+                Arg.Any<int?>(),
                 Arg.Any<bool>(),
                 Arg.Any<System.Threading.CancellationToken>())
                 .Returns(Task.FromResult(jsonWithInvalidBelief));
@@ -494,6 +500,7 @@ namespace LlamaBrain.Tests.Integration
                 Arg.Any<StructuredOutputFormat>(),
                 Arg.Any<int?>(),
                 Arg.Any<float?>(),
+                Arg.Any<int?>(),
                 Arg.Any<bool>(),
                 Arg.Any<System.Threading.CancellationToken>())
                 .Returns(Task.FromResult(jsonWithInvalidIntent));
@@ -538,6 +545,7 @@ namespace LlamaBrain.Tests.Integration
                 Arg.Any<StructuredOutputFormat>(),
                 Arg.Any<int?>(),
                 Arg.Any<float?>(),
+                Arg.Any<int?>(),
                 Arg.Any<bool>(),
                 Arg.Any<System.Threading.CancellationToken>())
                 .Returns(Task.FromResult(jsonWithInvalidMutation));
@@ -575,6 +583,7 @@ namespace LlamaBrain.Tests.Integration
                 Arg.Any<StructuredOutputFormat>(),
                 Arg.Any<int?>(),
                 Arg.Any<float?>(),
+                Arg.Any<int?>(),
                 Arg.Any<bool>(),
                 Arg.Any<System.Threading.CancellationToken>())
                 .Returns<Task<string>>(x => throw new InvalidOperationException("Structured output not supported"));
@@ -584,6 +593,7 @@ namespace LlamaBrain.Tests.Integration
                 Arg.Any<string>(),
                 Arg.Any<int?>(),
                 Arg.Any<float?>(),
+                Arg.Any<int?>(),
                 Arg.Any<System.Threading.CancellationToken>())
                 .Returns(Task.FromResult("Hello, welcome to my shop!"));
 
@@ -617,6 +627,7 @@ namespace LlamaBrain.Tests.Integration
                 Arg.Any<StructuredOutputFormat>(),
                 Arg.Any<int?>(),
                 Arg.Any<float?>(),
+                Arg.Any<int?>(),
                 Arg.Any<bool>(),
                 Arg.Any<System.Threading.CancellationToken>())
                 .Returns(Task.FromResult("Hello, welcome to my shop!"));
@@ -648,6 +659,7 @@ namespace LlamaBrain.Tests.Integration
                 Arg.Any<string>(),
                 Arg.Any<int?>(),
                 Arg.Any<float?>(),
+                Arg.Any<int?>(),
                 Arg.Any<System.Threading.CancellationToken>())
                 .Returns(Task.FromResult("Greetings, traveler!"));
 
@@ -674,6 +686,7 @@ namespace LlamaBrain.Tests.Integration
                 Arg.Any<StructuredOutputFormat>(),
                 Arg.Any<int?>(),
                 Arg.Any<float?>(),
+                Arg.Any<int?>(),
                 Arg.Any<bool>(),
                 Arg.Any<System.Threading.CancellationToken>());
         }
@@ -694,6 +707,7 @@ namespace LlamaBrain.Tests.Integration
                 Arg.Any<StructuredOutputFormat>(),
                 Arg.Any<int?>(),
                 Arg.Any<float?>(),
+                Arg.Any<int?>(),
                 Arg.Any<bool>(),
                 Arg.Any<System.Threading.CancellationToken>())
                 .Returns(Task.FromResult(validJson));
@@ -730,6 +744,7 @@ namespace LlamaBrain.Tests.Integration
                 Arg.Any<StructuredOutputFormat>(),
                 Arg.Any<int?>(),
                 Arg.Any<float?>(),
+                Arg.Any<int?>(),
                 Arg.Any<bool>(),
                 Arg.Any<System.Threading.CancellationToken>())
                 .Returns(Task.FromResult(jsonWithMutations));

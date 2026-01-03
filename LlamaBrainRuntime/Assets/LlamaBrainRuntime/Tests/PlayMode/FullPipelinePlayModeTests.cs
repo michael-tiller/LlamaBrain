@@ -46,7 +46,7 @@ namespace LlamaBrain.Tests.PlayMode
     /// Optional custom handler for SendPromptWithMetricsAsync (for throwing exceptions, etc.)
     /// The attempt number is passed as the second parameter to enable deterministic "attempt 1 throws, attempt 2 succeeds" behaviors.
     /// </summary>
-    public Func<string, int, int?, float?, bool, CancellationToken, Task<CompletionMetrics>>? OnSendMetrics;
+    public Func<string, int, int?, float?, int?, bool, CancellationToken, Task<CompletionMetrics>>? OnSendMetrics;
 
     public StubApiClient(List<StubResponse> responses)
     {
@@ -64,9 +64,9 @@ namespace LlamaBrain.Tests.PlayMode
     /// Sends a prompt and returns just the content string.
     /// Routes through SendPromptWithMetricsAsync to ensure single attempt counter.
     /// </summary>
-    public async Task<string> SendPromptAsync(string prompt, int? maxTokens = null, float? temperature = null, CancellationToken cancellationToken = default)
+    public async Task<string> SendPromptAsync(string prompt, int? maxTokens = null, float? temperature = null, int? seed = null, CancellationToken cancellationToken = default)
     {
-      var metrics = await SendPromptWithMetricsAsync(prompt, maxTokens, temperature, false, cancellationToken);
+      var metrics = await SendPromptWithMetricsAsync(prompt, maxTokens, temperature, seed, false, cancellationToken);
       return metrics.Content;
     }
 
@@ -74,19 +74,19 @@ namespace LlamaBrain.Tests.PlayMode
     /// Sends a prompt and returns detailed metrics.
     /// This is the primary method - all LLM calls increment the attempt counter here.
     /// </summary>
-    public Task<CompletionMetrics> SendPromptWithMetricsAsync(string prompt, int? maxTokens = null, float? temperature = null, bool cachePrompt = false, CancellationToken cancellationToken = default)
+    public Task<CompletionMetrics> SendPromptWithMetricsAsync(string prompt, int? maxTokens = null, float? temperature = null, int? seed = null, bool cachePrompt = false, CancellationToken cancellationToken = default)
     {
       if (disposed) throw new ObjectDisposedException(nameof(StubApiClient));
-      
+
       // Increment atomically to ensure thread-safety if concurrent calls occur
       // This ensures consistent attempt counting whether OnSendMetrics throws or returns normally
       var attempt = Interlocked.Increment(ref llmCallCount);
-      
+
       // Use custom handler if provided (for throwing exceptions, etc.)
       // Pass attempt number to enable deterministic "attempt 1 throws, attempt 2 succeeds" behaviors
       if (OnSendMetrics != null)
       {
-        return OnSendMetrics(prompt, attempt, maxTokens, temperature, cachePrompt, cancellationToken);
+        return OnSendMetrics(prompt, attempt, maxTokens, temperature, seed, cachePrompt, cancellationToken);
       }
       
       // Validate responses list is not empty (unless OnSendMetrics is provided)
@@ -126,10 +126,11 @@ namespace LlamaBrain.Tests.PlayMode
       StructuredOutputFormat format = StructuredOutputFormat.JsonSchema,
       int? maxTokens = null,
       float? temperature = null,
+      int? seed = null,
       bool cachePrompt = false,
       CancellationToken cancellationToken = default)
     {
-      var metrics = await SendStructuredPromptWithMetricsAsync(prompt, jsonSchema, format, maxTokens, temperature, cachePrompt, cancellationToken);
+      var metrics = await SendStructuredPromptWithMetricsAsync(prompt, jsonSchema, format, maxTokens, temperature, seed, cachePrompt, cancellationToken);
       return metrics.Content;
     }
 
@@ -143,6 +144,7 @@ namespace LlamaBrain.Tests.PlayMode
       StructuredOutputFormat format = StructuredOutputFormat.JsonSchema,
       int? maxTokens = null,
       float? temperature = null,
+      int? seed = null,
       bool cachePrompt = false,
       CancellationToken cancellationToken = default)
     {
@@ -160,7 +162,7 @@ namespace LlamaBrain.Tests.PlayMode
       {
         // For structured prompts, we'll route through the same handler but it won't have schema info
         // This is fine for stub testing - the handler can work with just prompt/attempt
-        return OnSendMetrics(prompt, attempt, maxTokens, temperature, cachePrompt, cancellationToken);
+        return OnSendMetrics(prompt, attempt, maxTokens, temperature, seed, cachePrompt, cancellationToken);
       }
       
       // Validate responses list is not empty (unless OnSendMetrics is provided)

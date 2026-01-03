@@ -141,7 +141,7 @@ namespace LlamaBrain.Tests
       // Arrange
       var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
       var expectedResponse = "Simple response";
-      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult(expectedResponse));
 
       // Act
@@ -149,7 +149,7 @@ namespace LlamaBrain.Tests
 
       // Assert
       Assert.AreEqual(expectedResponse, result);
-      _ = _apiClient.Received(1).SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>());
+      _ = _apiClient.Received(1).SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>());
       // Simple message should not add to dialogue history
       var history = agent.GetConversationHistory();
       Assert.AreEqual(0, history.Count);
@@ -161,14 +161,14 @@ namespace LlamaBrain.Tests
       // Arrange
       var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
       var cts = new CancellationTokenSource();
-      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult("Response"));
 
       // Act
       await agent.SendSimpleMessageAsync("Hello", cts.Token);
 
       // Assert
-      _ = _apiClient.Received(1).SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), cts.Token);
+      _ = _apiClient.Received(1).SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), cts.Token);
     }
 
     [Test]
@@ -176,7 +176,7 @@ namespace LlamaBrain.Tests
     {
       // Arrange
       var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
-      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromException<string>(new Exception("API Error")));
 
       // Act & Assert
@@ -218,7 +218,7 @@ namespace LlamaBrain.Tests
       // Arrange
       var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
       var expectedResponse = "Instruction response";
-      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult(expectedResponse));
 
       // Act
@@ -226,7 +226,7 @@ namespace LlamaBrain.Tests
 
       // Assert
       Assert.AreEqual(expectedResponse, result);
-      _ = _apiClient.Received(1).SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>());
+      _ = _apiClient.Received(1).SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -235,14 +235,14 @@ namespace LlamaBrain.Tests
       // Arrange
       var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
       var expectedResponse = "Response with context";
-      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult(expectedResponse));
 
       // Act
       await agent.SendInstructionAsync("Do something", "Additional context");
 
       // Assert
-      _ = _apiClient.Received(1).SendPromptAsync(Arg.Is<string>(p => p.Contains("Additional context")), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>());
+      _ = _apiClient.Received(1).SendPromptAsync(Arg.Is<string>(p => p.Contains("Additional context")), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -251,14 +251,14 @@ namespace LlamaBrain.Tests
       // Arrange
       var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
       var cts = new CancellationTokenSource();
-      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult("Response"));
 
       // Act
       await agent.SendInstructionAsync("Do something", null, cts.Token);
 
       // Assert
-      _ = _apiClient.Received(1).SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), cts.Token);
+      _ = _apiClient.Received(1).SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), cts.Token);
     }
 
     [Test]
@@ -266,7 +266,7 @@ namespace LlamaBrain.Tests
     {
       // Arrange
       var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
-      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromException<string>(new Exception("API Error")));
 
       // Act & Assert
@@ -795,7 +795,7 @@ namespace LlamaBrain.Tests
       var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
       var schema = "{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\"}}}";
       var rawResponse = "Here's the JSON: {\"name\":\"test\"}";
-      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult(rawResponse));
 
       // Act
@@ -803,7 +803,7 @@ namespace LlamaBrain.Tests
 
       // Assert
       Assert.AreEqual("{\"name\":\"test\"}", result);
-      _ = _apiClient.Received(1).SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>());
+      _ = _apiClient.Received(1).SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -813,7 +813,7 @@ namespace LlamaBrain.Tests
       var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
       var schema = "{\"type\":\"object\"}";
       var jsonResponse = "{\"key\":\"value\"}";
-      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult(jsonResponse));
 
       // Act
@@ -830,14 +830,14 @@ namespace LlamaBrain.Tests
       var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
       var schema = "{\"type\":\"object\"}";
       var cts = new CancellationTokenSource();
-      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult("{\"result\":\"ok\"}"));
 
       // Act
       await agent.SendStructuredMessageAsync("Test", schema, cts.Token);
 
       // Assert
-      _ = _apiClient.Received(1).SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), cts.Token);
+      _ = _apiClient.Received(1).SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), cts.Token);
     }
 
     [Test]
@@ -846,7 +846,7 @@ namespace LlamaBrain.Tests
       // Arrange
       var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
       var schema = "{\"type\":\"object\"}";
-      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult("Error: Something went wrong"));
 
       // Act & Assert
@@ -860,7 +860,7 @@ namespace LlamaBrain.Tests
       // Arrange
       var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
       var schema = "{\"type\":\"object\"}";
-      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult("This is just text with no JSON"));
 
       // Act & Assert
@@ -874,7 +874,7 @@ namespace LlamaBrain.Tests
       // Arrange
       var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
       var schema = "{\"type\":\"object\"}";
-      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult("{\"key\":\"value\"")); // Missing closing brace
 
       // Act & Assert
@@ -888,7 +888,7 @@ namespace LlamaBrain.Tests
       // Arrange
       var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
       var schema = "{\"type\":\"object\"}";
-      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult(""));
 
       // Act & Assert
@@ -903,7 +903,7 @@ namespace LlamaBrain.Tests
       var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
       var schema = "{\"type\":\"object\"}";
       var rawResponse = "Prefix text {\"outer\":{\"inner\":\"value\"}} suffix text";
-      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult(rawResponse));
 
       // Act
@@ -919,7 +919,7 @@ namespace LlamaBrain.Tests
       // Arrange
       var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
       var schema = "{\"type\":\"object\"}";
-      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromException<string>(new Exception("API Error")));
 
       // Act & Assert
@@ -946,7 +946,7 @@ namespace LlamaBrain.Tests
       // Arrange
       var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
       var schema = "{\"type\":\"object\"}";
-      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult("Error: Something went wrong"));
 
       // Act & Assert
@@ -960,7 +960,7 @@ namespace LlamaBrain.Tests
       // Arrange
       var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
       var schema = "{\"type\":\"object\"}";
-      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromException<string>(new Exception("API Error")));
 
       // Act & Assert
@@ -1013,7 +1013,7 @@ namespace LlamaBrain.Tests
       var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
       var schema = "{\"type\":\"object\",\"properties\":{\"result\":{\"type\":\"string\"}}}";
       var rawResponse = "Response: {\"result\":\"success\"}";
-      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult(rawResponse));
 
       // Act
@@ -1021,7 +1021,7 @@ namespace LlamaBrain.Tests
 
       // Assert
       Assert.AreEqual("{\"result\":\"success\"}", result);
-      _ = _apiClient.Received(1).SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>());
+      _ = _apiClient.Received(1).SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -1030,14 +1030,14 @@ namespace LlamaBrain.Tests
       // Arrange
       var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
       var schema = "{\"type\":\"object\"}";
-      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult("{\"result\":\"ok\"}"));
 
       // Act
       await agent.SendStructuredInstructionAsync("Do something", schema, "Additional context");
 
       // Assert
-      _ = _apiClient.Received(1).SendPromptAsync(Arg.Is<string>(p => p.Contains("Additional context")), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>());
+      _ = _apiClient.Received(1).SendPromptAsync(Arg.Is<string>(p => p.Contains("Additional context")), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>());
     }
 
     [Test]
@@ -1047,14 +1047,14 @@ namespace LlamaBrain.Tests
       var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
       var schema = "{\"type\":\"object\"}";
       var cts = new CancellationTokenSource();
-      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult("{\"result\":\"ok\"}"));
 
       // Act
       await agent.SendStructuredInstructionAsync("Test", schema, null, cts.Token);
 
       // Assert
-      _ = _apiClient.Received(1).SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), cts.Token);
+      _ = _apiClient.Received(1).SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), cts.Token);
     }
 
     [Test]
@@ -1076,7 +1076,7 @@ namespace LlamaBrain.Tests
       // Arrange
       var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
       var schema = "{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\"}}}";
-      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult("{\"name\":\"test\"}"));
 
       // Act
@@ -1093,7 +1093,7 @@ namespace LlamaBrain.Tests
       // Arrange
       var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
       var schema = "{\"type\":\"object\",\"properties\":{\"value\":{\"type\":\"string\"}}}";
-      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult("{\"value\":\"result\"}"));
 
       // Act
@@ -1110,7 +1110,7 @@ namespace LlamaBrain.Tests
       // Arrange
       var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
       var schema = "{\"type\":\"object\",\"properties\":{\"value\":{\"type\":\"string\"}}}";
-      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<CancellationToken>())
+      _apiClient.SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), Arg.Any<CancellationToken>())
         .Returns(Task.FromResult("{\"value\":\"result\"}"));
 
       // Act

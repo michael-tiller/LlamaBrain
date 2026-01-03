@@ -31,7 +31,7 @@
 | [Feature 11: RAG-Based Memory Retrieval](#feature-11) | 📋 Planned | MEDIUM |
 | [Feature 12: Dedicated Structured Output](#feature-12) | ✅ Complete | HIGH |
 | [Feature 13: Structured Output Integration](#feature-13) | ✅ Complete | HIGH |
-| [Feature 14: Deterministic Generation Seed](#feature-14) | 📋 Planned | CRITICAL |
+| [Feature 14: Deterministic Generation Seed](#feature-14) | 🔄 In Progress (14.1 Complete) | CRITICAL |
 | [Feature 15: Multiple NPC Support](#feature-15) | 📋 Planned | MEDIUM |
 | [Feature 16: Save/Load Game Integration](#feature-16) | 📋 Planned | CRITICAL |
 | [Feature 17: Token Cost Tracking & Analytics](#feature-17) | 📋 Planned | MEDIUM |
@@ -1220,9 +1220,9 @@ Provide context, memories, constraints, and dialogue history to the LLM in struc
 <a id="feature-14"></a>
 ## Feature 14: Deterministic Generation Seed
 
-**Priority**: CRITICAL - Completes cross-session determinism guarantee  
-**Status**: 📋 Planned (0% Complete)  
-**Dependencies**: Feature 10 (Deterministic Proof Gap Testing), Feature 16 (Save/Load Game Integration) - Requires deterministic inputs to be proven first and persistence for InteractionCount  
+**Priority**: CRITICAL - Completes cross-session determinism guarantee
+**Status**: 🔄 In Progress (14.1 Complete - Seed Parameter Support)
+**Dependencies**: Feature 10 (Deterministic Proof Gap Testing), Feature 16 (Save/Load Game Integration) - Requires deterministic inputs to be proven first and persistence for InteractionCount
 **Execution Order**: **DO THIS THIRD** (after Feature 16). Hook the persistence layer into the RNG to achieve the "Holy Grail" of AI consistency (cross-session determinism).
 
 ### Overview
@@ -1254,12 +1254,12 @@ Implement the **InteractionCount seed strategy** to achieve true cross-session d
 
 ### Definition of Done
 
-#### 14.1 Seed Parameter Support
-- [ ] Add `seed` parameter to `CompletionRequest` structure (llama.cpp API supports `seed` field)
-- [ ] Update `IApiClient` interface to accept optional `seed` parameter in `SendPromptAsync()` and `SendPromptWithMetricsAsync()`
-- [ ] Update `ApiClient` implementation to include `seed` in request JSON when provided
-- [ ] Validate seed parameter (must be non-negative integer, or null/unspecified for non-deterministic mode)
-- [ ] Add seed parameter to `LlmConfig` for default seed behavior (optional)
+#### 14.1 Seed Parameter Support ✅ COMPLETE
+- [x] Add `seed` parameter to `CompletionRequest` structure (llama.cpp API supports `seed` field)
+- [x] Update `IApiClient` interface to accept optional `seed` parameter in `SendPromptAsync()` and `SendPromptWithMetricsAsync()`
+- [x] Update `ApiClient` implementation to include `seed` in request JSON when provided
+- [x] Seed parameter accepts: null (omit from request), -1 (random), 0+ (deterministic)
+- [ ] Add seed parameter to `LlmConfig` for default seed behavior (optional) - DEFERRED to 14.2
 
 #### 14.2 Integration with InteractionContext
 - [ ] Modify `LlamaBrainAgent.SendWithSnapshotAsync()` to extract `InteractionCount` from `InteractionContext`
@@ -1308,11 +1308,11 @@ Implement the **InteractionCount seed strategy** to achieve true cross-session d
 - [ ] Log when seed is used vs when it's not available
 
 #### 14.6 Testing
-- [ ] Unit tests for `ApiClient` seed parameter handling
-- [ ] Unit tests for seed validation (negative seeds, null handling)
+- [x] Unit tests for `ApiClient` seed parameter handling (ApiClientSeedTests.cs - 11 tests)
+- [x] Unit tests for seed validation (negative seeds, null handling)
+- [x] Tests for backward compatibility (seed = null works correctly)
 - [ ] Integration tests for cross-session determinism (Phase 14.3 tests)
 - [ ] Tests for retry behavior with seed (same seed across retries)
-- [ ] Tests for backward compatibility (seed = null works correctly)
 - [ ] All tests in `LlamaBrain.Tests/Determinism/` passing
 
 #### 14.7 Documentation

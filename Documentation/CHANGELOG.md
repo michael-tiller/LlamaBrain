@@ -5,6 +5,206 @@ All notable changes to LlamaBrain will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0-rc.1] (Unreleased)
+
+### Core Library
+
+#### Added
+- **Feature 14.1: Seed Parameter Support - COMPLETE** ✅
+  - **API Layer Seed Support**
+    - Added `seed` field to `CompletionRequest` in `ApiContracts.cs`
+    - Updated `IApiClient` interface with `seed` parameter on all 4 methods:
+      - `SendPromptAsync`
+      - `SendPromptWithMetricsAsync`
+      - `SendStructuredPromptAsync`
+      - `SendStructuredPromptWithMetricsAsync`
+    - Updated `ApiClient` implementation to include seed in request JSON
+    - Seed semantics: `null` = omit (server default), `-1` = random, `0+` = deterministic
+  - **Test Coverage**
+    - Added `ApiClientSeedTests.cs` with 11 unit tests covering:
+      - Seed inclusion in all API methods
+      - Null seed omission from requests
+      - Negative seed (-1) pass-through
+      - Zero seed handling
+      - Seed parameter ordering with other parameters
+  - **Files Changed**:
+    - `Source/Core/ApiContracts.cs` - Added `seed` field
+    - `Source/Core/IApiClient.cs` - Added `seed` parameter to all methods
+    - `Source/Core/ApiClient.cs` - Implemented seed parameter support
+  - **Files Added**:
+    - `LlamaBrain.Tests/Core/ApiClientSeedTests.cs` - Seed parameter unit tests
+  - **Documentation**: Updated `ROADMAP.md` with 14.1 completion status
+
+- **Feature 23: Structured Input/Context - COMPLETE** ✅
+  - **Structured Context Provider Infrastructure**
+    - Added `IStructuredContextProvider` interface for structured context generation
+    - Added `LlamaCppStructuredContextProvider` singleton implementation
+    - Added `StructuredContextFormat` enum with None, JsonContext, and FunctionCalling options
+    - Added `StructuredContextConfig` for configuring context injection behavior
+    - Static presets: Default, TextOnly, Strict
+  - **JSON Schema DTOs for Context**
+    - Added `ContextJsonSchema` root DTO with versioning support
+    - Added `ContextSection` for memories (canonical facts, world state, episodic, beliefs)
+    - Added `ConstraintSection` for prohibitions, requirements, permissions
+    - Added `DialogueSection` with history and player input
+    - Added helper DTOs: `WorldStateEntry`, `EpisodicMemoryEntry`, `BeliefEntry`, `StructuredDialogueEntry`
+  - **Context Serialization**
+    - Added `ContextSerializer` with deterministic JSON serialization
+    - Supports compact JSON mode for token efficiency
+    - XML-style delimiters (`<context_json>`) for prompt injection
+    - Schema version tracking for forward compatibility
+  - **PromptAssembler Integration**
+    - Added `StructuredContextConfig` property to `PromptAssemblerConfig`
+    - Added `UseStructuredContext` computed property
+    - Added `AssembleStructuredPrompt()` method for structured context assembly
+    - Automatic fallback to text assembly on failure (when configured)
+    - Hybrid mode: structured JSON context + text system prompt
+  - **Test Coverage**: ~246 new tests across 8 test files
+    - `ContextSerializerTests.cs`: Serialization, determinism, and round-trip tests (23 tests)
+    - `StructuredContextProviderTests.cs`: Provider, config, and context building tests (24 tests)
+    - `PromptAssemblerStructuredTests.cs`: Integration and fallback behavior tests (35 tests)
+    - `FunctionCallDispatcherTests.cs`: Dispatch, registration, case-insensitivity, error handling (51 tests)
+    - `FunctionCallExecutorTests.cs`: Execution, factory methods, integration tests (30 tests)
+    - `BuiltInContextFunctionsTests.cs`: All 6 built-in functions, argument parsing (37 tests)
+    - `FunctionCallTests.cs`: Model tests, argument extraction (30 tests)
+    - `FunctionCallResultTests.cs`: Result factory methods, serialization (16 tests)
+  - **Files Added**:
+    - `Source/Core/StructuredInput/StructuredContextFormat.cs`
+    - `Source/Core/StructuredInput/StructuredContextConfig.cs`
+    - `Source/Core/StructuredInput/IStructuredContextProvider.cs`
+    - `Source/Core/StructuredInput/LlamaCppStructuredContextProvider.cs`
+    - `Source/Core/StructuredInput/ContextSerializer.cs`
+    - `Source/Core/StructuredInput/Schemas/ContextJsonSchema.cs`
+    - `Source/Core/StructuredInput/Schemas/ContextSection.cs`
+    - `Source/Core/StructuredInput/Schemas/ConstraintSection.cs`
+    - `Source/Core/StructuredInput/Schemas/DialogueSection.cs`
+  - **Function Calling Dispatch System** ✅
+    - Added `FunctionCallDispatcher` with command table pattern for function call routing
+    - Added `FunctionCall` and `FunctionCallResult` DTOs for function call requests/results
+    - Added `FunctionCallExecutor` for pipeline integration
+    - Extended `ParsedOutput` to include `FunctionCalls` property
+    - Extended JSON schema to include `functionCalls` array
+    - Added `BuiltInContextFunctions` with 6 built-in context access functions:
+      - `get_memories(limit, minSignificance)` - Get episodic memories
+      - `get_beliefs(limit, minConfidence)` - Get NPC beliefs
+      - `get_constraints()` - Get current constraints
+      - `get_dialogue_history(limit)` - Get recent dialogue
+      - `get_world_state(keys)` - Get world state entries
+      - `get_canonical_facts()` - Get canonical facts
+    - Supports custom game function registration (e.g., PlayNpcFaceAnimation, StartWalking)
+    - Self-contained interpretation from LLM JSON output (no native LLM function calling required)
+    - Works with any LLM that outputs structured JSON
+    - Files Added:
+      - `Source/Core/FunctionCalling/FunctionCall.cs`
+      - `Source/Core/FunctionCalling/FunctionCallResult.cs`
+      - `Source/Core/FunctionCalling/FunctionCallDispatcher.cs`
+      - `Source/Core/FunctionCalling/FunctionCallExecutor.cs`
+      - `Source/Core/FunctionCalling/BuiltInContextFunctions.cs`
+    - Tests Added:
+      - `LlamaBrain.Tests/FunctionCalling/FunctionCallDispatcherTests.cs`
+      - `LlamaBrain.Tests/FunctionCalling/FunctionCallExecutorTests.cs`
+      - `LlamaBrain.Tests/FunctionCalling/BuiltInContextFunctionsTests.cs`
+      - `LlamaBrain.Tests/FunctionCalling/FunctionCallTests.cs`
+      - `LlamaBrain.Tests/FunctionCalling/FunctionCallResultTests.cs`
+  - **Deferred Items**: Native LLM function calling APIs (OpenAI, Anthropic) - not needed, we parse JSON ourselves
+
+### Unity Runtime
+
+#### Added
+- **Unity Function Call Integration** ✅
+  - **FunctionCallController** (MonoBehaviour singleton)
+    - Manages core `FunctionCallDispatcher` instance
+    - Registers functions from ScriptableObject configs
+    - Provides UnityEvents for function call results
+    - Programmatic registration/unregistration support
+    - Scene-local singleton pattern (like `WorldIntentDispatcher`)
+  - **FunctionCallConfigAsset** (ScriptableObject)
+    - Designer-friendly function configuration
+    - Function name, description, parameter schema
+    - Enable/disable flags, priority/ordering
+    - Similar structure to `ExpectancyRuleAsset`
+  - **NpcFunctionCallConfig** (MonoBehaviour component)
+    - Per-NPC function configuration
+    - References NPC-specific `FunctionCallConfigAsset` list
+    - Overrides/extends global functions
+    - Attached to NPC GameObjects (like `NpcExpectancyConfig`)
+  - **FunctionCallEvents** (Unity Event Types)
+    - `FunctionCallEvent` - UnityEvent for individual function calls
+    - `FunctionCallResultEvent` - UnityEvent for results by function name
+    - `FunctionCallResultsEvent` - UnityEvent for batch results
+  - **LlamaBrainAgent Integration**
+    - Added `NpcFunctionCallConfig?` field (like `ExpectancyConfig`)
+    - Auto-detects `NpcFunctionCallConfig` component during initialization
+    - Registers NPC-specific functions with `FunctionCallController`
+    - Executes function calls after parsing output in `SendWithSnapshotAsync()`
+    - Stores results in `LastFunctionCallResults` property
+    - Added `HookFunctionCallController()` method (like `HookIntentDispatcher()`)
+  - **Files Added**:
+    - `LlamaBrainRuntime/.../FunctionCalling/FunctionCallEvents.cs`
+    - `LlamaBrainRuntime/.../FunctionCalling/FunctionCallConfigAsset.cs`
+    - `LlamaBrainRuntime/.../FunctionCalling/FunctionCallController.cs`
+    - `LlamaBrainRuntime/.../FunctionCalling/NpcFunctionCallConfig.cs`
+  - **Features**:
+    - Inspector-based function handlers via UnityEvents
+    - Code-based function handlers via C# Action delegates
+    - Global functions from `FunctionCallController` + NPC-specific functions from `NpcFunctionCallConfig`
+    - NPC-specific functions take precedence over global functions
+    - Results automatically sent to Unity via UnityEvents
+    - Results stored in `LlamaBrainAgent.LastFunctionCallResults` for debugging/metrics
+
+### Project Infrastructure
+
+#### Added
+- **Simple Project Governance** ✅
+  - **Public Surface Definition**
+    - Condensed `SCOPE.md` to 1-page format covering what LlamaBrain is (and is not), supported Unity versions, supported providers, and deterministic guarantees
+  - **Governance Structure**
+    - `GOVERNANCE.md` with BDFL model and delegation framework
+    - `CODEOWNERS` file covering critical directories (Validation, Inference, AuthoritativeMemorySystem, Unity Core)
+    - Maintainer criteria and permissions clearly defined
+  - **Contribution Guidelines**
+    - Enhanced `CONTRIBUTING.md` with complete sections for:
+      - Branching strategy (feature/fix/docs/test branches)
+      - Test requirements (92.37% coverage, 1,531 tests)
+      - Code formatting (dotnet format)
+      - Commit conventions (Conventional Commits format)
+      - Security reporting path (GitHub Security Advisory)
+      - "No secrets in issues" policy
+  - **Release Process**
+    - `RELEASE_CHECKLIST.md` with SemVer guidelines
+    - `CHANGELOG.md` following Keep a Changelog format
+    - CI/CD package validation step (validates Unity package.json consistency)
+  - **Documentation & Proof**
+    - Updated `README.md` to prominently feature RedRoom demo as proof of deterministic architecture
+    - Added dedicated "🧪 Proof: RedRoom Demo & Deterministic Gate/Fallback" section
+    - Highlights RedRoom as complete, runnable demonstration of all 9 architectural components
+- **Formal Attribution & Trademark Policy** ✅
+  - **Citation Support**
+    - Added `CITATION.cff` for GitHub citation tooling and academic attribution
+    - Enables "Cite this repository" feature on GitHub
+  - **Developer Certificate of Origin (DCO)**
+    - Added `DCO.md` explaining DCO requirements and sign-off process
+    - All commits must include "Signed-off-by" line
+    - CI workflow enforces DCO check on all pull requests
+    - Updated `CONTRIBUTING.md` with DCO requirements and attribution guidelines
+  - **Trademark Usage Policy**
+    - Added `TRADEMARKS.md` with comprehensive trademark usage policy
+    - Defines allowed uses, prohibited uses, and fork branding requirements
+    - Clarifies separation between MIT License (code) and trademark rights
+    - Updated `README.md` with trademark clarification note
+  - **Attribution & Credit**
+    - Added `CONTRIBUTORS` file for tracking non-trivial contributions
+    - Added `THIRD_PARTY_NOTICES.md` for third-party code attribution
+    - Updated `CONTRIBUTING.md` with attribution section covering:
+      - DCO sign-off requirements
+      - SPDX license header requirements for new files
+      - Copyright and attribution guidelines
+      - Third-party attribution requirements
+  - **SPDX License Headers**
+    - Added SPDX license identifiers to key public API files (`ApiClient.cs`, `BrainAgent.cs`, `IApiClient.cs`)
+    - New files must include `SPDX-License-Identifier: MIT` headers
+    - Makes license scanning and compliance easier
+
 ## [0.2.0] - 2026-01-02
 
 ### Core Library
