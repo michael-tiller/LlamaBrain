@@ -99,7 +99,7 @@ namespace LlamaBrain.Tests.PlayMode
       var stubResponses = new List<StubApiClient.StubResponse>();
       var client = new StubApiClient(stubResponses);
       disposables.Add(client);
-      client.OnSendMetrics = (prompt, attempt, maxTokens, temperature, cachePrompt, cancellationToken) =>
+      client.OnSendMetrics = (prompt, attempt, maxTokens, temperature, seed, cachePrompt, cancellationToken) =>
       {
         return Task.FromException<CompletionMetrics>(new System.Net.Http.HttpRequestException("Server unavailable"));
       };

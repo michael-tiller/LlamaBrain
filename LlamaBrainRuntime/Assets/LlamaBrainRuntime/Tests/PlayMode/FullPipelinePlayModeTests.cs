@@ -1168,7 +1168,7 @@ namespace LlamaBrain.Tests.PlayMode
       var stubResponses = new List<StubApiClient.StubResponse>(); // Empty - won't be used since OnSendMetrics throws
       var stubClient = new StubApiClient(stubResponses);
       disposables.Add(stubClient); // Track for cleanup
-      stubClient.OnSendMetrics = (prompt, attempt, maxTokens, temperature, cachePrompt, cancellationToken) =>
+      stubClient.OnSendMetrics = (prompt, attempt, maxTokens, temperature, seed, cachePrompt, cancellationToken) =>
       {
         // Deterministically return faulted task to simulate server unavailable (async error path)
         // Attempt number is available but not needed for this test (all attempts should fail)
