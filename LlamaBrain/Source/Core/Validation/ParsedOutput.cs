@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using LlamaBrain.Core.FunctionCalling;
 
 namespace LlamaBrain.Core.Validation
 {
@@ -228,9 +229,15 @@ namespace LlamaBrain.Core.Validation
     public List<WorldIntent> WorldIntents { get; set; } = new List<WorldIntent>();
 
     /// <summary>
-    /// Whether the output contained any structured data (mutations or intents).
+    /// Function calls extracted from the output.
+    /// These are requests from the LLM to call functions (e.g., get_memories, get_constraints).
     /// </summary>
-    public bool HasStructuredData => ProposedMutations.Count > 0 || WorldIntents.Count > 0;
+    public List<FunctionCall> FunctionCalls { get; set; } = new List<FunctionCall>();
+
+    /// <summary>
+    /// Whether the output contained any structured data (mutations, intents, or function calls).
+    /// </summary>
+    public bool HasStructuredData => ProposedMutations.Count > 0 || WorldIntents.Count > 0 || FunctionCalls.Count > 0;
 
     /// <summary>
     /// Metadata extracted during parsing.
@@ -288,6 +295,17 @@ namespace LlamaBrain.Core.Validation
     public ParsedOutput WithIntent(WorldIntent intent)
     {
       WorldIntents.Add(intent);
+      return this;
+    }
+
+    /// <summary>
+    /// Adds a function call to this output.
+    /// </summary>
+    /// <param name="functionCall">The function call to add</param>
+    /// <returns>This ParsedOutput instance for method chaining</returns>
+    public ParsedOutput WithFunctionCall(FunctionCall functionCall)
+    {
+      FunctionCalls.Add(functionCall);
       return this;
     }
 
@@ -366,6 +384,10 @@ namespace LlamaBrain.Core.Validation
       if (WorldIntents.Count > 0)
       {
         parts.Add($"{WorldIntents.Count} intents");
+      }
+      if (FunctionCalls.Count > 0)
+      {
+        parts.Add($"{FunctionCalls.Count} function calls");
       }
       return string.Join(" | ", parts);
     }

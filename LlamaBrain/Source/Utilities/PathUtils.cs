@@ -2,9 +2,6 @@ using System;
 using System.IO;
 using System.Linq;
 
-/// <summary>
-/// This namespace contains utility classes
-/// </summary>
 namespace LlamaBrain.Utilities
 {
   /// <summary>

@@ -1,13 +1,13 @@
 # LlamaBrain
 
-[![CI](https://github.com/michael-tiller/llamabrain/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/michael-tiller/llamabrain/actions/workflows/ci-cd.yml)
+[![CI](https://github.com/michael-tiller/llamabrain/actions/workflows/ci-cd.yml/badge.svg?branch=main&event=push)](https://github.com/michael-tiller/llamabrain/actions/workflows/ci-cd.yml)
 [![C#](https://img.shields.io/badge/C%23-239120?logo=c-sharp&logoColor=white)](https://docs.microsoft.com/en-us/dotnet/csharp/)
 [![.NET Standard](https://img.shields.io/badge/.NET%20Standard-2.1-512BD4?logo=dotnet&logoColor=white)](https://docs.microsoft.com/en-us/dotnet/standard/net-standard)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **Deterministic Neuro-Symbolic Authoritative State Management**
 
-A production-ready architecture that enforces a strict validation boundary between untrusted LLM outputs and your authoritative game state. The model is treated as a stateless generator—continuity emerges from deterministic state reconstruction, not from trusting the AI's memory.
+LlamaBrain™ is a production-ready architecture that enforces a strict validation boundary between untrusted LLM outputs and your authoritative game state. The model is treated as a stateless generator—continuity emerges from deterministic state reconstruction, not from trusting the AI's memory.
 
 [![Deterministic Reconstruction + Validation Boundary](https://img.youtube.com/vi/RT2v9199gfM/0.jpg)](https://www.youtube.com/watch?v=RT2v9199gfM)
 
@@ -21,6 +21,21 @@ A production-ready architecture that enforces a strict validation boundary betwe
 - Authority hierarchy (canonical > world state > episodic > beliefs)
 
 Only validated outputs can trigger memory mutations. Invalid outputs trigger retries with stricter constraints, never corrupting state.
+
+## 🧪 Proof: RedRoom Demo & Deterministic Gate/Fallback
+
+**See it in action:** The **RedRoom** testing suite is a complete, runnable demonstration of LlamaBrain's deterministic architecture and validation gates. It serves as both a "Hello World" example and a comprehensive testing framework.
+
+**What RedRoom Demonstrates:**
+- ✅ **Complete 9-Component Architecture**: All architectural components working together in a single, runnable example
+- ✅ **Deterministic State Reconstruction**: Byte-level determinism in state serialization and prompt assembly
+- ✅ **Validation Gate & Fallback**: Invalid outputs trigger retries with stricter constraints—never corrupting state
+- ✅ **Production-Ready Components**: Uses the same components as production games, not simplified examples
+- ✅ **Comprehensive Testing**: Multiple trigger zones, metrics collection, and adversarial testing capabilities
+
+**Location:** `LlamaBrainRuntime/Assets/LlamaBrainRuntime/Runtime/RedRoom/`
+
+The RedRoom demo proves the architecture works in practice, not just theory. It's the fastest way to understand LlamaBrain's deterministic guarantees and see the validation boundary in action.
 
 LlamaBrain consists of two main components:
 
@@ -72,16 +87,17 @@ LlamaBrain/
    - Add LlamaBrainAgent to a GameObject
    - Start building AI-powered characters
 
-4. **Test LLM Performance (Optional)**
-   - Use the RedRoom testing suite for comprehensive LLM evaluation
-   - Set up multiple trigger zones with different prompts
-   - Collect and analyze metrics automatically
-   - See the RedRoom testing suite documentation for details
+4. **See the Proof: RedRoom Demo** ⭐
+   - **Start here**: RedRoom is the complete, runnable demonstration of LlamaBrain's deterministic architecture
+   - Open the RedRoom scene in Unity to see all 9 architectural components working together
+   - Test the validation gate and fallback system with multiple trigger zones
+   - Collect metrics and verify deterministic behavior
+   - See [RedRoom README](LlamaBrainRuntime/Assets/LlamaBrainRuntime/Runtime/RedRoom/README.md) for complete documentation
 
 ### For .NET Developers
 1. **Install the Core Library**
    ```xml
-   <PackageReference Include="LlamaBrain" Version="0.2.0" />
+   <PackageReference Include="LlamaBrain" Version="0.3.0-rc.1" />
    ```
 
 2. **Basic Usage**
@@ -217,6 +233,8 @@ See [SAFEGUARDS.md](Documentation/SAFEGUARDS.md) for detailed security informati
 
 ## 🧪 Testing
 
+[![Tests](https://github.com/michael-tiller/llamabrain/actions/workflows/ci-cd.yml/badge.svg?branch=main&event=push)](https://github.com/michael-tiller/llamabrain/actions/workflows/ci-cd.yml)
+
 ### Core Library
 - Comprehensive unit tests
 - Security validation tests
@@ -289,6 +307,8 @@ When reporting issues, include:
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+
+**Note**: LlamaBrain™ is MIT-licensed. The name "LlamaBrain" and any associated logos are trademarks. The MIT License grants rights to use, modify, and distribute the software, but does not grant rights to use the LlamaBrain trademark, name, or logo. See [TRADEMARKS.md](TRADEMARKS.md) for trademark usage policy.
 
 ## 📈 Roadmap
 **See [ROADMAP.md](Documentation/ROADMAP.md) for detailed implementation plan and progress tracking.**
