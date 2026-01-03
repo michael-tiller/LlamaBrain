@@ -2,7 +2,7 @@
 
 **Goal**: Implement the complete "Continuity Emerges from Deterministic State Reconstruction Around a Stateless Generator" architectural pattern.
 
-**Last Updated**: January 1, 2026
+**Last Updated**: January 2, 2026
 
 ---
 
@@ -40,12 +40,13 @@
 | [Feature 20: Memory Change History Visualization](#feature-20) | 📋 Planned | LOW |
 | [Feature 21: Sidecar Host](#feature-21) | 📋 Planned | MEDIUM |
 | [Feature 22: Unreal Engine Support](#feature-22) | 📋 Planned | MEDIUM |
-| [Feature 23: Structured Input/Context](#feature-23) | 🚧 In Progress | ~70% |
+| [Feature 23: Structured Input/Context](#feature-23) | ✅ Complete | HIGH |
 | [Feature 24: "I've seen this" Recognition](#feature-24) | 📋 Planned | MEDIUM |
 | [Feature 26: Narrative Consolidation](#feature-26) | 📋 Planned | MEDIUM |
 | [Feature 27: Smart KV Cache Management](#feature-27) | 📋 Planned | CRITICAL |
 | [Feature 28: "Black Box" Audit Recorder](#feature-28) | 📋 Planned | CRITICAL |
 | [Feature 29: Prompt A/B Testing & Hot Reload](#feature-29) | 📋 Planned | MEDIUM |
+| [Feature 30: Unity Repackaging & Distribution](#feature-30) | 📋 Planned | MEDIUM |
 
 ---
 
@@ -1092,7 +1093,7 @@ Complete integration of structured output throughout the validation pipeline, mu
 ## Feature 23: Structured Input/Context
 
 **Priority**: HIGH - Completes bidirectional structured communication
-**Status**: 🚧 In Progress (~95% Complete)
+**Status**: ✅ **Complete** (100% Complete)
 **Dependencies**: Feature 12 (Dedicated Structured Output), Feature 13 (Structured Output Integration)
 **Execution Order**: **DO AFTER Feature 13** - Builds on structured output foundation to provide structured context input. Should be done before Feature 16 (Save/Load) to ensure data structures are stable.
 
@@ -3381,6 +3382,205 @@ Implement hot reload capability for `PersonaConfig` and `BrainSettings` that all
 - [ ] Documentation complete with A/B testing guide
 
 **Note**: This feature significantly improves developer experience by enabling rapid iteration on prompt tuning and personality configuration. Narrative designers can tweak traits and see changes immediately, accelerating the design iteration cycle.
+
+---
+
+<a id="feature-30"></a>
+## Feature 30: Unity Repackaging & Distribution
+
+**Priority**: MEDIUM - Improves Unity package distribution and developer experience  
+**Status**: 📋 Planned (0% Complete)  
+**Dependencies**: Feature 8 (RedRoom Integration), Feature 23 (Structured Input/Context)  
+**Execution Order**: **Milestone 8** - Platform expansion and distribution improvements
+
+### Overview
+
+Improve Unity package distribution, versioning, and integration experience. The current Unity package (`LlamaBrainRuntime`) is distributed as a local package, but production-ready distribution requires automated packaging, version management, Git-based UPM support, and streamlined integration workflows.
+
+**The Problem**:
+- Unity runtime (`LlamaBrainRuntime`) is currently embedded in the main repository
+- Manual package building and versioning is error-prone
+- No automated package validation or consistency checks
+- Limited distribution options (local package only)
+- No Git-based UPM support for easy version management
+- Package dependencies and compatibility not automatically validated
+- No automated release packaging workflow
+- Monorepo structure complicates Unity Package Manager distribution
+
+**The Solution**:
+Split the Unity runtime into its own dedicated repository and implement comprehensive Unity package repackaging system with automated build, validation, versioning, and distribution support. Enable Git-based UPM distribution, automated package validation, and streamlined release workflows.
+
+**Use Cases**:
+- Automated Unity package building from CI/CD
+- Git-based UPM distribution for easy version management
+- Automated package validation and consistency checks
+- Streamlined release packaging workflows
+- Better dependency management and compatibility validation
+- Support for Unity Package Manager registry distribution
+
+### Definition of Done
+
+#### 30.0 Repository Migration (Do First)
+- [ ] Create new dedicated repository for Unity runtime (e.g., `llamabrain-unity`)
+- [ ] Migrate `LlamaBrainRuntime` codebase to new repository
+- [ ] Set up repository structure following Unity Package Manager conventions
+- [ ] Configure Git repository with proper `.gitignore` for Unity projects
+- [ ] Set up CI/CD pipeline for the new repository
+- [ ] Update main repository to reference Unity package via Git UPM
+- [ ] Migrate Unity-specific documentation to new repository
+- [ ] Update all cross-repository references and links
+- [ ] Test repository migration (verify package can be installed from new repo)
+- [ ] Document repository structure and migration rationale
+
+#### 30.1 Automated Package Building
+- [ ] Create package build script (PowerShell/Bash) for automated building
+- [ ] Support for building from CI/CD pipelines
+- [ ] Automated version injection from Git tags or version files
+- [ ] Package structure validation (required files, correct paths)
+- [ ] Automated package.json generation with correct dependencies
+- [ ] Support for both development and release builds
+
+#### 30.2 Package Validation
+- [ ] Automated validation of package.json consistency
+- [ ] Validate package structure (required directories, files)
+- [ ] Validate Unity version compatibility
+- [ ] Validate dependency versions and compatibility
+- [ ] Check for missing or broken references
+- [ ] Validate sample scenes and assets
+
+#### 30.3 Git-Based UPM Support
+- [ ] Support Git URL-based package installation
+- [ ] Support version tags (e.g., `#v0.3.0`)
+- [ ] Support branch-based installation (e.g., `#main`, `#develop`)
+- [ ] Document Git UPM installation workflow
+- [ ] Test Git UPM installation in clean Unity projects
+- [ ] Support for private repository access (SSH/HTTPS)
+
+#### 30.4 Version Management
+- [ ] Automated version bumping from Git tags
+- [ ] Semantic versioning support (major.minor.patch)
+- [ ] Pre-release version support (e.g., `0.3.0-rc.1`)
+- [ ] Version consistency across package.json, AssemblyInfo, and documentation
+- [ ] Automated changelog generation from Git commits
+- [ ] Support for version metadata (build number, commit hash)
+
+#### 30.5 Distribution Workflow
+- [ ] Automated release package creation
+- [ ] Support for Unity Package Manager registry distribution
+- [ ] Support for local package distribution (`.tgz` files)
+- [ ] Automated release notes generation
+- [ ] Package signing and integrity verification (optional)
+- [ ] Support for multiple Unity version targets
+
+#### 30.6 Documentation & Integration
+- [ ] Update installation documentation with Git UPM instructions
+- [ ] Document package build and release workflow
+- [ ] Create developer guide for package maintenance
+- [ ] Update CI/CD documentation with package build steps
+- [ ] Document version management and release process
+- [ ] Add troubleshooting guide for package installation issues
+
+#### 30.7 Testing
+- [ ] Unit tests for package build scripts
+- [ ] Integration tests: Verify package builds correctly
+- [ ] Integration tests: Verify Git UPM installation works
+- [ ] Integration tests: Verify package validation catches errors
+- [ ] Test package installation in clean Unity projects
+- [ ] Test package upgrade scenarios (version migration)
+- [ ] All tests in `LlamaBrain.Tests/Packaging/` passing
+
+### Technical Considerations
+
+**Repository Migration**:
+- **Rationale**: Unity Package Manager works best with dedicated repositories for packages
+- **Separation**: Core library (main repo) vs Unity runtime (dedicated repo)
+- **Benefits**: Independent versioning, cleaner Git history, easier UPM distribution
+- **Dependencies**: Unity package will reference core library (NuGet, Git submodule, or DLL)
+- **Migration Strategy**: 
+  - Create new repository with Unity package structure
+  - Migrate `LlamaBrainRuntime` codebase
+  - Update main repository to use Git UPM reference
+  - Set up CI/CD for both repositories
+  - Update documentation and cross-references
+
+**Package Structure**:
+- **Required Files**: `package.json`, `README.md`, `LICENSE.md`, core runtime files
+- **Optional Files**: Samples, documentation, editor tools
+- **Directory Structure**: Follow Unity Package Manager conventions
+- **Asset Organization**: Proper folder structure for Unity import
+
+**Version Management**:
+- **Source of Truth**: Git tags for release versions
+- **Version Format**: Semantic versioning (e.g., `0.3.0`, `0.3.0-rc.1`)
+- **Consistency**: package.json, AssemblyInfo, documentation must match
+- **Automation**: CI/CD automatically bumps versions from Git tags
+
+**Git UPM Support**:
+- **URL Format**: `https://github.com/user/repo.git#v0.3.0` or `git@github.com:user/repo.git#v0.3.0`
+- **Version Tags**: Support for Git tags (e.g., `#v0.3.0`)
+- **Branches**: Support for branch-based installation (e.g., `#main`)
+- **Authentication**: Support for private repositories (SSH keys, personal access tokens)
+
+**Package Validation**:
+- **Structure Validation**: Check required files and directories exist
+- **Dependency Validation**: Verify dependency versions are compatible
+- **Unity Version**: Verify Unity version compatibility
+- **Reference Validation**: Check for broken script references
+- **Sample Validation**: Verify sample scenes load correctly
+
+**Distribution Options**:
+- **Git UPM**: Primary distribution method (Git URL-based)
+- **Local Package**: `.tgz` file distribution for offline installation
+- **Unity Registry**: Optional registry distribution (requires Unity account)
+- **Asset Store**: Future consideration (not in scope for this feature)
+
+**CI/CD Integration**:
+- **Build Trigger**: On Git tag creation or manual trigger
+- **Package Build**: Automated package building from source
+- **Validation**: Automated package validation before release
+- **Artifact**: Package artifact uploaded to release or artifact storage
+- **Notification**: Optional notification on build completion
+
+**Repository Structure**:
+- **Main Repository**: Core LlamaBrain library (`.NET Standard 2.1`)
+- **Unity Repository**: Dedicated repository for Unity runtime package
+- **Separation**: Clean separation enables independent versioning and distribution
+- **Dependencies**: Unity package references core library via NuGet or Git submodule
+- **CI/CD**: Separate CI/CD pipelines for each repository
+
+**Integration Points**:
+- `package.json`: Unity package manifest (in Unity repository)
+- `LlamaBrain.csproj`: Core library project file (in main repository)
+- Unity runtime package: Complete package structure in dedicated repository
+- CI/CD pipelines: Automated build and release workflows for both repositories
+- Git repositories: Version tags and release management for both repositories
+- Cross-repository references: Documentation and dependency management
+
+### Estimated Effort
+
+**Total**: 2-3 weeks
+- Feature 30.0 (Repository Migration): 3-5 days
+- Feature 30.1-30.2 (Package Building & Validation): 3-4 days
+- Feature 30.3-30.4 (Git UPM & Version Management): 2-3 days
+- Feature 30.5-30.6 (Distribution & Documentation): 2-3 days
+- Feature 30.7 (Testing): 1-2 days
+
+### Success Criteria
+
+- [ ] Unity runtime successfully migrated to dedicated repository
+- [ ] New repository structure follows Unity Package Manager conventions
+- [ ] Main repository references Unity package via Git UPM
+- [ ] Automated package building from CI/CD works correctly
+- [ ] Package validation catches common errors and inconsistencies
+- [ ] Git UPM installation works in clean Unity projects
+- [ ] Version management is automated and consistent across repositories
+- [ ] Release packaging workflow is streamlined and documented
+- [ ] Package installation and upgrade scenarios work correctly
+- [ ] All tests passing with package build and validation
+- [ ] Documentation complete with installation and maintenance guides
+- [ ] Cross-repository dependencies properly managed
+
+**Note**: This feature improves the developer experience for both LlamaBrain maintainers and users. Splitting the Unity runtime into its own repository enables proper Git-based UPM distribution, independent versioning, and cleaner separation of concerns. Automated packaging reduces manual errors, Git UPM support enables easy version management, and streamlined workflows accelerate the release process. This complements Feature 21 (Sidecar Host) and Feature 22 (Unreal Engine Support) by ensuring Unity integration is production-ready with proper distribution infrastructure.
 
 ---
 

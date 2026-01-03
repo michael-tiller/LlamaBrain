@@ -39,12 +39,13 @@
 | [Feature 20: Memory Change History Visualization](ROADMAP.md#feature-20) | 📋 Planned | LOW |
 | [Feature 21: Sidecar Host](ROADMAP.md#feature-21) | 📋 Planned | MEDIUM |
 | [Feature 22: Unreal Engine Support](ROADMAP.md#feature-22) | 📋 Planned | MEDIUM |
-| [Feature 23: Structured Input/Context](ROADMAP.md#feature-23) | ✅ **COMPLETE**  | 100% |
+| [Feature 23: Structured Input/Context](ROADMAP.md#feature-23) | ✅ Complete | 100% |
 | [Feature 24: "I've seen this" Recognition](ROADMAP.md#feature-24) | 📋 Planned | MEDIUM |
 | [Feature 26: Narrative Consolidation](ROADMAP.md#feature-26) | 📋 Planned | MEDIUM |
 | [Feature 27: Smart KV Cache Management](ROADMAP.md#feature-27) | 📋 Planned | CRITICAL |
 | [Feature 28: "Black Box" Audit Recorder](ROADMAP.md#feature-28) | 📋 Planned | CRITICAL |
 | [Feature 29: Prompt A/B Testing & Hot Reload](ROADMAP.md#feature-29) | 📋 Planned | MEDIUM |
+| [Feature 30: Unity Repackaging & Distribution](ROADMAP.md#feature-30) | 📋 Planned | MEDIUM |
 
 **Note**: Detailed feature descriptions, implementation plans, and checklists are in [ROADMAP.md](ROADMAP.md). This document focuses on high-level status and progress tracking.
 
@@ -188,18 +189,17 @@
 
 **Target**: Complete all high-priority features for v0.3.0 release
 - (deterministic proof gaps) - ✅ **COMPLETE** All minimal proof suite tests done
-- Requires Feature 12-13 completion (structured output migration) - **DO FIRST**
-- Requires Feature 23 completion (structured input/context) - **DO AFTER 13**
-- Requires Feature 16 completion (save/load persistence) - **DO SECOND**
-- Requires Feature 14 completion (cross-session determinism) - **DO THIRD**
+- ✅ **COMPLETE** Feature 12-13 (structured output migration)
+- ✅ **COMPLETE** Feature 23 (structured input/context)
+- Requires Feature 16 completion (save/load persistence) - **DO NEXT** (CRITICAL priority)
+- Requires Feature 14 completion (cross-session determinism) - **DO AFTER 16** (CRITICAL priority)
 - Requires Feature 27 completion (KV cache optimization) - **DO AFTER Phase 3** (latency critical)
 - Requires Feature 28 completion (audit recorder) - **DO AFTER Phase 3** (ops critical)
 - Requires Feature 29 completion (hot reload) - **DO AFTER Phase 1** (developer experience)
 - Recover line test coverage to 90%+
 - Requires all tests passing
 - Requires performance benchmarks met (200ms cache hit latency target)
-
-**Note**: Once structured input and output are fully implemented, the system will need to be migrated to use structured I/O as the de facto (and only) solution for data transfer.
+- The system should be migrated to use structured I/O as the de facto (and only) solution for data transfer.
 
 
 ### Milestone 6: (0.3.1) The Memory Update (Features 11, 24, 20, 26) 📋
@@ -235,14 +235,16 @@
 - NPC-to-NPC interaction capabilities (Feature 15)
 - Performance optimization and scalability improvements
 
-### Milestone 8: (0.4.0) The Epic Update (21, 22) 📋
+### Milestone 8: (0.4.0) The Sidecar Update (21, 22, 30) 📋
 **Status**: Planned  
 - Feature 21: Sidecar Host - 📋 Planned (MEDIUM priority)
 - Feature 22: Unreal Engine Support - 📋 Planned (MEDIUM priority)
+- Feature 30: Unity Repackaging & Distribution - 📋 Planned (MEDIUM priority)
 
-**Target**: Add platform expansion capabilities
+**Target**: Add platform expansion capabilities and improve distribution
 - Sidecar host implementation for external integrations (Feature 21)
 - Unreal Engine support and integration (Feature 22)
+- Unity package repackaging with automated build, validation, and Git UPM support (Feature 30)
 ---
 
 ## Further Reading
