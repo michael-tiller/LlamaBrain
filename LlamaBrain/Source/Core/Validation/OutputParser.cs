@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using LlamaBrain.Core.FunctionCalling;
 using LlamaBrain.Core.StructuredOutput;
 using LlamaBrain.Utilities;
 
@@ -357,6 +358,15 @@ namespace LlamaBrain.Core.Validation
           foreach (var intent in structured.WorldIntents)
           {
             result.WithIntent(intent.ToWorldIntent());
+          }
+        }
+
+        // Convert function calls
+        if (structured.FunctionCalls != null)
+        {
+          foreach (var functionCall in structured.FunctionCalls)
+          {
+            result.WithFunctionCall(functionCall.ToFunctionCall());
           }
         }
 

@@ -883,4 +883,4 @@ The LlamaBrain memory system provides:
 ---
 
 **Last Updated**: December 31, 2025  
-**Memory System Version**: 0.2.0-rc.1
+**Memory System Version**: 0.3.0-rc.1

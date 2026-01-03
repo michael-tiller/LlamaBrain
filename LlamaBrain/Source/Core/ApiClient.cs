@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Michael Tiller and contributors
+
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,9 +14,6 @@ using System.Collections.Generic;
 using LlamaBrain.Utilities;
 using LlamaBrain.Core.StructuredOutput;
 
-/// <summary>
-/// API client for the llama.cpp API
-/// </summary>
 namespace LlamaBrain.Core
 {
   /// <summary>
