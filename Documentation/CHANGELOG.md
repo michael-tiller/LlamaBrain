@@ -142,6 +142,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Updated `README.md` to prominently feature RedRoom demo as proof of deterministic architecture
     - Added dedicated "🧪 Proof: RedRoom Demo & Deterministic Gate/Fallback" section
     - Highlights RedRoom as complete, runnable demonstration of all 9 architectural components
+- **Formal Attribution & Trademark Policy** ✅
+  - **Citation Support**
+    - Added `CITATION.cff` for GitHub citation tooling and academic attribution
+    - Enables "Cite this repository" feature on GitHub
+  - **Developer Certificate of Origin (DCO)**
+    - Added `DCO.md` explaining DCO requirements and sign-off process
+    - All commits must include "Signed-off-by" line
+    - CI workflow enforces DCO check on all pull requests
+    - Updated `CONTRIBUTING.md` with DCO requirements and attribution guidelines
+  - **Trademark Usage Policy**
+    - Added `TRADEMARKS.md` with comprehensive trademark usage policy
+    - Defines allowed uses, prohibited uses, and fork branding requirements
+    - Clarifies separation between MIT License (code) and trademark rights
+    - Updated `README.md` with trademark clarification note
+  - **Attribution & Credit**
+    - Added `CONTRIBUTORS` file for tracking non-trivial contributions
+    - Added `THIRD_PARTY_NOTICES.md` for third-party code attribution
+    - Updated `CONTRIBUTING.md` with attribution section covering:
+      - DCO sign-off requirements
+      - SPDX license header requirements for new files
+      - Copyright and attribution guidelines
+      - Third-party attribution requirements
+  - **SPDX License Headers**
+    - Added SPDX license identifiers to key public API files (`ApiClient.cs`, `BrainAgent.cs`, `IApiClient.cs`)
+    - New files must include `SPDX-License-Identifier: MIT` headers
+    - Makes license scanning and compliance easier
 
 ## [0.2.0] - 2026-01-02
 

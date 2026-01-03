@@ -7,7 +7,7 @@
 
 **Deterministic Neuro-Symbolic Authoritative State Management**
 
-A production-ready architecture that enforces a strict validation boundary between untrusted LLM outputs and your authoritative game state. The model is treated as a stateless generator—continuity emerges from deterministic state reconstruction, not from trusting the AI's memory.
+LlamaBrain™ is a production-ready architecture that enforces a strict validation boundary between untrusted LLM outputs and your authoritative game state. The model is treated as a stateless generator—continuity emerges from deterministic state reconstruction, not from trusting the AI's memory.
 
 [![Deterministic Reconstruction + Validation Boundary](https://img.youtube.com/vi/RT2v9199gfM/0.jpg)](https://www.youtube.com/watch?v=RT2v9199gfM)
 
@@ -307,6 +307,8 @@ When reporting issues, include:
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+
+**Note**: LlamaBrain™ is MIT-licensed. The name "LlamaBrain" and any associated logos are trademarks. The MIT License grants rights to use, modify, and distribute the software, but does not grant rights to use the LlamaBrain trademark, name, or logo. See [TRADEMARKS.md](TRADEMARKS.md) for trademark usage policy.
 
 ## 📈 Roadmap
 **See [ROADMAP.md](Documentation/ROADMAP.md) for detailed implementation plan and progress tracking.**

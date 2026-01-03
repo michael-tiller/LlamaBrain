@@ -385,7 +385,7 @@ git checkout -b docs/update-readme
 
 ### 3. Commit Your Changes
 
-Use clear, descriptive commit messages following conventional commit format:
+Use clear, descriptive commit messages following conventional commit format. **All commits must be signed off** (see DCO requirements below).
 
 **Commit Message Format:**
 ```
@@ -394,6 +394,8 @@ type(scope): description
 [optional body]
 
 [optional footer]
+
+Signed-off-by: Your Name <your.email@example.com>
 ```
 
 **Types:**
@@ -406,12 +408,13 @@ type(scope): description
 
 **Examples:**
 ```bash
-git commit -m "feat(core): Add structured output support"
-git commit -m "fix(validation): Correct constraint escalation logic"
-git commit -m "docs(readme): Update Unity version requirements"
-git commit -m "test(inference): Add snapshot determinism tests"
-git commit -m "refactor(memory): Simplify memory retrieval logic"
-git commit -m "chore(deps): Update Newtonsoft.Json to 13.0.4"
+# Use -s flag to automatically add Signed-off-by
+git commit -s -m "feat(core): Add structured output support"
+git commit -s -m "fix(validation): Correct constraint escalation logic"
+git commit -s -m "docs(readme): Update Unity version requirements"
+git commit -s -m "test(inference): Add snapshot determinism tests"
+git commit -s -m "refactor(memory): Simplify memory retrieval logic"
+git commit -s -m "chore(deps): Update Newtonsoft.Json to 13.0.4"
 ```
 
 **Best Practices:**
@@ -419,6 +422,7 @@ git commit -m "chore(deps): Update Newtonsoft.Json to 13.0.4"
 - Keep first line under 72 characters
 - Reference issues: `fix(validation): Correct constraint escalation (#123)`
 - Be specific: "Add validation" not "Update code"
+- **Always use `-s` flag** to sign off commits (required for DCO)
 
 ### 4. Run Tests
 
@@ -544,6 +548,70 @@ See [SECURITY.md](SECURITY.md) for detailed security reporting procedures.
   3. Contact maintainers privately
 - Issues containing secrets may be automatically closed
 - Use environment variables or configuration files (not committed) for secrets
+
+## 📝 Attribution & Credit
+
+### Developer Certificate of Origin (DCO)
+
+All contributions to LlamaBrain must include a "Signed-off-by" line in the commit message. This certifies that you have the right to submit the code under the project license.
+
+**Required for every commit:**
+```bash
+git commit -s -m "Your commit message"
+```
+
+The `-s` flag automatically adds:
+```
+Signed-off-by: Your Name <your.email@example.com>
+```
+
+**What you're certifying:**
+- You have the right to contribute the code (it's your original work or you have permission)
+- You understand the contribution will be licensed under the MIT License
+- You're not violating any third-party intellectual property rights
+
+**Enforcement:**
+- All Pull Requests must have commits with valid "Signed-off-by" lines
+- CI checks will block PRs without sign-offs
+- See [DCO.md](DCO.md) for complete details
+
+### Copyright & Attribution
+
+**Contributors retain copyright** to their contributions. By contributing, you grant LlamaBrain the right to use your contribution under the MIT License, but you maintain ownership of your code.
+
+**Adding yourself to CONTRIBUTORS:**
+- If you make a non-trivial contribution (beyond typo fixes), you may add yourself to [CONTRIBUTORS](CONTRIBUTORS)
+- Submit a PR adding your name and a brief description of your contribution
+- This is optional; your contributions are tracked in Git history regardless
+
+### SPDX License Headers
+
+**New source files must include SPDX license identifiers:**
+
+```csharp
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Michael Tiller and contributors
+
+namespace LlamaBrain.Core
+{
+    // Your code here
+}
+```
+
+**Why SPDX headers?**
+- Makes license scanning and compliance easier
+- Clearly identifies license terms in source code
+- Required for downstream compliance and tooling
+
+**Existing files:** We're gradually adding SPDX headers to existing files. New files must include them.
+
+### Third-Party Attribution
+
+If you include third-party code, assets, or libraries:
+- Ensure they're compatible with MIT License
+- Add attribution to [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+- Include license information and source URLs
+- Follow the third-party's license requirements
 
 ## 📄 License
 
