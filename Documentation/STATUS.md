@@ -39,8 +39,12 @@
 | [Feature 20: Memory Change History Visualization](ROADMAP.md#feature-20) | 📋 Planned | LOW |
 | [Feature 21: Sidecar Host](ROADMAP.md#feature-21) | 📋 Planned | MEDIUM |
 | [Feature 22: Unreal Engine Support](ROADMAP.md#feature-22) | 📋 Planned | MEDIUM |
-| [Feature 23: Structured Input/Context](ROADMAP.md#feature-23) | 🚧 In Progress | ~98% |
+| [Feature 23: Structured Input/Context](ROADMAP.md#feature-23) | ✅ **COMPLETE**  | 100% |
 | [Feature 24: "I've seen this" Recognition](ROADMAP.md#feature-24) | 📋 Planned | MEDIUM |
+| [Feature 26: Narrative Consolidation](ROADMAP.md#feature-26) | 📋 Planned | MEDIUM |
+| [Feature 27: Smart KV Cache Management](ROADMAP.md#feature-27) | 📋 Planned | CRITICAL |
+| [Feature 28: "Black Box" Audit Recorder](ROADMAP.md#feature-28) | 📋 Planned | CRITICAL |
+| [Feature 29: Prompt A/B Testing & Hot Reload](ROADMAP.md#feature-29) | 📋 Planned | MEDIUM |
 
 **Note**: Detailed feature descriptions, implementation plans, and checklists are in [ROADMAP.md](ROADMAP.md). This document focuses on high-level status and progress tracking.
 
@@ -55,27 +59,42 @@
    - Feature 13: Structured Output Integration (1-2 weeks) - ✅ **COMPLETE**
    - **Rationale**: Fundamentally changes how data enters the pipeline. Must be done before Feature 16 to avoid rework.
 
-2. **Feature 23: Structured Input/Context** - 🚧 **IN PROGRESS (~98%)**
-   - Complete bidirectional structured communication (1-2 weeks)
+2. **Feature 23: Structured Input/Context** - ✅ **COMPLETE**
+   - Complete bidirectional structured communication (1-2 weeks) - ✅ **COMPLETE**
    - Provide context in structured format (JSON/function calling)
    - **Rationale**: Complements structured outputs, improves context understanding, enables function calling APIs
-   - **Current**: Core infrastructure complete (providers, serializers, schemas, PromptAssembler integration), function calling dispatch system implemented, Unity function call integration complete, ~82 tests, documentation complete
+   - **Status**: Core infrastructure complete (providers, serializers, schemas, PromptAssembler integration), function calling dispatch system implemented, Unity function call integration complete, ~82 tests, documentation complete
 
 3. **Feature 16: Save/Load Game Integration** - **DO THIS SECOND**
    - Build persistence layer after data structures are stable (3-5 days)
    - Persist `InteractionCount` and other deterministic state
-   - **Rationale**: Must be built on stable data structures from Feature 12, 13 & 20
+   - **Rationale**: Must be built on stable data structures from Feature 12, 13 & 23
 
 4. **Feature 14: Deterministic Generation Seed** - **DO THIS THIRD**
    - Hook persistence layer into RNG for cross-session determinism (1-2 weeks)
    - Uses persisted `InteractionCount` from Feature 16
    - **Rationale**: The "Holy Grail" of AI consistency, but requires persistence to work
 
-5. **Feature 10: Deterministic Proof Gap Testing** - ✅ **COMPLETE**
+5. **Feature 27: Smart KV Cache Management** - **DO AFTER Phase 3** (CRITICAL)
+   - Performance optimization critical for production latency (1-2 weeks)
+   - Enables 200ms responses vs 1.5s (cache hit vs miss)
+   - **Rationale**: Latency critical - difference between playable and unplayable game
+
+6. **Feature 28: "Black Box" Audit Recorder** - **DO AFTER Phase 3** (CRITICAL)
+   - Production support tool leveraging determinism for bug reproduction (1-2 weeks)
+   - Enables instant bug replay from debug packages
+   - **Rationale**: Ops critical - turns "He said/She said" into reproducible tickets
+
+7. **Feature 29: Prompt A/B Testing & Hot Reload** - **DO AFTER Phase 1** (MEDIUM)
+   - Developer experience enhancement for rapid iteration (1-2 weeks)
+   - Enables live tuning of prompts and settings
+   - **Rationale**: Developer experience - accelerates design iteration cycle
+
+8. **Feature 10: Deterministic Proof Gap Testing** - ✅ **COMPLETE**
    - All features, requirements, and tests implemented (351 tests total)
    - **Rationale**: Required for v0.2.0. Architecture can now claim "deterministically proven" at byte level.
 
-6. **Feature 8: RedRoom Integration** - ✅ **COMPLETE**
+9. **Feature 8: RedRoom Integration** - ✅ **COMPLETE**
    - All components implemented including Memory Mutation Overlay and Validation Gate Overlay
    - **Rationale**: Complete testing infrastructure for the architecture
 
@@ -142,7 +161,7 @@
 
 **Note**: Feature 12 (Dedicated Structured Output) is complete with native llama.cpp JSON schema support. Feature 13 (Structured Output Integration) is complete with full pipeline orchestration, schema validation, and comprehensive metrics tracking.
 
-### Milestone 5: v0.3.0 - The Production Update (Features 12, 13, 23, 14, 16, 10 completion) 🚧
+### Milestone 5: v0.3.0 - The Production Update (Features 12, 13, 23, 14, 16, 27, 28, 29, 10 completion) 🚧
 **Status**: 🚧 In Progress (0.3.0-rc.1)  
 **Prerequisite**: **Milestone 4 (v0.2.0) must be released** before starting Milestone 5 features.
 
@@ -151,15 +170,21 @@
 2. **Feature 23** (Structured Input/Context) - Do after 13
 3. **Feature 16** (Save/Load) - Do second
 4. **Feature 14** (Deterministic Seed) - Do third
-5. **Feature 10** (Proof Gap Testing) - ✅ **COMPLETE** (all minimal proof suite tests done, architecture can claim "deterministically proven")
+5. **Feature 27** (Smart KV Cache Management) - Do after Phase 3 (CRITICAL for production latency)
+6. **Feature 28** ("Black Box" Audit Recorder) - Do after Phase 3 (CRITICAL for production support)
+7. **Feature 29** (Prompt A/B Testing & Hot Reload) - Do after Phase 1 (Developer experience)
+8. **Feature 10** (Proof Gap Testing) - ✅ **COMPLETE** (all minimal proof suite tests done, architecture can claim "deterministically proven")
 
 **Status**:
 - Feature 10: Deterministic Proof Gap Testing - ✅ **COMPLETE** (all minimal proof suite tests done, architecture can claim "deterministically proven")
 - Feature 12: Dedicated Structured Output - ✅ **COMPLETE** (native llama.cpp json_schema support, 56 tests)
 - Feature 13: Structured Output Integration - ✅ **COMPLETE** (full pipeline orchestration, schema validation, metrics tracking)
-- Feature 23: Structured Input/Context - 🚧 **IN PROGRESS (~98%)** (core infrastructure complete: providers, serializers, schemas, PromptAssembler integration, function calling dispatch system implemented, Unity function call integration complete, ~82 tests, documentation complete)
+- Feature 23: Structured Input/Context - ✅ **COMPLETE**  (core infrastructure complete: providers, serializers, schemas, PromptAssembler integration, function calling dispatch system implemented, Unity function call integration complete, ~82 tests, documentation complete)
 - Feature 16: Save/Load Game Integration - 📋 Planned (CRITICAL priority - **DO SECOND**, after 12, 13 & 23)
 - Feature 14: Deterministic Generation Seed - 📋 Planned (CRITICAL priority - **DO THIRD**, after 16)
+- Feature 27: Smart KV Cache Management - 📋 Planned (CRITICAL priority - **DO AFTER Phase 3**, latency critical for production)
+- Feature 28: "Black Box" Audit Recorder - 📋 Planned (CRITICAL priority - **DO AFTER Phase 3**, ops critical for production support)
+- Feature 29: Prompt A/B Testing & Hot Reload - 📋 Planned (MEDIUM priority - **DO AFTER Phase 1**, developer experience enhancement)
 
 **Target**: Complete all high-priority features for v0.3.0 release
 - (deterministic proof gaps) - ✅ **COMPLETE** All minimal proof suite tests done
@@ -167,42 +192,57 @@
 - Requires Feature 23 completion (structured input/context) - **DO AFTER 13**
 - Requires Feature 16 completion (save/load persistence) - **DO SECOND**
 - Requires Feature 14 completion (cross-session determinism) - **DO THIRD**
+- Requires Feature 27 completion (KV cache optimization) - **DO AFTER Phase 3** (latency critical)
+- Requires Feature 28 completion (audit recorder) - **DO AFTER Phase 3** (ops critical)
+- Requires Feature 29 completion (hot reload) - **DO AFTER Phase 1** (developer experience)
 - Recover line test coverage to 90%+
 - Requires all tests passing
-- Requires performance benchmarks met
+- Requires performance benchmarks met (200ms cache hit latency target)
 
-**Note**: Feature 10 is **complete**. The architecture can now claim to be "deterministically proven" at byte level with all minimal proof suite tests passing.
+**Note**: Once structured input and output are fully implemented, the system will need to be migrated to use structured I/O as the de facto (and only) solution for data transfer.
 
-### Milestone 6: Enhanced Features (Features 11, 15, 17, 18, 19, 24) 📋
+
+### Milestone 6: (0.3.1) The Memory Update (Features 11, 24, 20, 26) 📋
 **Status**: Planned  
 **Prerequisite**: **Milestone 5 (v0.3.0) must be complete** before starting Milestone 6 features. These are enhancements that build on a stable foundation.
 
 - Feature 11: Hybrid RAG-Based Memory Retrieval & Memory Proving (noun-based + inference) - 📋 Planned (MEDIUM priority)
-- Feature 15: Multiple NPC Support - 📋 Planned (MEDIUM priority)
+- Feature 24: "I've seen this" Recognition - 📋 Planned (MEDIUM priority)
+- Feature 20: Memory Change History Visualization - 📋 Planned (LOW priority)
+- Feature 26: Narrative Consolidation - 📋 Planned (MEDIUM priority)
+
+**Target**: Enhance memory system with advanced retrieval, consolidation, and recognition capabilities
+- RAG-based retrieval with embeddings (Feature 11)
+- Vector storage and indexing (Feature 11)
+- Memory proving through repetition recognition (Feature 11, Feature 24)
+- Memory consolidation transforming episodic memories into summaries (Feature 26)
+- Deterministic "I've seen this" recognition system for locations and topics (Feature 24)
+- Memory change history visualization and debugging tools (Feature 20)
+
+### Milestone 7: (0.3.2) The Defensive Update (Features 17, 18, 15, 19) 📋
+**Status**: Planned  
 - Feature 17: Token Cost Tracking & Analytics - 📋 Planned (MEDIUM priority)
 - Feature 18: Concurrent Request Handling & Thread Safety - 📋 Planned (MEDIUM priority)
+- Feature 15: Multiple NPC Support - 📋 Planned (MEDIUM priority)
 - Feature 19: Health Check & Resilience - 📋 Planned (MEDIUM priority)
-- Feature 24: "I've seen this" Recognition - 📋 Planned (MEDIUM priority)
 
+**Target**: Add production monitoring and resilience, and support multi-NPC scenarios
+- Token usage tracking and cost analytics (Feature 17)
+- Thread-safe concurrent request handling (Feature 18)
+- Health monitoring and automatic recovery (Feature 19)
+- Circuit breaker and graceful degradation (Feature 19)
+- Multi-NPC conversation support with shared memory (Feature 15)
+- NPC-to-NPC interaction capabilities (Feature 15)
+- Performance optimization and scalability improvements
 
-### Milestone 7: The Epic Update (Features 20, 21) 📋
+### Milestone 8: (0.4.0) The Epic Update (21, 22) 📋
 **Status**: Planned  
 - Feature 21: Sidecar Host - 📋 Planned (MEDIUM priority)
 - Feature 22: Unreal Engine Support - 📋 Planned (MEDIUM priority)
 
-**Target**: Enhance memory retrieval with semantic search, support multi-NPC scenarios, and add production monitoring/resilience
-- RAG-based retrieval with embeddings
-- Vector storage and indexing
-- Memory proving through repetition recognition (Feature 24)
-- Deterministic "I've seen this" recognition system for locations and topics
-- Multi-NPC conversation support with shared memory
-- NPC-to-NPC interaction capabilities
-- Token usage tracking and cost analytics
-- Thread-safe concurrent request handling
-- Health monitoring and automatic recovery
-- Circuit breaker and graceful degradation
-- Performance optimization
-
+**Target**: Add platform expansion capabilities
+- Sidecar host implementation for external integrations (Feature 21)
+- Unreal Engine support and integration (Feature 22)
 ---
 
 ## Further Reading
