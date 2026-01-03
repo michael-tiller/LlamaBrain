@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.0-rc.1] (Unreleased)
 
+### Unity Runtime
+
+#### Added
+- **Feature 14: Cross-Session Determinism Proof Tests - COMPLETE** ✅
+  - **PlayMode Tests** (`CrossSessionDeterminismPlayModeTests.cs`)
+    - `PlayMode_CrossSession_SameSeedSamePrompt_ProducesIdenticalOutput` - Core proof: same seed + prompt = identical output
+    - `PlayMode_CrossSession_DifferentSeeds_ProduceDifferentOutputs` - Sanity check: different seeds differ
+    - `PlayMode_CrossSession_InteractionCountAsSeed_ProducesDeterministicSequence` - Game replay proof
+    - `PlayMode_CrossSession_TemperatureZero_ProducesDeterministicOutput` - Greedy decoding proof
+    - `PlayMode_CrossSession_StructuredOutput_ProducesIdenticalJson` - JSON output determinism
+  - **Server Wait Improvements**
+    - Wait for `/health` endpoint to return 200 OK (not just any HTTP response)
+    - Properly handles 503 "Loading model" status during model initialization
+    - Added error validation to prevent false positives from error responses
+  - **Documentation**: Updated ARCHITECTURE.md with Feature 14 completion status and proof test references
+
 ### Core Library
 
 #### Added

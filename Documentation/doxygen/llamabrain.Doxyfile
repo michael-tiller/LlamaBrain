@@ -1020,8 +1020,13 @@ INPUT                  = ../../README.md \
                          ../../LICENSE.md \
                          ../../CONTRIBUTING.md \
                          ../../CODE_OF_CONDUCT.md \
+                         ../../SECURITY.md \
+                         ../../DCO.md \
+                         ../../THIRD_PARTY_NOTICES.md \
+                         ../../TRADEMARKS.md \
                          ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/Documentation/THIRD_PARTY_PACKAGES.md \
                          ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/README.md \
+                         ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/Runtime/RedRoom/README.md \
                          ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/Documentation/USAGE_GUIDE.md \
                          ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/Documentation/QUICK_START.md
 

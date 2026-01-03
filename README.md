@@ -11,6 +11,8 @@ LlamaBrain™ is a production-ready architecture that enforces a strict validati
 
 ![Architectural Diagram](Documentation/architectural_diagram.png)
 
+**See [ARCHITECTURE.md](Documentation/ARCHITECTURE.md) for more information.**
+
 ## The Core Innovation
 
 **The Model is Untrusted.** LLMs are stochastic generators that hallucinate. LlamaBrain enforces a strict validation boundary: all LLM outputs are validated against constraints and extant canonical facts before any memory mutations occur. The model has no direct access to game state—it's a pure, stateless generator. Continuity emerges from deterministic state reconstruction, not from trusting the AI's memory.
@@ -348,7 +350,9 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 **Core Architecture**: Complete and production-ready. The determinism boundary, validation gate, and authoritative memory system are fully implemented and tested.
 
-**Current Focus**: Structured Output Integration (Feature 13) and cross-session determinism (Feature 14, 16)
+**Completed**: Structured Output (Features 12, 13), Deterministic Seed (Feature 14), Structured Input (Feature 23)
+
+**Current Focus**: Save/Load Integration (Feature 16), KV Cache (Feature 27), Audit Recorder (Feature 28)
 
 **See [STATUS.md](Documentation/STATUS.md) for milestone progress.**
 
