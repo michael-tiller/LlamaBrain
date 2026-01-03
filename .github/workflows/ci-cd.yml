@@ -105,10 +105,10 @@ jobs:
           $xml = [xml](Get-Content "LlamaBrain/LlamaBrain.csproj")
           $pg = $xml.Project.PropertyGroup
           
-          $ver = ($pg | ForEach-Object { $_.Version } | Where-Object { $_ })[0]
+          $ver = @($pg | ForEach-Object { $_.Version } | Where-Object { $_ })[0]
           if (-not $ver) {
-            $prefix = ($pg | ForEach-Object { $_.VersionPrefix } | Where-Object { $_ })[0]
-            $suffix = ($pg | ForEach-Object { $_.VersionSuffix } | Where-Object { $_ })[0]
+            $prefix = @($pg | ForEach-Object { $_.VersionPrefix } | Where-Object { $_ })[0]
+            $suffix = @($pg | ForEach-Object { $_.VersionSuffix } | Where-Object { $_ })[0]
             if ($prefix) {
               $ver = $prefix + $(if ($suffix) { "-$suffix" } else { "" })
             }
