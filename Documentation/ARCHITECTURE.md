@@ -278,6 +278,163 @@ var assembledPrompt = assembler.AssembleFromSnapshot(snapshot);
 // assembledPrompt.PromptText now includes few-shot examples in the configured location
 ```
 
+**Structured Context Injection** (Feature 23):
+- **Purpose**: Provide context, memories, constraints, and dialogue history to the LLM in structured JSON format instead of plain text, improving LLM understanding and determinism
+- **Implementation**: `IStructuredContextProvider`, `LlamaCppStructuredContextProvider`, `ContextSerializer`, `StructuredContextConfig`
+- **Format**: JSON context blocks with XML-style delimiters (`<context_json>...</context_json>`) embedded in prompts
+- **Benefits**: 
+  - Machine-parseable context sections reduce ambiguity
+  - Better LLM understanding of context structure
+  - Enables function calling via self-contained JSON interpretation (works with any LLM)
+  - Complements structured outputs (Features 12-13) for bidirectional structured communication
+- **Hybrid Mode**: Supports mixing structured JSON context with text system prompts
+- **Fallback**: Gracefully falls back to text-based assembly if structured context fails (when configured)
+
+**Example**:
+```csharp
+// Configure structured context
+var assemblerConfig = new PromptAssemblerConfig
+{
+    StructuredContextConfig = StructuredContextConfig.Default
+    // Uses JsonContext format with fallback enabled
+};
+
+var assembler = new PromptAssembler(assemblerConfig);
+
+// Assemble prompt with structured context
+var assembledPrompt = assembler.AssembleStructuredPrompt(snapshot);
+
+// Prompt now contains structured JSON context block:
+// <context_json>
+// {
+//   "schemaVersion": "1.0",
+//   "context": {
+//     "canonicalFacts": [...],
+//     "worldState": [...],
+//     "episodicMemories": [...],
+//     "beliefs": [...]
+//   },
+//   "constraints": {
+//     "prohibitions": [...],
+//     "requirements": [...],
+//     "permissions": [...]
+//   },
+//   "dialogue": {
+//     "history": [...],
+//     "playerInput": "Hello!"
+//   }
+// }
+// </context_json>
+```
+
+**Configuration Options**:
+```csharp
+// Default: JSON context with fallback
+var config = StructuredContextConfig.Default;
+
+// Text-only (legacy behavior)
+var config = StructuredContextConfig.TextOnly;
+
+// Strict: JSON context, no fallback, validation enabled
+var config = StructuredContextConfig.Strict;
+
+// Custom configuration
+var config = new StructuredContextConfig
+{
+    PreferredFormat = StructuredContextFormat.JsonContext,
+    FallbackToTextAssembly = true,
+    ValidateSchema = true,
+    UseCompactJson = false,  // Use compact JSON to save tokens
+    ContextBlockOpenTag = "<context_json>",
+    ContextBlockCloseTag = "</context_json>"
+};
+```
+
+**Function Call Dispatch** (Feature 23 Extension):
+- **Purpose**: Enable LLM to trigger game actions (animations, movement, UI) via function calls in structured JSON output
+- **Implementation**: 
+  - Core: `FunctionCallDispatcher`, `FunctionCallExecutor`, `FunctionCall`, `FunctionCallResult`
+  - Unity: `FunctionCallController`, `FunctionCallConfigAsset`, `NpcFunctionCallConfig`, `FunctionCallEvents`
+- **Pattern**: Command table dispatch pattern - function names map to handler delegates
+- **Workflow**:
+  1. LLM outputs function calls in structured JSON (no native LLM support required)
+  2. `OutputParser` extracts function calls into `ParsedOutput.FunctionCalls`
+  3. `FunctionCallDispatcher` routes calls to registered handlers
+  4. Handlers execute game logic synchronously during dialogue processing
+- **Built-In Functions**: Context access functions (get_memories, get_beliefs, get_constraints, etc.)
+- **Custom Functions**: Register any game function (e.g., PlayNpcFaceAnimation, StartWalking)
+- **Unity Integration**:
+  - `FunctionCallController` (MonoBehaviour singleton) manages global functions
+  - `FunctionCallConfigAsset` (ScriptableObject) for designer-friendly configuration
+  - `NpcFunctionCallConfig` (MonoBehaviour) for per-NPC function overrides
+  - `LlamaBrainAgent` automatically executes function calls after parsing
+  - Results available via UnityEvents and `LastFunctionCallResults` property
+- **Benefits**: 
+  - Works with any LLM that outputs JSON (no native function calling required)
+  - Synchronous execution enables immediate game state changes
+  - Familiar command dispatch pattern
+  - Extensible registration system
+  - Unity integration with inspector-based and code-based handlers
+
+**Core Library Example**:
+```csharp
+// Register custom game function
+var dispatcher = new FunctionCallDispatcher();
+dispatcher.RegisterFunction(
+    "PlayNpcFaceAnimation",
+    (call) => {
+        var animation = call.GetArgumentString("animation", "neutral");
+        npcAnimationController.PlayFaceAnimation(animation);
+        return FunctionCallResult.SuccessResult(new { success = true });
+    }
+);
+
+// LLM outputs in JSON:
+// {
+//   "dialogueText": "I'm so happy!",
+//   "functionCalls": [
+//     { "functionName": "PlayNpcFaceAnimation", "arguments": { "animation": "smile" } }
+//   ]
+// }
+
+// Execute function calls
+var executor = new FunctionCallExecutor(dispatcher, snapshot, memorySystem);
+var results = executor.ExecuteAll(parsedOutput);
+// Animation executes immediately during dialogue processing
+```
+
+**Unity Integration Example**:
+```csharp
+using LlamaBrain.Runtime.Core.FunctionCalling;
+
+// FunctionCallController (singleton) manages global functions
+var controller = FunctionCallController.Instance 
+    ?? FunctionCallController.GetOrCreate();
+
+// Register function programmatically
+controller.RegisterFunction(
+    "PlayNpcFaceAnimation",
+    (call) => {
+        var animation = call.GetArgumentString("animation", "neutral");
+        npcAnimationController.PlayFaceAnimation(animation);
+        return FunctionCallResult.SuccessResult(new { success = true });
+    },
+    "Play a facial animation on the NPC",
+    @"{""type"": ""object"", ""properties"": {""animation"": {""type"": ""string""}}}"
+);
+
+// Or use ScriptableObject configs (designer-friendly)
+// 1. Create FunctionCallConfigAsset
+// 2. Assign to FunctionCallController global configs
+// 3. Register handler via UnityEvent or code
+
+// LlamaBrainAgent automatically executes function calls
+// Results available via:
+// - agent.LastFunctionCallResults (property)
+// - FunctionCallController.OnFunctionCallsExecuted (UnityEvent)
+// - FunctionCallController.OnAnyFunctionCall (UnityEvent)
+```
+
 ### Component 6: Stateless Inference Core
 
 **Purpose**: Pure stateless text generation - the LLM has no memory, authority, or world access.
@@ -1132,9 +1289,10 @@ All nine components are fully implemented and tested:
 - ✅ Component 8: Memory Mutation - Complete (Feature 6)
 - ✅ Component 9: Fallback System - Complete (Feature 7)
 
-**Test Coverage**: 92.37% line coverage, 853+ passing tests
+**Test Coverage**: 88.96% line coverage (5,824 of 6,547 lines), ~95% branch coverage
+**Coverage Note**: Coverage regressed from 92.37% after Features 12-13. See COVERAGE_REPORT.md for recovery plan.
 
-**Feature 10: Deterministic Proof Gap Testing**: 🚧 In Progress (~25% Complete)
+**Feature 10: Deterministic Proof Gap Testing**: ✅ Complete
 - Critical requirements 1-4 implemented (strict total order sorting, SequenceNumber field, tie-breaker logic, OutputParser normalization)
 - 7 high-leverage determinism tests added
 - See `PHASE10_PROOF_GAPS.md` for detailed test backlog
@@ -1411,4 +1569,4 @@ Guard: My duty never ends, but I can spare a moment for a citizen." // Guides to
 ---
 
 **Last Updated**: December 31, 2025  
-**Architecture Version**: 0.2.0
+**Architecture Version**: 0.3.0-rc.1

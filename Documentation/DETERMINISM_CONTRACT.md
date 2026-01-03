@@ -236,7 +236,8 @@ The following contract decisions ensure non-contradictory behavior across the sy
 - **Command**: `dotnet test --collect:"XPlat code coverage" --settings coverlet.runsettings`
 - **Artifact**: `LlamaBrain/coverage/coverage-analysis.csv`
 - **Report**: `LlamaBrain/COVERAGE_REPORT.md`
-- **Current**: 92.37% line coverage (5,100 of 5,521 lines), ~95% branch coverage
+- **Current**: 88.96% line coverage (5,824 of 6,547 lines), ~95% branch coverage
+- **Note**: Coverage regressed from 92.37% after Features 12-13. Recovery plan in COVERAGE_REPORT.md.
 
 ### Test Counts
 - **Command**: `dotnet test --list-tests`
