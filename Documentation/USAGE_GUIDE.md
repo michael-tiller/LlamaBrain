@@ -1052,7 +1052,7 @@ var config = new StructuredContextConfig
     PreferredFormat = StructuredContextFormat.JsonContext,
     FallbackToTextAssembly = true,  // Fall back to text if structured fails
     ValidateSchema = true,           // Validate context schema before injection
-    UseCompactJson = false,          // Use compact JSON to save tokens
+    UseCompactJson = true,          // Use compact JSON to save tokens
     ContextBlockOpenTag = "<context_json>",
     ContextBlockCloseTag = "</context_json>"
 };
@@ -1512,7 +1512,7 @@ For Unity projects, use the Unity Runtime components for designer-friendly funct
 4. **Configure LlamaBrainAgent**:
    - `FunctionCallConfig` field auto-detects `NpcFunctionCallConfig` component
    - Functions automatically registered during initialization
-   - Function calls automatically executed after parsing output
+   - Function calls executed after parsing output
 
 #### Inspector-Based Handlers
 

@@ -14,23 +14,14 @@ namespace LlamaBrain.Core.FunctionCalling
   public class FunctionCallExecutor
   {
     private readonly FunctionCallDispatcher _dispatcher;
-    private readonly StateSnapshot _snapshot;
-    private readonly AuthoritativeMemorySystem? _memorySystem;
 
     /// <summary>
     /// Creates a new function call executor.
     /// </summary>
     /// <param name="dispatcher">The function call dispatcher with registered functions</param>
-    /// <param name="snapshot">The current state snapshot (for context access)</param>
-    /// <param name="memorySystem">Optional memory system for memory queries</param>
-    public FunctionCallExecutor(
-        FunctionCallDispatcher dispatcher,
-        StateSnapshot snapshot,
-        AuthoritativeMemorySystem? memorySystem = null)
+    public FunctionCallExecutor(FunctionCallDispatcher dispatcher)
     {
       _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
-      _snapshot = snapshot ?? throw new ArgumentNullException(nameof(snapshot));
-      _memorySystem = memorySystem;
     }
 
     /// <summary>
@@ -47,10 +38,19 @@ namespace LlamaBrain.Core.FunctionCalling
         return results;
       }
 
-      foreach (var functionCall in parsedOutput.FunctionCalls)
+      for (var i = 0; i < parsedOutput.FunctionCalls.Count; i++)
       {
+        var functionCall = parsedOutput.FunctionCalls[i];
         var result = _dispatcher.DispatchCall(functionCall);
-        var key = functionCall.CallId ?? functionCall.FunctionName;
+
+        var key = !string.IsNullOrEmpty(functionCall.CallId)
+            ? functionCall.CallId
+            : !string.IsNullOrEmpty(functionCall.FunctionName)
+                ? functionCall.FunctionName
+                : throw new ArgumentException(
+                    $"Function call at index {i} has both null/empty CallId and FunctionName.",
+                    nameof(parsedOutput));
+
         results[key] = result;
       }
 
@@ -79,7 +79,7 @@ namespace LlamaBrain.Core.FunctionCalling
     {
       var dispatcher = new FunctionCallDispatcher();
       BuiltInContextFunctions.RegisterAll(dispatcher, snapshot, memorySystem);
-      return new FunctionCallExecutor(dispatcher, snapshot, memorySystem);
+      return new FunctionCallExecutor(dispatcher);
     }
   }
 }

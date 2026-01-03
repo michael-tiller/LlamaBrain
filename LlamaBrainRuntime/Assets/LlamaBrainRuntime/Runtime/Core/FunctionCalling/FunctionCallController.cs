@@ -216,8 +216,6 @@ namespace LlamaBrain.Runtime.Core.FunctionCalling
       }
 
       var results = new Dictionary<string, FunctionCallResult>();
-      var allFunctionCalls = new List<FunctionCall>();
-      var allResults = new List<FunctionCallResult>();
 
       for (int i = 0; i < parsedOutput.FunctionCalls.Count; i++)
       {
@@ -233,8 +231,6 @@ namespace LlamaBrain.Runtime.Core.FunctionCalling
                 ? $"{functionCall.FunctionName}_{i}" 
                 : i.ToString());
           results[key] = result;
-          allFunctionCalls.Add(functionCall);
-          allResults.Add(result);
 
           // Fire general event
           onAnyFunctionCall?.Invoke(functionCall, result);
