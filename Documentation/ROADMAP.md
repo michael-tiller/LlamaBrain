@@ -2,7 +2,7 @@
 
 **Goal**: Implement the complete "Continuity Emerges from Deterministic State Reconstruction Around a Stateless Generator" architectural pattern.
 
-**Last Updated**: January 2, 2026
+**Last Updated**: January 3, 2026
 
 ---
 
@@ -42,6 +42,7 @@
 | [Feature 22: Unreal Engine Support](#feature-22) | 📋 Planned | MEDIUM |
 | [Feature 23: Structured Input/Context](#feature-23) | ✅ Complete | HIGH |
 | [Feature 24: "I've seen this" Recognition](#feature-24) | 📋 Planned | MEDIUM |
+| [Feature 25: NLP Belief Contradiction Detection](#feature-25) | 📋 Planned | MEDIUM |
 | [Feature 26: Narrative Consolidation](#feature-26) | 📋 Planned | MEDIUM |
 | [Feature 27: Smart KV Cache Management](#feature-27) | 📋 Planned | CRITICAL |
 | [Feature 28: "Black Box" Audit Recorder](#feature-28) | 📋 Planned | CRITICAL |
@@ -99,13 +100,14 @@ The following execution order is **strongly recommended** for v0.3.0 to avoid re
 **Note**: Features 27 and 28 are CRITICAL for production deployment. Feature 29 improves developer experience and can be done in parallel with other features.
 
 ### Post-Milestone 5: Enhanced Features
-8. **Milestone 6 Features (11, 15, 17, 18, 19, 24, 26)** - **Only after Milestone 5 complete**
+8. **Milestone 6 Features (11, 15, 17, 18, 19, 24, 25, 26)** - **Only after Milestone 5 complete**
    - Feature 11: RAG-Based Memory Retrieval
    - Feature 15: Multiple NPC Support
    - Feature 17: Token Cost Tracking & Analytics
    - Feature 18: Concurrent Request Handling & Thread Safety
    - Feature 19: Health Check & Resilience
    - Feature 24: "I've seen this" Recognition
+   - Feature 25: NLP Belief Contradiction Detection *(depends on Feature 11 embeddings)*
    - Feature 26: Narrative Consolidation
    - **Rationale**: These are enhancements that build on a stable foundation
 
@@ -2857,6 +2859,139 @@ This feature provides concrete proof that retrieval influences generation throug
 - [ ] Documentation complete with examples and usage guide
 
 **Note**: This feature can be implemented independently of Feature 11 (RAG-Based Memory Retrieval), but topic recognition will benefit from semantic search capabilities. Location recognition (Tier A) requires no RAG dependencies and can be shipped immediately.
+
+---
+
+<a id="feature-25"></a>
+## Feature 25: NLP Belief Contradiction Detection
+
+**Priority**: MEDIUM - Fixes known gap in memory authority enforcement
+**Status**: 📋 Planned (0% Complete)
+**Dependencies**: Feature 2 (Structured Memory System), Feature 11 (RAG-Based Memory Retrieval - for embeddings)
+**Execution Order**: **Milestone 6** - Enhances memory integrity through semantic analysis
+
+### Overview
+
+The current belief contradiction detection uses simple string matching, which fails to detect semantic contradictions. For example, if a canonical fact states "The king's name is Arthur" and the LLM generates a belief "The king is not named Arthur", the current system won't flag this as a contradiction because it only looks for exact string matches.
+
+**The Problem**:
+- `AuthoritativeMemorySystem.SetBelief()` has a basic contradiction check
+- Current implementation uses simple string matching: `belief.Content.Contains(fact.Fact)`
+- Test `GetActiveBeliefs_ExcludesContradicted` admits: *"Mark b1 as contradicted manually (since our simple check won't catch it)"*
+- Semantic contradictions slip through, violating the "canonical facts are immutable truth" contract
+
+**The Gap**:
+- String matching: "The sky is blue" vs "The sky is green" - NOT detected as contradiction
+- Negation patterns: "The king is Arthur" vs "The king is not Arthur" - NOT detected
+- Paraphrasing: "Arthur rules the kingdom" vs "The kingdom has no ruler" - NOT detected
+
+**The Solution**:
+Implement NLP-based semantic contradiction detection using embeddings (from Feature 11) or a dedicated contradiction classifier. When a belief is added, check semantic similarity with canonical facts and flag contradictions based on meaning, not string matching.
+
+**Use Cases**:
+- Prevent NPCs from forming beliefs that contradict world lore
+- Catch LLM hallucinations that contradict established facts
+- Maintain narrative consistency across long play sessions
+- Enable designers to trust that canonical facts are truly immutable
+
+### Definition of Done
+
+#### 25.1 Semantic Similarity Engine
+- [ ] Create `SemanticContradictionDetector` service
+- [ ] Integration with embedding model (from Feature 11's RAG infrastructure)
+- [ ] Compute semantic similarity between belief content and canonical facts
+- [ ] Configurable similarity threshold for contradiction detection (default: 0.8)
+- [ ] Support for negation detection patterns (not, never, no longer, etc.)
+
+#### 25.2 Contradiction Detection Algorithm
+- [ ] Embedding-based approach: Compare belief embedding with fact embeddings
+- [ ] Negation-aware: Detect when belief negates a fact even with high similarity
+- [ ] Entailment classification: Use NLI (Natural Language Inference) model for precise detection
+- [ ] Hybrid approach: Fast string matching + semantic fallback for edge cases
+- [ ] Deterministic results: Same belief + facts = same contradiction decision
+
+#### 25.3 Memory System Integration
+- [ ] Update `AuthoritativeMemorySystem.SetBelief()` to use semantic detection
+- [ ] Update `ValidationGate` to use semantic contradiction check (Gate 2)
+- [ ] Add `ContradictionReason` field to explain why belief was flagged
+- [ ] Support batch checking for multiple beliefs against all canonical facts
+- [ ] Maintain backward compatibility with simple string matching (fallback mode)
+
+#### 25.4 Configuration
+- [ ] `ContradictionDetectionMode`: `Simple` (current), `Semantic`, `Hybrid`
+- [ ] `SimilarityThreshold`: Configurable threshold for semantic detection (0.0-1.0)
+- [ ] `EnableNegationDetection`: Toggle negation pattern matching
+- [ ] `EnableEntailmentClassification`: Toggle NLI model usage
+- [ ] Per-persona configuration overrides
+
+#### 25.5 Testing
+- [ ] Unit tests for `SemanticContradictionDetector`
+- [ ] Test case: "The sky is blue" vs "The sky is green" → CONTRADICTION
+- [ ] Test case: "The king is Arthur" vs "The king is not Arthur" → CONTRADICTION
+- [ ] Test case: "Arthur rules" vs "The kingdom has no ruler" → CONTRADICTION
+- [ ] Test case: "Arthur is wise" vs "Arthur is brave" → NOT contradiction
+- [ ] Integration tests with `AuthoritativeMemorySystem`
+- [ ] Integration tests with `ValidationGate`
+- [ ] Determinism tests: Same inputs produce identical results
+- [ ] Performance tests: Detection latency < 50ms
+
+#### 25.6 Documentation
+- [ ] Update `MEMORY.md` with semantic contradiction detection section
+- [ ] Update `ARCHITECTURE.md` Claims-to-Tests mapping
+- [ ] Document configuration options and tuning guidance
+- [ ] Add examples of detected vs. missed contradictions
+- [ ] Troubleshooting guide for false positives/negatives
+
+### Technical Considerations
+
+**Embedding Model**:
+- Reuse embedding infrastructure from Feature 11 (RAG)
+- Recommended: `all-MiniLM-L6-v2` (fast, good quality)
+- Alternative: `text-embedding-ada-002` (OpenAI, higher quality)
+- Local model preferred for offline/determinism requirements
+
+**Detection Strategies**:
+
+| Strategy | Pros | Cons |
+|----------|------|------|
+| **Embedding Similarity** | Fast, works well for paraphrasing | May miss negations |
+| **Negation Patterns** | Catches "not", "never", etc. | Brittle, language-specific |
+| **NLI Model** | Most accurate for entailment | Slower, requires separate model |
+| **Hybrid** | Best of all approaches | Most complex to implement |
+
+**Recommended Approach**: Start with Embedding Similarity + Negation Patterns (25.1 + 25.2), add NLI in future iteration if needed.
+
+**Performance Requirements**:
+- Detection latency: < 50ms per belief
+- Batch detection: < 200ms for 10 beliefs against 100 facts
+- Memory: Embeddings cached for all canonical facts (updated on fact addition)
+
+**Determinism Requirements**:
+- Embedding model must produce deterministic outputs (or use fixed seed)
+- Contradiction decision must be reproducible for save/load compatibility
+- Document any non-deterministic components and their impact
+
+### Estimated Effort
+
+**Total**: 1-2 weeks
+- Feature 25.1 (Semantic Similarity Engine): 2-3 days
+- Feature 25.2 (Contradiction Algorithm): 2-3 days
+- Feature 25.3 (Memory System Integration): 2 days
+- Feature 25.4-25.5 (Configuration & Testing): 2-3 days
+- Feature 25.6 (Documentation): 1 day
+
+### Success Criteria
+
+- [ ] Semantic contradiction detection implemented and integrated
+- [ ] Test case "The king is Arthur" vs "The king is not Arthur" passes
+- [ ] Test case "The sky is blue" vs "The sky is green" passes
+- [ ] `ValidationGate` uses semantic detection for Gate 2 (canonical contradiction check)
+- [ ] Detection latency < 50ms per belief
+- [ ] Configuration options documented and working
+- [ ] All tests passing with deterministic guarantees
+- [ ] Documentation complete with examples
+
+**Note**: This feature directly addresses a known gap documented in ARCHITECTURE.md's "Claims to Tests Mapping" section. The current string-matching approach is acknowledged in test code as insufficient. Feature 25 closes this gap and enables the system to truly enforce canonical fact immutability.
 
 ---
 

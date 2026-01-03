@@ -6,6 +6,8 @@ namespace LlamaBrain.Tests
 {
   public class ApiContractsTests
   {
+    #region CompletionRequest Tests
+
     [Test]
     public void CompletionRequest_DefaultValues_AreCorrect()
     {
@@ -21,6 +23,11 @@ namespace LlamaBrain.Tests
       Assert.AreEqual(1.1f, request.repeat_penalty);
       Assert.IsNull(request.stop);
       Assert.IsFalse(request.stream);
+      Assert.IsFalse(request.cache_prompt);
+      Assert.IsNull(request.seed);
+      Assert.IsNull(request.json_schema);
+      Assert.IsNull(request.grammar);
+      Assert.IsNull(request.response_format);
     }
 
     [Test]
@@ -157,6 +164,271 @@ namespace LlamaBrain.Tests
       Assert.AreEqual(response.timings.prompt_n, deserialized.timings.prompt_n);
       Assert.AreEqual(response.tokens_predicted, deserialized.tokens_predicted);
     }
+
+    #endregion
+
+    #region CompletionRequest Structured Output Tests
+
+    [Test]
+    public void CompletionRequest_WithStructuredOutputParams_StoresCorrectly()
+    {
+      // Arrange & Act
+      var request = new CompletionRequest
+      {
+        prompt = "Generate JSON",
+        json_schema = @"{""type"":""object""}",
+        grammar = "root ::= object",
+        response_format = ResponseFormat.JsonObject,
+        cache_prompt = true,
+        seed = 42
+      };
+
+      // Assert
+      Assert.AreEqual(@"{""type"":""object""}", request.json_schema);
+      Assert.AreEqual("root ::= object", request.grammar);
+      Assert.IsNotNull(request.response_format);
+      Assert.IsTrue(request.cache_prompt);
+      Assert.AreEqual(42, request.seed);
+    }
+
+    [Test]
+    public void CompletionRequest_SeedWithNull_OmitsFromJson()
+    {
+      // Arrange
+      var request = new CompletionRequest { prompt = "Test", seed = null };
+
+      // Act
+      var json = JsonConvert.SerializeObject(request);
+
+      // Assert - seed should be omitted due to NullValueHandling.Ignore attribute
+      Assert.That(json, Does.Not.Contain("\"seed\":"));
+    }
+
+    [Test]
+    public void CompletionRequest_SeedWithValue_IncludesInJson()
+    {
+      // Arrange
+      var request = new CompletionRequest { prompt = "Test", seed = 123 };
+
+      // Act
+      var json = JsonConvert.SerializeObject(request);
+
+      // Assert
+      Assert.That(json, Does.Contain("\"seed\":123"));
+    }
+
+    #endregion
+
+    #region ResponseFormat Tests
+
+    [Test]
+    public void ResponseFormat_DefaultType_IsJsonObject()
+    {
+      // Arrange & Act
+      var format = new ResponseFormat();
+
+      // Assert
+      Assert.AreEqual("json_object", format.type);
+      Assert.IsNull(format.schema);
+    }
+
+    [Test]
+    public void ResponseFormat_JsonObject_CreatesCorrectInstance()
+    {
+      // Act
+      var format = ResponseFormat.JsonObject;
+
+      // Assert
+      Assert.IsNotNull(format);
+      Assert.AreEqual("json_object", format.type);
+      Assert.IsNull(format.schema);
+    }
+
+    [Test]
+    public void ResponseFormat_WithSchema_CreatesCorrectInstance()
+    {
+      // Arrange
+      var schema = new { type = "object", properties = new { name = new { type = "string" } } };
+
+      // Act
+      var format = ResponseFormat.WithSchema(schema);
+
+      // Assert
+      Assert.IsNotNull(format);
+      Assert.AreEqual("json_object", format.type);
+      Assert.IsNotNull(format.schema);
+      Assert.AreEqual(schema, format.schema);
+    }
+
+    [Test]
+    public void ResponseFormat_Serialization_WorksCorrectly()
+    {
+      // Arrange
+      var format = new ResponseFormat
+      {
+        type = "json_object",
+        schema = new { type = "object" }
+      };
+
+      // Act
+      var json = JsonConvert.SerializeObject(format);
+      var deserialized = JsonConvert.DeserializeObject<ResponseFormat>(json);
+
+      // Assert
+      Assert.IsNotNull(deserialized);
+      Assert.AreEqual("json_object", deserialized!.type);
+      Assert.IsNotNull(deserialized.schema);
+    }
+
+    #endregion
+
+    #region Timings Tests
+
+    [Test]
+    public void Timings_DefaultValues_AreZero()
+    {
+      // Arrange & Act
+      var timings = new Timings();
+
+      // Assert
+      Assert.AreEqual(0, timings.prompt_n);
+      Assert.AreEqual(0.0, timings.prompt_ms);
+      Assert.AreEqual(0.0, timings.prompt_per_token_ms);
+      Assert.AreEqual(0.0, timings.prompt_per_second);
+      Assert.AreEqual(0, timings.predicted_n);
+      Assert.AreEqual(0.0, timings.predicted_ms);
+      Assert.AreEqual(0.0, timings.predicted_per_token_ms);
+      Assert.AreEqual(0.0, timings.predicted_per_second);
+    }
+
+    [Test]
+    public void Timings_WithCustomValues_StoresCorrectly()
+    {
+      // Arrange & Act
+      var timings = new Timings
+      {
+        prompt_n = 100,
+        prompt_ms = 50.5,
+        prompt_per_token_ms = 0.505,
+        prompt_per_second = 1980.2,
+        predicted_n = 50,
+        predicted_ms = 200.0,
+        predicted_per_token_ms = 4.0,
+        predicted_per_second = 250.0
+      };
+
+      // Assert
+      Assert.AreEqual(100, timings.prompt_n);
+      Assert.AreEqual(50.5, timings.prompt_ms);
+      Assert.AreEqual(0.505, timings.prompt_per_token_ms);
+      Assert.AreEqual(1980.2, timings.prompt_per_second);
+      Assert.AreEqual(50, timings.predicted_n);
+      Assert.AreEqual(200.0, timings.predicted_ms);
+      Assert.AreEqual(4.0, timings.predicted_per_token_ms);
+      Assert.AreEqual(250.0, timings.predicted_per_second);
+    }
+
+    #endregion
+
+    #region CompletionMetrics Tests
+
+    [Test]
+    public void CompletionMetrics_DefaultValues_AreCorrect()
+    {
+      // Arrange & Act
+      var metrics = new CompletionMetrics();
+
+      // Assert
+      Assert.AreEqual(string.Empty, metrics.Content);
+      Assert.AreEqual(0, metrics.PromptTokenCount);
+      Assert.AreEqual(0, metrics.PrefillTimeMs);
+      Assert.AreEqual(0, metrics.DecodeTimeMs);
+      Assert.AreEqual(0, metrics.TtftMs);
+      Assert.AreEqual(0, metrics.GeneratedTokenCount);
+      Assert.AreEqual(0, metrics.CachedTokenCount);
+      Assert.AreEqual(0, metrics.TotalTimeMs);
+    }
+
+    [Test]
+    public void CompletionMetrics_TokensPerSecond_CalculatesCorrectly()
+    {
+      // Arrange
+      var metrics = new CompletionMetrics
+      {
+        GeneratedTokenCount = 100,
+        DecodeTimeMs = 1000  // 1 second
+      };
+
+      // Act
+      var tokensPerSecond = metrics.TokensPerSecond;
+
+      // Assert - 100 tokens in 1000ms = 100 tokens/sec
+      Assert.AreEqual(100.0, tokensPerSecond);
+    }
+
+    [Test]
+    public void CompletionMetrics_TokensPerSecond_WithZeroDecodeTime_ReturnsZero()
+    {
+      // Arrange
+      var metrics = new CompletionMetrics
+      {
+        GeneratedTokenCount = 100,
+        DecodeTimeMs = 0
+      };
+
+      // Act
+      var tokensPerSecond = metrics.TokensPerSecond;
+
+      // Assert - division by zero should return 0
+      Assert.AreEqual(0.0, tokensPerSecond);
+    }
+
+    [Test]
+    public void CompletionMetrics_TokensPerSecond_WithFractionalValues_CalculatesCorrectly()
+    {
+      // Arrange
+      var metrics = new CompletionMetrics
+      {
+        GeneratedTokenCount = 50,
+        DecodeTimeMs = 200  // 200ms
+      };
+
+      // Act
+      var tokensPerSecond = metrics.TokensPerSecond;
+
+      // Assert - 50 tokens in 200ms = 250 tokens/sec
+      Assert.AreEqual(250.0, tokensPerSecond);
+    }
+
+    [Test]
+    public void CompletionMetrics_WithCustomValues_StoresCorrectly()
+    {
+      // Arrange & Act
+      var metrics = new CompletionMetrics
+      {
+        Content = "Generated content",
+        PromptTokenCount = 50,
+        PrefillTimeMs = 100,
+        DecodeTimeMs = 500,
+        TtftMs = 100,
+        GeneratedTokenCount = 25,
+        CachedTokenCount = 10,
+        TotalTimeMs = 600
+      };
+
+      // Assert
+      Assert.AreEqual("Generated content", metrics.Content);
+      Assert.AreEqual(50, metrics.PromptTokenCount);
+      Assert.AreEqual(100, metrics.PrefillTimeMs);
+      Assert.AreEqual(500, metrics.DecodeTimeMs);
+      Assert.AreEqual(100, metrics.TtftMs);
+      Assert.AreEqual(25, metrics.GeneratedTokenCount);
+      Assert.AreEqual(10, metrics.CachedTokenCount);
+      Assert.AreEqual(600, metrics.TotalTimeMs);
+      Assert.AreEqual(50.0, metrics.TokensPerSecond); // 25 tokens in 500ms = 50 tokens/sec
+    }
+
+    #endregion
   }
 }
 
