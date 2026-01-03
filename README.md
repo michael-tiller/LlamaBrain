@@ -13,14 +13,43 @@ LlamaBrain™ is a production-ready architecture that enforces a strict validati
 
 ## The Core Innovation
 
-**The Model is Untrusted.** LLMs are stochastic generators that hallucinate. LlamaBrain enforces a strict validation boundary: all LLM outputs are validated against constraints and canonical facts before any memory mutations occur. The model has no direct access to game state—it's a pure, stateless generator. Continuity emerges from deterministic state reconstruction, not from trusting the AI's memory.
+**The Model is Untrusted.** LLMs are stochastic generators that hallucinate. LlamaBrain enforces a strict validation boundary: all LLM outputs are validated against constraints and extant canonical facts before any memory mutations occur. The model has no direct access to game state—it's a pure, stateless generator. Continuity emerges from deterministic state reconstruction, not from trusting the AI's memory.
 
-**The Validation Gate** prevents hallucinations from corrupting authoritative state. Every output is checked against:
+**The Validation Gate** reduces risk of hallucination-driven state corruption by blocking invalid mutations. Every output is checked against:
 - Constraint sets from the expectancy engine
 - Immutable canonical facts (world truths that cannot be modified)
-- Authority hierarchy (canonical > world state > episodic > beliefs)
+- Authority hierarchy for conflict resolution (canonical > world state > episodic > beliefs)
 
-Only validated outputs can trigger memory mutations. Invalid outputs trigger retries with stricter constraints, never corrupting state.
+Only validated outputs can trigger memory mutations. Invalid outputs trigger retries with stricter constraints or fall back to deterministic behavior. The validation gate is the mechanism that prevents state corruption.
+
+## Model / Backend
+
+LlamaBrain uses a local llama.cpp backend and is **model-agnostic**.
+
+### Hard requirement
+Any **GGUF** model that can be run by llama.cpp and can produce text that conforms to LlamaBrain’s structured-output envelope.
+
+### Recommended baseline (tested)
+- stablelm-zephyr-3b.Q4_0.gguf
+- Rationale: fast on consumer GPUs and sufficient for structured intent emission.
+
+### Test Environment
+- OS: Windows 11
+- CPU: AMD Ryzen 7 7800X3D
+- RAM: 64 GB
+- GPU: NVIDIA RTX 4070 Ti SUPER
+- NVIDIA driver: 32.0.15.8129 (581.29)
+- llama.cpp: b7574, win-cuda-13.1-x64
+- CUDA: cudart-llama, win-cuda-13.1-x64
+- Model: stablelm-zephyr-3b.Q4_0.gguf
+
+### User-configurable parameters (affect quality, speed, and schema-pass rate):
+- ctx
+- temperature / top_p / top_k / repeat_penalty / seed
+- threads
+- gpu_layers
+
+**Note:** Output will vary by driver, llama.cpp build, VRAM, context size, and sampling. Treat as relative guidance.
 
 ## 🧪 Proof: RedRoom Demo & Deterministic Gate/Fallback
 
