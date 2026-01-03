@@ -10,6 +10,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Core Library
 
 #### Added
+- **Feature 14.1: Seed Parameter Support - COMPLETE** ✅
+  - **API Layer Seed Support**
+    - Added `seed` field to `CompletionRequest` in `ApiContracts.cs`
+    - Updated `IApiClient` interface with `seed` parameter on all 4 methods:
+      - `SendPromptAsync`
+      - `SendPromptWithMetricsAsync`
+      - `SendStructuredPromptAsync`
+      - `SendStructuredPromptWithMetricsAsync`
+    - Updated `ApiClient` implementation to include seed in request JSON
+    - Seed semantics: `null` = omit (server default), `-1` = random, `0+` = deterministic
+  - **Test Coverage**
+    - Added `ApiClientSeedTests.cs` with 10 unit tests covering:
+      - Seed inclusion in all API methods
+      - Null seed omission from requests
+      - Negative seed (-1) pass-through
+      - Zero seed handling
+      - Seed parameter ordering with other parameters
+  - **Files Changed**:
+    - `Source/Core/ApiContracts.cs` - Added `seed` field
+    - `Source/Core/IApiClient.cs` - Added `seed` parameter to all methods
+    - `Source/Core/ApiClient.cs` - Implemented seed parameter support
+  - **Files Added**:
+    - `LlamaBrain.Tests/Core/ApiClientSeedTests.cs` - Seed parameter unit tests
+  - **Documentation**: Updated `ROADMAP.md` with 14.1 completion status
+
 - **Feature 23: Structured Input/Context - COMPLETE** ✅
   - **Structured Context Provider Infrastructure**
     - Added `IStructuredContextProvider` interface for structured context generation
