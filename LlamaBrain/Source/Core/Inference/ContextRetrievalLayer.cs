@@ -177,6 +177,8 @@ namespace LlamaBrain.Core.Inference
 
     /// <summary>
     /// Retrieves canonical facts, optionally filtered by domain/topics.
+    /// Uses strict total order sorting for deterministic results:
+    /// Order: Id ordinal ascending (canonical facts are immutable, so Id is stable).
     /// </summary>
     private List<string> RetrieveCanonicalFacts(List<string> topics)
     {
@@ -190,6 +192,9 @@ namespace LlamaBrain.Core.Inference
                      .ToList();
       }
 
+      // Sort deterministically by Id before applying limit
+      facts = facts.OrderBy(f => f.Id, StringComparer.Ordinal).ToList();
+
       // Apply limit if configured
       if (_config.MaxCanonicalFacts > 0)
       {
@@ -201,6 +206,8 @@ namespace LlamaBrain.Core.Inference
 
     /// <summary>
     /// Retrieves world state entries, optionally filtered by topics.
+    /// Uses strict total order sorting for deterministic results:
+    /// Order: Key ordinal ascending (world state keys are stable identifiers).
     /// </summary>
     private List<string> RetrieveWorldState(List<string> topics)
     {
@@ -213,6 +220,9 @@ namespace LlamaBrain.Core.Inference
                                     IsRelevantToTopics(s.Key, topics))
                        .ToList();
       }
+
+      // Sort deterministically by Key before applying limit
+      states = states.OrderBy(s => s.Key, StringComparer.Ordinal).ToList();
 
       // Apply limit if configured
       if (_config.MaxWorldState > 0)

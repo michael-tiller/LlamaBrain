@@ -8,9 +8,40 @@ This document provides a comprehensive explanation of the LlamaBrain architectur
 
 ## Overview
 
-LlamaBrain solves a fundamental problem in AI-powered applications: **how to maintain deterministic, authoritative game state when using stochastic LLMs**. The architecture treats the LLM as a pure, stateless generator while maintaining continuity through deterministic state reconstruction.
+LlamaBrain solves a fundamental problem in AI-powered applications: **how to maintain deterministic, authoritative game state when using stochastic LLMs**. The architecture treats the LLM as a stateless generator while maintaining continuity through deterministic state reconstruction.
 
 **Core Principle**: The LLM has no memory, no authority, and no direct access to world state. All context is provided through bounded prompts, and all outputs are validated before any state changes occur.
+
+---
+
+## Determinism Boundary: Known Limitation
+
+**The LLM is stochastic. The governance plane is deterministic. This is intentional.**
+
+| Layer | Deterministic? | Proven? |
+|-------|----------------|---------|
+| Prompt Assembly | ✅ Yes | ✅ `GovernancePlaneDeterminismTests.cs` |
+| Parsing | ✅ Yes | ✅ `GovernancePlaneDeterminismTests.cs` |
+| Validation/Gating | ✅ Yes | ✅ `GovernancePlaneDeterminismTests.cs` |
+| Memory Mutation | ✅ Yes | ✅ `GovernancePlaneDeterminismTests.cs` |
+| Fallback Selection | ✅ Yes | ✅ `GovernancePlaneDeterminismTests.cs` |
+| Metrics Emission | ✅ Yes | ✅ `GovernancePlaneDeterminismTests.cs` |
+| **LLM Token Generation** | ❌ No | N/A (stochastic by nature) |
+
+**Why LLM determinism is not the goal:**
+- LLMs are stochastic generators. Even with fixed seeds, output can vary due to GPU kernels, thread scheduling, floating-point ordering, driver versions, etc.
+- Attempting to guarantee LLM determinism is a losing battle against hardware and runtime variability.
+- **The architectural guarantee is that the pipeline around the LLM is deterministic.** Given the same LLM output, the system will always parse, validate, and mutate state identically.
+
+**What this means in practice:**
+- Same game state + same player input → same prompt (byte-stable)
+- Same LLM output → same validation result → same memory mutations
+- Seeded sampling provides *best-effort reproducibility*, not a guarantee
+- The fallback system ensures graceful degradation when LLM output is invalid
+
+**See**: `GovernancePlaneDeterminismTests.cs` for the 14 tests that prove governance plane determinism.
+
+---
 
 ## The Nine-Component Architecture
 
@@ -171,6 +202,11 @@ memorySystem.SetBelief("hero_opinion", belief, MutationSource.ValidatedOutput);
   - **Significance**: Higher significance memories retained longer
   - **Confidence**: Beliefs filtered by confidence threshold
 - Configurable limits prevent token bloat
+- **Deterministic Ordering**: All retrievals are sorted using strict total ordering to ensure byte-stable prompt assembly:
+  - Canonical facts: sorted by Id (ordinal)
+  - World state: sorted by Key (ordinal)
+  - Episodic memories: sorted by score desc, CreatedAtTicks desc, Id ordinal, SequenceNumber asc
+  - Beliefs: sorted by score desc, Confidence desc, Id ordinal, SequenceNumber asc
 
 **Retry Support**:
 - `StateSnapshot.ForRetry()` creates new snapshot with merged constraints
@@ -1229,7 +1265,7 @@ This creates a virtuous cycle: well-crafted fallback responses improve both fail
 ## Key Architectural Principles
 
 ### 1. Stateless LLM
-The LLM is a pure function with no memory or state. It receives bounded prompts and generates text. It has no knowledge of previous interactions, no authority to modify state, and no direct access to the memory system.
+The LLM is a stateless stochastic generator with no memory. It receives bounded prompts and generates text. It has no knowledge of previous interactions, no authority to modify state, and no direct access to the memory system. Note: While seeded sampling provides best-effort reproducibility, LLM output is NOT mathematically deterministic due to hardware/runtime variations (GPU kernels, thread scheduling, floating-point ordering, etc.).
 
 ### 2. Deterministic State
 All context is captured in immutable `StateSnapshot` objects. The same snapshot can be replayed exactly, enabling deterministic retries. State is never modified during inference - only after validation.
@@ -1296,25 +1332,36 @@ All nine components are fully implemented and tested:
 
 This section maps architectural claims to the tests that prove them.
 
-### Claim 1: Determinism - Same Input = Same Output
+### Claim 1: Pipeline Determinism - Same Input = Same Output
 
 > "Deterministic: prompt assembly, parsing, validation, gating decision, memory mutation, metrics emission."
 
+**What IS proven (the governance plane around the LLM):**
+
 | Test File | Test Name | What It Proves |
 |-----------|-----------|----------------|
-| `CrossSessionDeterminismTests.cs` | `SameSeedSamePrompt_ProducesIdenticalOutput_AcrossSessions` | **PROOF**: Same seed + prompt = identical LLM output across sessions |
-| `CrossSessionDeterminismTests.cs` | `InteractionCountAsSeed_ProducesDeterministicSequence` | **PROOF**: Game replays produce identical dialogue sequences |
-| `CrossSessionDeterminismPlayModeTests.cs` | `PlayMode_CrossSession_*` | **PROOF**: Same tests running in Unity with real llama.cpp server |
-| `DeterministicPipelineTests.cs` | `FullPipeline_IdenticalInputs_ProduceIdenticalOutputs` | Complete pipeline produces identical outputs for identical inputs |
+| `GovernancePlaneDeterminismTests.cs` | `PromptAssembly_SameInputs_IdenticalBytes_*` | **PROOF**: Prompt assembly is byte-stable |
+| `GovernancePlaneDeterminismTests.cs` | `Validation_SameParsedOutput_IdenticalGateResult_*` | **PROOF**: Validation/gating is deterministic |
+| `GovernancePlaneDeterminismTests.cs` | `Mutation_SameGateResult_IdenticalDiff` | **PROOF**: Memory mutation is deterministic |
+| `GovernancePlaneDeterminismTests.cs` | `DictionaryEnumeration_*` | **PROOF**: Dictionary ordering doesn't leak into output |
+| `DeterministicPipelineTests.cs` | `FullPipeline_IdenticalInputs_ProduceIdenticalOutputs` | Complete pipeline (with mocked LLM) produces identical outputs |
 | `DeterministicPipelineTests.cs` | `MemoryMutation_DeterministicOrder_ProducesIdenticalState` | Memory mutations applied in deterministic order |
 | `IdGeneratorTests.cs` | `SequentialIdGenerator_IsDeterministic` | Sequential IDs are deterministic across instances |
-| `ValidationGateTests.cs` | `Determinism_SameInputWithSeed_ProducesSameResult` | Validation produces same result for same input |
-| `ValidationGateTests.cs` | `Determinism_ConstraintOrderIndependent_SameResult` | Constraint order doesn't affect validation result |
+| `ValidationGateTests.cs` | `Determinism_*` | Validation produces same result for same input |
 | `ContextSerializerTests.cs` | `*_Determinism_*` | JSON serialization is deterministic |
 
-> **Note**: Cross-session determinism tests require a llama.cpp server:
+**What is NOT proven (LLM generation is stochastic):**
+
+| Test File | Test Name | What It Actually Tests |
+|-----------|-----------|----------------|
+| `CrossSessionDeterminismTests.cs` | `SameSeedSamePrompt_*` | Reproducibility smoke test (best-effort, not guaranteed) |
+| `ExternalIntegrationPlayModeTests.cs` | `PlayMode_*` | Reproducibility smoke test with real llama.cpp server |
+
+> **Important**: LLM output is NOT mathematically deterministic. Seeded sampling provides best-effort reproducibility under controlled conditions, but results may vary due to: GPU vs CPU execution, thread scheduling, SIMD reductions, llama.cpp version, CUDA version, driver version, etc. The architectural guarantee is that the **pipeline around the LLM** (prompt assembly, validation, mutation) is deterministic.
+>
+> **Note**: External integration tests require a llama.cpp server:
 > - **Standalone .NET**: `dotnet test --filter "Category=RequiresLlamaServer"` (manual server start)
-> - **Unity PlayMode**: Run `CrossSessionDeterminismPlayModeTests.cs` via Unity Test Runner (auto-starts server)
+> - **Unity PlayMode**: Run `ExternalIntegrationPlayModeTests.cs` via Unity Test Runner (auto-starts server)
 
 ### Claim 2: Canonical Facts Cannot Be Overridden
 
@@ -1583,39 +1630,46 @@ Console.WriteLine($"Success Rate: {metrics.OverallSuccessRate:F1}%");
 
 **See**: [ROADMAP.md](ROADMAP.md#feature-13-structured-output-integration) for detailed implementation checklist and [USAGE_GUIDE.md](USAGE_GUIDE.md#structured-output) for migration guide.
 
-### Feature 14: Deterministic Generation Seed
+### Feature 14: Seeded Generation for Reproducibility
 
-**Status**: ✅ Complete (API support done, proof tests in both .NET and Unity PlayMode)
+**Status**: ✅ Complete (API support done, reproducibility smoke tests in both .NET and Unity PlayMode)
 **Priority**: CRITICAL
 **Dependencies**: Feature 10 (Deterministic Proof Gap Testing), Feature 16 (Save/Load Game Integration)
 
-**Overview**: Implement the **InteractionCount seed strategy** to achieve true cross-session determinism. By using `InteractionContext.InteractionCount` as the seed for LLM generation, we transform the stochastic generator into a pure function relative to game state.
+**Overview**: Implement the **InteractionCount seed strategy** to maximize reproducibility of LLM generation. By using `InteractionContext.InteractionCount` as the seed, we achieve best-effort reproducibility under controlled runtime conditions.
 
 **Key Components**:
 - **Seed Parameter Support**: Add `seed` parameter to `CompletionRequest` and `IApiClient` interface
 - **Integration with InteractionContext**: Extract `InteractionCount` and pass as seed to LLM generation
-- **Cross-Session Determinism**: Ensure same `InteractionCount` + same prompt = identical output across sessions
-- **Hardware Determinism Documentation**: Document 100% determinism across sessions (same device), 99.9% predictability across devices
+- **Reproducibility Testing**: Verify seeded generation produces consistent output within same server session
 
-**Architectural Impact**: **Completes the deterministic state reconstruction pattern** by locking the final source of non-determinism: the LLM's internal random number generator. This achieves the "Holy Grail" of AI game development: **Cross-Session State Consistency**.
+**Important Limitations**:
+> **LLM generation is NOT mathematically deterministic.** Seeded sampling provides best-effort reproducibility, but results may vary due to:
+> - GPU vs CPU execution paths
+> - Thread scheduling and SIMD reductions
+> - llama.cpp version differences
+> - CUDA/driver version differences
+> - Floating-point ordering variations
+>
+> **What IS deterministic**: The pipeline around the LLM (prompt assembly, parsing, validation, memory mutation) - proven in `GovernancePlaneDeterminismTests.cs`.
 
 **The "Double-Lock System"**:
-- **Lock 1: Context Locking** - `SequenceNumber` and `Ordinal` string comparisons ensure the *prompt* never flutters
-- **Lock 2: Entropy Locking** - `InteractionCount` seed ensures the *dice roll* never flutters
+- **Lock 1: Context Locking** - `SequenceNumber` and `Ordinal` string comparisons ensure the *prompt* is byte-stable (PROVEN)
+- **Lock 2: Entropy Locking** - `InteractionCount` seed provides best-effort reproducibility for the *dice roll* (NOT PROVEN - hardware dependent)
 
-**Formula**: `f(Prompt, Context, InteractionCount) = Output` - A pure function that guarantees identical game states produce identical outputs.
-
-**Proof Strategy**: ✅ Implemented in two test files
+**Reproducibility Testing**: ✅ Implemented in two test files
 
 1. **`CrossSessionDeterminismTests.cs`** (standalone .NET tests) - `Category=RequiresLlamaServer`
-2. **`CrossSessionDeterminismPlayModeTests.cs`** (Unity PlayMode) - `Category=ExternalIntegration` - runs with real llama.cpp server
+2. **`ExternalIntegrationPlayModeTests.cs`** (Unity PlayMode) - `Category=ExternalIntegration` - runs with real llama.cpp server
 
-| Test | What It Proves |
+| Test | What It Actually Tests |
 |------|----------------|
-| `SameSeedSamePrompt_ProducesIdenticalOutput_AcrossSessions` | Same seed + prompt = identical output |
-| `InteractionCountAsSeed_ProducesDeterministicSequence` | Game replays produce identical dialogue |
-| `SameSeedWithStructuredOutput_ProducesIdenticalJson` | Structured output is also deterministic |
-| `TemperatureZero_ProducesDeterministicOutput` | Alternative: greedy decoding is deterministic |
+| `SameSeedSamePrompt_*` | Reproducibility smoke test (same session, same server) |
+| `InteractionCountAsSeed_*` | Reproducibility of seeded sequences (same session) |
+| `StructuredOutput_*` | Reproducibility of JSON output (same session) |
+| `TemperatureZero_*` | Greedy decoding reproducibility (same session) |
+
+> **Note**: These are smoke tests, not determinism proofs. They verify the seed parameter is working and that llama.cpp produces consistent output under controlled conditions. They do NOT prove cross-session or cross-hardware determinism.
 
 **Run Options**:
 ```bash
@@ -1626,7 +1680,7 @@ dotnet test --filter "Category=RequiresLlamaServer"
 # Run via Unity Test Runner with Category=ExternalIntegration
 ```
 
-**When these tests pass against a llama.cpp server, they mathematically prove that the system is deterministic**, regardless of the inherent randomness of the underlying AI model.
+**When these tests pass against a llama.cpp server, they provide strong empirical evidence of reproducibility under the tested configuration**, regardless of the inherent randomness of the underlying AI model.
 
 **See**: [ROADMAP.md](ROADMAP.md#feature-14-deterministic-generation-seed) for detailed implementation plan.
 

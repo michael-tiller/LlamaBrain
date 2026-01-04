@@ -18,19 +18,30 @@ using System.IO;
 namespace LlamaBrain.Tests.PlayMode
 {
     /// <summary>
-    /// Feature 14: Cross-Session Determinism Proof Tests (PlayMode)
+    /// External Integration Tests: LLM Reproducibility Smoke Tests (PlayMode)
     ///
-    /// These tests prove that the same seed + same prompt produces identical output
-    /// across independent sessions, completing the deterministic state reconstruction pattern.
+    /// These tests verify that seeded LLM generation produces reproducible output
+    /// under controlled conditions (same server process, same model, same parameters).
     ///
-    /// CRITICAL CLAIM: "f(Prompt, Context, InteractionCount) = Output" is a pure function
-    /// when using deterministic seeds.
+    /// IMPORTANT LIMITATIONS:
+    /// - These are NOT mathematical proofs of determinism
+    /// - Seeded sampling is best-effort reproducibility, not a guarantee
+    /// - Results may vary across: different hardware, GPU vs CPU, thread counts,
+    ///   llama.cpp versions, CUDA versions, driver versions, etc.
+    /// - True cross-session determinism would require: stop server, restart fresh,
+    ///   reload model, then compare - which these tests do NOT do
     ///
-    /// These tests run in Unity PlayMode with the real llama.cpp server.
+    /// WHAT IS ACTUALLY PROVEN (in GovernancePlaneDeterminismTests.cs):
+    /// - Prompt assembly is deterministic (byte-stable)
+    /// - Validation/gating is deterministic
+    /// - Memory mutation is deterministic
+    /// - The pipeline AROUND the LLM is deterministic
+    ///
+    /// These tests run in Unity PlayMode with a real llama.cpp server.
     /// Category: ExternalIntegration (requires real server)
     /// </summary>
     [TestFixture]
-    public class CrossSessionDeterminismPlayModeTests
+    public class ExternalIntegrationPlayModeTests
     {
         private GameObject? serverObject;
         private BrainServer? server;
@@ -263,31 +274,32 @@ namespace LlamaBrain.Tests.PlayMode
             }
         }
 
-        #region Cross-Session Determinism Proof Tests
+        #region Seeded Reproducibility Smoke Tests
 
         /// <summary>
-        /// PROOF TEST: Same seed + same prompt = identical output across sessions.
+        /// Smoke test: Same seed + same prompt tends to produce identical output
+        /// within the same server session.
         ///
-        /// This test proves Feature 14's core claim:
-        /// "f(Prompt, Context, InteractionCount) = Output" is a pure function.
+        /// NOTE: This is NOT a determinism proof. Seeded sampling provides
+        /// best-effort reproducibility under controlled conditions, but results
+        /// may vary due to hardware, threading, GPU kernels, etc.
         /// </summary>
         [UnityTest]
         [Category("ExternalIntegration")]
-        [Category("Determinism")]
-        public IEnumerator PlayMode_CrossSession_SameSeedSamePrompt_ProducesIdenticalOutput()
+        public IEnumerator PlayMode_SameSeedSamePrompt_ReproducibleOutput()
         {
             RequireExternal();
             SetUpExternalServer();
             yield return WaitForServerReady();
 
-            const int deterministicSeed = 42;
+            const int seed = 42;
             const string prompt = "Complete this sentence: The quick brown fox";
 
-            // Session 1: First inference
+            // First inference
             string output1;
             {
                 var client1 = server!.CreateClient();
-                Assert.That(client1, Is.Not.Null, "Failed to create client for session 1");
+                Assert.That(client1, Is.Not.Null, "Failed to create client for request 1");
                 disposables.Add(client1!);
 
                 CompletionMetrics? result1 = null;
@@ -297,24 +309,23 @@ namespace LlamaBrain.Tests.PlayMode
                         prompt,
                         maxTokens: 50,
                         temperature: 0.7f,
-                        seed: deterministicSeed,
+                        seed: seed,
                         cancellationToken: CancellationToken.None);
                 });
 
-                Assert.That(result1, Is.Not.Null, "Session 1 should return a result");
+                Assert.That(result1, Is.Not.Null, "Request 1 should return a result");
                 output1 = result1!.Content;
-                TestContext.Out.WriteLine($"Session 1 output: {output1}");
+                TestContext.Out.WriteLine($"Request 1 output: {output1}");
 
-                // Validate we got a real LLM response, not an error
                 Assert.That(output1, Does.Not.StartWith("Error:"),
-                    $"Session 1 returned an error instead of LLM response: {output1}");
+                    $"Request 1 returned an error instead of LLM response: {output1}");
             }
 
-            // Session 2: Second inference with identical parameters (new client simulates new session)
+            // Second inference with identical parameters
             string output2;
             {
                 var client2 = server!.CreateClient();
-                Assert.That(client2, Is.Not.Null, "Failed to create client for session 2");
+                Assert.That(client2, Is.Not.Null, "Failed to create client for request 2");
                 disposables.Add(client2!);
 
                 CompletionMetrics? result2 = null;
@@ -324,37 +335,40 @@ namespace LlamaBrain.Tests.PlayMode
                         prompt,
                         maxTokens: 50,
                         temperature: 0.7f,
-                        seed: deterministicSeed,
+                        seed: seed,
                         cancellationToken: CancellationToken.None);
                 });
 
-                Assert.That(result2, Is.Not.Null, "Session 2 should return a result");
+                Assert.That(result2, Is.Not.Null, "Request 2 should return a result");
                 output2 = result2!.Content;
-                TestContext.Out.WriteLine($"Session 2 output: {output2}");
+                TestContext.Out.WriteLine($"Request 2 output: {output2}");
 
-                // Validate we got a real LLM response, not an error
                 Assert.That(output2, Does.Not.StartWith("Error:"),
-                    $"Session 2 returned an error instead of LLM response: {output2}");
+                    $"Request 2 returned an error instead of LLM response: {output2}");
             }
 
-            // Assert: Outputs must be byte-for-byte identical
+            // Assert: Outputs should match (best-effort reproducibility)
             Assert.That(output2, Is.EqualTo(output1),
-                $"Cross-session determinism FAILED.\n" +
-                $"Seed: {deterministicSeed}\n" +
+                $"Seeded reproducibility check.\n" +
+                $"Seed: {seed}\n" +
                 $"Prompt: {prompt}\n" +
-                $"Session 1 output: {output1}\n" +
-                $"Session 2 output: {output2}");
+                $"Request 1: {output1}\n" +
+                $"Request 2: {output2}\n" +
+                $"NOTE: If this fails, it may indicate hardware/runtime non-determinism, not a bug.");
 
-            TestContext.Out.WriteLine("PROOF: Same seed + same prompt = identical output across sessions");
+            TestContext.Out.WriteLine("Seeded reproducibility check passed (same session)");
         }
 
         /// <summary>
-        /// Sanity check: Different seeds produce different outputs.
+        /// Smoke test: Different seeds tend to produce different outputs.
+        ///
+        /// NOTE: This test is inherently probabilistic. Two different seeds
+        /// CAN legitimately produce the same output for short completions.
+        /// Repeated failures may indicate seed handling issues.
         /// </summary>
         [UnityTest]
         [Category("ExternalIntegration")]
-        [Category("Determinism")]
-        public IEnumerator PlayMode_CrossSession_DifferentSeeds_ProduceDifferentOutputs()
+        public IEnumerator PlayMode_DifferentSeeds_TendToProduceDifferentOutputs()
         {
             RequireExternal();
             SetUpExternalServer();
@@ -380,7 +394,6 @@ namespace LlamaBrain.Tests.PlayMode
             Assert.That(result1, Is.Not.Null);
             Assert.That(result2, Is.Not.Null);
 
-            // Validate we got real LLM responses, not errors
             Assert.That(result1!.Content, Does.Not.StartWith("Error:"),
                 $"Seed 111 returned an error: {result1.Content}");
             Assert.That(result2!.Content, Does.Not.StartWith("Error:"),
@@ -389,19 +402,24 @@ namespace LlamaBrain.Tests.PlayMode
             TestContext.Out.WriteLine($"Seed 111: {result1.Content}");
             TestContext.Out.WriteLine($"Seed 222: {result2.Content}");
 
-            // Different seeds should (almost always) produce different outputs
+            // Different seeds should usually produce different outputs
+            // but this is probabilistic, not guaranteed
             Assert.That(result2.Content, Is.Not.EqualTo(result1.Content),
-                "Different seeds produced identical output - this is statistically unlikely. " +
-                "If this fails repeatedly, there may be an issue with seed handling.");
+                "Different seeds produced identical output. " +
+                "This is statistically unlikely but not impossible. " +
+                "If this fails repeatedly, check seed handling.");
         }
 
         /// <summary>
-        /// Proves determinism with InteractionCount as seed (the Feature 14 pattern).
+        /// Smoke test: InteractionCount as seed produces reproducible sequences
+        /// within the same server session.
+        ///
+        /// This tests the Feature 14 pattern but does NOT prove true cross-session
+        /// determinism (which would require server restart between sessions).
         /// </summary>
         [UnityTest]
         [Category("ExternalIntegration")]
-        [Category("Determinism")]
-        public IEnumerator PlayMode_CrossSession_InteractionCountAsSeed_ProducesDeterministicSequence()
+        public IEnumerator PlayMode_InteractionCountAsSeed_ReproducibleSequence()
         {
             RequireExternal();
             SetUpExternalServer();
@@ -409,14 +427,13 @@ namespace LlamaBrain.Tests.PlayMode
 
             const string basePrompt = "NPC responds to player greeting. Interaction #{0}. Player says: Hello!";
 
-            // Simulate game replay: same interaction sequence
             var sequence1 = new string[3];
             var sequence2 = new string[3];
 
-            // First playthrough
+            // First sequence
             {
                 var client = server!.CreateClient();
-                Assert.That(client, Is.Not.Null, "Failed to create client for playthrough 1");
+                Assert.That(client, Is.Not.Null, "Failed to create client for sequence 1");
                 disposables.Add(client!);
 
                 yield return UniTask.ToCoroutine(async () =>
@@ -431,10 +448,10 @@ namespace LlamaBrain.Tests.PlayMode
                 });
             }
 
-            // Second playthrough (new session, same interaction counts)
+            // Second sequence (same server session)
             {
                 var client = server!.CreateClient();
-                Assert.That(client, Is.Not.Null, "Failed to create client for playthrough 2");
+                Assert.That(client, Is.Not.Null, "Failed to create client for sequence 2");
                 disposables.Add(client!);
 
                 yield return UniTask.ToCoroutine(async () =>
@@ -449,33 +466,34 @@ namespace LlamaBrain.Tests.PlayMode
                 });
             }
 
-            // Assert: Both playthroughs produce identical dialogue
+            // Assert: Both sequences should match
             for (int i = 0; i < 3; i++)
             {
-                // Validate we got real LLM responses, not errors
                 Assert.That(sequence1[i], Does.Not.StartWith("Error:"),
-                    $"Playthrough 1, interaction {i} returned an error: {sequence1[i]}");
+                    $"Sequence 1, interaction {i} returned an error: {sequence1[i]}");
                 Assert.That(sequence2[i], Does.Not.StartWith("Error:"),
-                    $"Playthrough 2, interaction {i} returned an error: {sequence2[i]}");
+                    $"Sequence 2, interaction {i} returned an error: {sequence2[i]}");
 
                 Assert.That(sequence2[i], Is.EqualTo(sequence1[i]),
-                    $"Interaction {i} differs between playthroughs.\n" +
-                    $"Playthrough 1: {sequence1[i]}\n" +
-                    $"Playthrough 2: {sequence2[i]}");
+                    $"Interaction {i} differs between sequences.\n" +
+                    $"Sequence 1: {sequence1[i]}\n" +
+                    $"Sequence 2: {sequence2[i]}");
 
                 TestContext.Out.WriteLine($"Interaction {i}: {sequence1[i]}");
             }
 
-            TestContext.Out.WriteLine("PROOF: InteractionCount as seed produces deterministic replay");
+            TestContext.Out.WriteLine("InteractionCount reproducibility check passed (same session)");
         }
 
         /// <summary>
-        /// Proves that temperature=0 also produces deterministic output (greedy decoding).
+        /// Smoke test: Temperature=0 (greedy decoding) produces reproducible output.
+        ///
+        /// NOTE: Even greedy decoding may not be 100% deterministic across
+        /// all hardware/runtime configurations due to floating-point ordering.
         /// </summary>
         [UnityTest]
         [Category("ExternalIntegration")]
-        [Category("Determinism")]
-        public IEnumerator PlayMode_CrossSession_TemperatureZero_ProducesDeterministicOutput()
+        public IEnumerator PlayMode_TemperatureZero_ReproducibleOutput()
         {
             RequireExternal();
             SetUpExternalServer();
@@ -492,7 +510,6 @@ namespace LlamaBrain.Tests.PlayMode
 
             yield return UniTask.ToCoroutine(async () =>
             {
-                // temperature=0 should be greedy decoding (deterministic)
                 result1 = await apiClient!.SendPromptWithMetricsAsync(
                     prompt, maxTokens: 10, temperature: 0.0f);
                 result2 = await apiClient!.SendPromptWithMetricsAsync(
@@ -502,32 +519,30 @@ namespace LlamaBrain.Tests.PlayMode
             Assert.That(result1, Is.Not.Null);
             Assert.That(result2, Is.Not.Null);
 
-            // Validate we got real LLM responses, not errors
             Assert.That(result1!.Content, Does.Not.StartWith("Error:"),
                 $"First request returned an error: {result1.Content}");
             Assert.That(result2!.Content, Does.Not.StartWith("Error:"),
                 $"Second request returned an error: {result2.Content}");
 
             Assert.That(result2.Content, Is.EqualTo(result1.Content),
-                "Temperature=0 should produce deterministic output (greedy decoding).");
+                "Temperature=0 should produce reproducible output (greedy decoding).");
 
             TestContext.Out.WriteLine($"Temperature=0 output: {result1.Content}");
-            TestContext.Out.WriteLine("PROOF: Temperature=0 produces deterministic output via greedy decoding");
+            TestContext.Out.WriteLine("Temperature=0 reproducibility check passed");
         }
 
         /// <summary>
-        /// Proves determinism holds with structured output (JSON schema).
+        /// Smoke test: Structured output with same seed produces reproducible JSON.
         /// </summary>
         [UnityTest]
         [Category("ExternalIntegration")]
-        [Category("Determinism")]
-        public IEnumerator PlayMode_CrossSession_StructuredOutput_ProducesIdenticalJson()
+        public IEnumerator PlayMode_StructuredOutput_ReproducibleJson()
         {
             RequireExternal();
             SetUpExternalServer();
             yield return WaitForServerReady();
 
-            const int deterministicSeed = 12345;
+            const int seed = 12345;
             const string prompt = "Generate a person's name and age.";
             const string schema = @"{
                 ""type"": ""object"",
@@ -538,59 +553,57 @@ namespace LlamaBrain.Tests.PlayMode
                 ""required"": [""name"", ""age""]
             }";
 
-            // Session 1
+            // First request
             string json1;
             {
                 var client1 = server!.CreateClient();
-                Assert.That(client1, Is.Not.Null, "Failed to create client for session 1");
+                Assert.That(client1, Is.Not.Null, "Failed to create client for request 1");
                 disposables.Add(client1!);
 
                 string? result = null;
                 yield return UniTask.ToCoroutine(async () =>
                 {
                     result = await client1!.SendStructuredPromptAsync(
-                        prompt, schema, seed: deterministicSeed);
+                        prompt, schema, seed: seed);
                 });
 
-                Assert.That(result, Is.Not.Null, "Session 1 should return structured output");
+                Assert.That(result, Is.Not.Null, "Request 1 should return structured output");
                 json1 = result!;
-                TestContext.Out.WriteLine($"Session 1 JSON: {json1}");
+                TestContext.Out.WriteLine($"Request 1 JSON: {json1}");
 
-                // Validate we got a real response, not an error
                 Assert.That(json1, Does.Not.StartWith("Error:"),
-                    $"Session 1 returned an error: {json1}");
+                    $"Request 1 returned an error: {json1}");
             }
 
-            // Session 2
+            // Second request
             string json2;
             {
                 var client2 = server!.CreateClient();
-                Assert.That(client2, Is.Not.Null, "Failed to create client for session 2");
+                Assert.That(client2, Is.Not.Null, "Failed to create client for request 2");
                 disposables.Add(client2!);
 
                 string? result = null;
                 yield return UniTask.ToCoroutine(async () =>
                 {
                     result = await client2!.SendStructuredPromptAsync(
-                        prompt, schema, seed: deterministicSeed);
+                        prompt, schema, seed: seed);
                 });
 
-                Assert.That(result, Is.Not.Null, "Session 2 should return structured output");
+                Assert.That(result, Is.Not.Null, "Request 2 should return structured output");
                 json2 = result!;
-                TestContext.Out.WriteLine($"Session 2 JSON: {json2}");
+                TestContext.Out.WriteLine($"Request 2 JSON: {json2}");
 
-                // Validate we got a real response, not an error
                 Assert.That(json2, Does.Not.StartWith("Error:"),
-                    $"Session 2 returned an error: {json2}");
+                    $"Request 2 returned an error: {json2}");
             }
 
-            // Assert: JSON outputs must be identical
+            // Assert: JSON outputs should match
             Assert.That(json2, Is.EqualTo(json1),
-                $"Structured output determinism FAILED.\n" +
-                $"Session 1: {json1}\n" +
-                $"Session 2: {json2}");
+                $"Structured output reproducibility check.\n" +
+                $"Request 1: {json1}\n" +
+                $"Request 2: {json2}");
 
-            TestContext.Out.WriteLine("PROOF: Structured output with same seed produces identical JSON across sessions");
+            TestContext.Out.WriteLine("Structured output reproducibility check passed");
         }
 
         #endregion
