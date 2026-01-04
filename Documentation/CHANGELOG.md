@@ -25,6 +25,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Core Library
 
+#### Fixed
+- **Governance Plane Determinism: Dictionary Enumeration Order Leak**
+  - `ContextRetrievalLayer.RetrieveCanonicalFacts()` now sorts by `Id` (ordinal) for deterministic ordering
+  - `ContextRetrievalLayer.RetrieveWorldState()` now sorts by `Key` (ordinal) for deterministic ordering
+  - Fixes byte-stable prompt assembly when dictionary insertion order varies
+  - **Files Changed**: `Source/Core/Inference/ContextRetrievalLayer.cs`
+  - **Tests Fixed**: `GovernancePlaneDeterminismTests.cs` - rewrote to properly verify serialization stability
+
+#### Changed
+- **Clarified Determinism Claims: LLM Output is NOT Mathematically Deterministic**
+  - Renamed `CrossSessionDeterminismPlayModeTests.cs` → `ExternalIntegrationPlayModeTests.cs`
+  - Renamed test class `CrossSessionDeterminismPlayModeTests` → `ExternalIntegrationPlayModeTests`
+  - Rewrote test descriptions: "proof" → "reproducibility smoke test"
+  - Updated ARCHITECTURE.md to clarify:
+    - **What IS proven**: Pipeline determinism (prompt assembly, validation, mutation) - `GovernancePlaneDeterminismTests.cs`
+    - **What is NOT proven**: LLM generation (seeded sampling is best-effort, not guaranteed)
+  - Removed "pure function" claims for LLM output
+  - Added explicit limitations: GPU/CPU paths, thread scheduling, llama.cpp version, CUDA version, etc.
+  - **Rationale**: Seeded sampling provides best-effort reproducibility under controlled conditions, but is not mathematically deterministic due to hardware/runtime variations
+  - Added "Determinism Boundary: Known Limitation" section to ARCHITECTURE.md near the top, with table showing what is/isn't deterministic and why LLM determinism is not the goal
+
 #### Added
 - **Feature 14.1: Seed Parameter Support - COMPLETE** ✅
   - **API Layer Seed Support**
