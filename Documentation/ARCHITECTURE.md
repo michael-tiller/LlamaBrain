@@ -1358,7 +1358,7 @@ This section maps architectural claims to the tests that prove them.
 | `ExternalIntegrationPlayModeTests.cs` | `PlayMode_*` | Reproducibility smoke test with real llama.cpp server |
 
 > **Important**: LLM output is NOT mathematically deterministic. Seeded sampling provides best-effort reproducibility under controlled conditions, but results may vary due to: GPU vs CPU execution, thread scheduling, SIMD reductions, llama.cpp version, CUDA version, driver version, etc. The architectural guarantee is that the **pipeline around the LLM** (prompt assembly, validation, mutation) is deterministic.
-
+>
 > **Note**: External integration tests require a llama.cpp server:
 > - **Standalone .NET**: `dotnet test --filter "Category=RequiresLlamaServer"` (manual server start)
 > - **Unity PlayMode**: Run `ExternalIntegrationPlayModeTests.cs` via Unity Test Runner (auto-starts server)
@@ -1680,7 +1680,7 @@ dotnet test --filter "Category=RequiresLlamaServer"
 # Run via Unity Test Runner with Category=ExternalIntegration
 ```
 
-**When these tests pass against a llama.cpp server, they mathematically prove that the system is deterministic**, regardless of the inherent randomness of the underlying AI model.
+**When these tests pass against a llama.cpp server, they provide strong empirical evidence of reproducibility under the tested configuration**, regardless of the inherent randomness of the underlying AI model.
 
 **See**: [ROADMAP.md](ROADMAP.md#feature-14-deterministic-generation-seed) for detailed implementation plan.
 

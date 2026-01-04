@@ -1352,7 +1352,7 @@ Implement the **InteractionCount seed strategy** to achieve true cross-session d
 - [x] Unit tests for `ApiClient` seed parameter handling (ApiClientSeedTests.cs - 11 tests)
 - [x] Unit tests for seed validation (negative seeds, null handling)
 - [x] Tests for backward compatibility (seed = null works correctly)
-- [x] Integration tests for cross-session determinism (`CrossSessionDeterminismPlayModeTests.cs` - 5 tests)
+- [x] Integration tests for cross-session determinism (`ExternalIntegrationPlayModeTests.cs` - 5 tests)
 - [x] Standalone .NET tests (`CrossSessionDeterminismTests.cs` - 5 tests, requires manual server)
 - [ ] Tests for retry behavior with seed (same seed across retries) - Deferred
 - [x] All determinism tests passing

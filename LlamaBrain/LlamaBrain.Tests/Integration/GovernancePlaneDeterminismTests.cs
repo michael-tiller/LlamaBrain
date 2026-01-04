@@ -33,7 +33,7 @@ namespace LlamaBrain.Tests.Integration
     /// - Network timing, process scheduling
     ///
     /// These tests prove the governance plane determinism, NOT LLM output reproducibility.
-    /// For LLM integration smoke tests, see CrossSessionDeterminismPlayModeTests.cs (Unity)
+    /// For LLM integration smoke tests, see ExternalIntegrationPlayModeTests.cs (Unity)
     /// or CrossSessionDeterminismTests.cs (standalone, requires server).
     /// </summary>
     [TestFixture]
@@ -486,34 +486,31 @@ namespace LlamaBrain.Tests.Integration
         #region Fallback Selection Determinism
 
         /// <summary>
-        /// PROOF: g_fallback(FailureContext) = FallbackResponse is deterministic.
-        /// Same failure context always selects the same fallback response.
+        /// PROOF: g_fallback(FailureContext, seed) = FallbackResponse is deterministic.
+        /// Same failure context with same RNG seed always selects the same fallback response.
         /// </summary>
         [Test]
         public void Fallback_SameFailureContext_IdenticalSelection()
         {
-            // Arrange - Fixed failure context
+            // Arrange - Fixed failure context and seed
             var context = CreateTestContext();
+            const int fixedSeed = 42;
 
-            // Act - Request fallback 10 times with identical context
-            // Use a seeded random to make selection deterministic
+            // Act - Request fallback 10 times with identical context and same seed
             var fallbacks = new List<string>();
             for (int i = 0; i < 10; i++)
             {
-                // Reset the fallback system to ensure fresh state each time
-                var freshFallback = new FallbackSystem(_fallbackConfig);
+                // Create fresh FallbackSystem with identical seeded Random each time
+                var seededRandom = new Random(fixedSeed);
+                var freshFallback = new FallbackSystem(_fallbackConfig, seededRandom);
                 var response = freshFallback.GetFallbackResponse(context, "Validation failed: prohibition violated");
                 fallbacks.Add(response);
             }
 
-            // Assert - All fallbacks should come from the same pool
-            // Note: The fallback system may use random selection, but determinism
-            // is achieved through the constraint that:
-            // 1. Same trigger reason -> same fallback pool
-            // 2. Fallback pool is deterministically ordered
-            Assert.That(fallbacks.All(f => _fallbackConfig.PlayerUtteranceFallbacks.Contains(f) ||
-                                           _fallbackConfig.GenericFallbacks.Contains(f)),
-                "All fallbacks must come from the correct pool for the trigger reason");
+            // Assert - All fallbacks must be identical (same seed + same context = same selection)
+            var expected = fallbacks[0];
+            Assert.That(fallbacks.All(f => f == expected),
+                $"All fallbacks must be identical when using the same seed. Expected all to be '{expected}', got: [{string.Join(", ", fallbacks.Distinct())}]");
         }
 
         /// <summary>

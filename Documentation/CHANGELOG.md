@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Added
 - **Feature 14: Cross-Session Determinism Proof Tests - COMPLETE** ✅
-  - **PlayMode Tests** (`CrossSessionDeterminismPlayModeTests.cs`)
+  - **PlayMode Tests** (`ExternalIntegrationPlayModeTests.cs`)
     - `PlayMode_CrossSession_SameSeedSamePrompt_ProducesIdenticalOutput` - Core proof: same seed + prompt = identical output
     - `PlayMode_CrossSession_DifferentSeeds_ProduceDifferentOutputs` - Sanity check: different seeds differ
     - `PlayMode_CrossSession_InteractionCountAsSeed_ProducesDeterministicSequence` - Game replay proof
