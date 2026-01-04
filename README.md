@@ -9,29 +9,62 @@
 
 LlamaBrain™ is a production-ready architecture that enforces a strict validation boundary between untrusted LLM outputs and your authoritative game state. The model is treated as a stateless generator—continuity emerges from deterministic state reconstruction, not from trusting the AI's memory.
 
-[![Deterministic Reconstruction + Validation Boundary](https://img.youtube.com/vi/RT2v9199gfM/0.jpg)](https://www.youtube.com/watch?v=RT2v9199gfM)
+![Architectural Diagram](Documentation/architectural_diagram.png)
+
+**See [ARCHITECTURE.md](Documentation/ARCHITECTURE.md) for more information.**
 
 ## The Core Innovation
 
-**The Model is Untrusted.** LLMs are stochastic generators that hallucinate. LlamaBrain enforces a strict validation boundary: all LLM outputs are validated against constraints and canonical facts before any memory mutations occur. The model has no direct access to game state—it's a pure, stateless generator. Continuity emerges from deterministic state reconstruction, not from trusting the AI's memory.
+**The Model is Untrusted.** LLMs are stochastic generators that hallucinate. LlamaBrain enforces a strict validation boundary: all LLM outputs are validated against constraints and extant canonical facts before any memory mutations occur. The model has no direct access to game state—it's a pure, stateless generator. Continuity emerges from deterministic state reconstruction, not from trusting the AI's memory.
 
-**The Validation Gate** prevents hallucinations from corrupting authoritative state. Every output is checked against:
+**The Validation Gate** reduces risk of hallucination-driven state corruption by blocking invalid mutations. Every output is checked against:
 - Constraint sets from the expectancy engine
 - Immutable canonical facts (world truths that cannot be modified)
-- Authority hierarchy (canonical > world state > episodic > beliefs)
+- Authority hierarchy for conflict resolution (canonical > world state > episodic > beliefs)
 
-Only validated outputs can trigger memory mutations. Invalid outputs trigger retries with stricter constraints, never corrupting state.
+Only validated outputs can trigger memory mutations. Invalid outputs trigger retries with stricter constraints or fall back to deterministic behavior. The validation gate is the mechanism that prevents state corruption.
 
-## 🧪 Proof: RedRoom Demo & Deterministic Gate/Fallback
+## Model / Backend
+
+LlamaBrain uses a local llama.cpp backend and is **model-agnostic**.
+
+### Hard requirement
+Any **GGUF** model that can be run by llama.cpp and can produce text that conforms to LlamaBrain’s structured-output envelope.
+
+### Recommended baseline (tested)
+- stablelm-zephyr-3b.Q4_0.gguf
+- Rationale: fast on consumer GPUs and sufficient for structured intent emission.
+
+### Test Environment
+- OS: Windows 11
+- CPU: AMD Ryzen 7 7800X3D
+- RAM: 64 GB
+- GPU: NVIDIA RTX 4070 Ti SUPER
+- NVIDIA driver: 32.0.15.8129 (581.29)
+- llama.cpp: b7574, win-cuda-13.1-x64
+- CUDA: cudart-llama, win-cuda-13.1-x64
+- Model: stablelm-zephyr-3b.Q4_0.gguf
+
+### User-configurable parameters (affect quality, speed, and schema-pass rate):
+- ctx
+- temperature / top_p / top_k / repeat_penalty / seed
+- threads
+- gpu_layers
+
+**Note:** Output will vary by driver, llama.cpp build, VRAM, context size, and sampling. Treat as relative guidance.
+
+## Proof: RedRoom Demo & Deterministic Gate/Fallback
+
+[![Deterministic Reconstruction + Validation Boundary](https://img.youtube.com/vi/RT2v9199gfM/0.jpg)](https://www.youtube.com/watch?v=RT2v9199gfM)
 
 **See it in action:** The **RedRoom** testing suite is a complete, runnable demonstration of LlamaBrain's deterministic architecture and validation gates. It serves as both a "Hello World" example and a comprehensive testing framework.
 
 **What RedRoom Demonstrates:**
-- ✅ **Complete 9-Component Architecture**: All architectural components working together in a single, runnable example
-- ✅ **Deterministic State Reconstruction**: Byte-level determinism in state serialization and prompt assembly
-- ✅ **Validation Gate & Fallback**: Invalid outputs trigger retries with stricter constraints—never corrupting state
-- ✅ **Production-Ready Components**: Uses the same components as production games, not simplified examples
-- ✅ **Comprehensive Testing**: Multiple trigger zones, metrics collection, and adversarial testing capabilities
+- **Complete 9-Component Architecture**: All architectural components working together in a single, runnable example
+- **Deterministic State Reconstruction**: Byte-level determinism in state serialization and prompt assembly
+- **Validation Gate & Fallback**: Invalid outputs trigger retries with stricter constraints—never corrupting state
+- **Production-Ready Components**: Uses the same components as production games, not simplified examples
+- **Comprehensive Testing**: Multiple trigger zones, metrics collection, and adversarial testing capabilities
 
 **Location:** `LlamaBrainRuntime/Assets/LlamaBrainRuntime/Runtime/RedRoom/`
 
@@ -42,7 +75,7 @@ LlamaBrain consists of two main components:
 - **LlamaBrain Core** - A robust .NET Standard 2.1 library implementing the determinism boundary architecture
 - **LlamaBrain Runtime** - A Unity package providing seamless integration with Unity projects
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 LlamaBrain/
@@ -70,7 +103,7 @@ LlamaBrain/
     └── Documentation/            # Additional documentation
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### For Unity Developers
 1. **Import the Unity Package**
@@ -87,7 +120,7 @@ LlamaBrain/
    - Add LlamaBrainAgent to a GameObject
    - Start building AI-powered characters
 
-4. **See the Proof: RedRoom Demo** ⭐
+4. **See the Proof: RedRoom Demo**
    - **Start here**: RedRoom is the complete, runnable demonstration of LlamaBrain's deterministic architecture
    - Open the RedRoom scene in Unity to see all 9 architectural components working together
    - Test the validation gate and fallback system with multiple trigger zones
@@ -118,7 +151,7 @@ LlamaBrain/
    var response = await agent.SendMessageAsync("Hello!");
    ```
 
-## 🎮 Key Features
+## Features
 
 ### Core Library
 - **Secure API Client**: Rate-limited, validated HTTP communication
@@ -140,7 +173,7 @@ LlamaBrain/
   - NPC follower system with LLM dialogue
   - Player interaction system with visual feedback
 
-## 📚 Documentation
+## Documentation
 
 ### Core Library
 - **[Core README](LlamaBrain/README.md)** - Complete library documentation and usage guide
@@ -155,7 +188,7 @@ LlamaBrain/
 ### Unity Package
 Unity package documentation is available in the LlamaBrainRuntime project.
 
-## 🛠️ Requirements
+## Requirements
 
 ### Core Library
 - .NET Standard 2.1 or higher
@@ -172,7 +205,7 @@ Unity package documentation is available in the LlamaBrainRuntime project.
 <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### Server Setup
 1. Download llama.cpp server for your platform
@@ -194,7 +227,7 @@ var config = new ProcessConfig
 // Use BrainSettings ScriptableObject in Inspector
 ```
 
-## 🎯 Use Cases
+## Use Cases
 
 ### Game Development
 - **NPCs with Memory**: Characters that remember player interactions
@@ -219,7 +252,7 @@ var config = new ProcessConfig
 - **Data Analysis**: Natural language data exploration
 - **Documentation**: AI-powered help systems
 
-## 🛡️ Security & Safety
+## Security & Safety
 
 LlamaBrain implements comprehensive security measures:
 
@@ -231,7 +264,7 @@ LlamaBrain implements comprehensive security measures:
 
 See [SAFEGUARDS.md](Documentation/SAFEGUARDS.md) for detailed security information.
 
-## 🧪 Testing
+## Testing
 
 [![Tests](https://github.com/michael-tiller/llamabrain/actions/workflows/ci-cd.yml/badge.svg?branch=main&event=push)](https://github.com/michael-tiller/llamabrain/actions/workflows/ci-cd.yml)
 
@@ -252,7 +285,7 @@ See [SAFEGUARDS.md](Documentation/SAFEGUARDS.md) for detailed security informati
   - Multiple test scenarios with trigger zones
   - CSV/JSON export for analysis
 
-## 🔄 Integration
+## Integration
 
 ### Unity Integration
 LlamaBrain is designed to work seamlessly with Unity:
@@ -268,10 +301,10 @@ The core library supports:
 - .NET 5+
 - Any .NET Standard 2.1 compatible platform
 
-## 📦 Installation
+## Installation
 
 ### Quick Start
-If you have questions you can review the video quick start on [Youtube].(https://youtu.be/1EtU6qu7O5Q)
+If you have questions you can review the video quick start on [Youtube](https://youtu.be/1EtU6qu7O5Q).
 
 ### Unity Package
 1. Download the LlamaBrainRuntime package
@@ -288,7 +321,7 @@ dotnet add package LlamaBrain
 # Copy LlamaBrain/Source/ to your project
 ```
 
-## 🆘 Support
+## Support
 
 ### Getting Help
 1. **Check Documentation**: Start with the relevant README
@@ -304,20 +337,22 @@ When reporting issues, include:
 - Steps to reproduce
 - Configuration details
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
 
 **Note**: LlamaBrain™ is MIT-licensed. The name "LlamaBrain" and any associated logos are trademarks. The MIT License grants rights to use, modify, and distribute the software, but does not grant rights to use the LlamaBrain trademark, name, or logo. See [TRADEMARKS.md](TRADEMARKS.md) for trademark usage policy.
 
-## 📈 Roadmap
+## Roadmap
 **See [ROADMAP.md](Documentation/ROADMAP.md) for detailed implementation plan and progress tracking.**
 
 ### Current Status
 
 **Core Architecture**: Complete and production-ready. The determinism boundary, validation gate, and authoritative memory system are fully implemented and tested.
 
-**Current Focus**: Structured Output Integration (Feature 13) and cross-session determinism (Feature 14, 16)
+**Completed**: Structured Output (Features 12, 13), Deterministic Seed (Feature 14), Structured Input (Feature 23)
+
+**Current Focus**: Save/Load Integration (Feature 16), KV Cache (Feature 27), Audit Recorder (Feature 28)
 
 **See [STATUS.md](Documentation/STATUS.md) for milestone progress.**
 

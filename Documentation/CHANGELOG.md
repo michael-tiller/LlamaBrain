@@ -7,9 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.0-rc.1] (Unreleased)
 
+### Unity Runtime
+
+#### Added
+- **Feature 14: Cross-Session Determinism Proof Tests - COMPLETE** ✅
+  - **PlayMode Tests** (`CrossSessionDeterminismPlayModeTests.cs`)
+    - `PlayMode_CrossSession_SameSeedSamePrompt_ProducesIdenticalOutput` - Core proof: same seed + prompt = identical output
+    - `PlayMode_CrossSession_DifferentSeeds_ProduceDifferentOutputs` - Sanity check: different seeds differ
+    - `PlayMode_CrossSession_InteractionCountAsSeed_ProducesDeterministicSequence` - Game replay proof
+    - `PlayMode_CrossSession_TemperatureZero_ProducesDeterministicOutput` - Greedy decoding proof
+    - `PlayMode_CrossSession_StructuredOutput_ProducesIdenticalJson` - JSON output determinism
+  - **Server Wait Improvements**
+    - Wait for `/health` endpoint to return 200 OK (not just any HTTP response)
+    - Properly handles 503 "Loading model" status during model initialization
+    - Added error validation to prevent false positives from error responses
+  - **Documentation**: Updated ARCHITECTURE.md with Feature 14 completion status and proof test references
+
 ### Core Library
 
 #### Added
+- **Feature 14.1: Seed Parameter Support - COMPLETE** ✅
+  - **API Layer Seed Support**
+    - Added `seed` field to `CompletionRequest` in `ApiContracts.cs`
+    - Updated `IApiClient` interface with `seed` parameter on all 4 methods:
+      - `SendPromptAsync`
+      - `SendPromptWithMetricsAsync`
+      - `SendStructuredPromptAsync`
+      - `SendStructuredPromptWithMetricsAsync`
+    - Updated `ApiClient` implementation to include seed in request JSON
+    - Seed semantics: `null` = omit (server default), `-1` = random, `0+` = deterministic
+  - **Test Coverage**
+    - Added `ApiClientSeedTests.cs` with 10 unit tests covering:
+      - Seed inclusion in all API methods
+      - Null seed omission from requests
+      - Negative seed (-1) pass-through
+      - Zero seed handling
+      - Seed parameter ordering with other parameters
+  - **Files Changed**:
+    - `Source/Core/ApiContracts.cs` - Added `seed` field
+    - `Source/Core/IApiClient.cs` - Added `seed` parameter to all methods
+    - `Source/Core/ApiClient.cs` - Implemented seed parameter support
+  - **Files Added**:
+    - `LlamaBrain.Tests/Core/ApiClientSeedTests.cs` - Seed parameter unit tests
+  - **Documentation**: Updated `ROADMAP.md` with 14.1 completion status
+
 - **Feature 23: Structured Input/Context - COMPLETE** ✅
   - **Structured Context Provider Infrastructure**
     - Added `IStructuredContextProvider` interface for structured context generation
@@ -179,6 +220,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Added SPDX license identifiers to key public API files (`ApiClient.cs`, `BrainAgent.cs`, `IApiClient.cs`)
     - New files must include `SPDX-License-Identifier: MIT` headers
     - Makes license scanning and compliance easier
+
+### Documentation
+
+#### Changed
+- **README Files**: Comprehensive rewrite of root README.md and LlamaBrain/README.md for improved clarity
+  - Simplified architecture explanation focusing on the core problem/solution
+  - Streamlined feature descriptions
+  - Updated test counts (2,068 tests, up from 1,758)
+- **Doxygen Configuration**: Extended input file coverage
+  - Added SECURITY.md, DCO.md, THIRD_PARTY_NOTICES.md, TRADEMARKS.md to core Doxygen config
+  - Added RedRoom README.md for Unity documentation generation
+- **XML Documentation**: Improved documentation coverage in `StructuredSchemaValidator.cs`
+  - Added missing XML doc comments for methods and parameters
 
 ## [0.2.0] - 2026-01-02
 
