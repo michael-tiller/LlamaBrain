@@ -48,6 +48,8 @@
 | [Feature 28: "Black Box" Audit Recorder](#feature-28) | 📋 Planned | CRITICAL |
 | [Feature 29: Prompt A/B Testing & Hot Reload](#feature-29) | 📋 Planned | MEDIUM |
 | [Feature 30: Unity Repackaging & Distribution](#feature-30) | 📋 Planned | MEDIUM |
+| [Feature 31: Whisper Speech-to-Text Integration](#feature-31) | 📋 Planned | MEDIUM |
+| [Feature 32: Chatterbox Text-to-Speech Integration](#feature-32) | 📋 Planned | MEDIUM |
 
 ---
 
@@ -3686,6 +3688,254 @@ Split the Unity runtime into its own dedicated repository and implement comprehe
 
 ---
 
+<a id="feature-31"></a>
+## Feature 31: Whisper Speech-to-Text Integration
+
+**Priority**: MEDIUM - Enhances player experience with voice input  
+**Status**: 📋 Planned  
+**Dependencies**: Unity Audio System, whisper.unity package
+
+### Overview
+
+Integrate [whisper.unity](https://github.com/Macoron/whisper.unity) for local speech-to-text (STT) conversion, enabling players to speak to NPCs instead of typing. This complements Feature 32 (Chatterbox TTS) to create a complete voice conversation loop.
+
+**Architecture Alignment**: 
+- Local execution aligns with LlamaBrain's local-first approach
+- Native Unity integration (C# package) - no external services required
+- Text output feeds into existing `SendPlayerInputAsync()` pipeline
+- Maintains deterministic validation boundary (STT output is validated like typed text)
+
+### Definition of Done
+
+#### 31.1 Package Integration
+- [ ] Add whisper.unity package to Unity project (via Git UPM or manual installation)
+- [ ] Configure WhisperManager in scene with appropriate model (tiny/small/medium)
+- [ ] Set up GPU acceleration (Vulkan/Metal) if available
+- [ ] Configure model weights in StreamingAssets folder
+- [ ] Test microphone permissions on target platforms (Windows, macOS, Linux, iOS, Android)
+
+#### 31.2 Voice Input Component
+- [ ] Create `VoiceInputComponent.cs` or extend `DialoguePanelController.cs` with voice input
+- [ ] Implement hold-to-speak pattern (hold key/button, speak, release)
+- [ ] Add visual feedback for recording state ("listening..." indicator)
+- [ ] Implement recording start/stop with WhisperManager API
+- [ ] Handle transcription results and feed into existing text input pipeline
+- [ ] Add toggle to enable/disable voice input in UI settings
+
+#### 31.3 Integration with LlamaBrain Pipeline
+- [ ] Transcribed text flows through existing `SendPlayerInputAsync()` method
+- [ ] No changes required to core LlamaBrain validation or inference pipeline
+- [ ] Voice input treated identically to typed text (same validation, same constraints)
+- [ ] Add transcription confidence threshold (filter low-confidence transcriptions)
+- [ ] Implement fallback to text input if STT fails or returns empty result
+
+#### 31.4 Error Handling & Validation
+- [ ] Handle microphone permission denials gracefully
+- [ ] Handle transcription failures with user feedback
+- [ ] Validate transcription quality (minimum length, confidence scores)
+- [ ] Filter out nonsensical or very short transcriptions
+- [ ] Add retry mechanism for failed transcriptions
+- [ ] Log transcription attempts for debugging
+
+#### 31.5 Platform Support
+- [ ] Test on Windows (x86_64, optional Vulkan)
+- [ ] Test on macOS (Intel and ARM, optional Metal)
+- [ ] Test on Linux (x86_64, optional Vulkan)
+- [ ] Test on iOS (Device and Simulator, optional Metal)
+- [ ] Test on Android (ARM64)
+- [ ] Handle platform-specific microphone permission requests
+
+#### 31.6 Performance & Optimization
+- [ ] Benchmark transcription latency (target: <500ms for real-time feel)
+- [ ] Optimize model selection (tiny for speed, small/medium for accuracy)
+- [ ] Implement transcription caching for repeated phrases (optional)
+- [ ] Monitor memory usage with different model sizes
+- [ ] Profile GPU vs CPU performance on target hardware
+
+#### 31.7 Testing
+- [ ] Unit tests for VoiceInputComponent transcription flow
+- [ ] Integration tests with LlamaBrainAgent (voice → text → LLM → response)
+- [ ] Test multilingual transcription (English, German, Spanish, etc.)
+- [ ] Test with various audio quality levels (background noise, quiet speech)
+- [ ] Test transcription accuracy with game-specific terminology
+- [ ] RedRoom integration test with voice input scenarios
+
+#### 31.8 Documentation
+- [ ] Update USAGE_GUIDE.md with voice input setup instructions
+- [ ] Document model selection tradeoffs (speed vs accuracy)
+- [ ] Add voice input examples to samples
+- [ ] Document microphone permission requirements per platform
+- [ ] Update ARCHITECTURE.md with voice input flow diagram
+
+### Integration Points
+
+- **DialoguePanelController.cs**: Add voice input toggle and recording controls
+- **LlamaBrainAgent.cs**: No changes required (uses existing `SendPlayerInputAsync()`)
+- **WhisperManager**: Unity component from whisper.unity package
+- **Unity Audio System**: Microphone input handling
+
+### Estimated Effort
+
+**Total**: 2-3 weeks
+- Feature 31.1-31.2 (Package Integration & Component): 3-4 days
+- Feature 31.3-31.4 (Pipeline Integration & Validation): 2-3 days
+- Feature 31.5-31.6 (Platform Support & Performance): 3-4 days
+- Feature 31.7-31.8 (Testing & Documentation): 2-3 days
+
+### Success Criteria
+
+- [ ] Players can speak to NPCs using microphone input
+- [ ] Transcribed text flows seamlessly into existing dialogue pipeline
+- [ ] Voice input works on all target platforms with proper permissions
+- [ ] Transcription latency is acceptable for real-time conversation (<500ms)
+- [ ] Fallback to text input works when STT fails
+- [ ] Documentation complete with setup and troubleshooting guides
+- [ ] All tests passing with voice input integration
+
+**Note**: This feature enables natural voice conversations with NPCs. Whisper.unity provides local, privacy-preserving STT that aligns with LlamaBrain's architecture. The integration is non-invasive - transcribed text simply feeds into the existing validated text pipeline, maintaining all determinism and validation guarantees. This complements Feature 32 (Piper TTS) to create a complete voice conversation loop: Player speaks → Whisper STT → LlamaBrain → Piper TTS → NPC speaks.
+
+---
+
+<a id="feature-32"></a>
+## Feature 32: Piper Text-to-Speech Integration
+
+**Priority**: MEDIUM - Enhances NPC dialogue with voice output  
+**Status**: 📋 Planned  
+**Dependencies**: Unity Sentis, piper.unity package, .onnx voice models
+
+### Overview
+
+Integrate [piper.unity](https://github.com/Macoron/piper.unity) for local text-to-speech (TTS) conversion, enabling NPCs to speak their dialogue responses. This complements Feature 31 (Whisper STT) to create a complete voice conversation loop.
+
+**Architecture Alignment**:
+- Native Unity integration (C# package) - no external services required
+- Local execution aligns with LlamaBrain's local-first approach
+- Unity Sentis-based inference for high-performance TTS
+- Multiple voice models per NPC enable unique voices
+- Audio generation happens after text validation (maintains deterministic boundary)
+
+### Definition of Done
+
+#### 32.1 Package Integration
+- [ ] Add piper.unity package to Unity project (via Git UPM or manual installation)
+- [ ] Configure Unity Sentis for ONNX model inference
+- [ ] Set up PiperManager component in scene
+- [ ] Download and configure .onnx voice models (e.g., `en_US-lessac-medium.onnx`)
+- [ ] Place voice models in Assets folder (Unity Sentis auto-converts to model assets)
+- [ ] Test TTS generation with sample text
+
+#### 32.2 Unity Integration
+- [ ] Create `PiperTTSComponent.cs` or extend `LlamaBrainAgent.cs` with TTS support
+- [ ] Integrate PiperManager API for audio generation
+- [ ] Implement async audio generation with Unity Sentis
+- [ ] Add audio caching system (cache generated audio by text + voice model hash)
+- [ ] Integrate with Unity AudioSource for playback
+- [ ] Add TTS enable/disable toggle in LlamaBrainAgent or settings
+
+#### 32.3 Voice Management
+- [ ] Create `VoiceProfile` ScriptableObject for NPC voice configuration
+- [ ] Store .onnx voice model references per NPC
+- [ ] Add voice profile field to PersonaConfig or LlamaBrainAgent
+- [ ] Implement voice model validation (format, compatibility)
+- [ ] Support multiple voice models per NPC (different languages, styles)
+- [ ] Add voice preview functionality in Unity editor
+- [ ] Document voice model selection and acquisition (Hugging Face models)
+
+#### 32.4 Integration with LlamaBrain Pipeline
+- [ ] Hook TTS generation after text response validation in `SendWithSnapshotAsync()`
+- [ ] Generate audio only for validated, final responses (not retries)
+- [ ] Pass validated text to TTS service (maintains validation boundary)
+- [ ] Play audio simultaneously with text display
+- [ ] Handle TTS generation failures (fallback to text-only display)
+- [ ] Add TTS generation timeout (prevent hanging on service failures)
+
+#### 32.5 Text Processing & SSML Support
+- [ ] Clean text before TTS generation (remove markdown, special characters)
+- [ ] Handle SSML tags if supported by voice models
+- [ ] Process punctuation for natural speech pauses
+- [ ] Handle multilingual text (switch voice models based on language detection)
+- [ ] Validate text length limits for TTS generation
+
+#### 32.6 Audio Playback & Synchronization
+- [ ] Integrate with Unity AudioSource for spatial audio (3D positioning)
+- [ ] Synchronize audio playback with dialogue text display
+- [ ] Add audio volume controls per NPC
+- [ ] Implement audio fade-in/fade-out for smooth transitions
+- [ ] Handle audio interruption (new dialogue cancels previous audio)
+- [ ] Support subtitle display alongside audio
+
+#### 32.7 Error Handling & Validation
+- [ ] Validate voice model is loaded before generation
+- [ ] Handle Unity Sentis inference failures gracefully
+- [ ] Validate generated audio format and duration
+- [ ] Verify audio matches text length (sanity check)
+- [ ] Add retry mechanism for failed TTS generation
+- [ ] Handle out-of-memory errors for large text inputs
+- [ ] Log TTS generation attempts and failures
+
+#### 32.8 Performance & Optimization
+- [ ] Benchmark TTS generation latency (target: <500ms for real-time feel)
+- [ ] Implement audio caching (cache by text + voice model hash)
+- [ ] Optimize Unity Sentis inference settings
+- [ ] Profile memory usage with different voice models
+- [ ] Test with multiple concurrent TTS requests
+- [ ] Optimize voice model loading (preload vs on-demand)
+- [ ] Test performance on target platforms (Windows x86-64, others if supported)
+
+#### 32.9 Testing
+- [ ] Unit tests for PiperTTSComponent audio generation
+- [ ] Integration tests with LlamaBrainAgent (text → TTS → audio playback)
+- [ ] Test different voice models per NPC
+- [ ] Test multilingual TTS (switch models based on language)
+- [ ] Test audio caching (same text generates once, plays from cache)
+- [ ] Test Unity Sentis inference failures (fallback to text-only)
+- [ ] Test with various text lengths (short barks, long dialogue)
+- [ ] RedRoom integration test with TTS-enabled NPCs
+
+#### 32.10 Documentation
+- [ ] Update USAGE_GUIDE.md with TTS setup instructions
+- [ ] Document piper.unity package installation
+- [ ] Document voice model acquisition and setup (Hugging Face models)
+- [ ] Document voice profile creation and model assignment
+- [ ] Add TTS examples to samples
+- [ ] Document Unity Sentis requirements and configuration
+- [ ] Update ARCHITECTURE.md with TTS integration flow
+- [ ] Add troubleshooting guide for common TTS issues (model loading, Sentis errors)
+
+### Integration Points
+
+- **LlamaBrainAgent.cs**: Add TTS generation hook after `SendWithSnapshotAsync()` validation
+- **PersonaConfig.cs**: Add optional VoiceProfile field
+- **PiperTTSComponent.cs**: New Unity component for TTS generation (or extend LlamaBrainAgent)
+- **PiperManager**: Unity component from piper.unity package
+- **Unity Sentis**: ONNX model inference engine
+- **Unity AudioSource**: Audio playback component
+
+### Estimated Effort
+
+**Total**: 2-3 weeks
+- Feature 32.1-32.2 (Package Integration & Unity Integration): 2-3 days
+- Feature 32.3-32.4 (Voice Management & Pipeline Integration): 2-3 days
+- Feature 32.5-32.6 (Text Processing & Audio Playback): 2-3 days
+- Feature 32.7-32.8 (Error Handling & Performance): 2-3 days
+- Feature 32.9-32.10 (Testing & Documentation): 2-3 days
+
+### Success Criteria
+
+- [ ] NPCs can speak their dialogue responses using TTS
+- [ ] Each NPC can use different voice models for unique voices
+- [ ] TTS generation happens after text validation (maintains deterministic boundary)
+- [ ] Audio playback is synchronized with text display
+- [ ] Multilingual TTS works (switch models based on language)
+- [ ] Audio caching reduces redundant generation
+- [ ] Unity Sentis inference failures gracefully fall back to text-only
+- [ ] Documentation complete with setup and troubleshooting guides
+- [ ] All tests passing with TTS integration
+
+**Note**: This feature brings NPCs to life with natural voice output. Piper.unity provides high-quality, local TTS with native Unity integration - perfect for seamless NPC voices. The Unity-native architecture eliminates external service dependencies and keeps everything local. TTS generation happens after text validation, maintaining LlamaBrain's deterministic validation boundary. This complements Feature 31 (Whisper STT) to create a complete voice conversation loop: Player speaks → Whisper STT → LlamaBrain → Piper TTS → NPC speaks.
+
+---
+
 ## 🔄 Iteration Strategy
 
 Each feature follows this pattern:
@@ -3735,7 +3985,6 @@ Each feature follows this pattern:
   - **Mitigation**: Provide sensible defaults, comprehensive tutorials
 
 ### Future Considerations (Beyond This Roadmap)
-- Voice integration with validation
 - Visual novel integration
 - Multiplayer shared world state
 - Advanced analytics dashboard for metrics

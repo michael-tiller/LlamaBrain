@@ -46,6 +46,8 @@
 | [Feature 28: "Black Box" Audit Recorder](ROADMAP.md#feature-28) | 📋 Planned | CRITICAL |
 | [Feature 29: Prompt A/B Testing & Hot Reload](ROADMAP.md#feature-29) | 📋 Planned | MEDIUM |
 | [Feature 30: Unity Repackaging & Distribution](ROADMAP.md#feature-30) | 📋 Planned | MEDIUM |
+| [Feature 31: Whisper Speech-to-Text Integration](ROADMAP.md#feature-31) | 📋 Planned | MEDIUM |
+| [Feature 32: Chatterbox Text-to-Speech Integration](ROADMAP.md#feature-32) | 📋 Planned | MEDIUM |
 
 **Note**: Detailed feature descriptions, implementation plans, and checklists are in [ROADMAP.md](ROADMAP.md). This document focuses on high-level status and progress tracking.
 

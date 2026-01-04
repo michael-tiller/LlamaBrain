@@ -9,10 +9,24 @@ namespace LlamaBrain.Runtime.Persistence
 {
   /// <summary>
   /// Central save/load manager for LlamaBrain state.
+  /// Singleton that persists across scenes.
   /// Games trigger saves/loads through this component.
   /// </summary>
   public class LlamaBrainSaveManager : MonoBehaviour
   {
+    private static LlamaBrainSaveManager _instance;
+
+    /// <summary>
+    /// Gets the singleton instance.
+    /// </summary>
+    public static LlamaBrainSaveManager Instance => _instance;
+
+    /// <summary>
+    /// Returns true if this instance was detected as a duplicate and will be destroyed.
+    /// Useful for testing singleton lifecycle.
+    /// </summary>
+    public bool IsDuplicateInstance { get; private set; }
+
     [Header("Configuration")]
     [SerializeField]
     [Tooltip("Automatically find and register all LlamaBrainAgent instances in the scene")]
@@ -47,12 +61,36 @@ namespace LlamaBrain.Runtime.Persistence
 
     private void Awake()
     {
+      // Singleton pattern with duplicate detection
+      if (_instance != null && _instance != this)
+      {
+        IsDuplicateInstance = true;
+        Debug.LogWarning("[LlamaBrain] Duplicate LlamaBrainSaveManager detected. Destroying duplicate.");
+        Destroy(gameObject);
+        return;
+      }
+
+      _instance = this;
+      DontDestroyOnLoad(gameObject);
+
       // Default to SaveGameFree implementation
       _saveSystem = new SaveGameFreeSaveSystem();
     }
 
+    private void OnDestroy()
+    {
+      // Clear singleton reference if this is the active instance
+      if (_instance == this)
+      {
+        _instance = null;
+      }
+    }
+
     private void Start()
     {
+      // Skip initialization if this is a duplicate being destroyed
+      if (IsDuplicateInstance) return;
+
       if (autoFindAgents)
       {
         AutoRegisterAgents();
