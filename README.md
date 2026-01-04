@@ -24,6 +24,23 @@ LlamaBrain™ is a production-ready architecture that enforces a strict validati
 
 Only validated outputs can trigger memory mutations. Invalid outputs trigger retries with stricter constraints or fall back to deterministic behavior. The validation gate is the mechanism that prevents state corruption.
 
+## Determinism Boundary
+
+**The LLM is stochastic. The governance plane is deterministic. This is intentional.**
+
+| Layer | Deterministic? |
+|-------|----------------|
+| Prompt Assembly | ✅ Yes |
+| Parsing | ✅ Yes |
+| Validation/Gating | ✅ Yes |
+| Memory Mutation | ✅ Yes |
+| Fallback Selection | ✅ Yes |
+| **LLM Token Generation** | ❌ No |
+
+The architectural guarantee is that the **pipeline around the LLM** is deterministic. Given the same LLM output, the system will always parse, validate, and mutate state identically. LLM output itself is stochastic—seeded sampling provides best-effort reproducibility, not a guarantee.
+
+**See**: `GovernancePlaneDeterminismTests.cs` (14 tests proving governance plane determinism)
+
 ## Model / Backend
 
 LlamaBrain uses a local llama.cpp backend and is **model-agnostic**.
