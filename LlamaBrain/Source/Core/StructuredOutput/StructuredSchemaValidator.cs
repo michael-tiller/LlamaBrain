@@ -42,6 +42,12 @@ namespace LlamaBrain.Core.StructuredOutput
             /// </summary>
             public string? FailedField { get; }
 
+            /// <summary>
+            /// Creates a validation result.
+            /// </summary>
+            /// <param name="isValid">Whether the validation passed.</param>
+            /// <param name="errorMessage">The error message if validation failed.</param>
+            /// <param name="failedField">The field that failed validation (if any).</param>
             private SchemaValidationResult(bool isValid, string? errorMessage = null, string? failedField = null)
             {
                 IsValid = isValid;
@@ -52,15 +58,22 @@ namespace LlamaBrain.Core.StructuredOutput
             /// <summary>
             /// Creates a successful validation result.
             /// </summary>
+            /// <returns>A valid <see cref="SchemaValidationResult"/>.</returns>
             public static SchemaValidationResult Success() => new SchemaValidationResult(true);
 
             /// <summary>
             /// Creates a failed validation result.
             /// </summary>
+            /// <param name="errorMessage">The error message describing the validation failure.</param>
+            /// <param name="failedField">The field that failed validation (optional).</param>
+            /// <returns>An invalid <see cref="SchemaValidationResult"/> with error details.</returns>
             public static SchemaValidationResult Failure(string errorMessage, string? failedField = null)
                 => new SchemaValidationResult(false, errorMessage, failedField);
 
-            /// <inheritdoc/>
+            /// <summary>
+            /// Returns a string representation of the validation result.
+            /// </summary>
+            /// <returns>A string indicating validity and error details if invalid.</returns>
             public override string ToString()
                 => IsValid ? "Valid" : $"Invalid: {ErrorMessage} (field: {FailedField ?? "unknown"})";
         }

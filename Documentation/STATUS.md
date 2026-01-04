@@ -1,14 +1,13 @@
 # LlamaBrain Implementation Status
 
-**Last Updated**: January 2, 2026 (Feature 23 Complete - 0.3.0-rc.1)  
+**Last Updated**: January 3, 2026 (Feature 14 Complete - 0.3.0-rc.1)  
 
 ## Current Status
 
-**Core Features**: ✅ **COMPLETE** (Features 1-10, 12, 13)
+**Core Features**: ✅ **COMPLETE** (Features 1-10, 12-14, 23)
 **Overall Progress**: Core architecture complete, enhancements in progress
-**Test Coverage**: 88.96% line coverage (5,824 of 6,547 lines), ~95% branch coverage
-**Coverage Note**: Coverage regressed from 92.37% due to Features 12-13 adding 1,026 new lines. Recovery plan in progress (see COVERAGE_REPORT.md).
-**Total Tests**: 1,758 tests (all passing)
+**Test Coverage**: ~90%+ line coverage, 61 of 65 files at 80%+
+**Total Tests**: 2,068 tests (all passing)
 **FullPipelineIntegrationTests**: 22 tests complete
 
 ---
@@ -41,6 +40,7 @@
 | [Feature 22: Unreal Engine Support](ROADMAP.md#feature-22) | 📋 Planned | MEDIUM |
 | [Feature 23: Structured Input/Context](ROADMAP.md#feature-23) | ✅ Complete | 100% |
 | [Feature 24: "I've seen this" Recognition](ROADMAP.md#feature-24) | 📋 Planned | MEDIUM |
+| [Feature 25: NLP Belief Contradiction Detection](#feature-25) | 📋 Planned | MEDIUM |
 | [Feature 26: Narrative Consolidation](ROADMAP.md#feature-26) | 📋 Planned | MEDIUM |
 | [Feature 27: Smart KV Cache Management](ROADMAP.md#feature-27) | 📋 Planned | CRITICAL |
 | [Feature 28: "Black Box" Audit Recorder](ROADMAP.md#feature-28) | 📋 Planned | CRITICAL |
@@ -51,71 +51,40 @@
 
 ---
 
-## Next 5 Tasks (Recommended Execution Order)
+## Next Tasks (Milestone 5 Completion)
 
-**Critical Path for Milestone 5 (v0.3.0):**
+**Remaining for v0.3.0:**
 
-1. **Feature 12 & 13: Structured Output** - ✅ **COMPLETE**
-   - Feature 12: Dedicated Structured Output (2-3 weeks) - ✅ **COMPLETE**
-   - Feature 13: Structured Output Integration (1-2 weeks) - ✅ **COMPLETE**
-   - **Rationale**: Fundamentally changes how data enters the pipeline. Must be done before Feature 16 to avoid rework.
-
-2. **Feature 23: Structured Input/Context** - ✅ **COMPLETE**
-   - Complete bidirectional structured communication (1-2 weeks) - ✅ **COMPLETE**
-   - Provide context in structured format (JSON/function calling)
-   - **Rationale**: Complements structured outputs, improves context understanding, enables function calling APIs
-   - **Status**: Core infrastructure complete (providers, serializers, schemas, PromptAssembler integration), function calling dispatch system implemented, Unity function call integration complete, ~82 tests, documentation complete
-
-3. **Feature 16: Save/Load Game Integration** - **DO THIS SECOND**
-   - Build persistence layer after data structures are stable (3-5 days)
+1. **Feature 16: Save/Load Game Integration** - **DO NEXT**
+   - Build persistence layer (3-5 days)
    - Persist `InteractionCount` and other deterministic state
-   - **Rationale**: Must be built on stable data structures from Feature 12, 13 & 23
+   - **Rationale**: Required for full cross-session determinism with persisted state
 
-4. **Feature 14: Deterministic Generation Seed** - **DO THIS THIRD**
-   - Hook persistence layer into RNG for cross-session determinism (1-2 weeks)
-   - Uses persisted `InteractionCount` from Feature 16
-   - **Rationale**: The "Holy Grail" of AI consistency, but requires persistence to work
-
-5. **Feature 27: Smart KV Cache Management** - **DO AFTER Phase 3** (CRITICAL)
-   - Performance optimization critical for production latency (1-2 weeks)
+2. **Feature 27: Smart KV Cache Management** - CRITICAL
+   - Performance optimization for production latency (1-2 weeks)
    - Enables 200ms responses vs 1.5s (cache hit vs miss)
-   - **Rationale**: Latency critical - difference between playable and unplayable game
 
-6. **Feature 28: "Black Box" Audit Recorder** - **DO AFTER Phase 3** (CRITICAL)
-   - Production support tool leveraging determinism for bug reproduction (1-2 weeks)
-   - Enables instant bug replay from debug packages
-   - **Rationale**: Ops critical - turns "He said/She said" into reproducible tickets
+3. **Feature 28: "Black Box" Audit Recorder** - CRITICAL
+   - Production support tool for bug reproduction (1-2 weeks)
+   - Leverages determinism for instant bug replay
 
-7. **Feature 29: Prompt A/B Testing & Hot Reload** - **DO AFTER Phase 1** (MEDIUM)
-   - Developer experience enhancement for rapid iteration (1-2 weeks)
-   - Enables live tuning of prompts and settings
-   - **Rationale**: Developer experience - accelerates design iteration cycle
+4. **Feature 29: Prompt A/B Testing & Hot Reload** - MEDIUM
+   - Developer experience enhancement (1-2 weeks)
 
-8. **Feature 10: Deterministic Proof Gap Testing** - ✅ **COMPLETE**
-   - All features, requirements, and tests implemented (351 tests total)
-   - **Rationale**: Required for v0.2.0. Architecture can now claim "deterministically proven" at byte level.
-
-9. **Feature 8: RedRoom Integration** - ✅ **COMPLETE**
-   - All components implemented including Memory Mutation Overlay and Validation Gate Overlay
-   - **Rationale**: Complete testing infrastructure for the architecture
-
-**Note**: Milestone 5 (v0.3.0) focuses on enhancements and additional capabilities around making it a game-ready architecture - structured I/O, persistence, and determinism governance.
+**Recently Completed:**
+- ✅ Feature 10: Deterministic Proof Gap Testing
+- ✅ Feature 12 & 13: Structured Output
+- ✅ Feature 23: Structured Input/Context
+- ✅ Feature 14: Deterministic Generation Seed (seed parameter + cross-session proof tests)
 
 ---
 
 ## Verification Handles
 
-### Test Coverage
-- **Command**: `dotnet test --collect:"XPlat code coverage" --settings coverlet.runsettings`
-- **Artifact**: `LlamaBrain/coverage/coverage-analysis.csv`
-- **Report**: `LlamaBrain/COVERAGE_REPORT.md`
-- **Current**: 88.96% line coverage (5,824 of 6,547 lines), ~95% branch coverage
-- **Note**: Coverage regressed from 92.37% after Features 12-13. Recovery plan documented in COVERAGE_REPORT.md.
-
-### Test Execution
-- **Command**: `dotnet test`
-- **Current**: 1,758 tests (all passing)
-- **StructuredPipelineIntegrationTests**: 22 tests in `LlamaBrain.Tests/Integration/StructuredPipelineIntegrationTests.cs`
+### Test Coverage & Execution
+- **Run tests**: `dotnet test`
+- **Run with coverage**: `dotnet test --collect:"XPlat code coverage" --settings coverlet.runsettings`
+- **Report**: See `COVERAGE_REPORT.md` for detailed metrics
 
 ### Documentation
 - **Core Doxygen**: `doxygen Documentation/doxygen/llamabrain.Doxyfile`
@@ -153,53 +122,31 @@
 - Deterministic Proof Gap Testing ✅
 - Dedicated Structured Output ✅
 
-**Test Coverage**: 88.96% line coverage (5,824 of 6,547 lines), ~95% branch coverage
-**Coverage Note**: Coverage regressed from 92.37% after Features 12-13 added new code. Recovery plan in progress.
-**Total Tests**: 1,758 tests (all passing)
 **Documentation**: 100% API coverage, zero missing member warnings
-
-**Status**: Ready for v0.2.0 release. Core architecture is production-ready.
-
-**Note**: Feature 12 (Dedicated Structured Output) is complete with native llama.cpp JSON schema support. Feature 13 (Structured Output Integration) is complete with full pipeline orchestration, schema validation, and comprehensive metrics tracking.
 
 ### Milestone 5: v0.3.0 - The Production Update (Features 12, 13, 23, 14, 16, 27, 28, 29, 10 completion) 🚧
 **Status**: 🚧 In Progress (0.3.0-rc.1)  
 **Prerequisite**: **Milestone 4 (v0.2.0) must be released** before starting Milestone 5 features.
 
-**Recommended Execution Order** (see "Next 5 Tasks" section above):
-1. **Feature 12 & 13** (Structured Output) - Do first
-2. **Feature 23** (Structured Input/Context) - Do after 13
-3. **Feature 16** (Save/Load) - Do second
-4. **Feature 14** (Deterministic Seed) - Do third
-5. **Feature 27** (Smart KV Cache Management) - Do after Phase 3 (CRITICAL for production latency)
-6. **Feature 28** ("Black Box" Audit Recorder) - Do after Phase 3 (CRITICAL for production support)
-7. **Feature 29** (Prompt A/B Testing & Hot Reload) - Do after Phase 1 (Developer experience)
-8. **Feature 10** (Proof Gap Testing) - ✅ **COMPLETE** (all minimal proof suite tests done, architecture can claim "deterministically proven")
+**Completed:**
+- ✅ Feature 10 (Proof Gap Testing)
+- ✅ Feature 12 & 13 (Structured Output)
+- ✅ Feature 23 (Structured Input/Context)
+- ✅ Feature 14 (Deterministic Seed)
 
-**Status**:
-- Feature 10: Deterministic Proof Gap Testing - ✅ **COMPLETE** (all minimal proof suite tests done, architecture can claim "deterministically proven")
-- Feature 12: Dedicated Structured Output - ✅ **COMPLETE** (native llama.cpp json_schema support, 56 tests)
-- Feature 13: Structured Output Integration - ✅ **COMPLETE** (full pipeline orchestration, schema validation, metrics tracking)
-- Feature 23: Structured Input/Context - ✅ **COMPLETE**  (core infrastructure complete: providers, serializers, schemas, PromptAssembler integration, function calling dispatch system implemented, Unity function call integration complete, ~82 tests, documentation complete)
-- Feature 16: Save/Load Game Integration - 📋 Planned (CRITICAL priority - **DO SECOND**, after 12, 13 & 23)
-- Feature 14: Deterministic Generation Seed - 📋 Planned (CRITICAL priority - **DO THIRD**, after 16)
-- Feature 27: Smart KV Cache Management - 📋 Planned (CRITICAL priority - **DO AFTER Phase 3**, latency critical for production)
-- Feature 28: "Black Box" Audit Recorder - 📋 Planned (CRITICAL priority - **DO AFTER Phase 3**, ops critical for production support)
-- Feature 29: Prompt A/B Testing & Hot Reload - 📋 Planned (MEDIUM priority - **DO AFTER Phase 1**, developer experience enhancement)
+**Remaining:**
+1. Feature 16 (Save/Load) - **DO NEXT**
+2. Feature 27 (KV Cache) - CRITICAL
+3. Feature 28 (Audit Recorder) - CRITICAL
+4. Feature 29 (Hot Reload) - MEDIUM
 
-**Target**: Complete all high-priority features for v0.3.0 release
-- (deterministic proof gaps) - ✅ **COMPLETE** All minimal proof suite tests done
-- ✅ **COMPLETE** Feature 12-13 (structured output migration)
-- ✅ **COMPLETE** Feature 23 (structured input/context)
-- Requires Feature 16 completion (save/load persistence) - **DO NEXT** (CRITICAL priority)
-- ✅ **COMPLETE** Requires Feature 14 completion (cross-session determinism)
-- Requires Feature 27 completion (KV cache optimization) - **DO AFTER Phase 3** (latency critical)
-- Requires Feature 28 completion (audit recorder) - **DO AFTER Phase 3** (ops critical)
-- Requires Feature 29 completion (hot reload) - **DO AFTER Phase 1** (developer experience)
+**Target**: Complete remaining features for v0.3.0 release
+- Feature 16 (save/load persistence) - **DO NEXT**
+- Feature 27 (KV cache optimization) - CRITICAL for latency
+- Feature 28 (audit recorder) - CRITICAL for ops
+- Feature 29 (hot reload) - Developer experience
 - Recover line test coverage to 90%+
-- Requires all tests passing
-- Requires performance benchmarks met (200ms cache hit latency target)
-- The system should be migrated to use structured I/O as the de facto (and only) solution for data transfer.
+- Performance benchmarks: 200ms cache hit latency target
 
 
 ### Milestone 6: (0.3.1) The Memory Update (Features 11, 24, 20, 26) 📋
@@ -260,4 +207,4 @@
 
 ---
 
-**Next Review**: Core features complete. Feature 23 (Structured Input/Context) complete. Focus on completing Milestone 5 enhancements (Feature 16, 14, 27, 28, 29).
+**Next Review**: Feature 14 (Deterministic Seed) complete. Focus on remaining Milestone 5 features: Feature 16 (Save/Load), 27 (KV Cache), 28 (Audit Recorder), 29 (Hot Reload).
