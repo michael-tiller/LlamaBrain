@@ -1981,6 +1981,102 @@ namespace LlamaBrain.Runtime.Core
       LoadValidationRules(); // Reload global + NPC rules
       UnityEngine.Debug.Log($"[LlamaBrainAgent] Cleared trigger validation rules{(ruleSetName != null ? $" for '{ruleSetName}'" : "")}");
     }
+
+    #region Persistence Methods
+
+    /// <summary>
+    /// Creates a snapshot of this agent's current state for saving.
+    /// </summary>
+    /// <returns>The agent's save data, or null if not initialized</returns>
+    public Runtime.Persistence.AgentSaveData CreateSaveData()
+    {
+      if (!IsInitialized || runtimeProfile == null || memoryProvider == null)
+      {
+        UnityEngine.Debug.LogWarning("[LlamaBrainAgent] Cannot create save data: Agent not initialized");
+        return null;
+      }
+
+      var personaId = runtimeProfile.PersonaId;
+      var memorySystem = memoryProvider.GetSystem(personaId);
+      if (memorySystem == null)
+      {
+        UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Cannot create save data: No memory system for persona '{personaId}'");
+        return null;
+      }
+
+      // Create memory snapshot
+      var memorySnapshot = LlamaBrain.Persistence.MemorySnapshotBuilder.CreateSnapshot(memorySystem, personaId);
+
+      // Create conversation history snapshot
+      var conversationSnapshot = new LlamaBrain.Persistence.ConversationHistorySnapshot
+      {
+        PersonaId = personaId,
+        Entries = conversationHistory.Select(e => new LlamaBrain.Persistence.Dtos.DialogueEntryDto
+        {
+          Speaker = e.Speaker,
+          Text = e.Text,
+          TimestampTicks = e.Timestamp.ToUniversalTime().Ticks
+        }).ToList()
+      };
+
+      return new Runtime.Persistence.AgentSaveData
+      {
+        PersonaId = personaId,
+        MemorySnapshot = memorySnapshot,
+        ConversationHistory = conversationSnapshot
+      };
+    }
+
+    /// <summary>
+    /// Restores this agent's state from saved data.
+    /// </summary>
+    /// <param name="data">The save data to restore from</param>
+    public void RestoreFromSaveData(Runtime.Persistence.AgentSaveData data)
+    {
+      if (data == null)
+      {
+        UnityEngine.Debug.LogWarning("[LlamaBrainAgent] Cannot restore: Save data is null");
+        return;
+      }
+
+      if (!IsInitialized || runtimeProfile == null || memoryProvider == null)
+      {
+        UnityEngine.Debug.LogWarning("[LlamaBrainAgent] Cannot restore: Agent not initialized");
+        return;
+      }
+
+      var personaId = runtimeProfile.PersonaId;
+      if (personaId != data.PersonaId)
+      {
+        UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Persona ID mismatch: expected '{personaId}', got '{data.PersonaId}'");
+      }
+
+      // Restore memory
+      if (data.MemorySnapshot != null)
+      {
+        var memorySystem = memoryProvider.GetOrCreateSystem(personaId);
+        LlamaBrain.Persistence.MemorySnapshotRestorer.RestoreSnapshot(memorySystem, data.MemorySnapshot);
+        UnityEngine.Debug.Log($"[LlamaBrainAgent] Restored memory for '{personaId}'");
+      }
+
+      // Restore conversation history
+      if (data.ConversationHistory?.Entries != null)
+      {
+        conversationHistory.Clear();
+        foreach (var entry in data.ConversationHistory.Entries)
+        {
+          conversationHistory.Add(new DialogueEntry
+          {
+            Speaker = entry.Speaker,
+            Text = entry.Text,
+            Timestamp = new System.DateTime(entry.TimestampTicks, System.DateTimeKind.Utc).ToLocalTime()
+          });
+        }
+        UnityEngine.Debug.Log($"[LlamaBrainAgent] Restored {conversationHistory.Count} conversation entries for '{personaId}'");
+      }
+    }
+
+    #endregion
   }
 }
 

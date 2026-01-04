@@ -5,6 +5,82 @@ All notable changes to LlamaBrain will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0-rc.2] (Unreleased)
+
+### Core Library
+
+#### Added
+- **Feature 16: Save/Load Game Integration - COMPLETE** ✅
+  - **Engine-Agnostic Persistence Abstraction** (`LlamaBrain/Source/Persistence/`)
+    - `ISaveSystem` interface for engine-agnostic save/load operations
+    - `SaveData` top-level container with versioning and timestamps
+    - `PersonaMemorySnapshot` for complete memory state serialization
+    - `ConversationHistorySnapshot` for dialogue history persistence
+    - `SaveSlotInfo` for slot metadata (name, timestamp, version, persona count)
+    - `SaveResult` for operation results with success/failure handling
+  - **Memory Snapshot System**
+    - `MemorySnapshotBuilder` creates snapshots from `AuthoritativeMemorySystem` using public APIs
+    - `MemorySnapshotRestorer` restores memory state using internal `InsertXxxRaw` APIs for deterministic reconstruction
+    - Preserves all determinism-critical fields: `Id`, `SequenceNumber`, `CreatedAtTicks`, ordinals
+    - All enums serialized as `int` for stability
+  - **Immutable DTO Layer** (`LlamaBrain/Source/Persistence/Dtos/`)
+    - `CanonicalFactDto` - Canonical fact serialization
+    - `WorldStateDto` - World state entry serialization
+    - `EpisodicMemoryDto` - Episodic memory with significance/decay
+    - `BeliefDto` - Belief memory with confidence/sentiment
+    - `DialogueEntryDto` - Dialogue history entries
+  - **FileSystem Implementation** (`FileSystemSaveSystem.cs`)
+    - Uses existing `IFileSystem` abstraction for testability
+    - Atomic writes (temp-file-then-move pattern)
+    - Slot name sanitization for security
+    - 5MB file size limit protection
+    - JSON serialization via Newtonsoft.Json
+  - **Test Coverage**: 33 new tests
+    - `MemorySnapshotTests.cs`: Round-trip determinism, DTO conversion, restore correctness (18 tests)
+    - `FileSystemSaveSystemTests.cs`: Save/load operations, sanitization, error handling (15 tests)
+  - **AuthoritativeMemorySystem Enhancements**
+    - Added `GetWorldStateEntries()` helper for snapshot building
+    - Added `GetBeliefEntries()` helper for belief dictionary access
+  - **Files Added**:
+    - `Source/Persistence/ISaveSystem.cs`
+    - `Source/Persistence/SaveData.cs`
+    - `Source/Persistence/PersonaMemorySnapshot.cs`
+    - `Source/Persistence/ConversationHistorySnapshot.cs`
+    - `Source/Persistence/SaveSlotInfo.cs`
+    - `Source/Persistence/SaveResult.cs`
+    - `Source/Persistence/FileSystemSaveSystem.cs`
+    - `Source/Persistence/MemorySnapshotBuilder.cs`
+    - `Source/Persistence/MemorySnapshotRestorer.cs`
+    - `Source/Persistence/Dtos/CanonicalFactDto.cs`
+    - `Source/Persistence/Dtos/WorldStateDto.cs`
+    - `Source/Persistence/Dtos/EpisodicMemoryDto.cs`
+    - `Source/Persistence/Dtos/BeliefDto.cs`
+    - `Source/Persistence/Dtos/DialogueEntryDto.cs`
+  - **Documentation**: Updated STATUS.md, ROADMAP.md
+
+### Unity Runtime
+
+#### Added
+- **Feature 16: Unity Save/Load Integration** ✅
+  - **SaveGameFree Implementation** (`LlamaBrainRuntime/.../Runtime/Persistence/`)
+    - `SaveGameFreeSaveSystem` wraps SaveGameFree plugin, implements `ISaveSystem`
+    - Stores saves at `LlamaBrain/Saves/{slotName}` using SaveGameFree's native serialization
+    - Maintains metadata file for slot listing and ordering
+  - **LlamaBrainSaveManager MonoBehaviour**
+    - Central save/load manager for games
+    - Auto-registers all `LlamaBrainAgent` instances in scene (configurable)
+    - Named save slots support (e.g., "autosave", "slot1")
+    - `SaveToSlot()` / `LoadFromSlot()` methods
+    - `QuickSave()` / `QuickLoad()` convenience methods
+    - Events: `OnSaveComplete`, `OnLoadComplete`
+  - **LlamaBrainAgent Integration**
+    - Added `CreateSaveData()` method for agent state serialization
+    - Added `RestoreFromSaveData()` method for agent state restoration
+    - Preserves memory state, conversation history, and deterministic metadata
+  - **Files Added**:
+    - `Runtime/Persistence/SaveGameFreeSaveSystem.cs`
+    - `Runtime/Persistence/LlamaBrainSaveManager.cs`
+
 ## [0.3.0-rc.1] (Unreleased)
 
 ### Unity Runtime
