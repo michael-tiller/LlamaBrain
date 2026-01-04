@@ -221,6 +221,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - New files must include `SPDX-License-Identifier: MIT` headers
     - Makes license scanning and compliance easier
 
+### Documentation
+
+#### Changed
+- **README Files**: Comprehensive rewrite of root README.md and LlamaBrain/README.md for improved clarity
+  - Simplified architecture explanation focusing on the core problem/solution
+  - Streamlined feature descriptions
+  - Updated test counts (2,068 tests, up from 1,758)
+- **Doxygen Configuration**: Extended input file coverage
+  - Added SECURITY.md, DCO.md, THIRD_PARTY_NOTICES.md, TRADEMARKS.md to core Doxygen config
+  - Added RedRoom README.md for Unity documentation generation
+- **XML Documentation**: Improved documentation coverage in `StructuredSchemaValidator.cs`
+  - Added missing XML doc comments for methods and parameters
+
 ## [0.2.0] - 2026-01-02
 
 ### Core Library

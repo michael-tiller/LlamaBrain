@@ -40,6 +40,7 @@
 | [Feature 22: Unreal Engine Support](ROADMAP.md#feature-22) | 📋 Planned | MEDIUM |
 | [Feature 23: Structured Input/Context](ROADMAP.md#feature-23) | ✅ Complete | 100% |
 | [Feature 24: "I've seen this" Recognition](ROADMAP.md#feature-24) | 📋 Planned | MEDIUM |
+| [Feature 25: NLP Belief Contradiction Detection](#feature-25) | 📋 Planned | MEDIUM |
 | [Feature 26: Narrative Consolidation](ROADMAP.md#feature-26) | 📋 Planned | MEDIUM |
 | [Feature 27: Smart KV Cache Management](ROADMAP.md#feature-27) | 📋 Planned | CRITICAL |
 | [Feature 28: "Black Box" Audit Recorder](ROADMAP.md#feature-28) | 📋 Planned | CRITICAL |
