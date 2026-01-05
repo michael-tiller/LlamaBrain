@@ -1988,7 +1988,7 @@ namespace LlamaBrain.Runtime.Core
     /// Creates a snapshot of this agent's current state for saving.
     /// </summary>
     /// <returns>The agent's save data, or null if not initialized</returns>
-    public Runtime.Persistence.AgentSaveData CreateSaveData()
+    public Runtime.Persistence.AgentSaveData? CreateSaveData()
     {
       if (!IsInitialized || runtimeProfile == null || memoryProvider == null)
       {
