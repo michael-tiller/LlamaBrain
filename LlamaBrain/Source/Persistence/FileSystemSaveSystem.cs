@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using LlamaBrain.Persona;
 using LlamaBrain.Utilities;
 using Newtonsoft.Json;
@@ -71,8 +72,9 @@ namespace LlamaBrain.Persistence
           TypeNameHandling = TypeNameHandling.None
         });
 
-        // Check file size
-        if (json.Length > MaxFileSizeBytes)
+        // Check file size (using UTF-8 byte count, not character count)
+        var jsonByteCount = Encoding.UTF8.GetByteCount(json);
+        if (jsonByteCount > MaxFileSizeBytes)
         {
           return SaveResult.Failed($"Save data exceeds maximum size of {MaxFileSizeBytes / (1024 * 1024)}MB");
         }

@@ -35,6 +35,9 @@ Via Unity Package Manager (UPM):
    ```
 4. Click "Add" to install the package
 
+**⚠️ Installation Notes:**
+- Users may encounter namespace resolution errors during UPM/Git installation. If this occurs, refer to the [UniTask repository's UPM path instructions](https://github.com/Cysharp/UniTask) or use the `.unitypackage` as an alternative installation method.
+
 **Usage in LlamaBrain:**
 - Used in `LlamaBrainAgent` for async dialogue operations (`SendPlayerInputAsync`, `SendWithSnapshotAsync`)
 - Extension methods in `BrainAgentExtensions.cs` provide UniTask support for all BrainAgent operations
@@ -90,23 +93,35 @@ Via Unity Package Manager:
 
 These assets are only required if you plan to use the sample scenes and demos.
 
-### 3. Starter Assets – Third Person
+### 3. Starter Assets – Third Person (URP version only)
 
 **Description:**  
 Unity's Starter Assets – Third Person character controller used in LlamaBrain sample scenes and demos for character movement and interaction. This asset provides the foundation for NPC movement and player interaction mechanics in example scenarios.
+
+**⚠️ Unity 6 LTS Compatibility:**  
+**Only the URP version is compatible with Unity 6 LTS.** The built-in render pipeline and HDRP variants are not supported.
 
 **Asset Store:**  
 [Starter Assets – Third Person](https://assetstore.unity.com/packages/essentials/starter-assets-thirdperson-updates-in-new-charactercontroller-pa-196526)
 
 **License:** Non-standard Unity license (Standard Asset Store EULA). **Not redistributed** in this repository.
 
-**Tested with:** Unity 6000.0.58f2 LTS
+**Tested with:** Unity 6000.0.58f2 LTS (URP version only)
+
+**Required Dependencies:**
+- **URP Project**: Your Unity project must use the Universal Render Pipeline (URP)
+- **New Input System**: The package requires Unity's New Input System (not the legacy Input Manager)
+- **Cinemachine**: Cinemachine is a mandatory dependency for camera control
 
 **Installation:**
 
 1. Download from the Unity Asset Store
 2. Install via Package Manager (My Assets) or Asset Store tooling, depending on Unity version
-3. Ensure compatibility with Unity 6000.0.58f2 LTS or higher
+3. **Important**: Ensure you install the **URP version** (not built-in or HDRP variants)
+4. Ensure your project is configured for URP (not built-in render pipeline or HDRP)
+5. Enable the New Input System in Project Settings → Player → Active Input Handling
+6. Install Cinemachine via Package Manager if not already installed
+7. Ensure compatibility with Unity 6000.0.58f2 LTS or higher
 
 **Usage in LlamaBrain:**
 - Used in sample scenes for NPC movement and interaction
@@ -114,7 +129,7 @@ Unity's Starter Assets – Third Person character controller used in LlamaBrain 
 - Enables realistic character movement in example scenarios
 
 **Note:**  
-This asset is **not included** in the repository. You must download it separately from the Unity Asset Store if you want to use the sample scenes that depend on it.
+This asset is **not included** in the repository. You must download it separately from the Unity Asset Store if you want to use the sample scenes that depend on it. **Only the URP version is compatible with Unity 6 LTS.**
 
 ---
 
@@ -176,12 +191,12 @@ SaveGameFree is a free Unity asset for saving and loading game data. It provides
 
 ## 📋 Package Dependencies Summary
 
-| Package | Version | Type | Required |
-|---------|---------|------|----------|
-| UniTask | Tested | UPM/Git | ✅ Yes |
-| TextMeshPro | (Editor version) | Unity Package | ✅ Yes |
-| Starter Assets – Third Person | - | Asset Store | ⚠️ Samples Only |
-| SaveGameFree | 2.5.0+ | UnityPackage (manual import) | ✅ Yes |
+| Package | Version | Type | Required | Notes |
+|---------|---------|------|----------|-------|
+| UniTask | Tested | UPM/Git | ✅ Yes | May require namespace resolution troubleshooting |
+| TextMeshPro | (Editor version) | Unity Package | ✅ Yes | Bundled with Unity |
+| Starter Assets – Third Person | - | Asset Store | ⚠️ Samples Only | **URP version only** (requires URP, New Input System, Cinemachine) |
+| SaveGameFree | 2.5.0+ | UnityPackage (manual import) | ✅ Yes | Use GitHub version, not Asset Store |
 
 **Legend:**
 - ✅ **Core Runtime**: Required for core functionality
@@ -199,7 +214,10 @@ Before using LlamaBrain Runtime, ensure you have:
 - [ ] UniTask installed via Package Manager (Git URL)
 
 **Samples (if using sample scenes):**
-- [ ] Starter Assets – Third Person imported from Unity Asset Store
+- [ ] Starter Assets – Third Person (URP version only) imported from Unity Asset Store
+- [ ] Project configured for URP (not built-in or HDRP)
+- [ ] New Input System enabled in Project Settings
+- [ ] Cinemachine package installed via Package Manager
 
 **Persistence (Feature 16):**
 - [ ] SaveGameFree installed locally (not committed) - Required for save/load functionality

@@ -258,6 +258,56 @@ namespace LlamaBrain.Tests.PlayMode
         }
       }
     }
+
+    /// <summary>
+    /// Creates a configured ExpectancyRuleAsset for testing using reflection to set private serialized fields.
+    /// </summary>
+    private static ExpectancyRuleAsset CreateTestExpectancyRule(
+      string ruleName,
+      ConstraintType constraintType,
+      ConstraintSeverity severity,
+      string promptInjection,
+      string validationPattern,
+      bool useRegex = false)
+    {
+      var rule = ScriptableObject.CreateInstance<ExpectancyRuleAsset>();
+
+      // Set private serialized fields via reflection
+      var ruleType = typeof(ExpectancyRuleAsset);
+      var flags = BindingFlags.NonPublic | BindingFlags.Instance;
+
+      ruleType.GetField("ruleName", flags)?.SetValue(rule, ruleName);
+      ruleType.GetField("ruleId", flags)?.SetValue(rule, Guid.NewGuid().ToString("N").Substring(0, 8));
+      ruleType.GetField("isEnabled", flags)?.SetValue(rule, true);
+
+      // Create constraint definition
+      var constraintDef = new RuleConstraintDefinition
+      {
+        Type = constraintType,
+        Severity = severity,
+        Description = ruleName,
+        PromptInjection = promptInjection,
+        ValidationPatterns = new List<string> { validationPattern },
+        UseRegex = useRegex
+      };
+
+      // Set the constraints list
+      var constraintsList = new List<RuleConstraintDefinition> { constraintDef };
+      ruleType.GetField("constraints", flags)?.SetValue(rule, constraintsList);
+
+      return rule;
+    }
+
+    /// <summary>
+    /// Adds rules to NpcExpectancyConfig using reflection to access private field.
+    /// </summary>
+    private static void SetExpectancyConfigRules(NpcExpectancyConfig config, List<ExpectancyRuleAsset> rules)
+    {
+      var configType = typeof(NpcExpectancyConfig);
+      var flags = BindingFlags.NonPublic | BindingFlags.Instance;
+      configType.GetField("npcRules", flags)?.SetValue(config, rules);
+    }
+
     private GameObject? serverObject;
     private BrainServer? server;
     private BrainSettings? settings;
@@ -1540,14 +1590,14 @@ namespace LlamaBrain.Tests.PlayMode
       createdGameObjects.Add(expectancyConfigObject);
       var expectancyConfig = expectancyConfigObject.AddComponent<NpcExpectancyConfig>();
 
-      var profanityRule = ScriptableObject.CreateInstance<ExpectancyRuleAsset>();
-      profanityRule.RuleName = "No Profanity";
-      profanityRule.RuleType = ConstraintType.Prohibition;
-      profanityRule.Severity = ConstraintSeverity.Hard;
-      profanityRule.PromptInjection = "Never use profanity";
-      profanityRule.PatternType = PatternMatchType.Contains;
-      profanityRule.Pattern = "damn";
-      expectancyConfig.Rules = new List<ExpectancyRuleAsset> { profanityRule };
+      var profanityRule = CreateTestExpectancyRule(
+        ruleName: "No Profanity",
+        constraintType: ConstraintType.Prohibition,
+        severity: ConstraintSeverity.Hard,
+        promptInjection: "Never use profanity",
+        validationPattern: "damn"
+      );
+      SetExpectancyConfigRules(expectancyConfig, new List<ExpectancyRuleAsset> { profanityRule });
 
       agentObject = new GameObject("TestAgent");
       createdGameObjects.Add(agentObject);
@@ -1621,14 +1671,14 @@ namespace LlamaBrain.Tests.PlayMode
       createdGameObjects.Add(expectancyConfigObject);
       var expectancyConfig = expectancyConfigObject.AddComponent<NpcExpectancyConfig>();
 
-      var profanityRule = ScriptableObject.CreateInstance<ExpectancyRuleAsset>();
-      profanityRule.RuleName = "No Profanity";
-      profanityRule.RuleType = ConstraintType.Prohibition;
-      profanityRule.Severity = ConstraintSeverity.Hard;
-      profanityRule.PromptInjection = "Never use profanity";
-      profanityRule.PatternType = PatternMatchType.Contains;
-      profanityRule.Pattern = "damn";
-      expectancyConfig.Rules = new List<ExpectancyRuleAsset> { profanityRule };
+      var profanityRule = CreateTestExpectancyRule(
+        ruleName: "No Profanity",
+        constraintType: ConstraintType.Prohibition,
+        severity: ConstraintSeverity.Hard,
+        promptInjection: "Never use profanity",
+        validationPattern: "damn"
+      );
+      SetExpectancyConfigRules(expectancyConfig, new List<ExpectancyRuleAsset> { profanityRule });
 
       agentObject = new GameObject("TestAgent");
       createdGameObjects.Add(agentObject);

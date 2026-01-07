@@ -933,7 +933,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 4080325972440478357}
         m_TargetAssemblyTypeName: PausePanel, Assembly-CSharp.LlamaBrain.Runtime
-        m_MethodName: ConfirmQuit
+        m_MethodName: ConfirmRestart
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}

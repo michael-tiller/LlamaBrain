@@ -53,6 +53,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated package.json with new voice system dependencies
   - Updated manifest.json and packages-lock.json with required packages
   - Updated assembly definition to include voice system
+  - Removed unused assembly references from `Assembly-CSharp.LlamaBrain.Runtime.asmdef`
+- **WorldIntentDispatcher Event Parameters** - Changed `WorldIntentEvent` parameter type from `Dictionary<string, string>` to `Dictionary<string, object>` to support complex parameter types (nested objects, arrays) matching `WorldIntent.Parameters`
+- **NpcSpeechConfig Custom Model Fallback** - Added fallback to default model (`en_US-lessac-high`) when Custom preset is selected but `CustomModelPath` is null or empty, with editor validation warning
+- **PausePanel Method Rename** - Renamed `ConfirmQuit()` to `ConfirmRestart()` for clarity and updated prefab reference
+- **Third-Party Package Documentation** - Enhanced `THIRD_PARTY_PACKAGES.md` and `CONTRIBUTING.md` with:
+  - Clarified that Starter Assets – Third Person requires URP version only for Unity 6 LTS compatibility
+  - Added required dependencies documentation (URP project, New Input System, Cinemachine)
+  - Added installation notes for UniTask namespace resolution issues
+  - Updated package dependencies summary table with compatibility notes
 - **RedRoom Scene Updates**
   - Enhanced RedRoom.unity scene with new UI systems
   - Integrated save/load functionality
@@ -72,6 +81,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Save/load system integration with RedRoom demo
 - Voice system integration with dialogue triggers
 - **InteractionCount Increment Bug** - Fixed `InteractionCount` only incrementing when `storeConversationHistory` was enabled, breaking determinism when history storage was disabled. Now increments on any successful interaction regardless of history storage settings.
+- **FileSystemSaveSystem File Size Check** - Fixed file size validation to use UTF-8 byte count instead of character count, ensuring accurate size limits for multi-byte characters
+- **NpcVoiceOutput Audio Amplification** - Fixed division by zero error when processing audio with near-zero amplitude by adding epsilon check before amplification
+- **NpcDialogueTrigger Cancellation Token** - Fixed `ObjectDisposedException` when accessing disposed cancellation token by adding proper exception handling
+- **LoadGameMenu Empty Slot Display** - Fixed empty slot text not hiding when slots are populated and added null check for emptySlotText
+- **PausePanel Save Method** - Added null check for `LlamaBrainSaveManager.Instance` to prevent errors when save manager is unavailable
 
 ### Core Library
 

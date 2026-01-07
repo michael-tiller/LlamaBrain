@@ -39,9 +39,11 @@ Thank you for your interest in contributing to LlamaBrain! This document provide
    - **Usage**: Persisting game state, NPC memory, and InteractionCount across sessions
    - **License**: MIT License (GitHub version)
 
-4. **Starter Assets - Third Person** (via Unity Asset Store)
+4. **Starter Assets - Third Person (URP version only)** (via Unity Asset Store)
    - **Purpose**: Character controller for NPC movement and interaction
    - **Installation**: Download from [Unity Asset Store](https://assetstore.unity.com/packages/essentials/starter-assets-thirdperson-updates-in-new-charactercontroller-pa-196526)
+   - **Requirements**: URP project, New Input System, and Cinemachine (mandatory dependencies)
+   - **Unity 6 LTS Compatibility**: Only the URP version is compatible; built-in and HDRP variants are not supported
    - **Usage**: NPC movement, character controller functionality, and player interaction mechanics
    - **License**: Standard Asset Store EULA
 

@@ -481,9 +481,13 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
 
       Debug.Log($"[NpcDialogueTrigger] Speaking response via NpcVoiceController...");
 
+      var localCts = cancellationTokenSource;
+      CancellationToken token;
+      try { token = localCts?.Token ?? CancellationToken.None; } catch (ObjectDisposedException) { token = CancellationToken.None; }
+
       try
       {
-        await controller.SpeakAsync(response, cancellationTokenSource?.Token ?? default);
+        await controller.SpeakAsync(response, token);
         Debug.Log("[NpcDialogueTrigger] Voice output completed.");
       }
       catch (System.OperationCanceledException)

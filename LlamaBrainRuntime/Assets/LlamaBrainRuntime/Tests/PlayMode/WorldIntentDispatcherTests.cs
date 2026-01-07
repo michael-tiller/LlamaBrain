@@ -185,7 +185,7 @@ namespace LlamaBrain.Tests.PlayMode
       var eventFired = false;
       string? receivedIntentType = null;
       string? receivedTarget = null;
-      Dictionary<string, string>? receivedParams = null;
+      Dictionary<string, object>? receivedParams = null;
 
       dispatcher1.OnAnyIntent.AddListener((type, target, parameters) =>
       {
@@ -204,7 +204,7 @@ namespace LlamaBrain.Tests.PlayMode
       Assert.That(receivedIntentType, Is.EqualTo("follow_player"), "Intent type should match");
       Assert.That(receivedTarget, Is.EqualTo("player_001"), "Target should match");
       Assert.That(receivedParams, Is.Not.Null, "Parameters should not be null");
-      Assert.That(receivedParams!["distance"], Is.EqualTo("5"), "Parameter should match");
+      Assert.That(receivedParams!["distance"]?.ToString(), Is.EqualTo("5"), "Parameter should match");
     }
 
     [UnityTest]

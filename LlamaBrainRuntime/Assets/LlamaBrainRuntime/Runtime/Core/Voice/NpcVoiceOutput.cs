@@ -250,8 +250,16 @@ namespace LlamaBrain.Runtime.Core.Voice
         else if (maxVal < 0.01f)
         {
           // Audio too quiet, amplify
-          var amplificationFactor = 0.3f / maxVal;
-          processedAudio = audioData.Select(x => x * amplificationFactor).ToArray();
+          if (maxVal <= float.Epsilon)
+          {
+            // Skip amplification if maxVal is zero or near-zero
+            processedAudio = audioData.ToArray();
+          }
+          else
+          {
+            var amplificationFactor = 0.3f / maxVal;
+            processedAudio = audioData.Select(x => x * amplificationFactor).ToArray();
+          }
         }
         else
         {

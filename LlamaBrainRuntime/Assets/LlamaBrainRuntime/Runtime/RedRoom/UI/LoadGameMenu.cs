@@ -57,9 +57,13 @@ namespace LlamaBrain.Runtime.RedRoom.UI
 
   private void TryDisplayEmptySlotText()
   {
+    if (emptySlotText == null)
+      return;
     
     if (slots == null || slots.Count == 0)
       emptySlotText.gameObject.SetActive(true);
+    else
+      emptySlotText.gameObject.SetActive(false);
   }
 
   /// <summary>

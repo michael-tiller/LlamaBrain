@@ -442,8 +442,8 @@ namespace LlamaBrain.Tests.StructuredInput
             // Assert
             Assert.That(deserialized, Is.Not.Null);
             Assert.That(deserialized!.SchemaVersion, Is.EqualTo(original.SchemaVersion));
-            Assert.That(deserialized.Context!.CanonicalFacts, Is.EqualTo(original.Context.CanonicalFacts));
-            Assert.That(deserialized.Dialogue!.PlayerInput, Is.EqualTo(original.Dialogue.PlayerInput));
+            Assert.That(deserialized.Context!.CanonicalFacts, Is.EqualTo(original.Context!.CanonicalFacts));
+            Assert.That(deserialized.Dialogue!.PlayerInput, Is.EqualTo(original.Dialogue!.PlayerInput));
         }
 
         [Test]

@@ -95,9 +95,20 @@ namespace LlamaBrain.Runtime.Core.Voice
         VoiceModelPreset.EnglishLessacHigh => "en_US-lessac-high",
         VoiceModelPreset.EnglishLjspeechHigh => "en_US-ljspeech-high",
         VoiceModelPreset.JapaneseTestMedium => "ja_JP-test-medium",
-        VoiceModelPreset.Custom => CustomModelPath,
+        VoiceModelPreset.Custom => string.IsNullOrWhiteSpace(CustomModelPath) ? "en_US-lessac-high" : CustomModelPath,
         _ => "en_US-lessac-high"
       };
+    }
+
+    /// <summary>
+    /// Unity callback that validates the configuration in the editor.
+    /// </summary>
+    private void OnValidate()
+    {
+      if (VoicePreset == VoiceModelPreset.Custom && string.IsNullOrWhiteSpace(CustomModelPath))
+      {
+        Debug.LogWarning($"NpcSpeechConfig '{name}': VoicePreset is set to Custom but CustomModelPath is null or empty. Falling back to default model 'en_US-lessac-high' at runtime.", this);
+      }
     }
 
     /// <summary>

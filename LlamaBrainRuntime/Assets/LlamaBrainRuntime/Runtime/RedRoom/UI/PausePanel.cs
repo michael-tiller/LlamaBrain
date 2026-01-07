@@ -83,9 +83,9 @@ public class PausePanel : MonoBehaviour
   }
 
   /// <summary>
-  /// Confirms quitting and restarts the scene.
+  /// Confirms restarting and restarts the scene.
   /// </summary>
-  public void ConfirmQuit()
+  public void ConfirmRestart()
   {
     RestartAsync().Forget();
   }
@@ -102,6 +102,11 @@ public class PausePanel : MonoBehaviour
   /// </summary>
   public void Save()
   {
+    if (LlamaBrainSaveManager.Instance == null)
+    {
+      Debug.LogWarning("Cannot save game: LlamaBrainSaveManager.Instance is null.");
+      return;
+    }
     LlamaBrainSaveManager.Instance.SaveGame();
   }
 }
