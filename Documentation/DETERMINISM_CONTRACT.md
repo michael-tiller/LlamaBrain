@@ -335,6 +335,172 @@ These tests catch common determinism leaks:
 
 ---
 
+---
+
+## Seed-Based Determinism (Feature 14)
+
+### The Double-Lock System
+
+LlamaBrain employs a "Double-Lock System" to maximize reproducibility:
+
+**Lock 1: Context Locking (Deterministic)**
+- `SequenceNumber` and ordinal string comparisons ensure the *prompt* is byte-stable
+- Same input state → same prompt text (proven in `GovernancePlaneDeterminismTests.cs`)
+- This is a **hard guarantee** - mathematically deterministic
+
+**Lock 2: Entropy Locking (Best-Effort)**
+- `InteractionCount` is passed as the seed to llama.cpp for token selection
+- Same seed + same prompt → same output *under controlled conditions*
+- This is a **best-effort guarantee** - hardware and runtime dependent
+
+### Seed Parameter Flow
+
+The seed flows through the system as follows:
+
+```
+InteractionContext.InteractionCount
+    ↓
+LlamaBrainAgent.SendWithSnapshotAsync() extracts seed
+    ↓
+ApiClient.SendPromptWithMetricsAsync(seed: seed)
+    ↓
+CompletionRequest { seed = value }
+    ↓
+llama.cpp server uses seed for token sampling
+```
+
+### Seed Behavior by Value
+
+| Seed Value | Behavior |
+|------------|----------|
+| `null` (default) | Non-deterministic mode - llama.cpp uses random seed |
+| `0` | First interaction - deterministic with seed 0 |
+| `1, 2, 3...` | Subsequent interactions - deterministic with incrementing seed |
+| `-1` | Explicit random mode (llama.cpp convention) |
+
+### Retry Behavior
+
+**Same seed for all retry attempts**: When a validation failure triggers a retry, the same `InteractionCount` seed is used for all attempts of that interaction. This ensures:
+- Retries target the same "region" of output space
+- Different outputs come from stricter constraints, not different random states
+- Reproducibility is maintained across retry sequences
+
+**Example**:
+```
+Interaction 5, Attempt 1: seed=5, validation fails
+Interaction 5, Attempt 2: seed=5, validation fails (stricter constraints)
+Interaction 5, Attempt 3: seed=5, validation passes
+```
+
+### Per-Interaction vs Per-Attempt Seeds
+
+The seed represents the **interaction number**, not the attempt number within an interaction:
+- `InteractionCount = 0`: First time player talks to NPC
+- `InteractionCount = 1`: Second conversation
+- etc.
+
+This design choice ensures:
+1. Save/load reproducibility: Loading a save at interaction 5 produces the same output
+2. QA reproducibility: Testers can reproduce exact sequences by loading save files
+3. Debugging: Same interaction always produces same hallucination patterns
+
+---
+
+## Hardware Determinism Limitations (Feature 14.4)
+
+### Determinism Guarantees
+
+| Scenario | Determinism Level | Notes |
+|----------|------------------|-------|
+| Same device, same session | **100%** | Identical outputs guaranteed |
+| Same device, different sessions | **~100%** | Identical with same model/config |
+| Different devices, same GPU vendor | **~99.9%** | Minor floating-point variations possible |
+| Different GPU vendors (NVIDIA/AMD/Apple) | **~99%** | Floating-point ordering may differ |
+| GPU vs CPU inference | **~95%** | Different execution paths |
+
+### Why Hardware Affects Determinism
+
+LLM inference involves:
+1. **Matrix multiplications**: Floating-point operations may be reordered
+2. **SIMD reductions**: Sum order affects floating-point results
+3. **Thread scheduling**: Parallel operations may complete in different order
+4. **GPU kernels**: Different implementations across vendors
+
+### llama.cpp Determinism Mitigation
+
+llama.cpp actively fights for determinism:
+- Fixed thread count reduces scheduling variation
+- Quantization reduces floating-point sensitivity
+- Seed-based sampling provides reproducible token selection
+
+### Edge Cases
+
+| Scenario | Expected Behavior |
+|----------|-------------------|
+| **NVIDIA RTX 3090 vs RTX 4090** | ~99.9% identical (same CUDA path) |
+| **NVIDIA vs AMD** | ~99% identical (different compute shaders) |
+| **NVIDIA vs Apple Silicon** | ~99% identical (Metal vs CUDA) |
+| **CPU (AVX2) vs CPU (AVX-512)** | ~99.9% identical (same algorithm, different SIMD) |
+| **Windows vs Linux (same GPU)** | ~100% identical (driver implementation similar) |
+
+### Recommendations for QA
+
+1. **Reproducibility testing**: Use the same hardware configuration
+2. **Cross-device testing**: Accept ~99% match rate as "passing"
+3. **Save file testing**: Load identical saves on same hardware for exact reproduction
+4. **Hallucination debugging**: Capture full state (snapshot + seed) for exact replay
+
+### Logging
+
+When seed is used, the system logs:
+```
+[LlamaBrainAgent] Using deterministic seed: 5 (InteractionCount)
+```
+
+When seed is not available:
+```
+[LlamaBrainAgent] No seed provided, using non-deterministic mode
+```
+
+---
+
+## Backward Compatibility (Feature 14.5)
+
+### Default Behavior
+
+- **Seed parameter is optional**: All methods default to `seed: null`
+- **Null seed = non-deterministic**: Server uses random seed (legacy behavior)
+- **Existing code unchanged**: No breaking changes to existing integrations
+
+### Enabling Seed-Based Determinism
+
+**Option 1: Use InteractionContext (Recommended)**
+```csharp
+var context = InteractionContext.FromPlayerUtterance("npc_001", "Hello", 0f);
+context.InteractionCount = 5; // Set seed
+await agent.SendPlayerInputWithContextAsync(input, context);
+```
+
+**Option 2: Pass seed directly**
+```csharp
+await agent.SendMessageAsync("Hello", seed: 5);
+```
+
+**Option 3: Let LlamaBrainAgent handle it**
+```csharp
+// If currentInteractionContext is set, seed is extracted automatically
+```
+
+### Configuration
+
+There is no global "enable/disable" flag for seed-based determinism. The behavior is controlled per-call:
+- Pass a seed value → deterministic mode
+- Pass null or omit seed → non-deterministic mode
+
+This design allows mixing deterministic and non-deterministic calls as needed.
+
+---
+
 ## Further Reading
 
 - [README.md](../LlamaBrain/README.md) - Main library documentation and overview

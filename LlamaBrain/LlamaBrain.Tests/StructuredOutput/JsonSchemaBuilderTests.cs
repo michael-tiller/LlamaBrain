@@ -610,7 +610,7 @@ namespace LlamaBrain.Tests.StructuredOutput
                 IntentType = "follow_player",
                 Target = "player1",
                 Priority = 5,
-                Parameters = new System.Collections.Generic.Dictionary<string, string>
+                Parameters = new System.Collections.Generic.Dictionary<string, object>
                 {
                     { "speed", "fast" }
                 }
@@ -633,7 +633,7 @@ namespace LlamaBrain.Tests.StructuredOutput
             var intent = new StructuredIntent
             {
                 IntentType = "test",
-                Parameters = new System.Collections.Generic.Dictionary<string, string>
+                Parameters = new System.Collections.Generic.Dictionary<string, object>
                 {
                     { "key", "value" }
                 }

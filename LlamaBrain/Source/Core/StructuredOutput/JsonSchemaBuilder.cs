@@ -13,9 +13,29 @@ namespace LlamaBrain.Core.StructuredOutput
   /// <summary>
   /// Builder for JSON schemas used in structured output.
   /// Provides pre-built schemas for common types and dynamic schema generation.
+  /// Supports schema versioning for backward compatibility.
   /// </summary>
   public static class JsonSchemaBuilder
   {
+    /// <summary>
+    /// Gets the versioned ParsedOutput schema with schemaVersion field.
+    /// This is the recommended schema for new implementations.
+    /// </summary>
+    public static string VersionedParsedOutputSchema =>
+        SchemaVersionManager.AddVersionToSchema(ParsedOutputSchema);
+
+    /// <summary>
+    /// Gets the versioned DialogueOnly schema with schemaVersion field.
+    /// </summary>
+    public static string VersionedDialogueOnlySchema =>
+        SchemaVersionManager.AddVersionToSchema(DialogueOnlySchema);
+
+    /// <summary>
+    /// Gets the versioned Analysis schema with schemaVersion field.
+    /// </summary>
+    public static string VersionedAnalysisSchema =>
+        SchemaVersionManager.AddVersionToSchema(AnalysisSchema);
+
     /// <summary>
     /// Pre-built JSON schema for ParsedOutput structure.
     /// This is the primary schema for dialogue responses with mutations and intents.
@@ -72,8 +92,8 @@ namespace LlamaBrain.Core.StructuredOutput
           },
           ""parameters"": {
             ""type"": ""object"",
-            ""description"": ""Additional parameters for the intent"",
-            ""additionalProperties"": { ""type"": ""string"" }
+            ""description"": ""Additional parameters for the intent (supports nested objects and arrays)"",
+            ""additionalProperties"": true
           },
           ""priority"": {
             ""type"": ""integer"",
@@ -162,10 +182,53 @@ namespace LlamaBrain.Core.StructuredOutput
     /// <summary>
     /// Builds the pre-defined ParsedOutput schema.
     /// </summary>
+    /// <param name="includeVersion">Whether to include the schemaVersion field for versioning.</param>
     /// <returns>The JSON schema string for ParsedOutput.</returns>
-    public static string BuildParsedOutputSchema()
+    public static string BuildParsedOutputSchema(bool includeVersion = false)
     {
-      return ParsedOutputSchema;
+      return includeVersion ? VersionedParsedOutputSchema : ParsedOutputSchema;
+    }
+
+    /// <summary>
+    /// Builds a versioned schema from a C# type.
+    /// </summary>
+    /// <typeparam name="T">The type to generate a schema for.</typeparam>
+    /// <param name="includeVersion">Whether to include the schemaVersion field.</param>
+    /// <returns>The JSON schema string for the type.</returns>
+    public static string BuildVersionedFromType<T>(bool includeVersion = true)
+    {
+      var schema = BuildFromType<T>();
+      return includeVersion ? SchemaVersionManager.AddVersionToSchema(schema) : schema;
+    }
+
+    /// <summary>
+    /// Gets the current schema version.
+    /// </summary>
+    /// <returns>The current SchemaVersion.</returns>
+    public static SchemaVersion GetCurrentVersion()
+    {
+      return SchemaVersion.Current;
+    }
+
+    /// <summary>
+    /// Detects the schema version from a JSON response.
+    /// </summary>
+    /// <param name="json">JSON response to check.</param>
+    /// <returns>The detected SchemaVersion.</returns>
+    public static SchemaVersion DetectSchemaVersion(string json)
+    {
+      return SchemaVersionManager.DetectVersion(json);
+    }
+
+    /// <summary>
+    /// Checks if the current schema version can read a JSON response.
+    /// </summary>
+    /// <param name="json">JSON response to check.</param>
+    /// <returns>True if the response can be read by the current schema version.</returns>
+    public static bool CanReadResponse(string json)
+    {
+      var detectedVersion = SchemaVersionManager.DetectVersion(json);
+      return SchemaVersionManager.CanRead(detectedVersion);
     }
 
     /// <summary>
@@ -560,9 +623,9 @@ namespace LlamaBrain.Core.StructuredOutput
     public string? Target { get; set; }
 
     /// <summary>
-    /// Additional parameters.
+    /// Additional parameters. Supports complex types (nested objects, arrays).
     /// </summary>
-    public Dictionary<string, string> Parameters { get; set; } = new Dictionary<string, string>();
+    public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
 
     /// <summary>
     /// Priority of the intent.
@@ -579,7 +642,7 @@ namespace LlamaBrain.Core.StructuredOutput
       {
         IntentType = IntentType,
         Target = Target,
-        Parameters = new Dictionary<string, string>(Parameters),
+        Parameters = new Dictionary<string, object>(Parameters),
         Priority = Priority
       };
     }

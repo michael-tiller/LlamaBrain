@@ -44,5 +44,11 @@ namespace LlamaBrain.Persistence
     /// </summary>
     public List<BeliefDto> Beliefs { get; set; }
         = new List<BeliefDto>();
+
+    /// <summary>
+    /// Interaction count for deterministic seed generation (Feature 14).
+    /// Used to restore InteractionCount across save/load for the Double-Lock Pattern.
+    /// </summary>
+    public int InteractionCount { get; set; }
   }
 }

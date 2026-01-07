@@ -19,8 +19,9 @@ namespace LlamaBrain.Persistence
     /// </summary>
     /// <param name="memory">The memory system to snapshot</param>
     /// <param name="personaId">The persona ID for this snapshot</param>
+    /// <param name="interactionCount">Optional interaction count for deterministic seed restoration (Feature 14)</param>
     /// <returns>A complete snapshot of the memory state</returns>
-    public static PersonaMemorySnapshot CreateSnapshot(AuthoritativeMemorySystem memory, string personaId)
+    public static PersonaMemorySnapshot CreateSnapshot(AuthoritativeMemorySystem memory, string personaId, int interactionCount = 0)
     {
       if (memory == null) throw new ArgumentNullException(nameof(memory));
       if (string.IsNullOrEmpty(personaId)) throw new ArgumentException("Persona ID cannot be null or empty", nameof(personaId));
@@ -29,6 +30,7 @@ namespace LlamaBrain.Persistence
       {
         PersonaId = personaId,
         NextSequenceNumber = memory.NextSequenceNumber,
+        InteractionCount = interactionCount,
         CanonicalFacts = memory.GetCanonicalFacts()
             .OrderBy(f => f.SequenceNumber)
             .Select(ToDto)

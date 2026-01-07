@@ -165,7 +165,7 @@ namespace LlamaBrain.Tests
         .Returns(Task.FromResult("Response"));
 
       // Act
-      await agent.SendSimpleMessageAsync("Hello", cts.Token);
+      await agent.SendSimpleMessageAsync("Hello", cancellationToken: cts.Token);
 
       // Assert
       _ = _apiClient.Received(1).SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), cts.Token);
@@ -255,7 +255,7 @@ namespace LlamaBrain.Tests
         .Returns(Task.FromResult("Response"));
 
       // Act
-      await agent.SendInstructionAsync("Do something", null, cts.Token);
+      await agent.SendInstructionAsync("Do something", context: null, cancellationToken: cts.Token);
 
       // Assert
       _ = _apiClient.Received(1).SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), cts.Token);
@@ -834,7 +834,7 @@ namespace LlamaBrain.Tests
         .Returns(Task.FromResult("{\"result\":\"ok\"}"));
 
       // Act
-      await agent.SendStructuredMessageAsync("Test", schema, cts.Token);
+      await agent.SendStructuredMessageAsync("Test", schema, cancellationToken: cts.Token);
 
       // Assert
       _ = _apiClient.Received(1).SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), cts.Token);
@@ -1051,7 +1051,7 @@ namespace LlamaBrain.Tests
         .Returns(Task.FromResult("{\"result\":\"ok\"}"));
 
       // Act
-      await agent.SendStructuredInstructionAsync("Test", schema, null, cts.Token);
+      await agent.SendStructuredInstructionAsync("Test", schema, context: null, cancellationToken: cts.Token);
 
       // Assert
       _ = _apiClient.Received(1).SendPromptAsync(Arg.Any<string>(), Arg.Any<int?>(), Arg.Any<float?>(), Arg.Any<int?>(), cts.Token);

@@ -150,9 +150,9 @@ namespace LlamaBrain.Core.Validation
     public string? Target { get; set; }
 
     /// <summary>
-    /// Additional parameters for the intent.
+    /// Additional parameters for the intent. Supports complex types (nested objects, arrays).
     /// </summary>
-    public Dictionary<string, string> Parameters { get; set; } = new Dictionary<string, string>();
+    public Dictionary<string, object> Parameters { get; set; } = new Dictionary<string, object>();
 
     /// <summary>
     /// The priority of this intent (higher = more urgent).

@@ -196,6 +196,13 @@ namespace LlamaBrain.Runtime.Core
     public Dictionary<string, LlamaBrain.Core.FunctionCalling.FunctionCallResult>? LastFunctionCallResults { get; private set; }
 
     /// <summary>
+    /// Total interaction count for this agent (Feature 14 - Determinism).
+    /// Used as seed for LLM token selection to ensure reproducibility.
+    /// Persisted through save/load for cross-session determinism.
+    /// </summary>
+    public int InteractionCount { get; private set; }
+
+    /// <summary>
     /// The retry policy for inference.
     /// </summary>
     private RetryPolicy? retryPolicy;
@@ -568,8 +575,10 @@ namespace LlamaBrain.Runtime.Core
           var effectiveMaxTokens = isSingleLine ? System.Math.Min(maxResponseTokens, 24) : maxResponseTokens;
 
           // Send to LLM with deterministic seed (Double-Lock Pattern: Lock 2 - Entropy Locking)
-          // InteractionCount serves as the seed for deterministic token selection
-          var seed = currentInteractionContext?.InteractionCount;
+          // Use context's InteractionCount if provided, otherwise use agent's tracked count
+          var contextSeed = currentInteractionContext?.InteractionCount;
+          var seed = contextSeed ?? InteractionCount;
+          UnityEngine.Debug.Log($"[LlamaBrainAgent] Using deterministic seed: {seed} (source: {(contextSeed.HasValue ? "context" : "agent")})");
           var metrics = await client.SendPromptWithMetricsAsync(prompt, maxTokens: effectiveMaxTokens, seed: seed);
           attemptStopwatch.Stop();
 
@@ -845,6 +854,9 @@ namespace LlamaBrain.Runtime.Core
         AddToConversationHistory("NPC", finalResult.FinalResult.Response);
         dialogueSession?.AppendPlayer(input);
         dialogueSession?.AppendNpc(finalResult.FinalResult.Response);
+
+        // Increment InteractionCount for next interaction (Feature 14 - Determinism)
+        InteractionCount++;
       }
 
       UnityEngine.Debug.Log($"[LlamaBrainAgent] Inference complete: {finalResult}");
@@ -2006,8 +2018,8 @@ namespace LlamaBrain.Runtime.Core
         return null;
       }
 
-      // Create memory snapshot
-      var memorySnapshot = LlamaBrain.Persistence.MemorySnapshotBuilder.CreateSnapshot(memorySystem, personaId);
+      // Create memory snapshot (includes InteractionCount for Feature 14 determinism)
+      var memorySnapshot = LlamaBrain.Persistence.MemorySnapshotBuilder.CreateSnapshot(memorySystem, personaId, InteractionCount);
 
       // Create conversation history snapshot
       var conversationSnapshot = new LlamaBrain.Persistence.ConversationHistorySnapshot
@@ -2058,7 +2070,10 @@ namespace LlamaBrain.Runtime.Core
       {
         var memorySystem = memoryProvider.GetOrCreateSystem(personaId);
         LlamaBrain.Persistence.MemorySnapshotRestorer.RestoreSnapshot(memorySystem, data.MemorySnapshot);
-        UnityEngine.Debug.Log($"[LlamaBrainAgent] Restored memory for '{personaId}'");
+
+        // Restore InteractionCount for Feature 14 determinism (Double-Lock Pattern)
+        InteractionCount = data.MemorySnapshot.InteractionCount;
+        UnityEngine.Debug.Log($"[LlamaBrainAgent] Restored memory for '{personaId}' (InteractionCount: {InteractionCount})");
       }
 
       // Restore conversation history

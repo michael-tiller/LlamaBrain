@@ -1141,9 +1141,98 @@ server.StartServer(); // Starts llama.cpp server
 server.StopServer(); // Stops server
 ```
 
-**Location**: 
+**Location**:
 - `LlamaBrain/Source/Core/ApiClient.cs`
 - `LlamaBrainRuntime/Runtime/Core/BrainServer.cs`
+
+### Seed-Based Determinism (Feature 14)
+
+LlamaBrain supports deterministic generation through seed-based token selection. When a seed is provided, llama.cpp uses it to make reproducible token choices, enabling:
+- **Save/Load Reproducibility**: Same conversation after loading a save
+- **QA Testing**: Reproduce exact hallucinations for debugging
+- **Regression Testing**: Verify behavior consistency across builds
+
+#### How Seeds Work
+
+The system uses `InteractionContext.InteractionCount` as the seed value:
+- `InteractionCount = 0`: First interaction with NPC
+- `InteractionCount = 1`: Second interaction
+- etc.
+
+The seed is passed to llama.cpp's `seed` parameter in the completion request.
+
+#### Automatic Seed Usage (LlamaBrainAgent)
+
+When using `SendPlayerInputWithContextAsync()`, the seed is extracted automatically:
+
+```csharp
+// Create context with InteractionCount
+var context = InteractionContext.FromPlayerUtterance(
+    npcId: "guard_001",
+    playerInput: "Hello!",
+    gameTime: Time.time
+);
+context.InteractionCount = 5; // This becomes the seed
+
+// Agent extracts and uses seed automatically
+var response = await agent.SendPlayerInputWithContextAsync(input, context);
+// Logs: "[LlamaBrainAgent] Using deterministic seed: 5 (InteractionCount)"
+```
+
+#### Manual Seed Usage (BrainAgent)
+
+When using the core `BrainAgent` class directly:
+
+```csharp
+// Pass seed directly
+var response = await agent.SendMessageAsync("Hello", seed: 5);
+
+// Or use InteractionCount pattern
+var interactionCount = 5;
+var response = await agent.SendMessageAsync("Hello", seed: interactionCount);
+```
+
+#### Non-Deterministic Mode
+
+To use non-deterministic mode (random token selection):
+
+```csharp
+// Option 1: Don't set InteractionCount (defaults to null seed)
+var context = InteractionContext.FromPlayerUtterance("npc_001", "Hello", 0f);
+// context.InteractionCount is not set
+var response = await agent.SendPlayerInputWithContextAsync(input, context);
+// Logs: "[LlamaBrainAgent] No seed provided, using non-deterministic mode"
+
+// Option 2: Pass null seed explicitly
+var response = await agent.SendMessageAsync("Hello", seed: null);
+
+// Option 3: Pass -1 for explicit random mode
+var response = await agent.SendMessageAsync("Hello", seed: -1);
+```
+
+#### Retry Behavior
+
+When validation fails and retries occur, **the same seed is used for all retry attempts**:
+
+```
+Interaction 5, Attempt 1: seed=5, validation fails → retry with stricter constraints
+Interaction 5, Attempt 2: seed=5, validation fails → retry with even stricter constraints
+Interaction 5, Attempt 3: seed=5, validation passes → success
+```
+
+This ensures different outputs come from stricter constraints, not different random states.
+
+#### Hardware Considerations
+
+Seed-based determinism provides **best-effort reproducibility**:
+- **Same device, same session**: 100% reproducible
+- **Same device, different sessions**: ~100% reproducible
+- **Different devices, same GPU vendor**: ~99.9% reproducible
+- **Different GPU vendors**: ~99% reproducible
+
+For exact reproducibility in QA, use the same hardware configuration.
+
+**See**: `Documentation/DETERMINISM_CONTRACT.md` for detailed determinism guarantees.
 
 ---
 
@@ -1455,6 +1544,263 @@ Debug.Log($"Beliefs: {stats.BeliefCount} (Active: {stats.ActiveBeliefCount})");
 ```
 
 **Location**: `LlamaBrain/Source/Persona/AuthoritativeMemorySystem.cs` (lines 376-409)
+
+---
+
+## Structured Output (Feature 12)
+
+**Purpose**: Replace regex-based text parsing with LLM-native structured output formats for improved reliability and determinism.
+
+**Key Benefits**:
+- **Eliminates parsing errors**: JSON schema constraints ensure valid, parseable responses
+- **Improved determinism**: Native JSON parsing instead of regex extraction
+- **Automatic fallback**: Falls back to regex parsing if structured output fails
+- **Type safety**: Strongly-typed response structures
+
+### Overview
+
+LlamaBrain supports native structured output via llama.cpp's `json_schema` parameter. This ensures LLM responses conform to a strict JSON schema, eliminating regex parsing errors and improving reliability.
+
+**Prerequisites**: llama.cpp build with `json_schema` support (commit 5b7b0ac8df or later, March 22, 2024).
+
+### Using StructuredDialoguePipeline
+
+The `StructuredDialoguePipeline` provides complete orchestration for structured output:
+
+```csharp
+using LlamaBrain.Core;
+using LlamaBrain.Core.StructuredOutput;
+using LlamaBrain.Core.Validation;
+using LlamaBrain.Persona;
+
+// Create components
+var agent = new BrainAgent(profile, apiClient, memoryStore);
+var validationGate = new ValidationGate();
+var mutationController = new MemoryMutationController();
+var memorySystem = memoryStore.GetOrCreateSystem(profile.PersonaId);
+
+// Create pipeline with default config (structured with regex fallback)
+var pipeline = new StructuredDialoguePipeline(
+    agent,
+    validationGate,
+    mutationController,
+    memorySystem);
+
+// Process dialogue
+var result = await pipeline.ProcessDialogueAsync("Hello shopkeeper!");
+
+if (result.Success)
+{
+    Debug.Log($"Dialogue: {result.DialogueText}");
+    Debug.Log($"Parse Mode: {result.ParseMode}"); // Structured, Regex, or Fallback
+    Debug.Log($"Mutations Executed: {result.MutationResult?.SuccessCount ?? 0}");
+}
+```
+
+### Pipeline Configuration
+
+```csharp
+// Default: Structured output with regex fallback
+var config = StructuredPipelineConfig.Default;
+
+// Structured output only (no fallback)
+var config = StructuredPipelineConfig.StructuredOnly;
+
+// Regex parsing only (for older llama.cpp versions)
+var config = StructuredPipelineConfig.RegexOnly;
+
+// Custom configuration
+var config = new StructuredPipelineConfig
+{
+    UseStructuredOutput = true,
+    FallbackToRegex = true,
+    MaxRetries = 3,
+    TrackMetrics = true,
+    ValidateMutationSchemas = true,
+    ValidateIntentSchemas = true
+};
+
+var pipeline = new StructuredDialoguePipeline(agent, validationGate, null, null, config);
+```
+
+### Direct BrainAgent Methods
+
+For simpler use cases, use `BrainAgent` structured output methods directly:
+
+```csharp
+// Get structured dialogue response
+var parsedOutput = await agent.SendNativeDialogueAsync("Hello!");
+
+// Get typed response with custom schema
+var response = await agent.SendNativeStructuredMessageAsync<MyResponseType>("Analyze this:");
+
+// Instruction-based structured output
+var result = await agent.SendNativeStructuredInstructionAsync<DecisionResult>(
+    "Should we proceed with the plan?",
+    "You are a strategic advisor. Analyze and provide a decision.");
+```
+
+### Structured vs Regex Parsing Comparison
+
+| Aspect | Structured (JSON Schema) | Regex Parsing |
+|--------|--------------------------|---------------|
+| **Parse Time** | ~0.01-0.07ms | ~0.00-0.01ms |
+| **Reliability** | 100% on valid JSON | ~95% (regex edge cases) |
+| **Type Safety** | Strongly typed | String extraction |
+| **Schema Validation** | Built-in | Manual |
+| **Server Requirement** | llama.cpp with json_schema | Any version |
+| **Best For** | Production, complex outputs | Legacy, simple outputs |
+
+### Example: Structured vs Regex Response
+
+**Structured Output (JSON)**:
+```json
+{
+  "dialogueText": "Hello, traveler! Welcome to my shop.",
+  "proposedMutations": [
+    {
+      "type": "AppendEpisodic",
+      "content": "Player greeted the shopkeeper"
+    }
+  ],
+  "worldIntents": [
+    {
+      "intentType": "show_welcome",
+      "target": "player"
+    }
+  ]
+}
+```
+
+**Regex Parsing (Text)**:
+```text
+Hello, traveler! Welcome to my shop.
+
+[MEMORY:Player greeted the shopkeeper]
+[INTENT:show_welcome|target=player]
+```
+
+Both formats are parsed into the same `ParsedOutput` structure, but structured output is more reliable.
+
+### Schema Versioning
+
+LlamaBrain supports schema versioning for backward compatibility:
+
+```csharp
+using LlamaBrain.Core.StructuredOutput;
+
+// Get current schema version
+var version = JsonSchemaBuilder.GetCurrentVersion(); // e.g., "1.1.0"
+
+// Build versioned schema
+var schema = JsonSchemaBuilder.BuildParsedOutputSchema(includeVersion: true);
+
+// Detect version from response
+var detectedVersion = JsonSchemaBuilder.DetectSchemaVersion(jsonResponse);
+
+// Check compatibility
+if (JsonSchemaBuilder.CanReadResponse(jsonResponse))
+{
+    // Response is compatible with current schema
+}
+```
+
+### Complex Intent Parameters
+
+LlamaBrain supports complex, typed intent parameters for world intents:
+
+```csharp
+using LlamaBrain.Core.StructuredOutput;
+
+// Extract typed parameters from intent
+var intent = parsedOutput.WorldIntents[0];
+var parameters = intent.Parameters; // Dictionary<string, object>
+
+// Use typed parameter classes
+if (intent.IntentType == "give_item")
+{
+    var giveParams = IntentParameterExtensions.GetGiveItemParameters(parameters);
+    Debug.Log($"Giving {giveParams.Quantity} of {giveParams.ItemName} to {giveParams.TargetEntity}");
+}
+
+if (intent.IntentType == "move_to")
+{
+    var moveParams = IntentParameterExtensions.GetMoveToParameters(parameters);
+    Debug.Log($"Moving to ({moveParams.X}, {moveParams.Y}) at speed {moveParams.Speed}");
+}
+
+// Extract arrays and nested objects
+var tags = parameters.GetArray<string>("tags");
+var metadata = parameters.GetNested("metadata");
+```
+
+**Supported Parameter Types**:
+- `GiveItemParameters` - Item name, quantity, target entity
+- `MoveToParameters` - Destination coordinates, speed
+- `InteractParameters` - Target entity, interaction type
+- Custom types via `GetNested<T>()` and `GetArray<T>()` extension methods
+
+### Metrics Tracking
+
+Monitor structured output performance:
+
+```csharp
+var metrics = pipeline.Metrics;
+
+Debug.Log($"Total Requests: {metrics.TotalRequests}");
+Debug.Log($"Structured Success: {metrics.StructuredSuccessCount}");
+Debug.Log($"Regex Fallback: {metrics.RegexFallbackCount}");
+Debug.Log($"Success Rate: {metrics.StructuredSuccessRate:F1}%");
+Debug.Log($"Fallback Rate: {metrics.FallbackRate:F1}%");
+
+// Reset metrics for new session
+pipeline.ResetMetrics();
+```
+
+### Migration from Regex to Structured
+
+#### Step 1: Enable with Fallback
+
+Start with fallback enabled for safety:
+
+```csharp
+var config = StructuredPipelineConfig.Default; // FallbackToRegex = true
+var pipeline = new StructuredDialoguePipeline(agent, validationGate, null, null, config);
+```
+
+#### Step 2: Monitor Fallback Rate
+
+```csharp
+// After running for a while...
+var fallbackRate = pipeline.Metrics.FallbackRate;
+if (fallbackRate < 5.0f) // Less than 5% fallback usage
+{
+    Debug.Log("Structured output is stable, consider disabling fallback");
+}
+```
+
+#### Step 3: Disable Fallback (Optional)
+
+Once confirmed stable:
+
+```csharp
+var config = StructuredPipelineConfig.StructuredOnly;
+```
+
+### Best Practices
+
+| Practice | Description |
+|----------|-------------|
+| **Start with fallback** | Use `StructuredPipelineConfig.Default` during migration |
+| **Monitor metrics** | Track success rate and fallback usage |
+| **Validate schemas** | Enable `ValidateMutationSchemas` and `ValidateIntentSchemas` |
+| **Use versioned schemas** | Enable version tracking for backward compatibility |
+| **Test with real LLM** | Schema constraints may behave differently with different models |
+
+**Location**:
+- `LlamaBrain/Source/Core/StructuredOutput/StructuredDialoguePipeline.cs`
+- `LlamaBrain/Source/Core/StructuredOutput/JsonSchemaBuilder.cs`
+- `LlamaBrain/Source/Core/StructuredOutput/SchemaVersion.cs`
 
 ---
 
