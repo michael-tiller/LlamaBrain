@@ -12,7 +12,7 @@ LlamaBrain for Unity provides:
 
 ## Requirements
 
-- Unity 2022.3 LTS or higher
+- Unity 6000.0.58f2 LTS
 - **UniTask**: `https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask`
 - **TextMeshPro** (via Package Manager)
 - llama.cpp server executable + GGUF model
@@ -129,7 +129,7 @@ LlamaBrainForUnity/
 
 ## Development Status
 
-All 9 architectural components implemented. See **[STATUS.md](../../Documentation/STATUS.md)** for feature status and **[COVERAGE_REPORT.md](../../../LlamaBrain/COVERAGE_REPORT.md)** for test metrics.
+All 9 architectural components implemented. See **[STATUS.md](../../Documentation/STATUS.md)** for feature status and **[COVERAGE_REPORT.md](../../LlamaBrain/COVERAGE_REPORT.md)** for test metrics.
 
 ## Resources
 

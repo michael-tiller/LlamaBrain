@@ -14,6 +14,7 @@ namespace LlamaBrain.Core
     private float topP = 0.9f;
     private int topK = 40;
     private float repeatPenalty = 1.1f;
+    private int? seed = null; // null = no default seed (use per-call seed or server default)
 
     /// <summary>
     /// The maximum number of tokens to generate
@@ -58,6 +59,18 @@ namespace LlamaBrain.Core
     {
       get => repeatPenalty;
       set => repeatPenalty = Math.Max(0.0f, Math.Min(value, 2.0f));
+    }
+
+    /// <summary>
+    /// Default random seed for deterministic generation.
+    /// -1 = random (non-deterministic), 0+ = use this exact seed.
+    /// null = no default (use per-call seed or server default).
+    /// Per-call seed parameters take precedence over this default.
+    /// </summary>
+    public int? Seed
+    {
+      get => seed;
+      set => seed = value;
     }
 
     /// <summary>
@@ -120,6 +133,7 @@ namespace LlamaBrain.Core
         TopP = this.TopP,
         TopK = this.TopK,
         RepeatPenalty = this.RepeatPenalty,
+        Seed = this.Seed,
         StopSequences = this.StopSequences?.ToArray() ?? new string[0]
       };
     }

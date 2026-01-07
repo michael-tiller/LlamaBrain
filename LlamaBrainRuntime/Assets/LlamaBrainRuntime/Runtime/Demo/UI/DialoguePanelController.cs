@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using TMPro;
 using UnityEngine.Events;
 using LlamaBrain.Runtime.Demo;
+using LlamaBrain.Runtime.Core.Voice;
 using UnityEngine.SceneManagement;
 
 namespace LlamaBrain.Runtime.Demo.UI
@@ -39,12 +40,27 @@ namespace LlamaBrain.Runtime.Demo.UI
         /// </summary>
         [SerializeField] private Transform dialogueMessageContainer;
 
+        [Header("Voice Settings")]
+        [SerializeField]
+        [Tooltip("Optional voice controller for voice-enabled conversations.")]
+        private NpcVoiceController voiceController;
+
+        [SerializeField]
+        [Tooltip("Seconds of silence before auto-closing dialogue.")]
+        private float silenceTimeout = 6f;
 
         /// <summary>
         /// The event that is triggered when the player's message is submitted.
         /// </summary>
         [Header("Events")]
         [SerializeField] private UnityEvent<string> onPlayerMessageSubmitted;
+
+        [SerializeField]
+        [Tooltip("Fired when dialogue is closed due to silence timeout.")]
+        private UnityEvent onDialogueClosed;
+
+        private bool _isVoiceMode;
+        private float _lastActivityTime;
 
         /// <summary>
         /// Called when the dialogue panel is created.
@@ -53,6 +69,16 @@ namespace LlamaBrain.Runtime.Demo.UI
         {
             submitButton.onClick.AddListener(OnButtonSubmit);
             inputField.onSubmit.AddListener(OnInputSubmit);
+
+            // Wire up voice controller events if present
+            if (voiceController != null)
+            {
+                voiceController.OnPlayerSpeechRecognized.AddListener(OnPlayerSpeechRecognized);
+                voiceController.OnNpcResponseGenerated.AddListener(OnNpcResponseGenerated);
+                voiceController.OnSpeakingFinished.AddListener(OnVoiceActivityChanged);
+                voiceController.OnListeningStarted.AddListener(OnVoiceActivityChanged);
+                voiceController.OnSilenceTimeout.AddListener(OnSilenceTimeoutReached);
+            }
         }
 
         /// <summary>
@@ -62,6 +88,31 @@ namespace LlamaBrain.Runtime.Demo.UI
         {
             submitButton.onClick.RemoveListener(OnButtonSubmit);
             inputField.onSubmit.RemoveListener(OnInputSubmit);
+
+            // Unsubscribe from voice controller events
+            if (voiceController != null)
+            {
+                voiceController.OnPlayerSpeechRecognized.RemoveListener(OnPlayerSpeechRecognized);
+                voiceController.OnNpcResponseGenerated.RemoveListener(OnNpcResponseGenerated);
+                voiceController.OnSpeakingFinished.RemoveListener(OnVoiceActivityChanged);
+                voiceController.OnListeningStarted.RemoveListener(OnVoiceActivityChanged);
+                voiceController.OnSilenceTimeout.RemoveListener(OnSilenceTimeoutReached);
+            }
+        }
+
+        private void Update()
+        {
+            // Check silence timeout in voice mode
+            if (_isVoiceMode && voiceController != null)
+            {
+                if (!voiceController.IsSpeaking && !voiceController.IsListening && !voiceController.IsProcessing)
+                {
+                    if (Time.time - _lastActivityTime > silenceTimeout)
+                    {
+                        CloseDialogue();
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -120,5 +171,102 @@ namespace LlamaBrain.Runtime.Demo.UI
         {
             SceneManager.LoadScene(0, LoadSceneMode.Single);
         }
+
+        /// <summary>
+        /// Opens the dialogue panel with optional voice mode.
+        /// </summary>
+        /// <param name="useVoice">Whether to enable voice mode.</param>
+        public void OpenDialogue(bool useVoice = false)
+        {
+            gameObject.SetActive(true);
+            _isVoiceMode = useVoice;
+            ResetSilenceTimer();
+
+            if (useVoice && voiceController != null)
+            {
+                voiceController.StartConversation();
+            }
+        }
+
+        /// <summary>
+        /// Closes the dialogue panel.
+        /// </summary>
+        public void CloseDialogue()
+        {
+            if (_isVoiceMode && voiceController != null)
+            {
+                voiceController.EndConversation();
+            }
+
+            _isVoiceMode = false;
+            onDialogueClosed?.Invoke();
+            gameObject.SetActive(false);
+        }
+
+        /// <summary>
+        /// Sets the voice controller for voice-enabled conversations.
+        /// </summary>
+        /// <param name="controller">The voice controller to use for voice interactions.</param>
+        public void SetVoiceController(NpcVoiceController controller)
+        {
+            // Unsubscribe from old controller
+            if (voiceController != null)
+            {
+                voiceController.OnPlayerSpeechRecognized.RemoveListener(OnPlayerSpeechRecognized);
+                voiceController.OnNpcResponseGenerated.RemoveListener(OnNpcResponseGenerated);
+                voiceController.OnSpeakingFinished.RemoveListener(OnVoiceActivityChanged);
+                voiceController.OnListeningStarted.RemoveListener(OnVoiceActivityChanged);
+                voiceController.OnSilenceTimeout.RemoveListener(OnSilenceTimeoutReached);
+            }
+
+            voiceController = controller;
+
+            // Subscribe to new controller
+            if (voiceController != null)
+            {
+                voiceController.OnPlayerSpeechRecognized.AddListener(OnPlayerSpeechRecognized);
+                voiceController.OnNpcResponseGenerated.AddListener(OnNpcResponseGenerated);
+                voiceController.OnSpeakingFinished.AddListener(OnVoiceActivityChanged);
+                voiceController.OnListeningStarted.AddListener(OnVoiceActivityChanged);
+                voiceController.OnSilenceTimeout.AddListener(OnSilenceTimeoutReached);
+            }
+        }
+
+        private void OnPlayerSpeechRecognized(string text)
+        {
+            AddPlayerMessage(text);
+            ResetSilenceTimer();
+        }
+
+        private void OnNpcResponseGenerated(string text)
+        {
+            AddNpcMessage(text);
+            ResetSilenceTimer();
+        }
+
+        private void OnVoiceActivityChanged()
+        {
+            ResetSilenceTimer();
+        }
+
+        private void OnSilenceTimeoutReached()
+        {
+            CloseDialogue();
+        }
+
+        private void ResetSilenceTimer()
+        {
+            _lastActivityTime = Time.time;
+        }
+
+        /// <summary>
+        /// Whether the dialogue is in voice mode.
+        /// </summary>
+        public bool IsVoiceMode => _isVoiceMode;
+
+        /// <summary>
+        /// The current voice controller.
+        /// </summary>
+        public NpcVoiceController VoiceController => voiceController;
     }
 }

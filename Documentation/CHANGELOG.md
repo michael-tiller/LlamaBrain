@@ -5,6 +5,283 @@ All notable changes to LlamaBrain will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0-rc.2] (Unreleased)
+
+### Unity Runtime
+
+#### Added
+- **Voice System Integration (Features 31-32)** 🚧
+  - **Feature 31: Whisper Speech-to-Text Integration** - Voice input for NPCs
+    - **NpcVoiceInput** - Microphone-based voice input with Whisper.unity integration
+    - Speech-to-text transcription for player dialogue
+    - Voice activity detection and silence detection
+  - **Feature 32: Piper Text-to-Speech Integration** - Voice output for NPCs
+    - **NpcVoiceOutput** - Text-to-speech output system with Piper.unity integration
+    - Natural voice synthesis for NPC responses
+    - Per-NPC voice model configuration
+  - **NpcVoiceController** - Central voice input/output management coordinator
+  - **NpcSpeechConfig** - ScriptableObject configuration for voice settings
+  - Integration with LlamaBrainAgent for voice-enabled NPCs
+  - Files Added:
+    - `Runtime/Core/Voice/NpcVoiceController.cs`
+    - `Runtime/Core/Voice/NpcVoiceInput.cs`
+    - `Runtime/Core/Voice/NpcVoiceOutput.cs`
+    - `Runtime/Core/Voice/NpcSpeechConfig.cs`
+- **Game State Management UI (Feature 16 Extension)** ✅ **COMPLETE**
+  - **RedRoomGameController** (15 lines) - Singleton game state management
+  - **MainMenu** (26 lines) - Main menu with continue/new game/load game, dynamic button states
+  - **LoadGameMenu** (133 lines) - Save browser with delete confirmation, empty state handling
+  - **LoadGameScrollViewElement** (56 lines) - Individual save slot with selection feedback
+  - **PausePanel** (83 lines) - Pause menu with save/quit, ESC key support
+  - Full integration with LlamaBrainSaveManager for all save/load operations
+  - Confirmation dialogs via Unity UI SetActive pattern
+  - Scene transition support
+  - **Total**: ~298 lines of production UI code
+  - Files Added:
+    - `Runtime/RedRoom/RedRoomGameController.cs`
+    - `Runtime/RedRoom/UI/MainMenu.cs`
+    - `Runtime/RedRoom/UI/LoadGameMenu.cs`
+    - `Runtime/RedRoom/UI/LoadGameScrollViewElement.cs`
+    - `Runtime/RedRoom/UI/PausePanel.cs`
+- **Prefab Organization** ✅
+  - Reorganized RedRoom prefabs into UI subfolder
+  - Added new prefabs: LlamaBrainSaveManager, WhisperManager
+  - New UI prefabs: Panel_MainMenu, Panel_LoadGame, Panel_Pause, Element_SaveGameEntry
+
+#### Changed
+- **Unity Package Updates**
+  - Updated package.json with new voice system dependencies
+  - Updated manifest.json and packages-lock.json with required packages
+  - Updated assembly definition to include voice system
+  - Removed unused assembly references from `Assembly-CSharp.LlamaBrain.Runtime.asmdef`
+- **WorldIntentDispatcher Event Parameters** - Changed `WorldIntentEvent` parameter type from `Dictionary<string, string>` to `Dictionary<string, object>` to support complex parameter types (nested objects, arrays) matching `WorldIntent.Parameters`
+- **NpcSpeechConfig Custom Model Fallback** - Added fallback to default model (`en_US-lessac-high`) when Custom preset is selected but `CustomModelPath` is null or empty, with editor validation warning
+- **PausePanel Method Rename** - Renamed `ConfirmQuit()` to `ConfirmRestart()` for clarity and updated prefab reference
+- **Third-Party Package Documentation** - Enhanced `THIRD_PARTY_PACKAGES.md` and `CONTRIBUTING.md` with:
+  - Clarified that Starter Assets – Third Person requires URP version only for Unity 6 LTS compatibility
+  - Added required dependencies documentation (URP project, New Input System, Cinemachine)
+  - Added installation notes for UniTask namespace resolution issues
+  - Updated package dependencies summary table with compatibility notes
+- **RedRoom Scene Updates**
+  - Enhanced RedRoom.unity scene with new UI systems
+  - Integrated save/load functionality
+  - Added voice input/output support
+- **Configuration Assets**
+  - Added PromptAssemblerSettings asset for scene-specific configuration
+  - Added new expectancy and validation rule assets
+  - Enhanced dialogue panel controller for voice integration
+- **Project Settings**
+  - Updated AudioManager, EditorBuildSettings, GraphicsSettings
+  - Added MultiplayerManager asset
+  - Updated ProjectVersion.txt
+  - Updated URP settings (ShaderGraphSettings, URPProjectSettings)
+
+#### Fixed
+- UI prefab references and organization
+- Save/load system integration with RedRoom demo
+- Voice system integration with dialogue triggers
+- **InteractionCount Increment Bug** - Fixed `InteractionCount` only incrementing when `storeConversationHistory` was enabled, breaking determinism when history storage was disabled. Now increments on any successful interaction regardless of history storage settings.
+- **FileSystemSaveSystem File Size Check** - Fixed file size validation to use UTF-8 byte count instead of character count, ensuring accurate size limits for multi-byte characters
+- **NpcVoiceOutput Audio Amplification** - Fixed division by zero error when processing audio with near-zero amplitude by adding epsilon check before amplification
+- **NpcDialogueTrigger Cancellation Token** - Fixed `ObjectDisposedException` when accessing disposed cancellation token by adding proper exception handling
+- **LoadGameMenu Empty Slot Display** - Fixed empty slot text not hiding when slots are populated and added null check for emptySlotText
+- **PausePanel Save Method** - Added null check for `LlamaBrainSaveManager.Instance` to prevent errors when save manager is unavailable
+
+### Core Library
+
+#### Added
+- **Structured Output Enhancements (Feature 12 Completion)** ✅
+  - **Schema Versioning System**
+    - Added `SchemaVersion.cs` with version parsing, comparison, and migration support
+    - Version format: `major.minor.patch` with compatibility checking
+    - Automatic version detection from JSON schemas
+    - Migration support for backward compatibility
+    - 49 tests in `SchemaVersionTests.cs` covering version parsing, comparison, compatibility, and migration
+  - **Complex Intent Parameters**
+    - Added `IntentParameters.cs` with typed parameter classes:
+      - `GiveItemParameters` - Item name, quantity, target entity
+      - `MoveToParameters` - Destination coordinates, speed
+      - `InteractParameters` - Target entity, interaction type
+    - Added `IntentParameterExtensions` for safe extraction from `Dictionary<string, object>`
+    - Support for `GetArray<T>()` and `GetNested()` for complex parameter types
+    - Enhanced `GetArray<T>()` to handle JArray, JToken, IList, IEnumerable, and ArrayList from JSON deserialization
+    - Added `ConvertElement<T>()` helper for robust type conversion with JToken support
+    - 18 tests passing in `ComplexIntentParametersTests.cs` (expanded with collection type tests)
+  - **Relationship Authority Validation**
+    - Added `RelationshipAuthorityValidator.cs` for owner-based and confidence threshold validation
+    - Validates relationship entry authority before inclusion in context
+    - Supports owner-based filtering and confidence-based filtering
+    - 27 tests passing in `RelationshipAuthorityTests.cs`
+  - **Files Added**:
+    - `Source/Core/StructuredOutput/SchemaVersion.cs`
+    - `Source/Core/StructuredOutput/IntentParameters.cs`
+    - `Source/Core/StructuredOutput/RelationshipAuthorityValidator.cs`
+  - **Files Modified**:
+    - `Source/Core/StructuredOutput/JsonSchemaBuilder.cs` - Added version support
+    - `Source/Core/StructuredOutput/StructuredSchemaValidator.cs` - Enhanced validation
+    - `Source/Core/StructuredOutput/StructuredDialoguePipeline.cs` - Complex parameter support
+- **Structured Input Enhancements (Feature 23 Completion)** ✅
+  - **Relationship Entry Schema**
+    - Added `RelationshipEntry.cs` with full schema:
+      - `sourceEntity`, `targetEntity` - Entity identifiers
+      - `affinity`, `trust`, `familiarity` - Relationship metrics
+      - `history` - Relationship history array
+      - `tags` - Relationship tags array
+    - Integrated into `ContextSection.Relationships` property
+    - 21 tests passing in `RelationshipEntryTests.cs`
+  - **Partial Context Builder**
+    - Added `PartialContextBuilder.cs` with fluent API for incremental context construction
+    - Methods: `WithCanonicalFacts()`, `WithBeliefs()`, `WithRelationships()`, `WithDialogue()`
+    - All `ContextSection` properties nullable with `NullValueHandling.Ignore`
+    - Enables selective context inclusion for token efficiency
+    - 18 tests passing in `PartialContextTests.cs`
+  - **Validation Requirements**
+    - Added `ValidationRequirements` to `ConstraintSection`:
+      - `minResponseLength`, `maxResponseLength` - Response length constraints
+      - `requiredKeywords` - Required keywords array
+      - `forbiddenKeywords` - Forbidden keywords array
+    - Integrated into constraint validation pipeline
+    - 13 tests passing in `ValidationRequirementsTests.cs`
+  - **Authority Boundaries**
+    - Added `Authority` field to constraints with source tracking:
+      - `system` - System-level constraints
+      - `designer` - Designer-defined constraints
+      - `npc` - NPC-specific constraints
+      - `player` - Player-influenced constraints
+    - Enables authority-based constraint filtering
+  - **Dialogue Metadata**
+    - Added `DialogueMetadata` to `StructuredDialogueEntry`:
+      - `emotion` - Emotional state
+      - `location` - Conversation location
+      - `trigger` - Trigger identifier
+      - `turnNumber` - Turn sequence number
+    - Added `Timestamp` (float?) to dialogue entries
+    - 14 tests passing in `DialogueMetadataTests.cs`
+  - **Files Added**:
+    - `Source/Core/StructuredInput/PartialContextBuilder.cs`
+    - `Source/Core/StructuredInput/Schemas/RelationshipEntry.cs`
+  - **Files Modified**:
+    - `Source/Core/StructuredInput/Schemas/ConstraintSection.cs` - Added ValidationRequirements and Authority
+    - `Source/Core/StructuredInput/Schemas/ContextSection.cs` - Added Relationships property
+    - `Source/Core/StructuredInput/Schemas/DialogueSection.cs` - Added Timestamp and Metadata
+    - `Source/Core/StructuredInput/Schemas/ContextJsonSchema.cs` - Updated schema structure
+- **Seed-Based Determinism Documentation (Feature 14)** ✅
+  - **Comprehensive Documentation**
+    - Added comprehensive seed-based determinism section to `DETERMINISM_CONTRACT.md`:
+      - Double-lock system explanation (Context Locking + Entropy Locking)
+      - Seed parameter flow through the system
+      - Seed behavior by value (null, 0, 1+, -1)
+      - Retry behavior (same seed for all retry attempts)
+      - Per-interaction vs per-attempt seed semantics
+      - Hardware determinism limitations and guarantees
+      - Cross-device reproducibility expectations
+      - Backward compatibility and migration guide
+    - Updated `ARCHITECTURE.md` with seed usage logging information:
+      - `[LlamaBrainAgent] Using deterministic seed: 5 (InteractionCount)`
+      - `[LlamaBrainAgent] No seed provided, using non-deterministic mode`
+    - Updated `DEVELOPMENT_LOG.md` marking deferred items as complete:
+      - Schema versioning (Feature 12.3)
+      - Complex intent parameters (Feature 13.3)
+      - Relationship entries (Feature 23.2)
+      - Partial context support (Feature 23.5)
+      - Validation requirements (Feature 23.2)
+      - Authority boundaries (Feature 23.2)
+      - Dialogue metadata (Feature 23.2)
+  - **Integration Testing**
+    - Added `BrainAgentSeedIntegrationTests.cs` for seed integration testing
+    - Tests verify seed extraction from `InteractionContext` and propagation to API client
+- **Feature 16: Save/Load Game Integration - COMPLETE** ✅
+  - **Engine-Agnostic Persistence Abstraction** (`LlamaBrain/Source/Persistence/`)
+    - `ISaveSystem` interface for engine-agnostic save/load operations
+    - `SaveData` top-level container with versioning and timestamps
+    - `PersonaMemorySnapshot` for complete memory state serialization
+    - `ConversationHistorySnapshot` for dialogue history persistence
+    - `SaveSlotInfo` for slot metadata (name, timestamp, version, persona count)
+    - `SaveResult` for operation results with success/failure handling
+  - **Memory Snapshot System**
+    - `MemorySnapshotBuilder` creates snapshots from `AuthoritativeMemorySystem` using public APIs
+    - `MemorySnapshotRestorer` restores memory state using internal `InsertXxxRaw` APIs for deterministic reconstruction
+    - Preserves all determinism-critical fields: `Id`, `SequenceNumber`, `CreatedAtTicks`, ordinals
+    - All enums serialized as `int` for stability
+  - **Immutable DTO Layer** (`LlamaBrain/Source/Persistence/Dtos/`)
+    - `CanonicalFactDto` - Canonical fact serialization
+    - `WorldStateDto` - World state entry serialization
+    - `EpisodicMemoryDto` - Episodic memory with significance/decay
+    - `BeliefDto` - Belief memory with confidence/sentiment
+    - `DialogueEntryDto` - Dialogue history entries
+  - **FileSystem Implementation** (`FileSystemSaveSystem.cs`)
+    - Uses existing `IFileSystem` abstraction for testability
+    - Atomic writes (temp-file-then-move pattern)
+    - Slot name sanitization for security
+    - 5MB file size limit protection
+    - JSON serialization via Newtonsoft.Json
+  - **Test Coverage**: 33 new tests
+    - `MemorySnapshotTests.cs`: Round-trip determinism, DTO conversion, restore correctness (18 tests)
+    - `FileSystemSaveSystemTests.cs`: Save/load operations, sanitization, error handling (15 tests)
+  - **AuthoritativeMemorySystem Enhancements**
+    - Added `GetWorldStateEntries()` helper for snapshot building
+    - Added `GetBeliefEntries()` helper for belief dictionary access
+  - **Files Added**:
+    - `Source/Persistence/ISaveSystem.cs`
+    - `Source/Persistence/SaveData.cs`
+    - `Source/Persistence/PersonaMemorySnapshot.cs`
+    - `Source/Persistence/ConversationHistorySnapshot.cs`
+    - `Source/Persistence/SaveSlotInfo.cs`
+    - `Source/Persistence/SaveResult.cs`
+    - `Source/Persistence/FileSystemSaveSystem.cs`
+    - `Source/Persistence/MemorySnapshotBuilder.cs`
+    - `Source/Persistence/MemorySnapshotRestorer.cs`
+    - `Source/Persistence/Dtos/CanonicalFactDto.cs`
+    - `Source/Persistence/Dtos/WorldStateDto.cs`
+    - `Source/Persistence/Dtos/EpisodicMemoryDto.cs`
+    - `Source/Persistence/Dtos/BeliefDto.cs`
+    - `Source/Persistence/Dtos/DialogueEntryDto.cs`
+  - **Documentation**: Updated STATUS.md, ROADMAP.md
+- **Test Coverage Improvements** ✅
+  - **Persistence Test Suite Expansion**
+    - Added `ConversationHistorySnapshotTests.cs` (340 lines) - Comprehensive tests for conversation history serialization
+    - Added `DialogueEntryDtoTests.cs` (263 lines) - DTO serialization and validation tests
+    - Added `SaveDataTests.cs` (462 lines) - Save data container and versioning tests
+  - **Integration Test Enhancements**
+    - Expanded `StructuredPipelineIntegrationTests.cs` (+500 lines) - Additional structured pipeline integration scenarios
+  - **Utility Test Expansion**
+    - Enhanced `FileSystemTests.cs` (+125 lines) - Additional file system operation coverage
+    - Enhanced `ProcessUtilsTests.cs` (+273 lines) - Comprehensive process utility test coverage
+  - **Structured Output Test Expansion**
+    - Expanded `JsonSchemaBuilderTests.cs` (+509 lines) - Additional JSON schema generation and validation tests
+  - **Coverage Report Updates**
+    - Updated `COVERAGE_REPORT.md` with latest coverage statistics (91.37% line coverage, 84.94% branch coverage)
+    - Updated `coverage-analysis.csv` with latest metrics
+  - **Total**: ~2,601 lines of new test code across 9 files
+
+#### Fixed
+- **Test Count Corrections** - Fixed incorrect test counts in changelog documentation (was showing 88 for all tests, now shows accurate counts: 18, 27, 21, 18, 13, 14)
+- **Nullable Reference Warnings** - Fixed nullable reference warnings in test files by adding null-forgiving operators for nullable properties in ContextSerializer, DialogueMetadata, and StructuredContextProvider tests
+- **IntentParameters GetArray Enhancement** - Enhanced `GetArray<T>()` method to handle JArray, JToken, IList, IEnumerable, and ArrayList from JSON deserialization, improving compatibility with various JSON deserializers
+
+### Unity Runtime
+
+#### Added
+- **Feature 16: Unity Save/Load Integration** ✅
+  - **SaveGameFree Implementation** (`LlamaBrainRuntime/.../Runtime/Persistence/`)
+    - `SaveGameFreeSaveSystem` wraps SaveGameFree plugin, implements `ISaveSystem`
+    - Stores saves at `LlamaBrain/Saves/{slotName}` using SaveGameFree's native serialization
+    - Maintains metadata file for slot listing and ordering
+  - **LlamaBrainSaveManager MonoBehaviour**
+    - Central save/load manager for games
+    - Auto-registers all `LlamaBrainAgent` instances in scene (configurable)
+    - Named save slots support (e.g., "autosave", "slot1")
+    - `SaveToSlot()` / `LoadFromSlot()` methods
+    - `QuickSave()` / `QuickLoad()` convenience methods
+    - Events: `OnSaveComplete`, `OnLoadComplete`
+  - **LlamaBrainAgent Integration**
+    - Added `CreateSaveData()` method for agent state serialization
+    - Added `RestoreFromSaveData()` method for agent state restoration
+    - Preserves memory state, conversation history, and deterministic metadata
+  - **Files Added**:
+    - `Runtime/Persistence/SaveGameFreeSaveSystem.cs`
+    - `Runtime/Persistence/LlamaBrainSaveManager.cs`
+
 ## [0.3.0-rc.1] (Unreleased)
 
 ### Unity Runtime
@@ -1196,7 +1473,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Performance Optimization**: Rate limiting, caching, and resource management
 
 #### Technical
-- Unity 2022.3 LTS or higher support
+- Unity 6000.0.58f2 LTS
 - Assembly definitions for proper package structure
 - TextMeshPro integration for rich text support
 - EditMode and PlayMode tests for integration testing

@@ -81,9 +81,10 @@ namespace LlamaBrain.Core
     /// Sends a message to the persona and gets a response
     /// </summary>
     /// <param name="message">The message to send</param>
+    /// <param name="seed">Optional seed for deterministic generation (e.g., InteractionCount)</param>
     /// <param name="cancellationToken">Optional cancellation token</param>
     /// <returns>The persona's response</returns>
-    public async Task<string> SendMessageAsync(string message, CancellationToken cancellationToken = default)
+    public async Task<string> SendMessageAsync(string message, int? seed = null, CancellationToken cancellationToken = default)
     {
       if (_disposed)
         throw new ObjectDisposedException(nameof(BrainAgent));
@@ -100,7 +101,7 @@ namespace LlamaBrain.Core
         var prompt = _promptComposer.ComposePrompt(_profile, _dialogueSession, message);
 
         // Send the prompt to the LLM
-        var response = await _apiClient.SendPromptAsync(prompt, cancellationToken: cancellationToken);
+        var response = await _apiClient.SendPromptAsync(prompt, seed: seed, cancellationToken: cancellationToken);
 
         // Add the response to the dialogue session
         _dialogueSession.AppendNpc(response);
@@ -118,9 +119,10 @@ namespace LlamaBrain.Core
     /// Sends a simple message without conversation history
     /// </summary>
     /// <param name="message">The message to send</param>
+    /// <param name="seed">Optional seed for deterministic generation (e.g., InteractionCount)</param>
     /// <param name="cancellationToken">Optional cancellation token</param>
     /// <returns>The persona's response</returns>
-    public async Task<string> SendSimpleMessageAsync(string message, CancellationToken cancellationToken = default)
+    public async Task<string> SendSimpleMessageAsync(string message, int? seed = null, CancellationToken cancellationToken = default)
     {
       if (_disposed)
         throw new ObjectDisposedException(nameof(BrainAgent));
@@ -134,7 +136,7 @@ namespace LlamaBrain.Core
         var prompt = _promptComposer.ComposeSimplePrompt(_profile, message);
 
         // Send the prompt to the LLM
-        var response = await _apiClient.SendPromptAsync(prompt, cancellationToken: cancellationToken);
+        var response = await _apiClient.SendPromptAsync(prompt, seed: seed, cancellationToken: cancellationToken);
 
         return response;
       }
@@ -150,9 +152,10 @@ namespace LlamaBrain.Core
     /// </summary>
     /// <param name="instruction">The instruction to send</param>
     /// <param name="context">Optional additional context</param>
+    /// <param name="seed">Optional seed for deterministic generation (e.g., InteractionCount)</param>
     /// <param name="cancellationToken">Optional cancellation token</param>
     /// <returns>The persona's response</returns>
-    public async Task<string> SendInstructionAsync(string instruction, string? context = null, CancellationToken cancellationToken = default)
+    public async Task<string> SendInstructionAsync(string instruction, string? context = null, int? seed = null, CancellationToken cancellationToken = default)
     {
       if (_disposed)
         throw new ObjectDisposedException(nameof(BrainAgent));
@@ -166,7 +169,7 @@ namespace LlamaBrain.Core
         var prompt = _promptComposer.ComposeInstructionPrompt(_profile, instruction, context);
 
         // Send the prompt to the LLM
-        var response = await _apiClient.SendPromptAsync(prompt, cancellationToken: cancellationToken);
+        var response = await _apiClient.SendPromptAsync(prompt, seed: seed, cancellationToken: cancellationToken);
 
         return response;
       }
@@ -314,9 +317,10 @@ namespace LlamaBrain.Core
     /// </summary>
     /// <param name="message">The message to send</param>
     /// <param name="jsonSchema">The JSON schema the response should follow</param>
+    /// <param name="seed">Optional seed for deterministic generation (e.g., InteractionCount)</param>
     /// <param name="cancellationToken">Optional cancellation token</param>
     /// <returns>The structured JSON response as a string</returns>
-    public async Task<string> SendStructuredMessageAsync(string message, string jsonSchema, CancellationToken cancellationToken = default)
+    public async Task<string> SendStructuredMessageAsync(string message, string jsonSchema, int? seed = null, CancellationToken cancellationToken = default)
     {
       if (_disposed)
         throw new ObjectDisposedException(nameof(BrainAgent));
@@ -336,7 +340,7 @@ namespace LlamaBrain.Core
         var prompt = _promptComposer.ComposeStructuredJsonConversationPrompt(_profile, _dialogueSession, message, jsonSchema);
 
         // Send the prompt to the LLM
-        var response = await _apiClient.SendPromptAsync(prompt, cancellationToken: cancellationToken);
+        var response = await _apiClient.SendPromptAsync(prompt, seed: seed, cancellationToken: cancellationToken);
 
         // Validate and clean the JSON response
         var cleanedResponse = CleanAndValidateJsonResponse(response);
@@ -359,9 +363,10 @@ namespace LlamaBrain.Core
     /// <param name="instruction">The instruction to send</param>
     /// <param name="jsonSchema">The JSON schema the response should follow</param>
     /// <param name="context">Optional additional context</param>
+    /// <param name="seed">Optional seed for deterministic generation (e.g., InteractionCount)</param>
     /// <param name="cancellationToken">Optional cancellation token</param>
     /// <returns>The structured JSON response as a string</returns>
-    public async Task<string> SendStructuredInstructionAsync(string instruction, string jsonSchema, string? context = null, CancellationToken cancellationToken = default)
+    public async Task<string> SendStructuredInstructionAsync(string instruction, string jsonSchema, string? context = null, int? seed = null, CancellationToken cancellationToken = default)
     {
       if (_disposed)
         throw new ObjectDisposedException(nameof(BrainAgent));
@@ -378,7 +383,7 @@ namespace LlamaBrain.Core
         var prompt = _promptComposer.ComposeStructuredJsonPrompt(_profile, instruction, jsonSchema, context);
 
         // Send the prompt to the LLM
-        var response = await _apiClient.SendPromptAsync(prompt, cancellationToken: cancellationToken);
+        var response = await _apiClient.SendPromptAsync(prompt, seed: seed, cancellationToken: cancellationToken);
 
         // Validate and clean the JSON response
         var cleanedResponse = CleanAndValidateJsonResponse(response);
@@ -398,11 +403,12 @@ namespace LlamaBrain.Core
     /// <typeparam name="T">The type to deserialize to</typeparam>
     /// <param name="message">The message to send</param>
     /// <param name="jsonSchema">The JSON schema the response should follow</param>
+    /// <param name="seed">Optional seed for deterministic generation (e.g., InteractionCount)</param>
     /// <param name="cancellationToken">Optional cancellation token</param>
     /// <returns>The deserialized response object</returns>
-    public async Task<T?> SendStructuredMessageAsync<T>(string message, string jsonSchema, CancellationToken cancellationToken = default) where T : class
+    public async Task<T?> SendStructuredMessageAsync<T>(string message, string jsonSchema, int? seed = null, CancellationToken cancellationToken = default) where T : class
     {
-      var jsonResponse = await SendStructuredMessageAsync(message, jsonSchema, cancellationToken);
+      var jsonResponse = await SendStructuredMessageAsync(message, jsonSchema, seed, cancellationToken);
       return JsonUtils.Deserialize<T>(jsonResponse);
     }
 
@@ -413,11 +419,12 @@ namespace LlamaBrain.Core
     /// <param name="instruction">The instruction to send</param>
     /// <param name="jsonSchema">The JSON schema the response should follow</param>
     /// <param name="context">Optional additional context</param>
+    /// <param name="seed">Optional seed for deterministic generation (e.g., InteractionCount)</param>
     /// <param name="cancellationToken">Optional cancellation token</param>
     /// <returns>The deserialized response object</returns>
-    public async Task<T?> SendStructuredInstructionAsync<T>(string instruction, string jsonSchema, string? context = null, CancellationToken cancellationToken = default) where T : class
+    public async Task<T?> SendStructuredInstructionAsync<T>(string instruction, string jsonSchema, string? context = null, int? seed = null, CancellationToken cancellationToken = default) where T : class
     {
-      var jsonResponse = await SendStructuredInstructionAsync(instruction, jsonSchema, context, cancellationToken);
+      var jsonResponse = await SendStructuredInstructionAsync(instruction, jsonSchema, context, seed, cancellationToken);
       return JsonUtils.Deserialize<T>(jsonResponse);
     }
 
@@ -432,12 +439,14 @@ namespace LlamaBrain.Core
     /// <param name="message">The message to send</param>
     /// <param name="jsonSchema">The JSON schema the response must conform to</param>
     /// <param name="format">The structured output format (default: JsonSchema)</param>
+    /// <param name="seed">Optional seed for deterministic generation (e.g., InteractionCount)</param>
     /// <param name="cancellationToken">Optional cancellation token</param>
     /// <returns>The structured JSON response</returns>
     public async Task<string> SendNativeStructuredMessageAsync(
       string message,
       string jsonSchema,
       StructuredOutputFormat format = StructuredOutputFormat.JsonSchema,
+      int? seed = null,
       CancellationToken cancellationToken = default)
     {
       if (_disposed)
@@ -462,6 +471,7 @@ namespace LlamaBrain.Core
           prompt,
           jsonSchema,
           format,
+          seed: seed,
           cancellationToken: cancellationToken);
 
         // Check for null/empty response
@@ -493,11 +503,13 @@ namespace LlamaBrain.Core
     /// </summary>
     /// <param name="message">The message to send</param>
     /// <param name="format">The structured output format (default: JsonSchema)</param>
+    /// <param name="seed">Optional seed for deterministic generation (e.g., InteractionCount)</param>
     /// <param name="cancellationToken">Optional cancellation token</param>
     /// <returns>Parsed output with dialogue, mutations, and intents</returns>
     public async Task<ParsedOutput> SendNativeDialogueAsync(
       string message,
       StructuredOutputFormat format = StructuredOutputFormat.JsonSchema,
+      int? seed = null,
       CancellationToken cancellationToken = default)
     {
       if (_disposed)
@@ -516,6 +528,7 @@ namespace LlamaBrain.Core
           message,
           schema,
           format,
+          seed,
           cancellationToken);
 
         // Parse the structured response
@@ -538,15 +551,17 @@ namespace LlamaBrain.Core
     /// <param name="message">The message to send</param>
     /// <param name="jsonSchema">The JSON schema the response must conform to</param>
     /// <param name="format">The structured output format (default: JsonSchema)</param>
+    /// <param name="seed">Optional seed for deterministic generation (e.g., InteractionCount)</param>
     /// <param name="cancellationToken">Optional cancellation token</param>
     /// <returns>The deserialized response object</returns>
     public async Task<T?> SendNativeStructuredMessageAsync<T>(
       string message,
       string jsonSchema,
       StructuredOutputFormat format = StructuredOutputFormat.JsonSchema,
+      int? seed = null,
       CancellationToken cancellationToken = default) where T : class
     {
-      var jsonResponse = await SendNativeStructuredMessageAsync(message, jsonSchema, format, cancellationToken);
+      var jsonResponse = await SendNativeStructuredMessageAsync(message, jsonSchema, format, seed, cancellationToken);
       return JsonUtils.Deserialize<T>(jsonResponse);
     }
 
@@ -558,6 +573,7 @@ namespace LlamaBrain.Core
     /// <param name="jsonSchema">The JSON schema the response must conform to</param>
     /// <param name="context">Optional additional context</param>
     /// <param name="format">The structured output format (default: JsonSchema)</param>
+    /// <param name="seed">Optional seed for deterministic generation (e.g., InteractionCount)</param>
     /// <param name="cancellationToken">Optional cancellation token</param>
     /// <returns>The structured JSON response</returns>
     public async Task<string> SendNativeStructuredInstructionAsync(
@@ -565,6 +581,7 @@ namespace LlamaBrain.Core
       string jsonSchema,
       string? context = null,
       StructuredOutputFormat format = StructuredOutputFormat.JsonSchema,
+      int? seed = null,
       CancellationToken cancellationToken = default)
     {
       if (_disposed)
@@ -586,6 +603,7 @@ namespace LlamaBrain.Core
           prompt,
           jsonSchema,
           format,
+          seed: seed,
           cancellationToken: cancellationToken);
 
         // Check for null/empty response
@@ -616,6 +634,7 @@ namespace LlamaBrain.Core
     /// <param name="jsonSchema">The JSON schema the response must conform to</param>
     /// <param name="context">Optional additional context</param>
     /// <param name="format">The structured output format (default: JsonSchema)</param>
+    /// <param name="seed">Optional seed for deterministic generation (e.g., InteractionCount)</param>
     /// <param name="cancellationToken">Optional cancellation token</param>
     /// <returns>The deserialized response object</returns>
     public async Task<T?> SendNativeStructuredInstructionAsync<T>(
@@ -623,9 +642,10 @@ namespace LlamaBrain.Core
       string jsonSchema,
       string? context = null,
       StructuredOutputFormat format = StructuredOutputFormat.JsonSchema,
+      int? seed = null,
       CancellationToken cancellationToken = default) where T : class
     {
-      var jsonResponse = await SendNativeStructuredInstructionAsync(instruction, jsonSchema, context, format, cancellationToken);
+      var jsonResponse = await SendNativeStructuredInstructionAsync(instruction, jsonSchema, context, format, seed, cancellationToken);
       return JsonUtils.Deserialize<T>(jsonResponse);
     }
 

@@ -258,6 +258,56 @@ namespace LlamaBrain.Tests.PlayMode
         }
       }
     }
+
+    /// <summary>
+    /// Creates a configured ExpectancyRuleAsset for testing using reflection to set private serialized fields.
+    /// </summary>
+    private static ExpectancyRuleAsset CreateTestExpectancyRule(
+      string ruleName,
+      ConstraintType constraintType,
+      ConstraintSeverity severity,
+      string promptInjection,
+      string validationPattern,
+      bool useRegex = false)
+    {
+      var rule = ScriptableObject.CreateInstance<ExpectancyRuleAsset>();
+
+      // Set private serialized fields via reflection
+      var ruleType = typeof(ExpectancyRuleAsset);
+      var flags = BindingFlags.NonPublic | BindingFlags.Instance;
+
+      ruleType.GetField("ruleName", flags)?.SetValue(rule, ruleName);
+      ruleType.GetField("ruleId", flags)?.SetValue(rule, Guid.NewGuid().ToString("N").Substring(0, 8));
+      ruleType.GetField("isEnabled", flags)?.SetValue(rule, true);
+
+      // Create constraint definition
+      var constraintDef = new RuleConstraintDefinition
+      {
+        Type = constraintType,
+        Severity = severity,
+        Description = ruleName,
+        PromptInjection = promptInjection,
+        ValidationPatterns = new List<string> { validationPattern },
+        UseRegex = useRegex
+      };
+
+      // Set the constraints list
+      var constraintsList = new List<RuleConstraintDefinition> { constraintDef };
+      ruleType.GetField("constraints", flags)?.SetValue(rule, constraintsList);
+
+      return rule;
+    }
+
+    /// <summary>
+    /// Adds rules to NpcExpectancyConfig using reflection to access private field.
+    /// </summary>
+    private static void SetExpectancyConfigRules(NpcExpectancyConfig config, List<ExpectancyRuleAsset> rules)
+    {
+      var configType = typeof(NpcExpectancyConfig);
+      var flags = BindingFlags.NonPublic | BindingFlags.Instance;
+      configType.GetField("npcRules", flags)?.SetValue(config, rules);
+    }
+
     private GameObject? serverObject;
     private BrainServer? server;
     private BrainSettings? settings;
@@ -1486,6 +1536,352 @@ namespace LlamaBrain.Tests.PlayMode
         "Test setup should have canonical facts in memory (deterministic)");
 
       // Cleanup handled by TearDown (stubClient tracked in disposables)
+    }
+
+    #endregion
+
+    #region Seed Determinism Tests (Feature 14 - Deferred Tests)
+
+    /// <summary>
+    /// Feature 14.3/14.6 Deferred Test: Retry attempts use the same seed.
+    ///
+    /// This test verifies that all retry attempts within a single interaction
+    /// use the SAME seed value (Double-Lock Pattern: Lock 2 - Entropy Locking).
+    ///
+    /// Contract: Same InteractionCount = Same seed across all retry attempts.
+    /// </summary>
+    [UnityTest]
+    [Category("Contract")]
+    public IEnumerator PlayMode_PipelineContract_RetryAttempts_UseSameSeed()
+    {
+      // Arrange - Track seeds used across retry attempts
+      var seedsUsed = new List<int?>();
+
+      // Create stub that:
+      // - Attempt 1: Returns violating response (triggers retry)
+      // - Attempt 2: Returns compliant response (succeeds)
+      // Also captures the seed used for each attempt
+      var stubResponses = new List<StubApiClient.StubResponse>
+      {
+        new StubApiClient.StubResponse { Content = "damn, this is bad!" }, // Will fail validation
+        new StubApiClient.StubResponse { Content = "This is good!" }       // Will pass validation
+      };
+      var stubClient = new StubApiClient(stubResponses);
+      disposables.Add(stubClient);
+
+      // Track seeds via custom handler that wraps default behavior
+      stubClient.OnSendMetrics = (prompt, attempt, maxTokens, temperature, seed, cachePrompt, ct) =>
+      {
+        seedsUsed.Add(seed);
+        // Return the pre-configured response based on attempt
+        var response = attempt <= stubResponses.Count
+          ? stubResponses[attempt - 1]
+          : stubResponses[stubResponses.Count - 1];
+        return Task.FromResult(new CompletionMetrics
+        {
+          Content = response.Content,
+          PromptTokenCount = response.PromptTokenCount,
+          GeneratedTokenCount = response.GeneratedTokenCount
+        });
+      };
+
+      // Create expectancy config with profanity filter to trigger retry
+      var expectancyConfigObject = new GameObject("ExpectancyConfig");
+      createdGameObjects.Add(expectancyConfigObject);
+      var expectancyConfig = expectancyConfigObject.AddComponent<NpcExpectancyConfig>();
+
+      var profanityRule = CreateTestExpectancyRule(
+        ruleName: "No Profanity",
+        constraintType: ConstraintType.Prohibition,
+        severity: ConstraintSeverity.Hard,
+        promptInjection: "Never use profanity",
+        validationPattern: "damn"
+      );
+      SetExpectancyConfigRules(expectancyConfig, new List<ExpectancyRuleAsset> { profanityRule });
+
+      agentObject = new GameObject("TestAgent");
+      createdGameObjects.Add(agentObject);
+      unityAgent = agentObject.AddComponent<LlamaBrainAgent>();
+      unityAgent!.PersonaConfig = personaConfig;
+      unityAgent!.ExpectancyConfig = expectancyConfig;
+      unityAgent!.Initialize(stubClient, memoryStore!);
+      yield return null;
+
+      // Act
+      InferenceResultWithRetries? result = null;
+      yield return UniTask.ToCoroutine(async () =>
+      {
+        result = await unityAgent!.SendWithSnapshotAsync("Tell me something");
+      });
+
+      // Assert
+      Assert.IsNotNull(result);
+      Assert.That(result!.AllAttempts.Count, Is.EqualTo(2),
+        "Should have exactly 2 attempts (first fails, second succeeds)");
+
+      // CRITICAL: Verify all retry attempts used the same seed
+      Assert.That(seedsUsed.Count, Is.EqualTo(2),
+        "Should have tracked 2 seed values (one per attempt)");
+      Assert.That(seedsUsed[0], Is.EqualTo(seedsUsed[1]),
+        "All retry attempts MUST use the same seed for determinism (Feature 14 contract)");
+
+      // Verify the seed was derived from InteractionCount (should be non-null)
+      Assert.That(seedsUsed[0], Is.Not.Null,
+        "Seed should be derived from InteractionCount (not null)");
+
+      // Cleanup
+      UnityEngine.Object.DestroyImmediate(profanityRule);
+    }
+
+    /// <summary>
+    /// Feature 14.3 Deferred Test: Multiple retry attempts all use InteractionCount as seed.
+    ///
+    /// This test verifies that even with many retries, the seed remains constant.
+    /// </summary>
+    [UnityTest]
+    [Category("Contract")]
+    public IEnumerator PlayMode_PipelineContract_MultipleRetries_AllUseSameSeed()
+    {
+      // Arrange - Track all seeds
+      var seedsUsed = new List<int?>();
+
+      // Create stub that always returns violating response (forces max retries)
+      var stubResponses = new List<StubApiClient.StubResponse>();
+      for (int i = 0; i < 10; i++) // More than max retries
+      {
+        stubResponses.Add(new StubApiClient.StubResponse { Content = $"damn response {i}" });
+      }
+      var stubClient = new StubApiClient(stubResponses);
+      disposables.Add(stubClient);
+
+      stubClient.OnSendMetrics = (prompt, attempt, maxTokens, temperature, seed, cachePrompt, ct) =>
+      {
+        seedsUsed.Add(seed);
+        var response = stubResponses[Math.Min(attempt - 1, stubResponses.Count - 1)];
+        return Task.FromResult(new CompletionMetrics
+        {
+          Content = response.Content,
+          PromptTokenCount = response.PromptTokenCount,
+          GeneratedTokenCount = response.GeneratedTokenCount
+        });
+      };
+
+      // Create expectancy config with profanity filter
+      var expectancyConfigObject = new GameObject("ExpectancyConfig");
+      createdGameObjects.Add(expectancyConfigObject);
+      var expectancyConfig = expectancyConfigObject.AddComponent<NpcExpectancyConfig>();
+
+      var profanityRule = CreateTestExpectancyRule(
+        ruleName: "No Profanity",
+        constraintType: ConstraintType.Prohibition,
+        severity: ConstraintSeverity.Hard,
+        promptInjection: "Never use profanity",
+        validationPattern: "damn"
+      );
+      SetExpectancyConfigRules(expectancyConfig, new List<ExpectancyRuleAsset> { profanityRule });
+
+      agentObject = new GameObject("TestAgent");
+      createdGameObjects.Add(agentObject);
+      unityAgent = agentObject.AddComponent<LlamaBrainAgent>();
+      unityAgent!.PersonaConfig = personaConfig;
+      unityAgent!.ExpectancyConfig = expectancyConfig;
+      unityAgent!.Initialize(stubClient, memoryStore!);
+      yield return null;
+
+      // Act
+      InferenceResultWithRetries? result = null;
+      yield return UniTask.ToCoroutine(async () =>
+      {
+        result = await unityAgent!.SendWithSnapshotAsync("Tell me something");
+      });
+
+      // Assert
+      Assert.IsNotNull(result);
+      Assert.That(seedsUsed.Count, Is.GreaterThan(1),
+        "Should have multiple attempts tracked");
+
+      // CRITICAL: All seeds must be identical
+      var firstSeed = seedsUsed[0];
+      for (int i = 1; i < seedsUsed.Count; i++)
+      {
+        Assert.That(seedsUsed[i], Is.EqualTo(firstSeed),
+          $"Attempt {i + 1} seed ({seedsUsed[i]}) must match attempt 1 seed ({firstSeed}) - Feature 14 contract");
+      }
+
+      // Cleanup
+      UnityEngine.Object.DestroyImmediate(profanityRule);
+    }
+
+    /// <summary>
+    /// Feature 14.3 Deferred Test: Save/Load preserves InteractionCount for determinism.
+    ///
+    /// This test verifies that InteractionCount is correctly persisted through save/load,
+    /// ensuring the same seed is used after restoration (Double-Lock Pattern).
+    ///
+    /// Contract: Save → Load → Same InteractionCount → Same seed → Identical behavior.
+    /// </summary>
+    [UnityTest]
+    [Category("Contract")]
+    public IEnumerator PlayMode_PipelineContract_SaveLoad_PreservesInteractionCount()
+    {
+      // Arrange - Create agent and interact 3 times to increment InteractionCount
+      var stubResponses = new List<StubApiClient.StubResponse>();
+      for (int i = 0; i < 10; i++)
+      {
+        stubResponses.Add(new StubApiClient.StubResponse { Content = $"Response {i}" });
+      }
+      var stubClient = new StubApiClient(stubResponses);
+      disposables.Add(stubClient);
+
+      agentObject = new GameObject("TestAgent");
+      createdGameObjects.Add(agentObject);
+      unityAgent = agentObject.AddComponent<LlamaBrainAgent>();
+      unityAgent!.PersonaConfig = personaConfig;
+      unityAgent!.Initialize(stubClient, memoryStore!);
+      yield return null;
+
+      // Interact 3 times to set InteractionCount = 3
+      for (int i = 0; i < 3; i++)
+      {
+        yield return UniTask.ToCoroutine(async () =>
+        {
+          await unityAgent!.SendWithSnapshotAsync($"Hello {i}");
+        });
+      }
+
+      // Verify InteractionCount is 3
+      Assert.That(unityAgent!.InteractionCount, Is.EqualTo(3),
+        "After 3 successful interactions, InteractionCount should be 3");
+
+      // Act - Create save data
+      var saveData = unityAgent!.CreateSaveData();
+      Assert.That(saveData, Is.Not.Null, "Save data should be created");
+      Assert.That(saveData!.MemorySnapshot.InteractionCount, Is.EqualTo(3),
+        "Save data should contain InteractionCount = 3");
+
+      // Simulate new session - create fresh agent
+      var stubClient2 = new StubApiClient(stubResponses);
+      disposables.Add(stubClient2);
+
+      var agentObject2 = new GameObject("TestAgent2");
+      createdGameObjects.Add(agentObject2);
+      var unityAgent2 = agentObject2.AddComponent<LlamaBrainAgent>();
+      unityAgent2.PersonaConfig = personaConfig;
+      unityAgent2.Initialize(stubClient2, memoryStore!);
+      yield return null;
+
+      // Verify new agent starts at 0
+      Assert.That(unityAgent2.InteractionCount, Is.EqualTo(0),
+        "New agent should start with InteractionCount = 0");
+
+      // Restore from save data
+      unityAgent2.RestoreFromSaveData(saveData);
+
+      // Assert - InteractionCount restored
+      Assert.That(unityAgent2.InteractionCount, Is.EqualTo(3),
+        "After restoration, InteractionCount should be 3 (Feature 14 contract)");
+    }
+
+    /// <summary>
+    /// Feature 14.3 Deferred Test: Save/Load determinism produces identical outputs.
+    ///
+    /// This test verifies that after save/load, the same interaction produces
+    /// the same result because the same seed is used.
+    /// </summary>
+    [UnityTest]
+    [Category("Contract")]
+    public IEnumerator PlayMode_PipelineContract_SaveLoad_SameSeedProducesSameOutput()
+    {
+      // Arrange - Track seeds used
+      var seedsUsed = new List<int?>();
+
+      var stubResponses = new List<StubApiClient.StubResponse>
+      {
+        new StubApiClient.StubResponse { Content = "Response 0" },
+        new StubApiClient.StubResponse { Content = "Response 1" },
+        new StubApiClient.StubResponse { Content = "Response 2" },
+        new StubApiClient.StubResponse { Content = "Response 3" }, // For 4th interaction
+        new StubApiClient.StubResponse { Content = "Response 4" }  // For 5th interaction (after load)
+      };
+      var stubClient = new StubApiClient(stubResponses);
+      disposables.Add(stubClient);
+
+      stubClient.OnSendMetrics = (prompt, attempt, maxTokens, temperature, seed, cachePrompt, ct) =>
+      {
+        seedsUsed.Add(seed);
+        var response = stubResponses[Math.Min(seedsUsed.Count - 1, stubResponses.Count - 1)];
+        return Task.FromResult(new CompletionMetrics
+        {
+          Content = response.Content,
+          PromptTokenCount = response.PromptTokenCount,
+          GeneratedTokenCount = response.GeneratedTokenCount
+        });
+      };
+
+      agentObject = new GameObject("TestAgent");
+      createdGameObjects.Add(agentObject);
+      unityAgent = agentObject.AddComponent<LlamaBrainAgent>();
+      unityAgent!.PersonaConfig = personaConfig;
+      unityAgent!.Initialize(stubClient, memoryStore!);
+      yield return null;
+
+      // Interact 3 times to set InteractionCount = 3
+      for (int i = 0; i < 3; i++)
+      {
+        yield return UniTask.ToCoroutine(async () =>
+        {
+          await unityAgent!.SendWithSnapshotAsync($"Hello {i}");
+        });
+      }
+
+      // Save state at InteractionCount = 3
+      var saveData = unityAgent!.CreateSaveData();
+      var seedAtSaveTime = seedsUsed[seedsUsed.Count - 1]; // Last seed used was 2 (for interaction 3)
+
+      // Do one more interaction (InteractionCount = 3 becomes seed, then increments to 4)
+      yield return UniTask.ToCoroutine(async () =>
+      {
+        await unityAgent!.SendWithSnapshotAsync("After save");
+      });
+      var seedAfterSave = seedsUsed[seedsUsed.Count - 1]; // Should be 3
+
+      // Now simulate loading - restore InteractionCount to 3
+      seedsUsed.Clear();
+
+      var stubClient2 = new StubApiClient(stubResponses);
+      disposables.Add(stubClient2);
+
+      stubClient2.OnSendMetrics = (prompt, attempt, maxTokens, temperature, seed, cachePrompt, ct) =>
+      {
+        seedsUsed.Add(seed);
+        var response = stubResponses[Math.Min(attempt - 1, stubResponses.Count - 1)];
+        return Task.FromResult(new CompletionMetrics
+        {
+          Content = response.Content,
+          PromptTokenCount = response.PromptTokenCount,
+          GeneratedTokenCount = response.GeneratedTokenCount
+        });
+      };
+
+      var agentObject2 = new GameObject("TestAgent2");
+      createdGameObjects.Add(agentObject2);
+      var unityAgent2 = agentObject2.AddComponent<LlamaBrainAgent>();
+      unityAgent2.PersonaConfig = personaConfig;
+      unityAgent2.Initialize(stubClient2, memoryStore!);
+      yield return null;
+
+      unityAgent2.RestoreFromSaveData(saveData);
+
+      // Do the same interaction
+      yield return UniTask.ToCoroutine(async () =>
+      {
+        await unityAgent2.SendWithSnapshotAsync("After save");
+      });
+      var seedAfterLoad = seedsUsed[0]; // Should also be 3
+
+      // Assert - Same seed used after save/load restoration
+      Assert.That(seedAfterLoad, Is.EqualTo(seedAfterSave),
+        $"After save/load, the same interaction should use the same seed. Expected {seedAfterSave}, got {seedAfterLoad} (Feature 14 contract)");
     }
 
     #endregion

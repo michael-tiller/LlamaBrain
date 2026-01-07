@@ -198,7 +198,7 @@ namespace LlamaBrain.Core
           repeat_penalty = config.RepeatPenalty,
           stop = stopSequences.ToArray(),
           cache_prompt = cachePrompt,
-          seed = seed
+          seed = seed ?? config.Seed
         };
 
         var content = new StringContent(JsonConvert.SerializeObject(req), Encoding.UTF8, "application/json");
@@ -394,7 +394,7 @@ namespace LlamaBrain.Core
           repeat_penalty = config.RepeatPenalty,
           stop = new string[] { "</s>" }, // Only keep the most basic stop sequence
           cache_prompt = false, // Default to false for backward compatibility
-          seed = seed
+          seed = seed ?? config.Seed
         };
 
         var content = new StringContent(JsonConvert.SerializeObject(req), Encoding.UTF8, "application/json");
@@ -570,7 +570,7 @@ namespace LlamaBrain.Core
           repeat_penalty = config.RepeatPenalty,
           stop = new string[] { "</s>" },
           cache_prompt = cachePrompt,
-          seed = seed
+          seed = seed ?? config.Seed
         };
 
         // Apply structured output parameters based on format

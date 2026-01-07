@@ -11,9 +11,10 @@ namespace LlamaBrainRuntime.Core
 {
   /// <summary>
   /// Unity event for world intents with intent type and target.
+  /// Parameters dictionary supports complex types (nested objects, arrays) matching WorldIntent.Parameters.
   /// </summary>
   [Serializable]
-  public class WorldIntentEvent : UnityEvent<string, string, Dictionary<string, string>> { }
+  public class WorldIntentEvent : UnityEvent<string, string, Dictionary<string, object>> { }
 
   /// <summary>
   /// Unity event for specific intent types.

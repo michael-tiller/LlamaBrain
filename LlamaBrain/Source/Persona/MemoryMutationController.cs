@@ -178,6 +178,12 @@ namespace LlamaBrain.Persona
     public int CanonicalMutationAttempts { get; set; }
 
     /// <summary>
+    /// Number of authority violations (source lacked authority to modify target).
+    /// Incremented after mutation execution when the failure reason contains "lacks authority".
+    /// </summary>
+    public int AuthorityViolations { get; set; }
+
+    /// <summary>
     /// Success rate as a percentage.
     /// </summary>
     public float SuccessRate => TotalAttempted > 0 ? (float)TotalSucceeded / TotalAttempted * 100f : 0f;
@@ -258,6 +264,12 @@ namespace LlamaBrain.Persona
   /// </summary>
   public class MemoryMutationController
   {
+    /// <summary>
+    /// Known failure reason indicating an authority violation.
+    /// Used for robust matching instead of substring search.
+    /// </summary>
+    private const string AuthorityViolationReason = "lacks authority";
+
     private readonly MutationControllerConfig config;
     private readonly MutationStatistics statistics = new MutationStatistics();
 
@@ -476,6 +488,7 @@ namespace LlamaBrain.Persona
       statistics.RelationshipsTransformed = 0;
       statistics.IntentsEmitted = 0;
       statistics.CanonicalMutationAttempts = 0;
+      statistics.AuthorityViolations = 0;
     }
 
     #region Private Execution Methods
@@ -512,6 +525,8 @@ namespace LlamaBrain.Persona
         Log($"[MutationController] Appended episodic memory: {mutation.Content}");
         return MutationExecutionResult.Succeeded(mutation, entry);
       }
+
+      TrackAuthorityViolationIfNeeded(result.FailureReason);
 
       return MutationExecutionResult.Failed(mutation, result.FailureReason ?? "Unknown error");
     }
@@ -554,6 +569,8 @@ namespace LlamaBrain.Persona
         Log($"[MutationController] Transformed belief '{mutation.Target}': {mutation.Content}");
         return MutationExecutionResult.Succeeded(mutation, entry);
       }
+
+      TrackAuthorityViolationIfNeeded(result.FailureReason);
 
       return MutationExecutionResult.Failed(mutation, result.FailureReason ?? "Unknown error");
     }
@@ -602,6 +619,8 @@ namespace LlamaBrain.Persona
         return MutationExecutionResult.Succeeded(mutation, entry);
       }
 
+      TrackAuthorityViolationIfNeeded(result.FailureReason);
+
       return MutationExecutionResult.Failed(mutation, result.FailureReason ?? "Unknown error");
     }
 
@@ -648,6 +667,34 @@ namespace LlamaBrain.Persona
     {
       WorldIntentEmitsForTests++;
       OnWorldIntentEmitted?.Invoke(this, new WorldIntentEventArgs(intent, npcId));
+    }
+
+    /// <summary>
+    /// Checks if a failure reason indicates an authority violation and tracks it in statistics.
+    /// Centralizes authority violation detection to avoid duplicate substring matching.
+    /// </summary>
+    /// <param name="failureReason">The failure reason from a mutation result.</param>
+    private void TrackAuthorityViolationIfNeeded(string? failureReason)
+    {
+      if (!config.EnableStatistics)
+        return;
+
+      if (IsAuthorityViolation(failureReason))
+        statistics.AuthorityViolations++;
+    }
+
+    /// <summary>
+    /// Determines if a failure reason indicates an authority violation.
+    /// </summary>
+    /// <param name="failureReason">The failure reason to check.</param>
+    /// <returns>True if the failure reason indicates an authority violation.</returns>
+    private static bool IsAuthorityViolation(string? failureReason)
+    {
+      if (string.IsNullOrEmpty(failureReason))
+        return false;
+
+      // Use ordinal comparison for consistent, culture-invariant matching
+      return failureReason.IndexOf(AuthorityViolationReason, StringComparison.Ordinal) >= 0;
     }
 
     private void Log(string message)

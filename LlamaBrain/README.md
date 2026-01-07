@@ -83,7 +83,7 @@ LlamaBrain implements comprehensive security measures including input validation
 
 ## Testing
 
-See **[COVERAGE_REPORT.md](COVERAGE_REPORT.md)** for current test metrics and coverage.
+See **[COVERAGE_REPORT.md](./COVERAGE_REPORT.md)** for current test metrics and coverage.
 
 ```bash
 # Run all tests

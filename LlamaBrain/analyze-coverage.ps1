@@ -98,7 +98,7 @@ if ($lowCoverage) {
 }
 
 Write-Host "`n=== FILES WITH MEDIUM COVERAGE (50-80%) ===" -ForegroundColor Cyan
-$mediumCoverage = $files | Where-Object { $_.LineCoverage -ge 50 -and $_.LineCoverage -lt 80 }2
+$mediumCoverage = $files | Where-Object { $_.LineCoverage -ge 50 -and $_.LineCoverage -lt 80 }
 if ($mediumCoverage) {
     $mediumCoverage | Format-Table -AutoSize
     Write-Host "Total: $($mediumCoverage.Count) files" -ForegroundColor Cyan

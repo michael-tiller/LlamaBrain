@@ -29,7 +29,7 @@ A clear and concise description of what actually happened.
 
 - **Platform**: [e.g., Windows 10, macOS 13, Linux Ubuntu 22.04]
 - **.NET Version**: [e.g., .NET Standard 2.1, .NET 6.0]
-- **Unity Version**: [e.g., Unity 2022.3 LTS] (if applicable)
+- **Unity Version**: [e.g., Unity 6000.0.58f2 LTS] (if applicable)
 - **LlamaBrain Version**: [e.g., 0.2.0]
 - **llama.cpp Server Version**: [e.g., latest]
 - **Model**: [e.g., llama-2-7b.gguf]

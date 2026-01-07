@@ -238,6 +238,469 @@ namespace LlamaBrain.Tests.StructuredOutput
 
         #endregion
 
+        #region AnalysisSchema Tests
+
+        [Test]
+        public void AnalysisSchema_IsValidJson()
+        {
+            // Act
+            var schema = JsonSchemaBuilder.AnalysisSchema;
+
+            // Assert
+            Assert.That(LlamaBrain.Utilities.JsonUtils.IsValidJson(schema), Is.True);
+        }
+
+        [Test]
+        public void AnalysisSchema_ContainsRequiredProperties()
+        {
+            // Act
+            var schema = JsonSchemaBuilder.AnalysisSchema;
+
+            // Assert
+            Assert.That(schema, Does.Contain("decision"));
+            Assert.That(schema, Does.Contain("reasoning"));
+            Assert.That(schema, Does.Contain("confidence"));
+            Assert.That(schema, Does.Contain("alternatives"));
+        }
+
+        [Test]
+        public void AnalysisSchema_HasCorrectRequiredFields()
+        {
+            // Act
+            var schema = JsonSchemaBuilder.AnalysisSchema;
+
+            // Assert
+            Assert.That(schema, Does.Contain("\"required\": [\"decision\", \"reasoning\"]"));
+        }
+
+        #endregion
+
+        #region BuildFromType - Additional Type Coverage
+
+        [Test]
+        public void BuildFromType_WithArray_ReturnsArraySchema()
+        {
+            // Act
+            var schema = JsonSchemaBuilder.BuildFromType<ClassWithArray>();
+
+            // Assert
+            Assert.That(LlamaBrain.Utilities.JsonUtils.IsValidJson(schema), Is.True);
+            Assert.That(schema, Does.Contain("array"));
+            Assert.That(schema, Does.Contain("items"));
+        }
+
+        [Test]
+        public void BuildFromType_WithList_ReturnsArraySchema()
+        {
+            // Act
+            var schema = JsonSchemaBuilder.BuildFromType<ClassWithList>();
+
+            // Assert
+            Assert.That(LlamaBrain.Utilities.JsonUtils.IsValidJson(schema), Is.True);
+            Assert.That(schema, Does.Contain("array"));
+        }
+
+        [Test]
+        public void BuildFromType_WithDictionary_ReturnsObjectWithAdditionalProperties()
+        {
+            // Act
+            var schema = JsonSchemaBuilder.BuildFromType<ClassWithDictionary>();
+
+            // Assert
+            Assert.That(LlamaBrain.Utilities.JsonUtils.IsValidJson(schema), Is.True);
+            Assert.That(schema, Does.Contain("additionalProperties"));
+        }
+
+        [Test]
+        public void BuildFromType_WithNullableInt_HandlesNullable()
+        {
+            // Act
+            var schema = JsonSchemaBuilder.BuildFromType<ClassWithNullable>();
+
+            // Assert
+            Assert.That(LlamaBrain.Utilities.JsonUtils.IsValidJson(schema), Is.True);
+            Assert.That(schema, Does.Contain("integer"));
+        }
+
+        [Test]
+        public void BuildFromType_WithLong_ReturnsInteger()
+        {
+            // Act
+            var schema = JsonSchemaBuilder.BuildFromType<ClassWithLong>();
+
+            // Assert
+            Assert.That(schema, Does.Contain("integer"));
+        }
+
+        [Test]
+        public void BuildFromType_WithFloat_ReturnsNumber()
+        {
+            // Act
+            var schema = JsonSchemaBuilder.BuildFromType<ClassWithFloat>();
+
+            // Assert
+            Assert.That(schema, Does.Contain("number"));
+        }
+
+        [Test]
+        public void BuildFromType_WithDecimal_ReturnsNumber()
+        {
+            // Act
+            var schema = JsonSchemaBuilder.BuildFromType<ClassWithDecimal>();
+
+            // Assert
+            Assert.That(schema, Does.Contain("number"));
+        }
+
+        [Test]
+        public void BuildFromType_WithNestedClass_HandlesNesting()
+        {
+            // Act
+            var schema = JsonSchemaBuilder.BuildFromType<ClassWithNested>();
+
+            // Assert
+            Assert.That(LlamaBrain.Utilities.JsonUtils.IsValidJson(schema), Is.True);
+            Assert.That(schema, Does.Contain("nested"));
+        }
+
+        [Test]
+        public void BuildFromType_WithCircularReference_DoesNotCrash()
+        {
+            // Act - Should handle circular reference without infinite loop
+            var schema = JsonSchemaBuilder.BuildFromType<CircularClass>();
+
+            // Assert
+            Assert.That(LlamaBrain.Utilities.JsonUtils.IsValidJson(schema), Is.True);
+        }
+
+        [Test]
+        public void BuildFromType_StructuredDialogueResponse_ReturnsValidSchema()
+        {
+            // Act
+            var schema = JsonSchemaBuilder.BuildFromType<StructuredDialogueResponse>();
+
+            // Assert
+            Assert.That(LlamaBrain.Utilities.JsonUtils.IsValidJson(schema), Is.True);
+            Assert.That(schema, Does.Contain("dialogueText"));
+            Assert.That(schema, Does.Contain("proposedMutations"));
+            Assert.That(schema, Does.Contain("worldIntents"));
+        }
+
+        #endregion
+
+        #region CreateObjectSchema - Edge Cases
+
+        [Test]
+        public void CreateObjectSchema_NoRequiredProperties_OmitsRequired()
+        {
+            // Arrange
+            var properties = new System.Collections.Generic.Dictionary<string, (string type, string description)>
+            {
+                { "name", ("string", "The name") }
+            };
+
+            // Act
+            var schema = JsonSchemaBuilder.CreateObjectSchema(properties, null);
+
+            // Assert
+            Assert.That(LlamaBrain.Utilities.JsonUtils.IsValidJson(schema), Is.True);
+            Assert.That(schema, Does.Not.Contain("\"required\""));
+        }
+
+        [Test]
+        public void CreateObjectSchema_EmptyRequiredArray_OmitsRequired()
+        {
+            // Arrange
+            var properties = new System.Collections.Generic.Dictionary<string, (string type, string description)>
+            {
+                { "name", ("string", "The name") }
+            };
+
+            // Act
+            var schema = JsonSchemaBuilder.CreateObjectSchema(properties, System.Array.Empty<string>());
+
+            // Assert
+            Assert.That(LlamaBrain.Utilities.JsonUtils.IsValidJson(schema), Is.True);
+            Assert.That(schema, Does.Not.Contain("\"required\""));
+        }
+
+        [Test]
+        public void CreateObjectSchema_WithSpecialCharsInDescription_EscapesCorrectly()
+        {
+            // Arrange
+            var properties = new System.Collections.Generic.Dictionary<string, (string type, string description)>
+            {
+                { "text", ("string", "Contains \"quotes\" and \\backslash") }
+            };
+
+            // Act
+            var schema = JsonSchemaBuilder.CreateObjectSchema(properties);
+
+            // Assert
+            Assert.That(LlamaBrain.Utilities.JsonUtils.IsValidJson(schema), Is.True);
+        }
+
+        [Test]
+        public void CreateObjectSchema_WithNewlineInDescription_EscapesCorrectly()
+        {
+            // Arrange
+            var properties = new System.Collections.Generic.Dictionary<string, (string type, string description)>
+            {
+                { "text", ("string", "Line1\nLine2") }
+            };
+
+            // Act
+            var schema = JsonSchemaBuilder.CreateObjectSchema(properties);
+
+            // Assert
+            Assert.That(LlamaBrain.Utilities.JsonUtils.IsValidJson(schema), Is.True);
+        }
+
+        [Test]
+        public void CreateObjectSchema_MultipleRequiredProperties_IncludesAll()
+        {
+            // Arrange
+            var properties = new System.Collections.Generic.Dictionary<string, (string type, string description)>
+            {
+                { "first", ("string", "First prop") },
+                { "second", ("string", "Second prop") },
+                { "third", ("string", "Third prop") }
+            };
+
+            // Act
+            var schema = JsonSchemaBuilder.CreateObjectSchema(properties, new[] { "first", "second" });
+
+            // Assert
+            Assert.That(schema, Does.Contain("\"first\""));
+            Assert.That(schema, Does.Contain("\"second\""));
+            Assert.That(schema, Does.Contain("\"required\""));
+        }
+
+        #endregion
+
+        #region ValidateSchema - Edge Cases
+
+        [Test]
+        public void ValidateSchema_NullInput_ReturnsFalse()
+        {
+            // Act
+            var result = JsonSchemaBuilder.ValidateSchema(null!, out var error);
+
+            // Assert
+            Assert.That(result, Is.False);
+            Assert.That(error, Is.Not.Null);
+        }
+
+        [Test]
+        public void ValidateSchema_WhitespaceOnly_ReturnsFalse()
+        {
+            // Act
+            var result = JsonSchemaBuilder.ValidateSchema("   ", out var error);
+
+            // Assert
+            Assert.That(result, Is.False);
+            Assert.That(error, Does.Contain("empty"));
+        }
+
+        [Test]
+        public void ValidateSchema_PrebuiltParsedOutputSchema_IsValid()
+        {
+            // Act
+            var result = JsonSchemaBuilder.ValidateSchema(JsonSchemaBuilder.ParsedOutputSchema, out var error);
+
+            // Assert
+            Assert.That(result, Is.True);
+            Assert.That(error, Is.Null);
+        }
+
+        [Test]
+        public void ValidateSchema_PrebuiltDialogueOnlySchema_IsValid()
+        {
+            // Act
+            var result = JsonSchemaBuilder.ValidateSchema(JsonSchemaBuilder.DialogueOnlySchema, out var error);
+
+            // Assert
+            Assert.That(result, Is.True);
+            Assert.That(error, Is.Null);
+        }
+
+        [Test]
+        public void ValidateSchema_PrebuiltAnalysisSchema_IsValid()
+        {
+            // Act
+            var result = JsonSchemaBuilder.ValidateSchema(JsonSchemaBuilder.AnalysisSchema, out var error);
+
+            // Assert
+            Assert.That(result, Is.True);
+            Assert.That(error, Is.Null);
+        }
+
+        #endregion
+
+        #region StructuredMutation Tests
+
+        [Test]
+        public void StructuredMutation_ToProposedMutation_ValidType_Converts()
+        {
+            // Arrange
+            var mutation = new StructuredMutation
+            {
+                Type = "AppendEpisodic",
+                Content = "Test content",
+                Target = "target1",
+                Confidence = 0.9f
+            };
+
+            // Act
+            var result = mutation.ToProposedMutation();
+
+            // Assert
+            Assert.That(result.Type, Is.EqualTo(LlamaBrain.Core.Validation.MutationType.AppendEpisodic));
+            Assert.That(result.Content, Is.EqualTo("Test content"));
+            Assert.That(result.Target, Is.EqualTo("target1"));
+            Assert.That(result.Confidence, Is.EqualTo(0.9f));
+        }
+
+        [Test]
+        public void StructuredMutation_ToProposedMutation_InvalidType_FallsBackToAppendEpisodic()
+        {
+            // Arrange
+            var mutation = new StructuredMutation
+            {
+                Type = "InvalidMutationType",
+                Content = "Test content"
+            };
+
+            // Act
+            var result = mutation.ToProposedMutation();
+
+            // Assert - Should fall back to AppendEpisodic
+            Assert.That(result.Type, Is.EqualTo(LlamaBrain.Core.Validation.MutationType.AppendEpisodic));
+        }
+
+        [Test]
+        public void StructuredMutation_ToProposedMutation_TransformBelief_Converts()
+        {
+            // Arrange
+            var mutation = new StructuredMutation
+            {
+                Type = "TransformBelief",
+                Content = "New belief",
+                Target = "belief_id",
+                Confidence = 0.75f
+            };
+
+            // Act
+            var result = mutation.ToProposedMutation();
+
+            // Assert
+            Assert.That(result.Type, Is.EqualTo(LlamaBrain.Core.Validation.MutationType.TransformBelief));
+        }
+
+        #endregion
+
+        #region StructuredIntent Tests
+
+        [Test]
+        public void StructuredIntent_ToWorldIntent_Converts()
+        {
+            // Arrange
+            var intent = new StructuredIntent
+            {
+                IntentType = "follow_player",
+                Target = "player1",
+                Priority = 5,
+                Parameters = new System.Collections.Generic.Dictionary<string, object>
+                {
+                    { "speed", "fast" }
+                }
+            };
+
+            // Act
+            var result = intent.ToWorldIntent();
+
+            // Assert
+            Assert.That(result.IntentType, Is.EqualTo("follow_player"));
+            Assert.That(result.Target, Is.EqualTo("player1"));
+            Assert.That(result.Priority, Is.EqualTo(5));
+            Assert.That(result.Parameters["speed"], Is.EqualTo("fast"));
+        }
+
+        [Test]
+        public void StructuredIntent_ToWorldIntent_CopiesParameters()
+        {
+            // Arrange
+            var intent = new StructuredIntent
+            {
+                IntentType = "test",
+                Parameters = new System.Collections.Generic.Dictionary<string, object>
+                {
+                    { "key", "value" }
+                }
+            };
+
+            // Act
+            var result = intent.ToWorldIntent();
+
+            // Modify original
+            intent.Parameters["key"] = "modified";
+
+            // Assert - Should be a copy, not reference
+            Assert.That(result.Parameters["key"], Is.EqualTo("value"));
+        }
+
+        #endregion
+
+        #region StructuredFunctionCall Tests
+
+        [Test]
+        public void StructuredFunctionCall_ToFunctionCall_Converts()
+        {
+            // Arrange
+            var call = new StructuredFunctionCall
+            {
+                FunctionName = "get_memories",
+                CallId = "call_123",
+                Arguments = new System.Collections.Generic.Dictionary<string, object>
+                {
+                    { "limit", 10 }
+                }
+            };
+
+            // Act
+            var result = call.ToFunctionCall();
+
+            // Assert
+            Assert.That(result.FunctionName, Is.EqualTo("get_memories"));
+            Assert.That(result.CallId, Is.EqualTo("call_123"));
+            Assert.That(result.Arguments["limit"], Is.EqualTo(10));
+        }
+
+        [Test]
+        public void StructuredFunctionCall_ToFunctionCall_CopiesArguments()
+        {
+            // Arrange
+            var call = new StructuredFunctionCall
+            {
+                FunctionName = "test",
+                Arguments = new System.Collections.Generic.Dictionary<string, object>
+                {
+                    { "key", "value" }
+                }
+            };
+
+            // Act
+            var result = call.ToFunctionCall();
+
+            // Modify original
+            call.Arguments["key"] = "modified";
+
+            // Assert - Should be a copy
+            Assert.That(result.Arguments["key"], Is.EqualTo("value"));
+        }
+
+        #endregion
+
         #region Test Helper Classes
 
         private class SimpleTestClass
@@ -257,6 +720,52 @@ namespace LlamaBrain.Tests.StructuredOutput
             Pending,
             Active,
             Completed
+        }
+
+        private class ClassWithArray
+        {
+            public string[] Tags { get; set; } = System.Array.Empty<string>();
+        }
+
+        private class ClassWithList
+        {
+            public System.Collections.Generic.List<int> Numbers { get; set; } = new System.Collections.Generic.List<int>();
+        }
+
+        private class ClassWithDictionary
+        {
+            public System.Collections.Generic.Dictionary<string, string> Metadata { get; set; } = new System.Collections.Generic.Dictionary<string, string>();
+        }
+
+        private class ClassWithNullable
+        {
+            public int? OptionalValue { get; set; }
+        }
+
+        private class ClassWithLong
+        {
+            public long BigNumber { get; set; }
+        }
+
+        private class ClassWithFloat
+        {
+            public float Ratio { get; set; }
+        }
+
+        private class ClassWithDecimal
+        {
+            public decimal Price { get; set; }
+        }
+
+        private class ClassWithNested
+        {
+            public SimpleTestClass Nested { get; set; } = new SimpleTestClass();
+        }
+
+        private class CircularClass
+        {
+            public string Name { get; set; } = "";
+            public CircularClass? Self { get; set; }
         }
 
         #endregion

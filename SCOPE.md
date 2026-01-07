@@ -13,7 +13,7 @@
 ## Supported Platforms & Versions
 
 - **.NET Standard 2.1+** (compatible with .NET Framework 4.6.1+, .NET Core 2.0+, .NET 5+)
-- **Unity 2022.3 LTS+** (requires .NET Standard 2.1 support, UPM-compatible)
+- **Unity 6000.0.58f2 LTS** (requires .NET Standard 2.1 support, UPM-compatible)
 
 ## Supported LLM Providers
 

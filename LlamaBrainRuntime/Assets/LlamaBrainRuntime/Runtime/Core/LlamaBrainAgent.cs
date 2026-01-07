@@ -196,6 +196,13 @@ namespace LlamaBrain.Runtime.Core
     public Dictionary<string, LlamaBrain.Core.FunctionCalling.FunctionCallResult>? LastFunctionCallResults { get; private set; }
 
     /// <summary>
+    /// Total interaction count for this agent (Feature 14 - Determinism).
+    /// Used as seed for LLM token selection to ensure reproducibility.
+    /// Persisted through save/load for cross-session determinism.
+    /// </summary>
+    public int InteractionCount { get; private set; }
+
+    /// <summary>
     /// The retry policy for inference.
     /// </summary>
     private RetryPolicy? retryPolicy;
@@ -567,8 +574,12 @@ namespace LlamaBrain.Runtime.Core
           var isSingleLine = (runtimeProfile?.SystemPrompt ?? "").Contains("one line");
           var effectiveMaxTokens = isSingleLine ? System.Math.Min(maxResponseTokens, 24) : maxResponseTokens;
 
-          // Send to LLM
-          var metrics = await client.SendPromptWithMetricsAsync(prompt, maxTokens: effectiveMaxTokens);
+          // Send to LLM with deterministic seed (Double-Lock Pattern: Lock 2 - Entropy Locking)
+          // Use context's InteractionCount if provided, otherwise use agent's tracked count
+          var contextSeed = currentInteractionContext?.InteractionCount;
+          var seed = contextSeed ?? InteractionCount;
+          UnityEngine.Debug.Log($"[LlamaBrainAgent] Using deterministic seed: {seed} (source: {(contextSeed.HasValue ? "context" : "agent")})");
+          var metrics = await client.SendPromptWithMetricsAsync(prompt, maxTokens: effectiveMaxTokens, seed: seed);
           attemptStopwatch.Stop();
 
           // Check if truncated
@@ -843,6 +854,14 @@ namespace LlamaBrain.Runtime.Core
         AddToConversationHistory("NPC", finalResult.FinalResult.Response);
         dialogueSession?.AppendPlayer(input);
         dialogueSession?.AppendNpc(finalResult.FinalResult.Response);
+      }
+
+      // Increment InteractionCount on any successful interaction (Feature 14 - Determinism)
+      // This must be outside storeConversationHistory check to maintain determinism
+      // regardless of whether history storage is enabled
+      if (finalResult.Success)
+      {
+        InteractionCount++;
       }
 
       UnityEngine.Debug.Log($"[LlamaBrainAgent] Inference complete: {finalResult}");
@@ -1725,7 +1744,7 @@ namespace LlamaBrain.Runtime.Core
     {
       try
       {
-        var brainServer = UnityEngine.Object.FindObjectOfType<BrainServer>();
+        var brainServer = UnityEngine.Object.FindAnyObjectByType<BrainServer>();
         if (brainServer != null)
         {
           brainServer.ConfigureAgent(this);
@@ -1981,6 +2000,105 @@ namespace LlamaBrain.Runtime.Core
       LoadValidationRules(); // Reload global + NPC rules
       UnityEngine.Debug.Log($"[LlamaBrainAgent] Cleared trigger validation rules{(ruleSetName != null ? $" for '{ruleSetName}'" : "")}");
     }
+
+    #region Persistence Methods
+
+    /// <summary>
+    /// Creates a snapshot of this agent's current state for saving.
+    /// </summary>
+    /// <returns>The agent's save data, or null if not initialized</returns>
+    public Runtime.Persistence.AgentSaveData? CreateSaveData()
+    {
+      if (!IsInitialized || runtimeProfile == null || memoryProvider == null)
+      {
+        UnityEngine.Debug.LogWarning("[LlamaBrainAgent] Cannot create save data: Agent not initialized");
+        return null;
+      }
+
+      var personaId = runtimeProfile.PersonaId;
+      var memorySystem = memoryProvider.GetSystem(personaId);
+      if (memorySystem == null)
+      {
+        UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Cannot create save data: No memory system for persona '{personaId}'");
+        return null;
+      }
+
+      // Create memory snapshot (includes InteractionCount for Feature 14 determinism)
+      var memorySnapshot = LlamaBrain.Persistence.MemorySnapshotBuilder.CreateSnapshot(memorySystem, personaId, InteractionCount);
+
+      // Create conversation history snapshot
+      var conversationSnapshot = new LlamaBrain.Persistence.ConversationHistorySnapshot
+      {
+        PersonaId = personaId,
+        Entries = conversationHistory.Select(e => new LlamaBrain.Persistence.Dtos.DialogueEntryDto
+        {
+          Speaker = e.Speaker,
+          Text = e.Text,
+          TimestampTicks = e.Timestamp.ToUniversalTime().Ticks
+        }).ToList()
+      };
+
+      return new Runtime.Persistence.AgentSaveData
+      {
+        PersonaId = personaId,
+        MemorySnapshot = memorySnapshot,
+        ConversationHistory = conversationSnapshot
+      };
+    }
+
+    /// <summary>
+    /// Restores this agent's state from saved data.
+    /// </summary>
+    /// <param name="data">The save data to restore from</param>
+    public void RestoreFromSaveData(Runtime.Persistence.AgentSaveData data)
+    {
+      if (data == null)
+      {
+        UnityEngine.Debug.LogWarning("[LlamaBrainAgent] Cannot restore: Save data is null");
+        return;
+      }
+
+      if (!IsInitialized || runtimeProfile == null || memoryProvider == null)
+      {
+        UnityEngine.Debug.LogWarning("[LlamaBrainAgent] Cannot restore: Agent not initialized");
+        return;
+      }
+
+      var personaId = runtimeProfile.PersonaId;
+      if (personaId != data.PersonaId)
+      {
+        UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Persona ID mismatch: expected '{personaId}', got '{data.PersonaId}'");
+      }
+
+      // Restore memory
+      if (data.MemorySnapshot != null)
+      {
+        var memorySystem = memoryProvider.GetOrCreateSystem(personaId);
+        LlamaBrain.Persistence.MemorySnapshotRestorer.RestoreSnapshot(memorySystem, data.MemorySnapshot);
+
+        // Restore InteractionCount for Feature 14 determinism (Double-Lock Pattern)
+        InteractionCount = data.MemorySnapshot.InteractionCount;
+        UnityEngine.Debug.Log($"[LlamaBrainAgent] Restored memory for '{personaId}' (InteractionCount: {InteractionCount})");
+      }
+
+      // Restore conversation history
+      if (data.ConversationHistory?.Entries != null)
+      {
+        conversationHistory.Clear();
+        foreach (var entry in data.ConversationHistory.Entries)
+        {
+          conversationHistory.Add(new DialogueEntry
+          {
+            Speaker = entry.Speaker,
+            Text = entry.Text,
+            Timestamp = new System.DateTime(entry.TimestampTicks, System.DateTimeKind.Utc).ToLocalTime()
+          });
+        }
+        UnityEngine.Debug.Log($"[LlamaBrainAgent] Restored {conversationHistory.Count} conversation entries for '{personaId}'");
+      }
+    }
+
+    #endregion
   }
 }
 

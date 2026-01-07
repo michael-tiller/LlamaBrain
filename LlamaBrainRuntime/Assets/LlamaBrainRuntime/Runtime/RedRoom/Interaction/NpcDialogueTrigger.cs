@@ -10,6 +10,7 @@ using LlamaBrain.Core.Expectancy;
 using LlamaBrain.Core.Metrics;
 using LlamaBrain.Persona;
 using LlamaBrain.Runtime.Core.Expectancy;
+using LlamaBrain.Runtime.Core.Voice;
 using Random = UnityEngine.Random;
 
 
@@ -47,6 +48,13 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
     [Header("Validation Rules")]
     [Tooltip("Trigger-specific validation rules that apply when this trigger is activated.")]
     [SerializeField] private LlamaBrain.Runtime.Core.Validation.ValidationRuleSetAsset? triggerValidationRules;
+
+    [Header("Voice Settings")]
+    [Tooltip("Enable voice output for this trigger's responses.")]
+    [SerializeField] private bool enableVoice = true;
+
+    [Tooltip("Optional voice controller for speaking responses. If not set, will search for one on the NPC.")]
+    [SerializeField] private NpcVoiceController? voiceController;
 
     private string currentFallbackText = "";
     private CancellationTokenSource? cancellationTokenSource = null;
@@ -169,6 +177,7 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
         var triggerId = _id;
         var context = InteractionContext.FromZoneTrigger(npcId, triggerId, promptText, Time.time);
         context.SceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+        context.InteractionCount = promptCount; // Use trigger's prompt count as seed for determinism
 
         // Load trigger-specific validation rules if available
         int triggerRuleCount = 0;
@@ -212,8 +221,13 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
             brainAgent);
         }
 
-        var finalResponse = response ?? currentFallbackText;
+        var finalResponse = response ?? currentFallbackText ?? "";
         onConversationTextGenerated?.Invoke(finalResponse);
+
+        // Note: Speech is NOT triggered here - it's pre-cached.
+        // Speech will be triggered when player interacts (presses E) via TriggerConversation()
+        Debug.Log($"[NpcDialogueTrigger] Response pre-cached. enableVoice={enableVoice}, length={finalResponse.Length}. Press E to hear it.");
+
         return finalResponse;
       }
       catch (System.OperationCanceledException)
@@ -268,15 +282,40 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
 
     /// <summary>
     /// Triggers conversation generation. Uses the current NPC if none specified.
+    /// This is called when the player presses E to interact.
     /// </summary>
     /// <param name="npc">The NPC to generate conversation for. If null, uses the current NPC.</param>
     public void TriggerConversation(NpcFollowerExample? npc = null)
     {
       var targetNpc = npc ?? currentNpc;
+      Debug.Log($"[NpcDialogueTrigger] TriggerConversation called. targetNpc={(targetNpc != null ? targetNpc.name : "null")}, enableVoice={enableVoice}, cachedText length={conversationText?.Length ?? 0}");
+
       if (targetNpc != null)
       {
-        GenerateConversationTextAsync(targetNpc).Forget();
+        // Capture the cached response BEFORE starting new generation
+        var cachedResponse = conversationText;
+        Debug.Log($"[NpcDialogueTrigger] Cached response: \"{(cachedResponse?.Length > 50 ? cachedResponse.Substring(0, 50) + "..." : cachedResponse)}\"");
+
+        // Increment prompt count before generating so the incremented count is available for the seed
         IncrementPromptCount();
+
+        // Start generating the next response in the background
+        GenerateConversationTextAsync(targetNpc).Forget();
+
+        // Speak the cached response if voice is enabled
+        if (enableVoice && !string.IsNullOrEmpty(cachedResponse))
+        {
+          Debug.Log($"[NpcDialogueTrigger] Speaking cached response now...");
+          SpeakResponseAsync(cachedResponse, targetNpc).Forget();
+        }
+        else if (enableVoice && string.IsNullOrEmpty(cachedResponse))
+        {
+          Debug.LogWarning("[NpcDialogueTrigger] Voice enabled but NO cached response! Generation may not have completed yet. Wait for NPC to finish thinking before pressing E.");
+        }
+        else
+        {
+          Debug.Log("[NpcDialogueTrigger] Voice is disabled, not speaking.");
+        }
       }
       else
       {
@@ -284,6 +323,34 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
         conversationText = currentFallbackText;
         onConversationTextGenerated?.Invoke(currentFallbackText);
       }
+    }
+
+    /// <summary>
+    /// Speaks the currently cached conversation text.
+    /// Call this when showing the dialogue UI to the player.
+    /// </summary>
+    public void SpeakCachedResponse()
+    {
+      if (!enableVoice)
+      {
+        Debug.Log("[NpcDialogueTrigger] Voice is disabled.");
+        return;
+      }
+
+      if (string.IsNullOrEmpty(conversationText))
+      {
+        Debug.LogWarning("[NpcDialogueTrigger] No cached response to speak.");
+        return;
+      }
+
+      if (currentNpc == null)
+      {
+        Debug.LogWarning("[NpcDialogueTrigger] No current NPC to speak.");
+        return;
+      }
+
+      Debug.Log($"[NpcDialogueTrigger] Speaking cached response: \"{conversationText.Substring(0, System.Math.Min(50, conversationText.Length))}...\"");
+      SpeakResponseAsync(conversationText, currentNpc).Forget();
     }
 
     /// <summary>
@@ -312,7 +379,7 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
     {
       return gameObject.name;
     }
-    
+
     /// <summary>
     /// Gets the prompt text for this trigger (for metrics collection)
     /// </summary>
@@ -362,6 +429,75 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
 
       var brainAgent = currentNpc.Agent.GetBrainAgent();
       return brainAgent?.LastMutationBatchResult;
+    }
+
+    /// <summary>
+    /// Whether voice output is enabled for this trigger.
+    /// </summary>
+    public bool VoiceEnabled
+    {
+      get => enableVoice;
+      set => enableVoice = value;
+    }
+
+    /// <summary>
+    /// The voice controller for this trigger.
+    /// </summary>
+    public NpcVoiceController? VoiceController
+    {
+      get => voiceController;
+      set => voiceController = value;
+    }
+
+    /// <summary>
+    /// Speaks the given response text using the voice controller.
+    /// </summary>
+    /// <param name="response">The text to speak.</param>
+    /// <param name="npc">The NPC to use for finding a voice controller if none is assigned.</param>
+    private async UniTask SpeakResponseAsync(string response, NpcFollowerExample npc)
+    {
+      Debug.Log($"[NpcDialogueTrigger] SpeakResponseAsync called. enableVoice={enableVoice}, response length={response?.Length ?? 0}");
+
+      // Find a voice controller if not assigned
+      var controller = voiceController;
+      if (controller == null && npc != null)
+      {
+        controller = npc.GetComponentInChildren<NpcVoiceController>();
+        Debug.Log($"[NpcDialogueTrigger] Searched for NpcVoiceController on NPC: {(controller != null ? "FOUND" : "NOT FOUND")}");
+      }
+
+      if (controller == null)
+      {
+        Debug.LogWarning("[NpcDialogueTrigger] Voice enabled but no NpcVoiceController found. Add NpcVoiceController component to the NPC.");
+        return;
+      }
+
+      // Start the conversation if not already in one (this enables STT listening)
+      if (!controller.IsInConversation)
+      {
+        Debug.Log("[NpcDialogueTrigger] Starting voice conversation to enable STT listening...");
+        controller.StartConversation();
+      }
+
+      Debug.Log($"[NpcDialogueTrigger] Speaking response via NpcVoiceController...");
+
+      var localCts = cancellationTokenSource;
+      CancellationToken token;
+      try { token = localCts?.Token ?? CancellationToken.None; } catch (ObjectDisposedException) { token = CancellationToken.None; }
+
+      try
+      {
+        await controller.SpeakAsync(response, token);
+        Debug.Log("[NpcDialogueTrigger] Voice output completed.");
+      }
+      catch (System.OperationCanceledException)
+      {
+        Debug.Log("[NpcDialogueTrigger] Voice output was cancelled.");
+      }
+      catch (System.Exception ex)
+      {
+        Debug.LogError($"[NpcDialogueTrigger] Error speaking response: {ex.Message}\n{ex.StackTrace}");
+      }
     }
   }
 }

@@ -61,7 +61,7 @@ namespace LlamaBrain.Runtime.Demo.UI
         // If not found on same GameObject, try to find an initialized one in the scene
         if (brainAgent == null || !brainAgent.IsInitialized)
         {
-          var allAgents = FindObjectsOfType<LlamaBrainAgent>();
+          var allAgents = FindObjectsByType<LlamaBrainAgent>(FindObjectsSortMode.None);
           Debug.Log($"[MemoryManagerUI] Found {allAgents.Length} LlamaBrainAgent(s) in scene during Start");
 
           foreach (var agent in allAgents)
@@ -124,7 +124,7 @@ namespace LlamaBrain.Runtime.Demo.UI
         else if (brainAgent == null)
         {
           // Try to find an initialized agent again if it's null
-          var allAgents = FindObjectsOfType<LlamaBrainAgent>();
+          var allAgents = FindObjectsByType<LlamaBrainAgent>(FindObjectsSortMode.None);
           foreach (var agent in allAgents)
           {
             if (agent.IsInitialized)
@@ -162,7 +162,7 @@ namespace LlamaBrain.Runtime.Demo.UI
       while (brainAgent == null || !brainAgent.IsInitialized)
       {
         // Always search for an initialized agent first
-        var allAgents = FindObjectsOfType<LlamaBrainAgent>();
+        var allAgents = FindObjectsByType<LlamaBrainAgent>(FindObjectsSortMode.None);
         Debug.Log($"[MemoryManagerUI] Found {allAgents.Length} LlamaBrainAgent(s) in scene");
 
         // Look for an initialized agent first
@@ -529,7 +529,7 @@ namespace LlamaBrain.Runtime.Demo.UI
     [ContextMenu("Force Find Agent")]
     public void ForceFindAgent()
     {
-      brainAgent = FindObjectOfType<LlamaBrainAgent>();
+      brainAgent = FindAnyObjectByType<LlamaBrainAgent>();
       if (brainAgent != null)
       {
         Debug.Log($"[MemoryManagerUI] Force found LlamaBrainAgent: {brainAgent.name}. IsInitialized: {brainAgent.IsInitialized}");

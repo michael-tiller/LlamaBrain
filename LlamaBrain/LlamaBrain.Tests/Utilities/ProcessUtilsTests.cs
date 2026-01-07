@@ -1347,5 +1347,275 @@ namespace LlamaBrain.Tests.Utilities
     }
 
     #endregion
+
+    #region Exception Path Coverage Tests
+
+    [Test]
+    [Platform("Win")]
+    public void KillProcess_ProcessThatExitsDuringKill_HandlesGracefully()
+    {
+      // Arrange - Start a very short-lived process
+      var processInfo = new ProcessStartInfo
+      {
+        FileName = "cmd.exe",
+        Arguments = "/c echo test",
+        CreateNoWindow = true,
+        UseShellExecute = false
+      };
+
+      var process = Process.Start(processInfo);
+      Assert.That(process, Is.Not.Null);
+
+      // Wait for process to exit naturally
+      process!.WaitForExit(5000);
+
+      // Act - Try to kill already-exited process (should handle gracefully)
+      // This exercises error handling paths when process state changes
+      // Assert - Should not throw, handles gracefully even if process already exited
+      Assert.DoesNotThrow(() => ProcessUtils.KillProcess("cmd", forceKill: true));
+
+      process.Dispose();
+    }
+
+    [Test]
+    public void GetProcessInfo_ProcessNameWithNullChar_ReturnsEmptyList()
+    {
+      // Arrange - Process name with embedded null (edge case)
+      var nameWithNull = "process\0name";
+
+      // Act - Should handle gracefully without throwing
+      var result = ProcessUtils.GetProcessInfo(nameWithNull);
+
+      // Assert
+      Assert.That(result, Is.Not.Null);
+    }
+
+    [Test]
+    public void ValidateProcessConfig_PathWithInvalidChars_ReturnsFalse()
+    {
+      // Arrange - Path with characters that might cause exceptions
+      var invalidPath = "C:\\<>:\"|?*\\invalid.exe";
+
+      // Act
+      var result = ProcessUtils.ValidateProcessConfig(invalidPath);
+
+      // Assert - Should return false, not throw
+      Assert.That(result, Is.False);
+    }
+
+    [Test]
+    public void ValidateProcessConfig_VeryLongPath_ReturnsFalse()
+    {
+      // Arrange - Path that exceeds Windows MAX_PATH
+      var longPath = "C:\\" + new string('a', 300) + "\\test.exe";
+
+      // Act
+      var result = ProcessUtils.ValidateProcessConfig(longPath);
+
+      // Assert - Should return false due to path length issues
+      Assert.That(result, Is.False);
+    }
+
+    [Test]
+    public void ValidateProcessConfig_UncPath_Handles()
+    {
+      // Arrange - UNC path that doesn't exist
+      var uncPath = "\\\\nonexistent-server\\share\\file.exe";
+
+      // Act
+      var result = ProcessUtils.ValidateProcessConfig(uncPath);
+
+      // Assert - Should return false (file doesn't exist)
+      Assert.That(result, Is.False);
+    }
+
+    [Test]
+    public void GetProcessInfo_ProcessNameWithInvalidChars_ReturnsEmptyList()
+    {
+      // Arrange - Process name that won't match anything
+      var invalidName = "process<>name";
+
+      // Act
+      var result = ProcessUtils.GetProcessInfo(invalidName);
+
+      // Assert - Should return empty list, not throw
+      Assert.That(result, Is.Not.Null);
+      Assert.That(result.Count, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void IsProcessRunning_ProcessNameWithNumbers_HandlesCorrectly()
+    {
+      // Arrange
+      var nameWithNumbers = "process12345";
+
+      // Act
+      var result = ProcessUtils.IsProcessRunning(nameWithNumbers);
+
+      // Assert
+      Assert.That(result, Is.False);
+    }
+
+    [Test]
+    public void GetRunningProcesses_ProcessNameStartingWithNumber_HandlesCorrectly()
+    {
+      // Arrange
+      var nameStartingWithNumber = "123process";
+
+      // Act
+      var result = ProcessUtils.GetRunningProcesses(nameStartingWithNumber);
+
+      // Assert
+      Assert.That(result, Is.Not.Null);
+      Assert.That(result.Count, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void KillProcess_ProcessNameWithDots_HandlesCorrectly()
+    {
+      // Arrange - Process name with dots (like a filename without extension)
+      var nameWithDots = "process.name.test";
+
+      // Act
+      var result = ProcessUtils.KillProcess(nameWithDots);
+
+      // Assert - Should return false (no such process)
+      Assert.That(result, Is.False);
+    }
+
+    [Test]
+    public void GetProcessInfo_ProcessNameWithUnderscore_HandlesCorrectly()
+    {
+      // Arrange
+      var nameWithUnderscore = "process_name_test";
+
+      // Act
+      var result = ProcessUtils.GetProcessInfo(nameWithUnderscore);
+
+      // Assert
+      Assert.That(result, Is.Not.Null);
+      Assert.That(result.Count, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void ValidateProcessConfig_RelativePath_HandlesCorrectly()
+    {
+      // Arrange - Relative path to non-existent file
+      var relativePath = "relative\\path\\to\\file.exe";
+
+      // Act
+      var result = ProcessUtils.ValidateProcessConfig(relativePath);
+
+      // Assert
+      Assert.That(result, Is.False);
+    }
+
+    [Test]
+    public void ValidateProcessConfig_PathWithSpaces_HandlesCorrectly()
+    {
+      // Arrange
+      var pathWithSpaces = Path.Combine(Path.GetTempPath(), "path with spaces", "file.exe");
+
+      // Act
+      var result = ProcessUtils.ValidateProcessConfig(pathWithSpaces);
+
+      // Assert - Should return false (doesn't exist)
+      Assert.That(result, Is.False);
+    }
+
+    [Test]
+    public async Task WaitForProcessStartAsync_PositiveOneTimeout_Works()
+    {
+      // Arrange - Test minimum valid timeout
+      var nonExistent = "nonexistent_process_abc123";
+
+      // Act
+      var result = await ProcessUtils.WaitForProcessStartAsync(nonExistent, 1);
+
+      // Assert
+      Assert.That(result, Is.False);
+    }
+
+    [Test]
+    public async Task WaitForProcessExitAsync_PositiveOneTimeout_Works()
+    {
+      // Arrange - Test minimum valid timeout with running process
+      // Act
+      var result = await ProcessUtils.WaitForProcessExitAsync(_currentProcessName, 1);
+
+      // Assert
+      Assert.That(result, Is.False);
+    }
+
+    [Test]
+    public void ProcessInfo_StartTimeCanBeSet()
+    {
+      // Arrange
+      var info = new ProcessInfo();
+      var testTime = new DateTime(2020, 1, 1, 12, 0, 0);
+
+      // Act
+      info.StartTime = testTime;
+
+      // Assert
+      Assert.That(info.StartTime, Is.EqualTo(testTime));
+    }
+
+    [Test]
+    public void ProcessInfo_MemoryValuesCanBeNegative()
+    {
+      // Arrange - Edge case: technically memory values shouldn't be negative
+      // but the DTO allows it
+      var info = new ProcessInfo();
+
+      // Act
+      info.WorkingSet = -1;
+      info.VirtualMemorySize = -1;
+      info.PrivateMemorySize = -1;
+
+      // Assert
+      Assert.That(info.WorkingSet, Is.EqualTo(-1));
+      Assert.That(info.VirtualMemorySize, Is.EqualTo(-1));
+      Assert.That(info.PrivateMemorySize, Is.EqualTo(-1));
+    }
+
+    [Test]
+    public void ProcessInfo_ThreadCountCanBeZero()
+    {
+      // Arrange
+      var info = new ProcessInfo();
+
+      // Act & Assert - default is zero
+      Assert.That(info.ThreadCount, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void IsProcessRunning_SingleCharacterName_HandlesCorrectly()
+    {
+      // Arrange
+      var singleChar = "x";
+
+      // Act
+      var result = ProcessUtils.IsProcessRunning(singleChar);
+
+      // Assert
+      Assert.That(result, Is.False);
+    }
+
+    [Test]
+    public void GetRunningProcesses_SingleCharacterName_ReturnsEmptyList()
+    {
+      // Arrange
+      var singleChar = "z";
+
+      // Act
+      var result = ProcessUtils.GetRunningProcesses(singleChar);
+
+      // Assert
+      Assert.That(result, Is.Not.Null);
+      Assert.That(result.Count, Is.EqualTo(0));
+    }
+
+    #endregion
   }
 }

@@ -49,3 +49,27 @@ LlamaBrain/LlamaBrain.sln.DotSettings.user
 /LlamaBrain/LlamaBrain.Tests/TestResults
 claude.md
 .claude/
+# Unity auto-generated files
+*.csproj
+*.sln
+*.sln.DotSettings.user
+/LlamaBrainRuntime/obj/
+
+# IDE files
+.idea/
+*/.idea/
+
+# Unity runtime generated assets
+/LlamaBrainRuntime/Assets/DefaultVolumeProfile.asset
+/LlamaBrainRuntime/Assets/DefaultVolumeProfile.asset.meta
+/LlamaBrainRuntime/Assets/Resources/
+/LlamaBrainRuntime/Assets/Resources.meta
+/LlamaBrainRuntime/Assets/StreamingAssets/
+/LlamaBrainRuntime/Assets/StreamingAssets.meta
+
+# Unity package samples
+/LlamaBrainRuntime/Assets/Samples/
+/LlamaBrainRuntime/Assets/Samples.meta
+
+# Personal development notes
+TEACHABLE_MOMENTS.md

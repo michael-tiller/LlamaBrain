@@ -18,20 +18,23 @@ namespace LlamaBrain.Core.StructuredInput.Schemas
 
         /// <summary>
         /// Context section containing memories (facts, state, episodic, beliefs).
+        /// Optional for partial context support.
         /// </summary>
-        [JsonProperty("context", Order = 1)]
-        public ContextSection Context { get; set; } = new ContextSection();
+        [JsonProperty("context", Order = 1, NullValueHandling = NullValueHandling.Ignore)]
+        public ContextSection? Context { get; set; }
 
         /// <summary>
         /// Constraints section containing prohibitions, requirements, and permissions.
+        /// Optional for partial context support.
         /// </summary>
-        [JsonProperty("constraints", Order = 2)]
-        public ConstraintSection Constraints { get; set; } = new ConstraintSection();
+        [JsonProperty("constraints", Order = 2, NullValueHandling = NullValueHandling.Ignore)]
+        public ConstraintSection? Constraints { get; set; }
 
         /// <summary>
         /// Dialogue section containing history and current player input.
+        /// Optional for partial context support.
         /// </summary>
-        [JsonProperty("dialogue", Order = 3)]
-        public DialogueSection Dialogue { get; set; } = new DialogueSection();
+        [JsonProperty("dialogue", Order = 3, NullValueHandling = NullValueHandling.Ignore)]
+        public DialogueSection? Dialogue { get; set; }
     }
 }

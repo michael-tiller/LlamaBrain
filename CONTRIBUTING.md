@@ -12,7 +12,7 @@ Thank you for your interest in contributing to LlamaBrain! This document provide
 - **Testing**: NUnit test framework (included via project dependencies)
 
 **For Unity Runtime Development:**
-- **Unity**: Unity 2022.3 LTS or higher
+- **Unity**: Unity 6000.0.58f2 LTS
 - **Unity Test Framework**: Included via Unity Test Runner
 - **Core Library**: Must build the core library first (see Unity Development section)
 
@@ -39,9 +39,11 @@ Thank you for your interest in contributing to LlamaBrain! This document provide
    - **Usage**: Persisting game state, NPC memory, and InteractionCount across sessions
    - **License**: MIT License (GitHub version)
 
-4. **Starter Assets - Third Person** (via Unity Asset Store)
+4. **Starter Assets - Third Person (URP version only)** (via Unity Asset Store)
    - **Purpose**: Character controller for NPC movement and interaction
    - **Installation**: Download from [Unity Asset Store](https://assetstore.unity.com/packages/essentials/starter-assets-thirdperson-updates-in-new-charactercontroller-pa-196526)
+   - **Requirements**: URP project, New Input System, and Cinemachine (mandatory dependencies)
+   - **Unity 6 LTS Compatibility**: Only the URP version is compatible; built-in and HDRP variants are not supported
    - **Usage**: NPC movement, character controller functionality, and player interaction mechanics
    - **License**: Standard Asset Store EULA
 
@@ -146,7 +148,7 @@ dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
 
 ### Unity Prerequisites
 
-- **Unity Version**: Unity 2022.3 LTS or higher
+- **Unity Version**: Unity 6000.0.58f2 LTS
 - **Unity Test Framework**: Included via Unity Test Runner (EditMode and PlayMode tests)
 - **Assembly Definitions**: Unity uses `.asmdef` files for assembly management
 - **ScriptableObjects**: Used extensively for configuration (BrainSettings, PersonaConfig, ExpectancyRuleAsset, etc.)

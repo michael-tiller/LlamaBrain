@@ -55,7 +55,7 @@ namespace LlamaBrain.Runtime.Demo.UI
       // Auto-find brain server if not assigned
       if (brainServer == null)
       {
-        brainServer = FindObjectOfType<BrainServer>();
+        brainServer = FindAnyObjectByType<BrainServer>();
       }
 
       // Setup button listeners
@@ -279,7 +279,7 @@ namespace LlamaBrain.Runtime.Demo.UI
     [ContextMenu("Force Find Server")]
     public void ForceFindServer()
     {
-      brainServer = FindObjectOfType<BrainServer>();
+      brainServer = FindAnyObjectByType<BrainServer>();
       if (brainServer != null)
       {
         Debug.Log($"[ClientManagerUI] Force found BrainServer: {brainServer.name}");

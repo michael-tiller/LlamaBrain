@@ -315,7 +315,7 @@ if (config == null)
 ### Before Starting
 - [ ] llama.cpp server executable downloaded
 - [ ] Compatible GGUF model file available
-- [ ] Unity 2022.3 LTS or higher
+- [ ] Unity 6000.0.58f2 LTS
 - [ ] .NET Standard 2.1 support enabled
 
 ### Server Setup

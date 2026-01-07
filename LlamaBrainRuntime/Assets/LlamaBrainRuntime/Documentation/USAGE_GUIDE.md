@@ -2,7 +2,7 @@
 
 This guide shows how to use all nine components of the LlamaBrain architecture in your Unity project. The system ensures deterministic, controlled AI behavior while maintaining the flexibility and creativity of Large Language Models.
 
-**Last Updated**: December 31, 2025
+**Last Updated**: January 6, 2026
 
 ---
 
@@ -1141,9 +1141,102 @@ server.StartServer(); // Starts llama.cpp server
 server.StopServer(); // Stops server
 ```
 
-**Location**: 
+**Location**:
 - `LlamaBrain/Source/Core/ApiClient.cs`
 - `LlamaBrainRuntime/Runtime/Core/BrainServer.cs`
+
+### Seed-Based Determinism (Feature 14)
+
+LlamaBrain supports deterministic generation through seed-based token selection. When a seed is provided, llama.cpp uses it to make reproducible token choices, enabling:
+- **Save/Load Reproducibility**: Same conversation after loading a save
+- **QA Testing**: Reproduce exact hallucinations for debugging
+- **Regression Testing**: Verify behavior consistency across builds
+
+#### How Seeds Work
+
+The system uses `InteractionContext.InteractionCount` as the seed value:
+- `InteractionCount = 0`: First interaction with NPC
+- `InteractionCount = 1`: Second interaction
+- etc.
+
+The seed is passed to llama.cpp's `seed` parameter in the completion request.
+
+#### Automatic Seed Usage (LlamaBrainAgent)
+
+When using `SendPlayerInputWithContextAsync()`, the seed is extracted automatically:
+
+```csharp
+// Create context with InteractionCount
+var context = InteractionContext.FromPlayerUtterance(
+    npcId: "guard_001",
+    playerInput: "Hello!",
+    gameTime: Time.time
+);
+context.InteractionCount = 5; // This becomes the seed
+
+// Agent extracts and uses seed automatically
+var response = await agent.SendPlayerInputWithContextAsync(input, context);
+// Logs: "[LlamaBrainAgent] Using deterministic seed: 5 (source: context)"
+```
+
+#### Manual Seed Usage (BrainAgent)
+
+When using the core `BrainAgent` class directly:
+
+```csharp
+// Pass seed directly
+var response = await agent.SendMessageAsync("Hello", seed: 5);
+
+// Or use InteractionCount pattern
+var interactionCount = 5;
+var response = await agent.SendMessageAsync("Hello", seed: interactionCount);
+```
+
+#### Non-Deterministic Mode
+
+**Important**: `SendPlayerInputWithContextAsync()` and `LlamaBrainAgent` always use `InteractionContext.InteractionCount` for deterministic generation. Since `InteractionCount` defaults to `0` (not nullable), the seed computation `var seed = contextSeed ?? InteractionCount` always produces a concrete seed value. This means `LlamaBrainAgent` always runs in deterministic mode.
+
+To use true non-deterministic mode (random token selection), you must use the lower-level `BrainAgent` APIs directly:
+
+```csharp
+// Option 1: Pass null seed explicitly
+var response = await agent.SendMessageAsync("Hello", seed: null);
+
+// Option 2: Pass -1 for explicit random mode
+var response = await agent.SendMessageAsync("Hello", seed: -1);
+
+// Option 3: Use SendSimpleMessageAsync with null seed
+var response = await agent.SendSimpleMessageAsync("Hello", seed: null);
+```
+
+**Note**: When using `LlamaBrainAgent.SendPlayerInputWithContextAsync()`, the seed is always computed from `InteractionContext.InteractionCount` (which defaults to 0), and the log message will show:
+```
+[LlamaBrainAgent] Using deterministic seed: {seed} (source: {context|agent})
+```
+
+#### Retry Behavior
+
+When validation fails and retries occur, **the same seed is used for all retry attempts**:
+
+```
+Interaction 5, Attempt 1: seed=5, validation fails → retry with stricter constraints
+Interaction 5, Attempt 2: seed=5, validation fails → retry with even stricter constraints
+Interaction 5, Attempt 3: seed=5, validation passes → success
+```
+
+This ensures different outputs come from stricter constraints, not different random states.
+
+#### Hardware Considerations
+
+Seed-based determinism provides **best-effort reproducibility**:
+- **Same device, same session**: 100% reproducible
+- **Same device, different sessions**: ~100% reproducible
+- **Different devices, same GPU vendor**: ~99.9% reproducible
+- **Different GPU vendors**: ~99% reproducible
+
+For exact reproducibility in QA, use the same hardware configuration.
+
+**See**: `Documentation/DETERMINISM_CONTRACT.md` for detailed determinism guarantees.
 
 ---
 
@@ -1455,6 +1548,708 @@ Debug.Log($"Beliefs: {stats.BeliefCount} (Active: {stats.ActiveBeliefCount})");
 ```
 
 **Location**: `LlamaBrain/Source/Persona/AuthoritativeMemorySystem.cs` (lines 376-409)
+
+---
+
+## Structured Output (Feature 12)
+
+**Purpose**: Replace regex-based text parsing with LLM-native structured output formats for improved reliability and determinism.
+
+**Key Benefits**:
+- **Eliminates parsing errors**: JSON schema constraints ensure valid, parseable responses
+- **Improved determinism**: Native JSON parsing instead of regex extraction
+- **Automatic fallback**: Falls back to regex parsing if structured output fails
+- **Type safety**: Strongly-typed response structures
+
+### Overview
+
+LlamaBrain supports native structured output via llama.cpp's `json_schema` parameter. This ensures LLM responses conform to a strict JSON schema, eliminating regex parsing errors and improving reliability.
+
+**Prerequisites**: llama.cpp build with `json_schema` support (commit 5b7b0ac8df or later, March 22, 2024).
+
+### Using StructuredDialoguePipeline
+
+The `StructuredDialoguePipeline` provides complete orchestration for structured output:
+
+```csharp
+using LlamaBrain.Core;
+using LlamaBrain.Core.StructuredOutput;
+using LlamaBrain.Core.Validation;
+using LlamaBrain.Persona;
+
+// Create components
+var agent = new BrainAgent(profile, apiClient, memoryStore);
+var validationGate = new ValidationGate();
+var mutationController = new MemoryMutationController();
+var memorySystem = memoryStore.GetOrCreateSystem(profile.PersonaId);
+
+// Create pipeline with default config (structured with regex fallback)
+var pipeline = new StructuredDialoguePipeline(
+    agent,
+    validationGate,
+    mutationController,
+    memorySystem);
+
+// Process dialogue
+var result = await pipeline.ProcessDialogueAsync("Hello shopkeeper!");
+
+if (result.Success)
+{
+    Debug.Log($"Dialogue: {result.DialogueText}");
+    Debug.Log($"Parse Mode: {result.ParseMode}"); // Structured, Regex, or Fallback
+    Debug.Log($"Mutations Executed: {result.MutationResult?.SuccessCount ?? 0}");
+}
+```
+
+### Pipeline Configuration
+
+```csharp
+// Default: Structured output with regex fallback
+var config = StructuredPipelineConfig.Default;
+
+// Structured output only (no fallback)
+var config = StructuredPipelineConfig.StructuredOnly;
+
+// Regex parsing only (for older llama.cpp versions)
+var config = StructuredPipelineConfig.RegexOnly;
+
+// Custom configuration
+var config = new StructuredPipelineConfig
+{
+    UseStructuredOutput = true,
+    FallbackToRegex = true,
+    MaxRetries = 3,
+    TrackMetrics = true,
+    ValidateMutationSchemas = true,
+    ValidateIntentSchemas = true
+};
+
+var pipeline = new StructuredDialoguePipeline(agent, validationGate, null, null, config);
+```
+
+### Direct BrainAgent Methods
+
+For simpler use cases, use `BrainAgent` structured output methods directly:
+
+```csharp
+// Get structured dialogue response
+var parsedOutput = await agent.SendNativeDialogueAsync("Hello!");
+
+// Get typed response with custom schema
+var response = await agent.SendNativeStructuredMessageAsync<MyResponseType>("Analyze this:");
+
+// Instruction-based structured output
+var result = await agent.SendNativeStructuredInstructionAsync<DecisionResult>(
+    "Should we proceed with the plan?",
+    "You are a strategic advisor. Analyze and provide a decision.");
+```
+
+### Structured vs Regex Parsing Comparison
+
+| Aspect | Structured (JSON Schema) | Regex Parsing |
+|--------|--------------------------|---------------|
+| **Parse Time** | ~0.01-0.07ms | ~0.00-0.01ms |
+| **Reliability** | 100% on valid JSON | ~95% (regex edge cases) |
+| **Type Safety** | Strongly typed | String extraction |
+| **Schema Validation** | Built-in | Manual |
+| **Server Requirement** | llama.cpp with json_schema | Any version |
+| **Best For** | Production, complex outputs | Legacy, simple outputs |
+
+### Example: Structured vs Regex Response
+
+**Structured Output (JSON)**:
+```json
+{
+  "dialogueText": "Hello, traveler! Welcome to my shop.",
+  "proposedMutations": [
+    {
+      "type": "AppendEpisodic",
+      "content": "Player greeted the shopkeeper"
+    }
+  ],
+  "worldIntents": [
+    {
+      "intentType": "show_welcome",
+      "target": "player"
+    }
+  ]
+}
+```
+
+**Regex Parsing (Text)**:
+```text
+Hello, traveler! Welcome to my shop.
+
+[MEMORY:Player greeted the shopkeeper]
+[INTENT:show_welcome|target=player]
+```
+
+Both formats are parsed into the same `ParsedOutput` structure, but structured output is more reliable.
+
+### Schema Versioning
+
+LlamaBrain supports schema versioning for backward compatibility:
+
+```csharp
+using LlamaBrain.Core.StructuredOutput;
+
+// Get current schema version
+var version = JsonSchemaBuilder.GetCurrentVersion(); // e.g., "1.1.0"
+
+// Build versioned schema
+var schema = JsonSchemaBuilder.BuildParsedOutputSchema(includeVersion: true);
+
+// Detect version from response
+var detectedVersion = JsonSchemaBuilder.DetectSchemaVersion(jsonResponse);
+
+// Check compatibility
+if (JsonSchemaBuilder.CanReadResponse(jsonResponse))
+{
+    // Response is compatible with current schema
+}
+```
+
+### Complex Intent Parameters
+
+LlamaBrain supports complex, typed intent parameters for world intents:
+
+```csharp
+using LlamaBrain.Core.StructuredOutput;
+
+// Extract typed parameters from intent
+var intent = parsedOutput.WorldIntents[0];
+var parameters = intent.Parameters; // Dictionary<string, object>
+
+// Use typed parameter classes
+if (intent.IntentType == "give_item")
+{
+    var giveParams = IntentParameterExtensions.GetGiveItemParameters(parameters);
+    Debug.Log($"Giving {giveParams.Quantity} of {giveParams.ItemName} to {giveParams.TargetEntity}");
+}
+
+if (intent.IntentType == "move_to")
+{
+    var moveParams = IntentParameterExtensions.GetMoveToParameters(parameters);
+    Debug.Log($"Moving to ({moveParams.X}, {moveParams.Y}) at speed {moveParams.Speed}");
+}
+
+// Extract arrays and nested objects
+var tags = parameters.GetArray<string>("tags");
+var metadata = parameters.GetNested("metadata");
+```
+
+**Supported Parameter Types**:
+- `GiveItemParameters` - Item name, quantity, target entity
+- `MoveToParameters` - Destination coordinates, speed
+- `InteractParameters` - Target entity, interaction type
+- Custom types via `GetNested<T>()` and `GetArray<T>()` extension methods
+
+### Metrics Tracking
+
+Monitor structured output performance:
+
+```csharp
+var metrics = pipeline.Metrics;
+
+Debug.Log($"Total Requests: {metrics.TotalRequests}");
+Debug.Log($"Structured Success: {metrics.StructuredSuccessCount}");
+Debug.Log($"Regex Fallback: {metrics.RegexFallbackCount}");
+Debug.Log($"Success Rate: {metrics.StructuredSuccessRate:F1}%");
+Debug.Log($"Fallback Rate: {metrics.FallbackRate:F1}%");
+
+// Reset metrics for new session
+pipeline.ResetMetrics();
+```
+
+### Migration from Regex to Structured
+
+#### Step 1: Enable with Fallback
+
+Start with fallback enabled for safety:
+
+```csharp
+var config = StructuredPipelineConfig.Default; // FallbackToRegex = true
+var pipeline = new StructuredDialoguePipeline(agent, validationGate, null, null, config);
+```
+
+#### Step 2: Monitor Fallback Rate
+
+```csharp
+// After running for a while...
+var fallbackRate = pipeline.Metrics.FallbackRate;
+if (fallbackRate < 5.0f) // Less than 5% fallback usage
+{
+    Debug.Log("Structured output is stable, consider disabling fallback");
+}
+```
+
+#### Step 3: Disable Fallback (Optional)
+
+Once confirmed stable:
+
+```csharp
+var config = StructuredPipelineConfig.StructuredOnly;
+```
+
+### Best Practices
+
+| Practice | Description |
+|----------|-------------|
+| **Start with fallback** | Use `StructuredPipelineConfig.Default` during migration |
+| **Monitor metrics** | Track success rate and fallback usage |
+| **Validate schemas** | Enable `ValidateMutationSchemas` and `ValidateIntentSchemas` |
+| **Use versioned schemas** | Enable version tracking for backward compatibility |
+| **Test with real LLM** | Schema constraints may behave differently with different models |
+
+**Location**:
+- `LlamaBrain/Source/Core/StructuredOutput/StructuredDialoguePipeline.cs`
+- `LlamaBrain/Source/Core/StructuredOutput/JsonSchemaBuilder.cs`
+- `LlamaBrain/Source/Core/StructuredOutput/SchemaVersion.cs`
+
+---
+
+## Voice System Integration (Features 31-32)
+
+**Purpose**: Enable voice-based interactions with NPCs through microphone input and text-to-speech output.
+
+**Features**:
+- **Feature 31**: Whisper.unity integration for speech-to-text (voice input)
+- **Feature 32**: Piper.unity integration for text-to-speech (voice output)
+
+### Overview
+
+The voice system provides a complete solution for spoken dialogue with NPCs. Player speech is transcribed to text via Whisper, processed through the standard LlamaBrain pipeline, and NPC responses are converted to speech via TTS.
+
+**Architecture Flow**:
+```
+Player Speaks → Microphone → NpcVoiceInput → Whisper (STT) → 
+LlamaBrainAgent (Standard Pipeline) → NpcVoiceOutput → TTS → Audio Playback
+```
+
+### Components
+
+#### 1. NpcVoiceController
+
+Central component managing voice input/output coordination.
+
+**Setup**:
+```csharp
+// On NPC GameObject
+public class VoiceNPC : MonoBehaviour
+{
+    [SerializeField] private NpcSpeechConfig speechConfig;
+    private NpcVoiceController voiceController;
+    private LlamaBrainAgent agent;
+    
+    void Start()
+    {
+        agent = GetComponent<LlamaBrainAgent>();
+        voiceController = gameObject.AddComponent<NpcVoiceController>();
+        voiceController.Initialize(agent, speechConfig);
+        
+        // Hook up events
+        voiceController.OnTranscriptionReceived += HandleTranscription;
+        voiceController.OnSpeechStarted += () => Debug.Log("NPC speaking...");
+        voiceController.OnSpeechCompleted += () => Debug.Log("NPC finished speaking");
+    }
+    
+    private async void HandleTranscription(string transcribedText)
+    {
+        Debug.Log($"Player said: {transcribedText}");
+        // Agent processes and responds automatically
+    }
+    
+    public void ToggleListening()
+    {
+        if (voiceController.IsListening)
+            voiceController.StopListening();
+        else
+            voiceController.StartListening();
+    }
+}
+```
+
+**Key Methods**:
+- `Initialize(LlamaBrainAgent, NpcSpeechConfig)` - Set up voice controller
+- `StartListening()` - Begin recording microphone input
+- `StopListening()` - Stop recording and transcribe
+- `Speak(string text)` - Convert text to speech and play
+
+**Events**:
+- `OnTranscriptionReceived(string)` - Fired when speech is transcribed
+- `OnSpeechStarted()` - Fired when TTS begins playback
+- `OnSpeechCompleted()` - Fired when TTS finishes playback
+- `OnListeningStarted()` - Fired when microphone starts recording
+- `OnListeningStopped()` - Fired when microphone stops recording
+
+#### 2. NpcVoiceInput
+
+Handles microphone input and speech-to-text transcription.
+
+**Key Features**:
+- Microphone device selection
+- Whisper model integration (local or API)
+- Voice activity detection (VAD)
+- Automatic silence detection
+- Audio preprocessing (noise reduction, normalization)
+
+**Configuration** (via NpcSpeechConfig):
+```csharp
+// Voice Input Settings
+inputSettings.microphoneDevice = null; // null = default device
+inputSettings.whisperModelPath = "path/to/whisper-model.bin";
+inputSettings.useWhisperAPI = false; // Use local Whisper model
+inputSettings.whisperAPIKey = ""; // If using API
+inputSettings.silenceThreshold = 0.01f; // Audio level threshold
+inputSettings.silenceDuration = 2.0f; // Seconds of silence before auto-stop
+inputSettings.maxRecordingDuration = 30.0f; // Maximum recording length
+```
+
+#### 3. NpcVoiceOutput
+
+Handles text-to-speech conversion and audio playback.
+
+**Key Features**:
+- Multiple TTS provider support (local, API-based)
+- Voice parameter configuration (pitch, speed, volume)
+- Audio caching for repeated phrases
+- Integration with Unity AudioSource
+
+**Configuration** (via NpcSpeechConfig):
+```csharp
+// Voice Output Settings
+outputSettings.ttsProvider = TTSProvider.Local; // or TTSProvider.API
+outputSettings.voiceId = "en-US-Standard-A"; // Voice selection
+outputSettings.pitch = 1.0f; // Voice pitch multiplier
+outputSettings.speed = 1.0f; // Speech speed multiplier
+outputSettings.volume = 1.0f; // Audio volume
+outputSettings.useAudioCache = true; // Cache common phrases
+```
+
+#### 4. NpcSpeechConfig
+
+ScriptableObject for voice system configuration.
+
+**Creation**:
+1. Right-click in Project window
+2. `Create → LlamaBrain → Voice → NPC Speech Config`
+3. Configure in Inspector
+4. Assign to NpcVoiceController
+
+**Settings**:
+- **Input Settings**: Microphone, Whisper, VAD
+- **Output Settings**: TTS provider, voice, audio parameters
+- **Integration Settings**: Agent reference, audio source
+- **Debug Settings**: Logging, visualization
+
+### Example: Complete Voice-Enabled NPC
+
+```csharp
+using UnityEngine;
+using LlamaBrain.Runtime.Core;
+using LlamaBrain.Runtime.Core.Voice;
+
+public class CompleteVoiceNPC : MonoBehaviour
+{
+    [Header("Components")]
+    [SerializeField] private LlamaBrainAgent agent;
+    [SerializeField] private NpcSpeechConfig speechConfig;
+    
+    [Header("UI")]
+    [SerializeField] private GameObject listeningIndicator;
+    [SerializeField] private GameObject speakingIndicator;
+    
+    private NpcVoiceController voiceController;
+    
+    void Start()
+    {
+        // Initialize voice controller
+        voiceController = gameObject.AddComponent<NpcVoiceController>();
+        voiceController.Initialize(agent, speechConfig);
+        
+        // Hook up events for UI feedback
+        voiceController.OnListeningStarted += () => 
+        {
+            listeningIndicator.SetActive(true);
+            Debug.Log("Listening to player...");
+        };
+        
+        voiceController.OnListeningStopped += () => 
+        {
+            listeningIndicator.SetActive(false);
+            Debug.Log("Processing speech...");
+        };
+        
+        voiceController.OnTranscriptionReceived += (text) =>
+        {
+            Debug.Log($"Transcribed: {text}");
+            // Agent automatically processes through full pipeline:
+            // 1. Create interaction context
+            // 2. Evaluate expectancy rules
+            // 3. Retrieve memory context
+            // 4. Assemble prompt
+            // 5. Query LLM
+            // 6. Validate output
+            // 7. Mutate memory
+            // 8. Return response (or fallback)
+        };
+        
+        voiceController.OnSpeechStarted += () => 
+        {
+            speakingIndicator.SetActive(true);
+            Debug.Log("NPC speaking...");
+        };
+        
+        voiceController.OnSpeechCompleted += () => 
+        {
+            speakingIndicator.SetActive(false);
+            Debug.Log("NPC finished speaking");
+        };
+    }
+    
+    void Update()
+    {
+        // Toggle listening with Space key
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            if (voiceController.IsListening)
+                voiceController.StopListening();
+            else
+                voiceController.StartListening();
+        }
+        
+        // Manual stop with Escape
+        if (Input.GetKeyDown(KeyCode.Escape) && voiceController.IsListening)
+        {
+            voiceController.StopListening();
+        }
+    }
+    
+    // Programmatic speech (e.g., for cutscenes)
+    public void SayGreeting()
+    {
+        voiceController.Speak("Hello traveler! How can I help you today?");
+    }
+}
+```
+
+### Integration with LlamaBrainAgent
+
+The voice system integrates seamlessly with the existing LlamaBrain pipeline:
+
+```csharp
+// In NpcVoiceController (simplified internal flow)
+private async void ProcessTranscription(string transcribedText)
+{
+    // 1. Transcription received from Whisper
+    OnTranscriptionReceived?.Invoke(transcribedText);
+    
+    // 2. Send to LlamaBrainAgent (goes through full pipeline)
+    var response = await agent.SendPlayerInputAsync(transcribedText);
+    
+    // 3. Convert response to speech
+    if (!string.IsNullOrEmpty(response))
+    {
+        await Speak(response);
+    }
+}
+```
+
+**Key Points**:
+- Voice input is converted to text **before** entering the pipeline
+- Standard validation, memory, and fallback systems apply
+- Voice output is generated **after** validation succeeds
+- All architectural guarantees maintained (determinism, validation, authority)
+
+### Whisper Integration
+
+**Local Whisper** (Recommended for Privacy):
+```csharp
+// Configure for local Whisper model
+speechConfig.inputSettings.useWhisperAPI = false;
+speechConfig.inputSettings.whisperModelPath = "Assets/Models/whisper-base.bin";
+speechConfig.inputSettings.whisperLanguage = "en"; // or "auto" for detection
+```
+
+**Whisper API** (Cloud-based):
+```csharp
+// Configure for Whisper API
+speechConfig.inputSettings.useWhisperAPI = true;
+speechConfig.inputSettings.whisperAPIKey = "your-api-key";
+speechConfig.inputSettings.whisperAPIEndpoint = "https://api.openai.com/v1/audio/transcriptions";
+```
+
+### TTS Provider Options
+
+**1. Local TTS** (Platform-dependent):
+```csharp
+outputSettings.ttsProvider = TTSProvider.Local;
+outputSettings.voiceId = "Microsoft David Desktop"; // Windows
+// or "com.apple.speech.synthesis.voice.Alex" // macOS
+```
+
+**2. Cloud TTS** (Google, Azure, AWS):
+```csharp
+outputSettings.ttsProvider = TTSProvider.GoogleCloudTTS;
+outputSettings.voiceId = "en-US-Standard-B";
+outputSettings.apiKey = "your-google-cloud-api-key";
+```
+
+### Performance Considerations
+
+**Audio Processing**:
+- Whisper transcription: ~1-3 seconds (local, depends on audio length)
+- TTS generation: ~0.5-2 seconds (depends on provider and text length)
+- Total voice round-trip: ~2-6 seconds + LLM processing time
+
+**Optimization Tips**:
+1. Use local Whisper model for faster transcription
+2. Cache common TTS phrases in NpcSpeechConfig
+3. Pre-generate TTS for frequently used responses
+4. Use smaller Whisper models (base, small) for real-time conversations
+5. Consider streaming TTS for longer responses
+
+### Troubleshooting
+
+**Microphone Not Detecting**:
+- Check `Microphone.devices` array for available devices
+- Verify microphone permissions (Windows/macOS security settings)
+- Test with `speechConfig.inputSettings.microphoneDevice = null` (default)
+
+**Transcription Quality Issues**:
+- Increase `silenceThreshold` if background noise is detected
+- Use larger Whisper model (medium, large) for better accuracy
+- Set correct `whisperLanguage` instead of "auto"
+
+**TTS Not Playing**:
+- Verify AudioSource component is attached
+- Check audio output device settings
+- Ensure TTS provider credentials are valid
+- Test with simple phrase: `voiceController.Speak("Test")`
+
+**Voice/Agent Integration Issues**:
+- Ensure LlamaBrainAgent is properly initialized before voice controller
+- Check that agent's PersonaConfig and BrainSettings are configured
+- Verify agent is responding to text input before adding voice
+
+### Files Reference
+
+**Voice System**:
+- `Runtime/Core/Voice/NpcVoiceController.cs` - Main controller
+- `Runtime/Core/Voice/NpcVoiceInput.cs` - Microphone + Whisper
+- `Runtime/Core/Voice/NpcVoiceOutput.cs` - TTS + Audio
+- `Runtime/Core/Voice/NpcSpeechConfig.cs` - Configuration asset
+
+**Integration**:
+- Voice system works with all existing LlamaBrainAgent features
+- Compatible with validation rules, expectancy constraints, memory mutations
+- Maintains deterministic pipeline guarantees
+
+---
+
+## Save/Load UI System (Feature 16 Extension)
+
+**Purpose**: Provide complete user interface for game state management including main menu, save/load screens, and pause menu.
+
+### Overview
+
+The save/load UI system provides a complete, production-ready interface for managing game state persistence. It integrates with LlamaBrainSaveManager (Feature 16) to provide seamless save/load functionality with a user-friendly UI.
+
+### Key Components
+
+#### RedRoomGameController
+Main game controller managing scene transitions and game state.
+
+#### MainMenu
+Main menu UI panel with new game and load game options.
+- Prefab: `Prefabs/UI/Panel_MainMenu.prefab`
+
+#### LoadGameMenu
+Save slot browser showing all available saves with metadata.
+- Prefab: `Prefabs/UI/Panel_LoadGame.prefab`
+
+#### LoadGameScrollViewElement
+Individual save slot entry displaying metadata and load button.
+- Prefab: `Prefabs/UI/Element_SaveGameEntry.prefab`
+
+#### PausePanel
+In-game pause menu with save, load, and quit options.
+- Prefab: `Prefabs/UI/Panel_Pause.prefab`
+
+### Basic Usage
+
+```csharp
+using UnityEngine;
+using LlamaBrain.Runtime.Persistence;
+
+public class GameStateExample : MonoBehaviour
+{
+    [SerializeField] private LlamaBrainSaveManager saveManager;
+    
+    // Quick save (F5)
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.F5))
+        {
+            QuickSave();
+        }
+        
+        if (Input.GetKeyDown(KeyCode.F9))
+        {
+            QuickLoad();
+        }
+    }
+    
+    private async void QuickSave()
+    {
+        var result = await saveManager.QuickSave();
+        if (result.Success)
+        {
+            Debug.Log("Quick save successful");
+        }
+    }
+    
+    private async void QuickLoad()
+    {
+        var result = await saveManager.QuickLoad();
+        if (result.Success)
+        {
+            Debug.Log("Quick load successful");
+        }
+    }
+    
+    // Named save slot
+    private async void SaveToSlot(string slotName)
+    {
+        var result = await saveManager.SaveToSlot(slotName);
+        if (result.Success)
+        {
+            Debug.Log($"Saved to slot: {slotName}");
+        }
+    }
+    
+    // Load from slot
+    private async void LoadFromSlot(string slotName)
+    {
+        var result = await saveManager.LoadFromSlot(slotName);
+        if (result.Success)
+        {
+            Debug.Log($"Loaded from slot: {slotName}");
+        }
+    }
+}
+```
+
+### Files Reference
+
+**UI System**:
+- `Runtime/RedRoom/RedRoomGameController.cs`
+- `Runtime/RedRoom/UI/MainMenu.cs`
+- `Runtime/RedRoom/UI/LoadGameMenu.cs`
+- `Runtime/RedRoom/UI/LoadGameScrollViewElement.cs`
+- `Runtime/RedRoom/UI/PausePanel.cs`
+
+**See**: RedRoom sample scene for complete working example
 
 ---
 

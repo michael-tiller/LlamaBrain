@@ -21,11 +21,11 @@ MonoBehaviour:
   conditionMode: 0
   conditions: []
   constraints:
-  - Type: 0
+  - Type: 1
     Severity: 2
-    Description: Cannot mention red or red-associated colors/concepts
-    PromptInjection: You must NEVER mention the color red or anything associated
-      with red. This includes words like blood, crimson, scarlet, ruby, cherry, vermillion,
+    Description: Must mention red or red-associated colors/concepts
+    PromptInjection: You must mention the color red or anything associated with red.
+      This includes words like blood, crimson, scarlet, ruby, cherry, vermillion,
       rust, maroon, burgundy, carmine, or any shade of red. Avoid describing anything
       that is typically red in color.
     ValidationPatterns:
