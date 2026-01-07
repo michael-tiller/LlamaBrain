@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 09b30461ccb8b0141836d26eda86d2cb, type: 3}
+  m_Name: PromptAssemblerSettings
+  m_EditorClassIdentifier: 
+  maxPromptTokens: 2048
+  reserveResponseTokens: 256
+  charsPerToken: 4
+  maxDialogueExchanges: 5
+  maxEpisodicMemories: 5
+  maxBeliefs: 3
+  maxContextCharacters: 2000
+  alwaysIncludeCanonicalFacts: 1
+  alwaysIncludeWorldState: 1
+  includeConstraints: 1
+  includeRetryFeedback: 1
+  systemPromptFormat: 'System: {0}'
+  contextHeader: '
+
+    [Context]'
+  conversationHeader: '
+
+    [Conversation]'
+  playerInputFormat: '
+
+    Player: {0}'
+  npcPromptFormat: '
+
+    {0}:'
+  defaultNpcName: NPC

@@ -12,7 +12,7 @@ Thank you for your interest in contributing to LlamaBrain! This document provide
 - **Testing**: NUnit test framework (included via project dependencies)
 
 **For Unity Runtime Development:**
-- **Unity**: Unity 2022.3 LTS or higher
+- **Unity**: Unity 6000.0.58f2 LTS
 - **Unity Test Framework**: Included via Unity Test Runner
 - **Core Library**: Must build the core library first (see Unity Development section)
 
@@ -146,7 +146,7 @@ dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
 
 ### Unity Prerequisites
 
-- **Unity Version**: Unity 2022.3 LTS or higher
+- **Unity Version**: Unity 6000.0.58f2 LTS
 - **Unity Test Framework**: Included via Unity Test Runner (EditMode and PlayMode tests)
 - **Assembly Definitions**: Unity uses `.asmdef` files for assembly management
 - **ScriptableObjects**: Used extensively for configuration (BrainSettings, PersonaConfig, ExpectancyRuleAsset, etc.)

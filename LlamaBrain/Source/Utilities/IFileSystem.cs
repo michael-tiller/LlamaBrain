@@ -48,6 +48,15 @@ namespace LlamaBrain.Utilities
     void MoveFile(string sourceFileName, string destFileName);
 
     /// <summary>
+    /// Atomically replaces a destination file with a source file.
+    /// If destinationFileName doesn't exist, this behaves like MoveFile.
+    /// Uses atomic replacement when possible to prevent data loss on crash.
+    /// </summary>
+    /// <param name="sourceFileName">The path of the source file (will be deleted after replacement)</param>
+    /// <param name="destinationFileName">The path of the destination file to replace</param>
+    void ReplaceFile(string sourceFileName, string destinationFileName);
+
+    /// <summary>
     /// Gets file information
     /// </summary>
     /// <param name="fileName">The path of the file</param>

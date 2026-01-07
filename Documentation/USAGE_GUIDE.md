@@ -2,7 +2,7 @@
 
 This guide provides practical examples and best practices for using LlamaBrain's deterministic NPC dialogue system across different game engines.
 
-**Last Updated**: January 2, 2026
+**Last Updated**: January 3, 2026
 
 ---
 
@@ -30,6 +30,7 @@ This guide focuses on the **core library** (engine-agnostic .NET Standard 2.1), 
 12. [Function Calling](#function-calling)
 13. [Debugging & Monitoring](#debugging--monitoring)
 14. [Performance Optimization](#performance-optimization)
+15. [Save/Load Persistence](#save-load-persistence)
 
 ---
 
@@ -1759,6 +1760,297 @@ var retryPolicy = new RetryPolicy
 
 ---
 
+<a id="save-load-persistence"></a>
+## Save/Load Persistence
+
+LlamaBrain provides an engine-agnostic persistence layer for saving and loading NPC memory state and conversation history across game sessions.
+
+### Architecture Overview
+
+The persistence system uses a clean adapter pattern:
+
+```
+LlamaBrain Core (engine-agnostic)
+├── ISaveSystem interface           # Engine-agnostic save/load contract
+├── SaveData + DTOs                 # Immutable serialization types
+├── MemorySnapshotBuilder           # Creates snapshots from memory
+├── MemorySnapshotRestorer          # Restores memory from snapshots
+└── FileSystemSaveSystem            # Default file-based implementation
+
+Unity Runtime
+├── SaveGameFreeSaveSystem          # SaveGameFree plugin wrapper
+└── LlamaBrainSaveManager           # MonoBehaviour for game integration
+```
+
+### Core Library Usage
+
+#### Basic Save/Load with FileSystemSaveSystem
+
+```csharp
+using LlamaBrain.Persistence;
+using LlamaBrain.Utilities;
+
+// Create save system with real file system
+var fileSystem = new FileSystem();
+var clock = new SystemClock();
+var saveSystem = new FileSystemSaveSystem("C:/GameSaves/LlamaBrain", fileSystem, clock);
+
+// Create save data from your agents
+var saveData = SaveData.CreateNew();
+
+// Add each NPC's memory snapshot
+foreach (var agent in activeAgents)
+{
+    var personaId = agent.Profile.PersonaId;
+    var memorySnapshot = MemorySnapshotBuilder.CreateSnapshot(agent.MemorySystem, personaId);
+    saveData.PersonaMemories[personaId] = memorySnapshot;
+
+    // Optionally save conversation history
+    var historySnapshot = new ConversationHistorySnapshot
+    {
+        DialogueHistory = agent.DialogueHistory.Select(d => new DialogueEntryDto
+        {
+            Speaker = d.Speaker,
+            Text = d.Text,
+            TimestampTicks = d.Timestamp.Ticks
+        }).ToList()
+    };
+    saveData.ConversationHistories[personaId] = historySnapshot;
+}
+
+// Save to named slot
+var result = saveSystem.Save("slot1", saveData);
+if (result.Success)
+{
+    Console.WriteLine($"Saved to slot '{result.SlotName}' at {result.SavedAtUtc}");
+}
+else
+{
+    Console.WriteLine($"Save failed: {result.ErrorMessage}");
+}
+```
+
+#### Loading State
+
+```csharp
+// Load from slot
+var loadedData = saveSystem.Load("slot1");
+if (loadedData != null)
+{
+    foreach (var agent in activeAgents)
+    {
+        var personaId = agent.Profile.PersonaId;
+
+        if (loadedData.PersonaMemories.TryGetValue(personaId, out var snapshot))
+        {
+            // Restore memory state
+            MemorySnapshotRestorer.RestoreFromSnapshot(agent.MemorySystem, snapshot);
+        }
+
+        if (loadedData.ConversationHistories?.TryGetValue(personaId, out var history) == true)
+        {
+            // Restore conversation history
+            agent.RestoreDialogueHistory(history);
+        }
+    }
+    Console.WriteLine($"Loaded {loadedData.PersonaMemories.Count} NPCs");
+}
+```
+
+#### Listing and Managing Save Slots
+
+```csharp
+// List all save slots
+var slots = saveSystem.ListSlots();
+foreach (var slot in slots)
+{
+    Console.WriteLine($"Slot: {slot.SlotName}");
+    Console.WriteLine($"  Saved: {new DateTime(slot.SavedAtUtcTicks, DateTimeKind.Utc)}");
+    Console.WriteLine($"  NPCs: {slot.PersonaCount}");
+    Console.WriteLine($"  Version: {slot.Version}");
+}
+
+// Check if slot exists
+if (saveSystem.SlotExists("autosave"))
+{
+    Console.WriteLine("Autosave found");
+}
+
+// Delete a slot
+if (saveSystem.DeleteSlot("old_save"))
+{
+    Console.WriteLine("Deleted old save");
+}
+```
+
+### Unity Integration
+
+#### Setting Up LlamaBrainSaveManager
+
+Add the `LlamaBrainSaveManager` component to a persistent GameObject (e.g., GameManager):
+
+```csharp
+using LlamaBrain.Runtime.Persistence;
+using UnityEngine;
+
+public class GameSaveController : MonoBehaviour
+{
+    [SerializeField] private LlamaBrainSaveManager saveManager;
+
+    void Start()
+    {
+        // Auto-registers all LlamaBrainAgent instances in scene by default
+        // Or manually register specific agents:
+        // saveManager.RegisterAgent(myNpcAgent);
+
+        // Subscribe to events
+        saveManager.OnSaveComplete += OnSaveComplete;
+        saveManager.OnLoadComplete += OnLoadComplete;
+    }
+
+    void OnSaveComplete(SaveResult result)
+    {
+        if (result.Success)
+            Debug.Log($"Game saved to '{result.SlotName}'");
+        else
+            Debug.LogError($"Save failed: {result.ErrorMessage}");
+    }
+
+    void OnLoadComplete(bool success)
+    {
+        if (success)
+            Debug.Log("Game loaded successfully");
+        else
+            Debug.LogWarning("Failed to load game");
+    }
+
+    // Called from UI Save button
+    public void OnSaveButtonClicked(string slotName)
+    {
+        saveManager.SaveToSlot(slotName);
+    }
+
+    // Called from UI Load button
+    public void OnLoadButtonClicked(string slotName)
+    {
+        saveManager.LoadFromSlot(slotName);
+    }
+
+    // Quick save/load (uses default "autosave" slot)
+    public void QuickSave() => saveManager.QuickSave();
+    public void QuickLoad() => saveManager.QuickLoad();
+}
+```
+
+#### Inspector Configuration
+
+The `LlamaBrainSaveManager` component provides these configuration options:
+
+| Setting | Description |
+|---------|-------------|
+| `Auto Find Agents` | Automatically find and register all `LlamaBrainAgent` instances in scene |
+| `Default Slot Name` | Name of slot used by QuickSave/QuickLoad (default: "autosave") |
+
+#### Manual Agent Registration
+
+For dynamic NPC spawning, manually register/unregister agents:
+
+```csharp
+// When NPC spawns
+public void OnNpcSpawned(LlamaBrainAgent agent)
+{
+    saveManager.RegisterAgent(agent);
+}
+
+// When NPC is destroyed
+public void OnNpcDestroyed(LlamaBrainAgent agent)
+{
+    saveManager.UnregisterAgent(agent);
+}
+```
+
+### Custom Save System Implementation
+
+Create your own save system by implementing `ISaveSystem`:
+
+```csharp
+using LlamaBrain.Persistence;
+
+public class CloudSaveSystem : ISaveSystem
+{
+    private readonly string _cloudEndpoint;
+
+    public CloudSaveSystem(string endpoint)
+    {
+        _cloudEndpoint = endpoint;
+    }
+
+    public SaveResult Save(string slotName, SaveData data)
+    {
+        try
+        {
+            var json = JsonConvert.SerializeObject(data);
+            // Upload to cloud...
+            return SaveResult.Succeeded(slotName, data.SavedAtUtcTicks);
+        }
+        catch (Exception ex)
+        {
+            return SaveResult.Failed(ex.Message);
+        }
+    }
+
+    public SaveData? Load(string slotName)
+    {
+        // Download from cloud...
+        return JsonConvert.DeserializeObject<SaveData>(json);
+    }
+
+    public bool SlotExists(string slotName)
+    {
+        // Check cloud storage...
+        return true;
+    }
+
+    public bool DeleteSlot(string slotName)
+    {
+        // Delete from cloud...
+        return true;
+    }
+
+    public IReadOnlyList<SaveSlotInfo> ListSlots()
+    {
+        // List cloud slots...
+        return new List<SaveSlotInfo>();
+    }
+}
+
+// Use custom implementation
+saveManager.Initialize(new CloudSaveSystem("https://api.example.com/saves"));
+```
+
+### Determinism Considerations
+
+The persistence system preserves all determinism-critical fields:
+
+| Field | Purpose |
+|-------|---------|
+| `Id` | Unique identifier for each memory entry |
+| `SequenceNumber` | Insertion order for deterministic retrieval |
+| `CreatedAtTicks` | Creation timestamp for decay calculations |
+| `Ordinal` | Ordinal position for deterministic sorting |
+
+**Important**: All enums are serialized as `int` for stability across versions. This ensures saves remain compatible even if enum names change.
+
+### Best Practices
+
+1. **Save at safe points**: Trigger saves after dialogue completes, not during
+2. **Use named slots**: Support multiple save slots for player convenience
+3. **Handle failures gracefully**: Always check `SaveResult.Success` before confirming to player
+4. **Test round-trips**: Verify that save → load produces identical behavior
+5. **Version your saves**: Use `SaveData.Version` for migration support
+
+---
+
 ## Further Reading
 
 - [README.md](../LlamaBrain/README.md) - Main library documentation and overview
@@ -1772,4 +2064,4 @@ var retryPolicy = new RetryPolicy
 
 ---
 
-**Version**: 0.2.0-rc.1
+**Version**: 0.3.0-rc.2

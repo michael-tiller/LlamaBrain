@@ -1028,7 +1028,8 @@ INPUT                  = ../../README.md \
                          ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/README.md \
                          ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/Runtime/RedRoom/README.md \
                          ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/Documentation/USAGE_GUIDE.md \
-                         ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/Documentation/QUICK_START.md
+                         ../../LlamaBrainRuntime/Assets/LlamaBrainRuntime/Documentation/QUICK_START.md \
+                         ../DEVELOPMENT_LOG.md
 
 # This tag can be used to specify the character encoding of the source files
 # that Doxygen parses. Internally Doxygen uses the UTF-8 encoding. Doxygen uses

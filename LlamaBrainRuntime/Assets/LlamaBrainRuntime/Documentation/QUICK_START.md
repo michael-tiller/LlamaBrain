@@ -8,7 +8,7 @@ LlamaBrain for Unity brings local AI to your Unity projects with intelligent NPC
 
 Before you start, make sure you have:
 
-- **Unity 2022.3 LTS or higher**
+- **Unity 6000.0.58f2 LTS**
 - **TextMeshPro package** (installed via Package Manager)
 - **UniTask**
 - **Newtonsoft.Json**

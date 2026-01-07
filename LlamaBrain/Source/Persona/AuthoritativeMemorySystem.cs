@@ -545,6 +545,34 @@ namespace LlamaBrain.Persona
       OnLog?.Invoke("[Memory] All memories cleared");
     }
 
+    #endregion
+
+    #region Snapshot Helpers (For Persistence)
+
+    /// <summary>
+    /// Gets all world state entries with their keys.
+    /// Used by persistence layer for snapshotting.
+    /// </summary>
+    /// <returns>An enumerable of key-value pairs for world state</returns>
+    public IEnumerable<KeyValuePair<string, WorldStateEntry>> GetWorldStateEntries()
+    {
+      return _worldState;
+    }
+
+    /// <summary>
+    /// Gets all beliefs with their dictionary keys.
+    /// Used by persistence layer for snapshotting.
+    /// </summary>
+    /// <returns>An enumerable of key-value pairs for beliefs</returns>
+    public IEnumerable<KeyValuePair<string, BeliefMemoryEntry>> GetBeliefEntries()
+    {
+      return _beliefs;
+    }
+
+    #endregion
+
+    #region Statistics
+
     /// <summary>
     /// Recalculates the next sequence number from existing memories.
     /// Call this after loading/deserializing memories to ensure the counter is correct.

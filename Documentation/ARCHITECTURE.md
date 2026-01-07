@@ -1682,7 +1682,170 @@ dotnet test --filter "Category=RequiresLlamaServer"
 
 **When these tests pass against a llama.cpp server, they provide strong empirical evidence of reproducibility under the tested configuration**, regardless of the inherent randomness of the underlying AI model.
 
-**See**: [ROADMAP.md](ROADMAP.md#feature-14-deterministic-generation-seed) for detailed implementation plan.
+**See**: [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md#feature-14) for implementation details.
+
+## Unity Integration Features
+
+### Voice System Integration (Features 31-32 - In Progress)
+
+**Status**: 🚧 In Progress  
+**Priority**: MEDIUM  
+**Dependencies**: Unity Package, whisper.unity (Feature 31), piper.unity (Feature 32)
+
+**Overview**: Provides voice input/output capabilities for NPCs, enabling spoken dialogue through microphone input and text-to-speech output. The system integrates with LlamaBrainAgent to provide seamless voice-enabled conversations.
+
+**Key Components**:
+- **NpcVoiceController**: Central MonoBehaviour component managing voice input and output
+  - Coordinates between NpcVoiceInput and NpcVoiceOutput components
+  - Routes voice transcriptions to LlamaBrainAgent
+  - Manages voice playback of NPC responses
+  - Handles state transitions (idle, listening, processing, speaking)
+  
+- **NpcVoiceInput**: Microphone-based voice input system
+  - Whisper integration for speech-to-text transcription
+  - Configurable microphone selection
+  - Audio recording management
+  - Automatic silence detection and voice activity detection
+  
+- **NpcVoiceOutput**: Text-to-speech output system
+  - Converts NPC text responses to speech
+  - Configurable voice parameters (pitch, speed, volume)
+  - Audio playback management
+  - Integration with Unity's AudioSource component
+  
+- **NpcSpeechConfig**: ScriptableObject configuration asset
+  - Voice input settings (microphone device, Whisper model, detection thresholds)
+  - Voice output settings (TTS provider, voice selection, audio parameters)
+  - Per-NPC voice customization
+  - Configurable via Unity Inspector
+
+**Unity Integration**:
+```csharp
+// Setup voice-enabled NPC
+public class VoiceEnabledNPC : MonoBehaviour
+{
+    private LlamaBrainAgent agent;
+    private NpcVoiceController voiceController;
+    
+    void Start()
+    {
+        agent = GetComponent<LlamaBrainAgent>();
+        voiceController = GetComponent<NpcVoiceController>();
+        
+        // Voice controller automatically integrates with agent
+        // Player speaks → Whisper transcribes → Agent processes → TTS speaks
+    }
+    
+    public void StartListening()
+    {
+        voiceController.StartListening();
+    }
+    
+    public void StopListening()
+    {
+        voiceController.StopListening();
+    }
+}
+```
+
+**Architectural Impact**: Extends the LlamaBrain architecture to support voice-based interactions while maintaining the same validation and memory mutation pipeline. Voice input is transcribed to text before entering the system, and voice output is generated from validated text responses.
+
+**Files Added**:
+- `Runtime/Core/Voice/NpcVoiceController.cs`
+- `Runtime/Core/Voice/NpcVoiceInput.cs`
+- `Runtime/Core/Voice/NpcVoiceOutput.cs`
+- `Runtime/Core/Voice/NpcSpeechConfig.cs`
+
+**Current Status**: Core voice system components implemented. Integration with external TTS providers and advanced audio processing features in progress.
+
+### Game State Management UI (Feature 16 Extension)
+
+**Status**: ✅ Complete  
+**Priority**: HIGH  
+**Dependencies**: Feature 16 (Save/Load Integration), Unity UI System
+
+**Overview**: Provides complete UI system for game state management, including main menu, save/load screens, and pause menu. Integrates with LlamaBrainSaveManager for full game state persistence.
+
+**Key Components**:
+- **RedRoomGameController**: Main game controller for scene management
+  - Scene transition management (main menu ↔ gameplay)
+  - Game initialization and cleanup
+  - Integration with save/load system
+  - Pause state management
+  
+- **MainMenu**: Main menu UI panel
+  - New Game button with scene loading
+  - Load Game button with save slot browser
+  - Quit Game functionality
+  - Integration with LlamaBrainSaveManager
+  
+- **LoadGameMenu**: Save slot browser UI
+  - Display all available save slots with metadata
+  - Slot selection and loading
+  - Save file information (timestamp, persona count, scene name)
+  - Scroll view for multiple save files
+  
+- **LoadGameScrollViewElement**: Individual save slot UI element
+  - Display save slot metadata
+  - Load button for slot selection
+  - Visual feedback for selection state
+  
+- **PausePanel**: In-game pause menu
+  - Resume game functionality
+  - Save game with slot name input
+  - Load game access to save browser
+  - Quit to main menu option
+  - Integration with LlamaBrainSaveManager
+
+**Unity Integration**:
+```csharp
+// Save current game state
+public class GameManager : MonoBehaviour
+{
+    [SerializeField] private LlamaBrainSaveManager saveManager;
+    
+    public async void SaveGame(string slotName)
+    {
+        var result = await saveManager.SaveToSlot(slotName);
+        if (result.Success)
+        {
+            Debug.Log($"Game saved to slot: {slotName}");
+        }
+    }
+    
+    public async void LoadGame(string slotName)
+    {
+        var result = await saveManager.LoadFromSlot(slotName);
+        if (result.Success)
+        {
+            Debug.Log($"Game loaded from slot: {slotName}");
+        }
+    }
+    
+    public List<SaveSlotInfo> GetSaveSlots()
+    {
+        return saveManager.GetAllSaveSlots();
+    }
+}
+```
+
+**UI Prefabs**:
+- `Prefabs/UI/Panel_MainMenu.prefab` - Main menu panel
+- `Prefabs/UI/Panel_LoadGame.prefab` - Save browser panel
+- `Prefabs/UI/Panel_Pause.prefab` - Pause menu panel
+- `Prefabs/UI/Element_SaveGameEntry.prefab` - Save slot entry element
+- `Prefabs/Shared/LlamaBrainSaveManager.prefab` - Save manager singleton
+
+**Architectural Impact**: Provides complete user-facing interface for the deterministic save/load system (Feature 16). Demonstrates proper integration of persona memory snapshots, conversation history, and game state persistence with Unity UI.
+
+**Files Added**:
+- `Runtime/RedRoom/RedRoomGameController.cs`
+- `Runtime/RedRoom/UI/MainMenu.cs`
+- `Runtime/RedRoom/UI/LoadGameMenu.cs`
+- `Runtime/RedRoom/UI/LoadGameScrollViewElement.cs`
+- `Runtime/RedRoom/UI/PausePanel.cs`
+
+**RedRoom Demo**: The complete save/load UI system is demonstrated in the RedRoom sample scene, showing integration with NPC agents, dialogue triggers, and memory persistence.
 
 ## Best Practices
 
@@ -1791,5 +1954,5 @@ Guard: My duty never ends, but I can spare a moment for a citizen." // Guides to
 
 ---
 
-**Last Updated**: January 3, 2026
-**Architecture Version**: 0.3.0-rc.1
+**Last Updated**: January 6, 2026
+**Architecture Version**: 0.3.0-rc.2

@@ -66,6 +66,42 @@ namespace LlamaBrain.Utilities
     }
 
     /// <summary>
+    /// Atomically replaces a destination file with a source file.
+    /// Uses File.Replace for atomic operation when destination exists.
+    /// </summary>
+    /// <param name="sourceFileName">The path of the source file (will be deleted after replacement)</param>
+    /// <param name="destinationFileName">The path of the destination file to replace</param>
+    public void ReplaceFile(string sourceFileName, string destinationFileName)
+    {
+      if (!File.Exists(destinationFileName))
+      {
+        // No existing file to replace, just move
+        File.Move(sourceFileName, destinationFileName);
+        return;
+      }
+
+      // Use File.Replace for atomic replacement
+      // The backup file parameter is null - File.Replace handles cleanup
+      var backupFileName = destinationFileName + ".bak";
+
+      // Remove any stale backup from previous failed operations
+      if (File.Exists(backupFileName))
+      {
+        File.Delete(backupFileName);
+      }
+
+      // File.Replace atomically replaces destinationFileName with sourceFileName,
+      // creating a backup at backupFileName
+      File.Replace(sourceFileName, destinationFileName, backupFileName);
+
+      // Clean up the backup file after successful replacement
+      if (File.Exists(backupFileName))
+      {
+        File.Delete(backupFileName);
+      }
+    }
+
+    /// <summary>
     /// Gets file information
     /// </summary>
     /// <param name="fileName">The path of the file</param>

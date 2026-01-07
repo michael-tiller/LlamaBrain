@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 7521495879740039789}
   - component: {fileID: 4541035360694212475}
   - component: {fileID: 6614885023430675433}
+  - component: {fileID: 4585601663770231089}
   m_Layer: 0
   m_Name: BrainAgent
   m_TagString: Untagged
@@ -77,5 +78,28 @@ MonoBehaviour:
   PersonaConfig: {fileID: 11400000, guid: f41df21f884db6e419a5a31912eab0bb, type: 2}
   PromptSettings: {fileID: 11400000, guid: 12345678901234567890123456789012, type: 2}
   MemoryCategoryManager: {fileID: 11400000, guid: 683654e303f426f4abb8ce4fd1d55d68, type: 2}
+  ExpectancyConfig: {fileID: 4585601663770231089}
+  FunctionCallConfig: {fileID: 0}
+  fallbackConfig: {fileID: 0}
+  npcValidationRules: {fileID: 0}
   maxConversationHistoryEntries: 20
   storeConversationHistory: 1
+  maxResponseTokens: 24
+  enableAutoDecay: 1
+  promptAssemblerSettings: {fileID: 11400000, guid: b64107870ec9baa41b82272b6f5dce2c, type: 2}
+  decayIntervalSeconds: 300
+--- !u!114 &4585601663770231089
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5984264737455516988}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01f7340bc2608bb409878411f58facf4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  npcRules:
+  - {fileID: 11400000, guid: ce3a4b9e552785044b5a51e75a146b33, type: 2}
+  npcIdOverride: 

@@ -5,6 +5,147 @@ All notable changes to LlamaBrain will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0-rc.2] (Unreleased)
+
+### Unity Runtime
+
+#### Added
+- **Voice System Integration (Features 31-32)** 🚧
+  - **Feature 31: Whisper Speech-to-Text Integration** - Voice input for NPCs
+    - **NpcVoiceInput** - Microphone-based voice input with Whisper.unity integration
+    - Speech-to-text transcription for player dialogue
+    - Voice activity detection and silence detection
+  - **Feature 32: Piper Text-to-Speech Integration** - Voice output for NPCs
+    - **NpcVoiceOutput** - Text-to-speech output system with Piper.unity integration
+    - Natural voice synthesis for NPC responses
+    - Per-NPC voice model configuration
+  - **NpcVoiceController** - Central voice input/output management coordinator
+  - **NpcSpeechConfig** - ScriptableObject configuration for voice settings
+  - Integration with LlamaBrainAgent for voice-enabled NPCs
+  - Files Added:
+    - `Runtime/Core/Voice/NpcVoiceController.cs`
+    - `Runtime/Core/Voice/NpcVoiceInput.cs`
+    - `Runtime/Core/Voice/NpcVoiceOutput.cs`
+    - `Runtime/Core/Voice/NpcSpeechConfig.cs`
+- **Game State Management UI (Feature 16 Extension)** ✅ **COMPLETE**
+  - **RedRoomGameController** (15 lines) - Singleton game state management
+  - **MainMenu** (26 lines) - Main menu with continue/new game/load game, dynamic button states
+  - **LoadGameMenu** (133 lines) - Save browser with delete confirmation, empty state handling
+  - **LoadGameScrollViewElement** (56 lines) - Individual save slot with selection feedback
+  - **PausePanel** (83 lines) - Pause menu with save/quit, ESC key support
+  - Full integration with LlamaBrainSaveManager for all save/load operations
+  - Confirmation dialogs via Unity UI SetActive pattern
+  - Scene transition support
+  - **Total**: ~298 lines of production UI code
+  - Files Added:
+    - `Runtime/RedRoom/RedRoomGameController.cs`
+    - `Runtime/RedRoom/UI/MainMenu.cs`
+    - `Runtime/RedRoom/UI/LoadGameMenu.cs`
+    - `Runtime/RedRoom/UI/LoadGameScrollViewElement.cs`
+    - `Runtime/RedRoom/UI/PausePanel.cs`
+- **Prefab Organization** ✅
+  - Reorganized RedRoom prefabs into UI subfolder
+  - Added new prefabs: LlamaBrainSaveManager, WhisperManager
+  - New UI prefabs: Panel_MainMenu, Panel_LoadGame, Panel_Pause, Element_SaveGameEntry
+
+#### Changed
+- **Unity Package Updates**
+  - Updated package.json with new voice system dependencies
+  - Updated manifest.json and packages-lock.json with required packages
+  - Updated assembly definition to include voice system
+- **RedRoom Scene Updates**
+  - Enhanced RedRoom.unity scene with new UI systems
+  - Integrated save/load functionality
+  - Added voice input/output support
+- **Configuration Assets**
+  - Added PromptAssemblerSettings asset for scene-specific configuration
+  - Added new expectancy and validation rule assets
+  - Enhanced dialogue panel controller for voice integration
+- **Project Settings**
+  - Updated AudioManager, EditorBuildSettings, GraphicsSettings
+  - Added MultiplayerManager asset
+  - Updated ProjectVersion.txt
+  - Updated URP settings (ShaderGraphSettings, URPProjectSettings)
+
+#### Fixed
+- UI prefab references and organization
+- Save/load system integration with RedRoom demo
+- Voice system integration with dialogue triggers
+
+### Core Library
+
+#### Added
+- **Feature 16: Save/Load Game Integration - COMPLETE** ✅
+  - **Engine-Agnostic Persistence Abstraction** (`LlamaBrain/Source/Persistence/`)
+    - `ISaveSystem` interface for engine-agnostic save/load operations
+    - `SaveData` top-level container with versioning and timestamps
+    - `PersonaMemorySnapshot` for complete memory state serialization
+    - `ConversationHistorySnapshot` for dialogue history persistence
+    - `SaveSlotInfo` for slot metadata (name, timestamp, version, persona count)
+    - `SaveResult` for operation results with success/failure handling
+  - **Memory Snapshot System**
+    - `MemorySnapshotBuilder` creates snapshots from `AuthoritativeMemorySystem` using public APIs
+    - `MemorySnapshotRestorer` restores memory state using internal `InsertXxxRaw` APIs for deterministic reconstruction
+    - Preserves all determinism-critical fields: `Id`, `SequenceNumber`, `CreatedAtTicks`, ordinals
+    - All enums serialized as `int` for stability
+  - **Immutable DTO Layer** (`LlamaBrain/Source/Persistence/Dtos/`)
+    - `CanonicalFactDto` - Canonical fact serialization
+    - `WorldStateDto` - World state entry serialization
+    - `EpisodicMemoryDto` - Episodic memory with significance/decay
+    - `BeliefDto` - Belief memory with confidence/sentiment
+    - `DialogueEntryDto` - Dialogue history entries
+  - **FileSystem Implementation** (`FileSystemSaveSystem.cs`)
+    - Uses existing `IFileSystem` abstraction for testability
+    - Atomic writes (temp-file-then-move pattern)
+    - Slot name sanitization for security
+    - 5MB file size limit protection
+    - JSON serialization via Newtonsoft.Json
+  - **Test Coverage**: 33 new tests
+    - `MemorySnapshotTests.cs`: Round-trip determinism, DTO conversion, restore correctness (18 tests)
+    - `FileSystemSaveSystemTests.cs`: Save/load operations, sanitization, error handling (15 tests)
+  - **AuthoritativeMemorySystem Enhancements**
+    - Added `GetWorldStateEntries()` helper for snapshot building
+    - Added `GetBeliefEntries()` helper for belief dictionary access
+  - **Files Added**:
+    - `Source/Persistence/ISaveSystem.cs`
+    - `Source/Persistence/SaveData.cs`
+    - `Source/Persistence/PersonaMemorySnapshot.cs`
+    - `Source/Persistence/ConversationHistorySnapshot.cs`
+    - `Source/Persistence/SaveSlotInfo.cs`
+    - `Source/Persistence/SaveResult.cs`
+    - `Source/Persistence/FileSystemSaveSystem.cs`
+    - `Source/Persistence/MemorySnapshotBuilder.cs`
+    - `Source/Persistence/MemorySnapshotRestorer.cs`
+    - `Source/Persistence/Dtos/CanonicalFactDto.cs`
+    - `Source/Persistence/Dtos/WorldStateDto.cs`
+    - `Source/Persistence/Dtos/EpisodicMemoryDto.cs`
+    - `Source/Persistence/Dtos/BeliefDto.cs`
+    - `Source/Persistence/Dtos/DialogueEntryDto.cs`
+  - **Documentation**: Updated STATUS.md, ROADMAP.md
+
+### Unity Runtime
+
+#### Added
+- **Feature 16: Unity Save/Load Integration** ✅
+  - **SaveGameFree Implementation** (`LlamaBrainRuntime/.../Runtime/Persistence/`)
+    - `SaveGameFreeSaveSystem` wraps SaveGameFree plugin, implements `ISaveSystem`
+    - Stores saves at `LlamaBrain/Saves/{slotName}` using SaveGameFree's native serialization
+    - Maintains metadata file for slot listing and ordering
+  - **LlamaBrainSaveManager MonoBehaviour**
+    - Central save/load manager for games
+    - Auto-registers all `LlamaBrainAgent` instances in scene (configurable)
+    - Named save slots support (e.g., "autosave", "slot1")
+    - `SaveToSlot()` / `LoadFromSlot()` methods
+    - `QuickSave()` / `QuickLoad()` convenience methods
+    - Events: `OnSaveComplete`, `OnLoadComplete`
+  - **LlamaBrainAgent Integration**
+    - Added `CreateSaveData()` method for agent state serialization
+    - Added `RestoreFromSaveData()` method for agent state restoration
+    - Preserves memory state, conversation history, and deterministic metadata
+  - **Files Added**:
+    - `Runtime/Persistence/SaveGameFreeSaveSystem.cs`
+    - `Runtime/Persistence/LlamaBrainSaveManager.cs`
+
 ## [0.3.0-rc.1] (Unreleased)
 
 ### Unity Runtime
@@ -1196,7 +1337,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Performance Optimization**: Rate limiting, caching, and resource management
 
 #### Technical
-- Unity 2022.3 LTS or higher support
+- Unity 6000.0.58f2 LTS
 - Assembly definitions for proper package structure
 - TextMeshPro integration for rich text support
 - EditMode and PlayMode tests for integration testing
