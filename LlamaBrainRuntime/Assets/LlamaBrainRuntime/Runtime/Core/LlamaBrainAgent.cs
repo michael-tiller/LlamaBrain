@@ -854,8 +854,13 @@ namespace LlamaBrain.Runtime.Core
         AddToConversationHistory("NPC", finalResult.FinalResult.Response);
         dialogueSession?.AppendPlayer(input);
         dialogueSession?.AppendNpc(finalResult.FinalResult.Response);
+      }
 
-        // Increment InteractionCount for next interaction (Feature 14 - Determinism)
+      // Increment InteractionCount on any successful interaction (Feature 14 - Determinism)
+      // This must be outside storeConversationHistory check to maintain determinism
+      // regardless of whether history storage is enabled
+      if (finalResult.Success)
+      {
         InteractionCount++;
       }
 

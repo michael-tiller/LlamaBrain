@@ -194,4 +194,4 @@
 
 ---
 
-**Next Review**: Feature 14 (Deterministic Seed) complete. Focus on remaining Milestone 5 features: Feature 16 (Save/Load), 27 (KV Cache), 28 (Audit Recorder), 29 (Hot Reload).
+**Next Review**: Feature 14 (Deterministic Seed) and Feature 16 (Save/Load) complete. Focus on remaining Milestone 5 features: Feature 27 (KV Cache), Feature 28 (Audit Recorder), Feature 29 (Hot Reload).

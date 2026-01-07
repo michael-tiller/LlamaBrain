@@ -145,7 +145,8 @@ namespace LlamaBrain.Tests.StructuredOutput
             Assert.That(v1_0_0 < v1_1_0, Is.True);
             Assert.That(v1_1_0 < v2_0_0, Is.True);
             Assert.That(v2_0_0 > v1_1_0, Is.True);
-            Assert.That(v1_0_0 <= v1_0_0, Is.True);
+            var v1_0_0_copy = new SchemaVersion(1, 0, 0);
+            Assert.That(v1_0_0 <= v1_0_0_copy, Is.True);
             Assert.That(v1_1_0 >= v1_0_0, Is.True);
         }
 

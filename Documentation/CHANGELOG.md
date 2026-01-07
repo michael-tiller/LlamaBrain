@@ -71,6 +71,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UI prefab references and organization
 - Save/load system integration with RedRoom demo
 - Voice system integration with dialogue triggers
+- **InteractionCount Increment Bug** - Fixed `InteractionCount` only incrementing when `storeConversationHistory` was enabled, breaking determinism when history storage was disabled. Now increments on any successful interaction regardless of history storage settings.
 
 ### Core Library
 
@@ -89,12 +90,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
       - `InteractParameters` - Target entity, interaction type
     - Added `IntentParameterExtensions` for safe extraction from `Dictionary<string, object>`
     - Support for `GetArray<T>()` and `GetNested()` for complex parameter types
-    - 88 tests passing in `ComplexIntentParametersTests.cs`
+    - Enhanced `GetArray<T>()` to handle JArray, JToken, IList, IEnumerable, and ArrayList from JSON deserialization
+    - Added `ConvertElement<T>()` helper for robust type conversion with JToken support
+    - 18 tests passing in `ComplexIntentParametersTests.cs` (expanded with collection type tests)
   - **Relationship Authority Validation**
     - Added `RelationshipAuthorityValidator.cs` for owner-based and confidence threshold validation
     - Validates relationship entry authority before inclusion in context
     - Supports owner-based filtering and confidence-based filtering
-    - 88 tests passing in `RelationshipAuthorityTests.cs`
+    - 27 tests passing in `RelationshipAuthorityTests.cs`
   - **Files Added**:
     - `Source/Core/StructuredOutput/SchemaVersion.cs`
     - `Source/Core/StructuredOutput/IntentParameters.cs`
@@ -111,20 +114,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
       - `history` - Relationship history array
       - `tags` - Relationship tags array
     - Integrated into `ContextSection.Relationships` property
-    - 88 tests passing in `RelationshipEntryTests.cs`
+    - 21 tests passing in `RelationshipEntryTests.cs`
   - **Partial Context Builder**
     - Added `PartialContextBuilder.cs` with fluent API for incremental context construction
     - Methods: `WithCanonicalFacts()`, `WithBeliefs()`, `WithRelationships()`, `WithDialogue()`
     - All `ContextSection` properties nullable with `NullValueHandling.Ignore`
     - Enables selective context inclusion for token efficiency
-    - 88 tests passing in `PartialContextTests.cs`
+    - 18 tests passing in `PartialContextTests.cs`
   - **Validation Requirements**
     - Added `ValidationRequirements` to `ConstraintSection`:
       - `minResponseLength`, `maxResponseLength` - Response length constraints
       - `requiredKeywords` - Required keywords array
       - `forbiddenKeywords` - Forbidden keywords array
     - Integrated into constraint validation pipeline
-    - 88 tests passing in `ValidationRequirementsTests.cs`
+    - 13 tests passing in `ValidationRequirementsTests.cs`
   - **Authority Boundaries**
     - Added `Authority` field to constraints with source tracking:
       - `system` - System-level constraints
@@ -139,7 +142,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
       - `trigger` - Trigger identifier
       - `turnNumber` - Turn sequence number
     - Added `Timestamp` (float?) to dialogue entries
-    - 88 tests passing in `DialogueMetadataTests.cs`
+    - 14 tests passing in `DialogueMetadataTests.cs`
   - **Files Added**:
     - `Source/Core/StructuredInput/PartialContextBuilder.cs`
     - `Source/Core/StructuredInput/Schemas/RelationshipEntry.cs`
@@ -236,6 +239,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Updated `COVERAGE_REPORT.md` with latest coverage statistics (91.37% line coverage, 84.94% branch coverage)
     - Updated `coverage-analysis.csv` with latest metrics
   - **Total**: ~2,601 lines of new test code across 9 files
+
+#### Fixed
+- **Test Count Corrections** - Fixed incorrect test counts in changelog documentation (was showing 88 for all tests, now shows accurate counts: 18, 27, 21, 18, 13, 14)
+- **Nullable Reference Warnings** - Fixed nullable reference warnings in test files by adding null-forgiving operators for nullable properties in ContextSerializer, DialogueMetadata, and StructuredContextProvider tests
+- **IntentParameters GetArray Enhancement** - Enhanced `GetArray<T>()` method to handle JArray, JToken, IList, IEnumerable, and ArrayList from JSON deserialization, improving compatibility with various JSON deserializers
 
 ### Unity Runtime
 

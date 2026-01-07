@@ -1176,7 +1176,7 @@ context.InteractionCount = 5; // This becomes the seed
 
 // Agent extracts and uses seed automatically
 var response = await agent.SendPlayerInputWithContextAsync(input, context);
-// Logs: "[LlamaBrainAgent] Using deterministic seed: 5 (InteractionCount)"
+// Logs: "[LlamaBrainAgent] Using deterministic seed: 5 (source: context)"
 ```
 
 #### Manual Seed Usage (BrainAgent)
@@ -1194,20 +1194,24 @@ var response = await agent.SendMessageAsync("Hello", seed: interactionCount);
 
 #### Non-Deterministic Mode
 
-To use non-deterministic mode (random token selection):
+**Important**: `SendPlayerInputWithContextAsync()` and `LlamaBrainAgent` always use `InteractionContext.InteractionCount` for deterministic generation. Since `InteractionCount` defaults to `0` (not nullable), the seed computation `var seed = contextSeed ?? InteractionCount` always produces a concrete seed value. This means `LlamaBrainAgent` always runs in deterministic mode.
+
+To use true non-deterministic mode (random token selection), you must use the lower-level `BrainAgent` APIs directly:
 
 ```csharp
-// Option 1: Don't set InteractionCount (defaults to null seed)
-var context = InteractionContext.FromPlayerUtterance("npc_001", "Hello", 0f);
-// context.InteractionCount is not set
-var response = await agent.SendPlayerInputWithContextAsync(input, context);
-// Logs: "[LlamaBrainAgent] No seed provided, using non-deterministic mode"
-
-// Option 2: Pass null seed explicitly
+// Option 1: Pass null seed explicitly
 var response = await agent.SendMessageAsync("Hello", seed: null);
 
-// Option 3: Pass -1 for explicit random mode
+// Option 2: Pass -1 for explicit random mode
 var response = await agent.SendMessageAsync("Hello", seed: -1);
+
+// Option 3: Use SendSimpleMessageAsync with null seed
+var response = await agent.SendSimpleMessageAsync("Hello", seed: null);
+```
+
+**Note**: When using `LlamaBrainAgent.SendPlayerInputWithContextAsync()`, the seed is always computed from `InteractionContext.InteractionCount` (which defaults to 0), and the log message will show:
+```
+[LlamaBrainAgent] Using deterministic seed: {seed} (source: {context|agent})
 ```
 
 #### Retry Behavior

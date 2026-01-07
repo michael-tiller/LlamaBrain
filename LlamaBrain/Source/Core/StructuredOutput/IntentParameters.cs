@@ -1,5 +1,8 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using Newtonsoft.Json.Linq;
 
 namespace LlamaBrain.Core.StructuredOutput
 {
@@ -179,37 +182,112 @@ namespace LlamaBrain.Core.StructuredOutput
 
         /// <summary>
         /// Gets an array value from a parameter dictionary.
+        /// Handles T[], object[], IList, IEnumerable, and JArray from JSON deserialization.
         /// </summary>
         /// <typeparam name="T">The element type.</typeparam>
         /// <param name="parameters">The parameters dictionary.</param>
         /// <param name="key">The key to look up.</param>
-        /// <returns>The array or null if not found.</returns>
+        /// <returns>The array or null if not found or conversion fails.</returns>
         public static T[]? GetArray<T>(Dictionary<string, object>? parameters, string key)
         {
             if (parameters == null || !parameters.TryGetValue(key, out var value) || value == null)
                 return null;
 
+            // Direct type match - already T[]
             if (value is T[] typedArray)
                 return typedArray;
 
-            if (value is object[] objArray)
+            try
             {
-                try
+                // Handle JArray from Newtonsoft.Json deserialization
+                if (value is JArray jArray)
+                {
+                    var result = new T[jArray.Count];
+                    for (int i = 0; i < jArray.Count; i++)
+                    {
+                        result[i] = jArray[i].ToObject<T>()!;
+                    }
+                    return result;
+                }
+
+                // Handle JToken (could be an array)
+                if (value is JToken jToken && jToken.Type == JTokenType.Array)
+                {
+                    var tokenArray = jToken.ToObject<T[]>();
+                    return tokenArray;
+                }
+
+                // Handle object[] (common from some deserializers)
+                if (value is object[] objArray)
                 {
                     var result = new T[objArray.Length];
                     for (int i = 0; i < objArray.Length; i++)
                     {
-                        result[i] = (T)Convert.ChangeType(objArray[i], typeof(T));
+                        result[i] = ConvertElement<T>(objArray[i]);
                     }
                     return result;
                 }
-                catch
+
+                // Handle IList (includes List<T>, ArrayList, etc.)
+                if (value is IList list)
                 {
-                    return null;
+                    var result = new T[list.Count];
+                    for (int i = 0; i < list.Count; i++)
+                    {
+                        result[i] = ConvertElement<T>(list[i]);
+                    }
+                    return result;
                 }
+
+                // Handle IEnumerable<object> or any IEnumerable (fallback)
+                if (value is IEnumerable enumerable && !(value is string))
+                {
+                    var items = enumerable.Cast<object>().ToArray();
+                    var result = new T[items.Length];
+                    for (int i = 0; i < items.Length; i++)
+                    {
+                        result[i] = ConvertElement<T>(items[i]);
+                    }
+                    return result;
+                }
+            }
+            catch
+            {
+                return null;
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Converts a single element to the target type.
+        /// Handles JToken, nullable types, and standard conversions.
+        /// </summary>
+        private static T ConvertElement<T>(object? element)
+        {
+            if (element == null)
+                return default!;
+
+            // Already the right type
+            if (element is T typedElement)
+                return typedElement;
+
+            // Handle JToken/JValue from Newtonsoft.Json
+            if (element is JToken jToken)
+            {
+                return jToken.ToObject<T>()!;
+            }
+
+            // Standard conversion
+            var targetType = typeof(T);
+            var underlyingType = Nullable.GetUnderlyingType(targetType);
+
+            if (underlyingType != null)
+            {
+                return (T)Convert.ChangeType(element, underlyingType);
+            }
+
+            return (T)Convert.ChangeType(element, targetType);
         }
 
         /// <summary>

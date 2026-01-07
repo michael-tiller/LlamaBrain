@@ -92,7 +92,7 @@ namespace LlamaBrain.Tests.StructuredInput
             var context = provider.BuildContext(snapshot);
 
             // Assert
-            Assert.That(context.Context.CanonicalFacts, Does.Contain("The king is Arthur"));
+            Assert.That(context.Context!.CanonicalFacts, Does.Contain("The king is Arthur"));
         }
 
         [Test]
@@ -110,8 +110,8 @@ namespace LlamaBrain.Tests.StructuredInput
             var context = provider.BuildContext(snapshot);
 
             // Assert
-            Assert.That(context.Context.WorldState, Has.Count.EqualTo(1));
-            Assert.That(context.Context.WorldState[0].Key, Is.EqualTo("door_status"));
+            Assert.That(context.Context!.WorldState, Has.Count.EqualTo(1));
+            Assert.That(context.Context.WorldState![0].Key, Is.EqualTo("door_status"));
             Assert.That(context.Context.WorldState[0].Value, Is.EqualTo("open"));
         }
 
@@ -130,8 +130,8 @@ namespace LlamaBrain.Tests.StructuredInput
             var context = provider.BuildContext(snapshot);
 
             // Assert
-            Assert.That(context.Context.EpisodicMemories, Has.Count.EqualTo(1));
-            Assert.That(context.Context.EpisodicMemories[0].Content, Is.EqualTo("Player said hello earlier"));
+            Assert.That(context.Context!.EpisodicMemories, Has.Count.EqualTo(1));
+            Assert.That(context.Context.EpisodicMemories![0].Content, Is.EqualTo("Player said hello earlier"));
         }
 
         [Test]
@@ -149,7 +149,7 @@ namespace LlamaBrain.Tests.StructuredInput
             var context = provider.BuildContext(snapshot);
 
             // Assert
-            Assert.That(context.Dialogue.History, Has.Count.EqualTo(2));
+            Assert.That(context.Dialogue!.History, Has.Count.EqualTo(2));
             Assert.That(context.Dialogue.PlayerInput, Is.EqualTo("How are you?"));
         }
 
@@ -182,7 +182,7 @@ namespace LlamaBrain.Tests.StructuredInput
             var context = provider.BuildContext(snapshot);
 
             // Assert
-            Assert.That(context.Constraints.Prohibitions, Does.Contain("Do not reveal secrets"));
+            Assert.That(context.Constraints!.Prohibitions, Does.Contain("Do not reveal secrets"));
             Assert.That(context.Constraints.Requirements, Does.Contain("Be helpful"));
         }
 
@@ -201,7 +201,7 @@ namespace LlamaBrain.Tests.StructuredInput
             var context = provider.BuildContext(snapshot);
 
             // Assert
-            Assert.That(context.Dialogue.History[0].Speaker, Is.EqualTo("Player"));
+            Assert.That(context.Dialogue!.History![0].Speaker, Is.EqualTo("Player"));
             Assert.That(context.Dialogue.History[0].Text, Is.EqualTo("Hello there"));
             Assert.That(context.Dialogue.History[1].Speaker, Is.EqualTo("Shopkeeper"));
             Assert.That(context.Dialogue.History[1].Text, Is.EqualTo("Welcome!"));
@@ -222,7 +222,7 @@ namespace LlamaBrain.Tests.StructuredInput
             var context = provider.BuildContext(snapshot);
 
             // Assert
-            Assert.That(context.Dialogue.History[0].Speaker, Is.EqualTo("Unknown"));
+            Assert.That(context.Dialogue!.History![0].Speaker, Is.EqualTo("Unknown"));
             Assert.That(context.Dialogue.History[0].Text, Is.EqualTo("Some text without speaker prefix"));
         }
 

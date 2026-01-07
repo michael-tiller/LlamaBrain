@@ -1,7 +1,9 @@
+using System.Collections;
 using System.Collections.Generic;
 using LlamaBrain.Core.StructuredOutput;
 using LlamaBrain.Core.Validation;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using NUnit.Framework;
 
 namespace LlamaBrain.Tests.StructuredOutput
@@ -63,8 +65,8 @@ namespace LlamaBrain.Tests.StructuredOutput
 
             var itemIds = intent.Parameters["itemIds"] as string[];
             Assert.That(itemIds, Is.Not.Null);
-            Assert.That(itemIds, Has.Length.EqualTo(3));
-            Assert.That(itemIds[0], Is.EqualTo("sword_001"));
+            Assert.That(itemIds!, Has.Length.EqualTo(3));
+            Assert.That(itemIds![0], Is.EqualTo("sword_001"));
         }
 
         [Test]
@@ -88,7 +90,7 @@ namespace LlamaBrain.Tests.StructuredOutput
 
             var destination = intent.Parameters["destination"] as Dictionary<string, object>;
             Assert.That(destination, Is.Not.Null);
-            Assert.That(destination["x"], Is.EqualTo(100.5f));
+            Assert.That(destination!["x"], Is.EqualTo(100.5f));
         }
 
         [Test]
@@ -335,6 +337,239 @@ namespace LlamaBrain.Tests.StructuredOutput
             var schema = JsonSchemaBuilder.ParsedOutputSchema;
 
             Assert.That(schema, Does.Contain("\"additionalProperties\": true").Or.Contain("\"additionalProperties\":true"));
+        }
+
+        #endregion
+
+        #region GetArray Collection Type Tests
+
+        [Test]
+        public void GetArray_WithTypedArray_ReturnsDirectly()
+        {
+            var parameters = new Dictionary<string, object>
+            {
+                { "items", new string[] { "a", "b", "c" } }
+            };
+
+            var result = IntentParameterExtensions.GetArray<string>(parameters, "items");
+
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result, Has.Length.EqualTo(3));
+            Assert.That(result![0], Is.EqualTo("a"));
+        }
+
+        [Test]
+        public void GetArray_WithObjectArray_ConvertsElements()
+        {
+            var parameters = new Dictionary<string, object>
+            {
+                { "numbers", new object[] { 1, 2, 3 } }
+            };
+
+            var result = IntentParameterExtensions.GetArray<int>(parameters, "numbers");
+
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result, Has.Length.EqualTo(3));
+            Assert.That(result![0], Is.EqualTo(1));
+        }
+
+        [Test]
+        public void GetArray_WithListOfT_ConvertsToArray()
+        {
+            var parameters = new Dictionary<string, object>
+            {
+                { "items", new List<string> { "x", "y", "z" } }
+            };
+
+            var result = IntentParameterExtensions.GetArray<string>(parameters, "items");
+
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result, Has.Length.EqualTo(3));
+            Assert.That(result![1], Is.EqualTo("y"));
+        }
+
+        [Test]
+        public void GetArray_WithListOfObject_ConvertsElements()
+        {
+            var parameters = new Dictionary<string, object>
+            {
+                { "ids", new List<object> { 10L, 20L, 30L } }
+            };
+
+            var result = IntentParameterExtensions.GetArray<long>(parameters, "ids");
+
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result, Has.Length.EqualTo(3));
+            Assert.That(result![2], Is.EqualTo(30L));
+        }
+
+        [Test]
+        public void GetArray_WithJArray_ConvertsElements()
+        {
+            var jArray = new JArray { "one", "two", "three" };
+            var parameters = new Dictionary<string, object>
+            {
+                { "words", jArray }
+            };
+
+            var result = IntentParameterExtensions.GetArray<string>(parameters, "words");
+
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result, Has.Length.EqualTo(3));
+            Assert.That(result![0], Is.EqualTo("one"));
+        }
+
+        [Test]
+        public void GetArray_WithJArrayOfIntegers_ConvertsElements()
+        {
+            var jArray = new JArray { 100, 200, 300 };
+            var parameters = new Dictionary<string, object>
+            {
+                { "values", jArray }
+            };
+
+            var result = IntentParameterExtensions.GetArray<int>(parameters, "values");
+
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result, Has.Length.EqualTo(3));
+            Assert.That(result![1], Is.EqualTo(200));
+        }
+
+        [Test]
+        public void GetArray_WithJToken_ConvertsArrayToken()
+        {
+            var json = "[\"alpha\", \"beta\", \"gamma\"]";
+            var jToken = JToken.Parse(json);
+            var parameters = new Dictionary<string, object>
+            {
+                { "letters", jToken }
+            };
+
+            var result = IntentParameterExtensions.GetArray<string>(parameters, "letters");
+
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result, Has.Length.EqualTo(3));
+            Assert.That(result![2], Is.EqualTo("gamma"));
+        }
+
+        [Test]
+        public void GetArray_WithArrayList_ConvertsElements()
+        {
+            var arrayList = new ArrayList { "first", "second", "third" };
+            var parameters = new Dictionary<string, object>
+            {
+                { "items", arrayList }
+            };
+
+            var result = IntentParameterExtensions.GetArray<string>(parameters, "items");
+
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result, Has.Length.EqualTo(3));
+            Assert.That(result![0], Is.EqualTo("first"));
+        }
+
+        [Test]
+        public void GetArray_WithMissingKey_ReturnsNull()
+        {
+            var parameters = new Dictionary<string, object>();
+
+            var result = IntentParameterExtensions.GetArray<string>(parameters, "nonexistent");
+
+            Assert.That(result, Is.Null);
+        }
+
+        [Test]
+        public void GetArray_WithNullValue_ReturnsNull()
+        {
+            var parameters = new Dictionary<string, object>
+            {
+                { "items", null! }
+            };
+
+            var result = IntentParameterExtensions.GetArray<string>(parameters, "items");
+
+            Assert.That(result, Is.Null);
+        }
+
+        [Test]
+        public void GetArray_WithNullParameters_ReturnsNull()
+        {
+            var result = IntentParameterExtensions.GetArray<string>(null, "items");
+
+            Assert.That(result, Is.Null);
+        }
+
+        [Test]
+        public void GetArray_WithInconvertibleElements_ReturnsNull()
+        {
+            var parameters = new Dictionary<string, object>
+            {
+                { "items", new object[] { "not", "integers" } }
+            };
+
+            // Attempting to convert strings to integers should fail
+            var result = IntentParameterExtensions.GetArray<int>(parameters, "items");
+
+            Assert.That(result, Is.Null);
+        }
+
+        [Test]
+        public void GetArray_FromJsonDeserialized_HandlesListCorrectly()
+        {
+            // Simulate JSON deserialization which produces List<object> or JArray
+            var json = @"{""items"":[""a"",""b"",""c""]}";
+            var deserialized = JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
+
+            var result = IntentParameterExtensions.GetArray<string>(deserialized, "items");
+
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result, Has.Length.EqualTo(3));
+            Assert.That(result![0], Is.EqualTo("a"));
+        }
+
+        [Test]
+        public void GetArray_FromJsonDeserializedIntegers_HandlesConversion()
+        {
+            var json = @"{""numbers"":[1,2,3,4,5]}";
+            var deserialized = JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
+
+            var result = IntentParameterExtensions.GetArray<int>(deserialized, "numbers");
+
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result, Has.Length.EqualTo(5));
+            Assert.That(result![4], Is.EqualTo(5));
+        }
+
+        [Test]
+        public void GetArray_WithJArrayContainingJValues_ConvertsCorrectly()
+        {
+            var jArray = JArray.Parse("[10.5, 20.5, 30.5]");
+            var parameters = new Dictionary<string, object>
+            {
+                { "floats", jArray }
+            };
+
+            var result = IntentParameterExtensions.GetArray<float>(parameters, "floats");
+
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result, Has.Length.EqualTo(3));
+            Assert.That(result![0], Is.EqualTo(10.5f).Within(0.01f));
+        }
+
+        [Test]
+        public void GetArray_WithIEnumerable_ConvertsToArray()
+        {
+            IEnumerable<int> enumerable = new int[] { 7, 8, 9 };
+            var parameters = new Dictionary<string, object>
+            {
+                { "nums", enumerable }
+            };
+
+            var result = IntentParameterExtensions.GetArray<int>(parameters, "nums");
+
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result, Has.Length.EqualTo(3));
+            Assert.That(result![0], Is.EqualTo(7));
         }
 
         #endregion

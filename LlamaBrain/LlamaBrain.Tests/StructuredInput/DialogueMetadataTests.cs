@@ -318,9 +318,9 @@ namespace LlamaBrain.Tests.StructuredInput
             Assert.That(restored!.History, Has.Count.EqualTo(1));
             Assert.That(restored.History[0].Metadata, Is.Not.Null);
             Assert.That(restored.History[0].Metadata!.Emotion, Is.EqualTo("curious"));
-            Assert.That(restored.History[0].Metadata.Location, Is.EqualTo("market"));
-            Assert.That(restored.History[0].Metadata.Trigger, Is.EqualTo("npc_interaction"));
-            Assert.That(restored.History[0].Metadata.TurnNumber, Is.EqualTo(0));
+            Assert.That(restored.History[0].Metadata!.Location, Is.EqualTo("market"));
+            Assert.That(restored.History[0].Metadata!.Trigger, Is.EqualTo("npc_interaction"));
+            Assert.That(restored.History[0].Metadata!.TurnNumber, Is.EqualTo(0));
             Assert.That(restored.PlayerInput, Is.EqualTo("Second message"));
         }
 
