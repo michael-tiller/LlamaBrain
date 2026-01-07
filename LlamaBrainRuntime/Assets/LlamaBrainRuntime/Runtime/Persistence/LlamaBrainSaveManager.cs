@@ -48,11 +48,23 @@ namespace LlamaBrain.Runtime.Persistence
 
     private ISaveSystem _saveSystem;
     private readonly List<LlamaBrainAgent> _registeredAgents = new List<LlamaBrainAgent>();
+    private string _activeSlotName;
 
     /// <summary>
     /// Gets the save system instance.
     /// </summary>
     public ISaveSystem SaveSystem => _saveSystem;
+
+    /// <summary>
+    /// Gets the currently active save slot name.
+    /// Returns null if no game is active.
+    /// </summary>
+    public string ActiveSlotName => _activeSlotName;
+
+    /// <summary>
+    /// Returns true if there is an active save slot (game in progress).
+    /// </summary>
+    public bool HasActiveGame => !string.IsNullOrEmpty(_activeSlotName);
 
     /// <summary>
     /// Gets the list of registered agents.
@@ -74,7 +86,15 @@ namespace LlamaBrain.Runtime.Persistence
       DontDestroyOnLoad(gameObject);
 
       // Default to SaveGameFree implementation
-      _saveSystem = new SaveGameFreeSaveSystem();
+      var saveGameFreeSystem = new SaveGameFreeSaveSystem();
+      _saveSystem = saveGameFreeSystem;
+
+      // Load persisted active slot
+      _activeSlotName = saveGameFreeSystem.GetActiveSlot();
+      if (!string.IsNullOrEmpty(_activeSlotName))
+      {
+        Debug.Log($"[LlamaBrain] Restored active slot: {_activeSlotName}");
+      }
     }
 
     private void OnDestroy()
@@ -257,20 +277,166 @@ namespace LlamaBrain.Runtime.Persistence
       }
     }
 
+    #region Active Slot Game Management
+
     /// <summary>
-    /// Quick save to the default slot.
+    /// Starts a new game by creating a new save slot and setting it as active.
+    /// Clears agent state for a fresh start.
     /// </summary>
-    public SaveResult QuickSave()
+    /// <returns>The name of the newly created slot</returns>
+    public string StartNewGame()
     {
-      return SaveToSlot(defaultSlotName);
+      // Generate a new sequential slot name
+      var newSlotName = GenerateNextSlotName();
+
+      // Clear all registered agents' state
+      foreach (var agent in _registeredAgents.Where(a => a.IsInitialized))
+      {
+        agent.ClearDialogueHistory();
+      }
+
+      // Set as active and persist
+      SetActiveSlotInternal(newSlotName);
+
+      Debug.Log($"[LlamaBrain] Started new game with slot: {newSlotName}");
+      return newSlotName;
     }
 
     /// <summary>
-    /// Quick load from the default slot.
+    /// Loads the most recently saved game and sets it as active.
+    /// </summary>
+    /// <returns>True if a save was found and loaded successfully</returns>
+    public bool LoadMostRecentGame()
+    {
+      var slots = ListSlots();
+      if (slots.Count == 0)
+      {
+        Debug.LogWarning("[LlamaBrain] No saved games found");
+        return false;
+      }
+
+      // ListSlots returns sorted by SavedAtUtcTicks descending (newest first)
+      var mostRecent = slots[0];
+      return LoadGame(mostRecent.SlotName);
+    }
+
+    /// <summary>
+    /// Loads a game from the specified slot and sets it as the active slot.
+    /// </summary>
+    /// <param name="slotName">The slot to load</param>
+    /// <returns>True if load was successful</returns>
+    public bool LoadGame(string slotName)
+    {
+      if (string.IsNullOrEmpty(slotName))
+      {
+        Debug.LogError("[LlamaBrain] Cannot load game: slot name is null or empty");
+        return false;
+      }
+
+      if (!LoadFromSlot(slotName))
+      {
+        return false;
+      }
+
+      // Set as active and persist
+      SetActiveSlotInternal(slotName);
+
+      Debug.Log($"[LlamaBrain] Loaded game and set active slot: {slotName}");
+      return true;
+    }
+
+    /// <summary>
+    /// Saves the current game to the active slot.
+    /// If no active slot exists, creates a new game first.
+    /// </summary>
+    /// <returns>Result of the save operation</returns>
+    public SaveResult SaveGame()
+    {
+      // Auto-create new game if no active slot
+      if (!HasActiveGame)
+      {
+        StartNewGame();
+      }
+
+      return SaveToSlot(_activeSlotName);
+    }
+
+    /// <summary>
+    /// Generates the next sequential slot name (save_001, save_002, etc.)
+    /// </summary>
+    private string GenerateNextSlotName()
+    {
+      var existingSlots = ListSlots();
+      int maxNumber = 0;
+
+      foreach (var slot in existingSlots)
+      {
+        if (slot.SlotName.StartsWith("save_") && slot.SlotName.Length == 8)
+        {
+          if (int.TryParse(slot.SlotName.Substring(5), out var number))
+          {
+            if (number > maxNumber)
+              maxNumber = number;
+          }
+        }
+      }
+
+      return $"save_{(maxNumber + 1):D3}";
+    }
+
+    /// <summary>
+    /// Sets the active slot and persists it to disk.
+    /// </summary>
+    private void SetActiveSlotInternal(string slotName)
+    {
+      _activeSlotName = slotName;
+
+      // Persist to disk if using SaveGameFree system
+      if (_saveSystem is SaveGameFreeSaveSystem saveGameFreeSystem)
+      {
+        saveGameFreeSystem.SetActiveSlot(slotName);
+      }
+    }
+
+    /// <summary>
+    /// Clears the active slot (e.g., when returning to main menu).
+    /// Does not delete the save data.
+    /// </summary>
+    public void ClearActiveSlot()
+    {
+      _activeSlotName = null;
+
+      if (_saveSystem is SaveGameFreeSaveSystem saveGameFreeSystem)
+      {
+        saveGameFreeSystem.SetActiveSlot(null);
+      }
+
+      Debug.Log("[LlamaBrain] Cleared active slot");
+    }
+
+    #endregion
+
+    /// <summary>
+    /// Quick save to the active slot.
+    /// If no active slot exists, creates a new game first.
+    /// </summary>
+    public SaveResult QuickSave()
+    {
+      return SaveGame();
+    }
+
+    /// <summary>
+    /// Quick load from the active slot.
+    /// Returns false if no active slot exists.
     /// </summary>
     public bool QuickLoad()
     {
-      return LoadFromSlot(defaultSlotName);
+      if (!HasActiveGame)
+      {
+        Debug.LogWarning("[LlamaBrain] No active slot to load from");
+        return false;
+      }
+      return LoadFromSlot(_activeSlotName);
     }
 
     /// <summary>
@@ -283,10 +449,19 @@ namespace LlamaBrain.Runtime.Persistence
 
     /// <summary>
     /// Deletes a save slot.
+    /// If the deleted slot is the active slot, clears the active slot.
     /// </summary>
     public bool DeleteSlot(string slotName)
     {
-      return _saveSystem?.DeleteSlot(slotName) ?? false;
+      var result = _saveSystem?.DeleteSlot(slotName) ?? false;
+
+      // Clear active slot if we just deleted it
+      if (result && _activeSlotName == slotName)
+      {
+        ClearActiveSlot();
+      }
+
+      return result;
     }
 
     /// <summary>

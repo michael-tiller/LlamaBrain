@@ -7,6 +7,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.0-rc.2] (Unreleased)
 
+### Unity Runtime
+
+#### Added
+- **Voice System Integration (Features 31-32)** 🚧
+  - **Feature 31: Whisper Speech-to-Text Integration** - Voice input for NPCs
+    - **NpcVoiceInput** - Microphone-based voice input with Whisper.unity integration
+    - Speech-to-text transcription for player dialogue
+    - Voice activity detection and silence detection
+  - **Feature 32: Piper Text-to-Speech Integration** - Voice output for NPCs
+    - **NpcVoiceOutput** - Text-to-speech output system with Piper.unity integration
+    - Natural voice synthesis for NPC responses
+    - Per-NPC voice model configuration
+  - **NpcVoiceController** - Central voice input/output management coordinator
+  - **NpcSpeechConfig** - ScriptableObject configuration for voice settings
+  - Integration with LlamaBrainAgent for voice-enabled NPCs
+  - Files Added:
+    - `Runtime/Core/Voice/NpcVoiceController.cs`
+    - `Runtime/Core/Voice/NpcVoiceInput.cs`
+    - `Runtime/Core/Voice/NpcVoiceOutput.cs`
+    - `Runtime/Core/Voice/NpcSpeechConfig.cs`
+- **Game State Management UI (Feature 16 Extension)** ✅ **COMPLETE**
+  - **RedRoomGameController** (15 lines) - Singleton game state management
+  - **MainMenu** (26 lines) - Main menu with continue/new game/load game, dynamic button states
+  - **LoadGameMenu** (133 lines) - Save browser with delete confirmation, empty state handling
+  - **LoadGameScrollViewElement** (56 lines) - Individual save slot with selection feedback
+  - **PausePanel** (83 lines) - Pause menu with save/quit, ESC key support
+  - Full integration with LlamaBrainSaveManager for all save/load operations
+  - Confirmation dialogs via Unity UI SetActive pattern
+  - Scene transition support
+  - **Total**: ~298 lines of production UI code
+  - Files Added:
+    - `Runtime/RedRoom/RedRoomGameController.cs`
+    - `Runtime/RedRoom/UI/MainMenu.cs`
+    - `Runtime/RedRoom/UI/LoadGameMenu.cs`
+    - `Runtime/RedRoom/UI/LoadGameScrollViewElement.cs`
+    - `Runtime/RedRoom/UI/PausePanel.cs`
+- **Prefab Organization** ✅
+  - Reorganized RedRoom prefabs into UI subfolder
+  - Added new prefabs: LlamaBrainSaveManager, WhisperManager
+  - New UI prefabs: Panel_MainMenu, Panel_LoadGame, Panel_Pause, Element_SaveGameEntry
+
+#### Changed
+- **Unity Package Updates**
+  - Updated package.json with new voice system dependencies
+  - Updated manifest.json and packages-lock.json with required packages
+  - Updated assembly definition to include voice system
+- **RedRoom Scene Updates**
+  - Enhanced RedRoom.unity scene with new UI systems
+  - Integrated save/load functionality
+  - Added voice input/output support
+- **Configuration Assets**
+  - Added PromptAssemblerSettings asset for scene-specific configuration
+  - Added new expectancy and validation rule assets
+  - Enhanced dialogue panel controller for voice integration
+- **Project Settings**
+  - Updated AudioManager, EditorBuildSettings, GraphicsSettings
+  - Added MultiplayerManager asset
+  - Updated ProjectVersion.txt
+  - Updated URP settings (ShaderGraphSettings, URPProjectSettings)
+
+#### Fixed
+- UI prefab references and organization
+- Save/load system integration with RedRoom demo
+- Voice system integration with dialogue triggers
+
 ### Core Library
 
 #### Added
@@ -1272,7 +1337,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Performance Optimization**: Rate limiting, caching, and resource management
 
 #### Technical
-- Unity 2022.3 LTS or higher support
+- Unity 6000.0.58f2 LTS
 - Assembly definitions for proper package structure
 - TextMeshPro integration for rich text support
 - EditMode and PlayMode tests for integration testing

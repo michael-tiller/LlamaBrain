@@ -1,6 +1,6 @@
 # LlamaBrain Implementation Status
 
-**Last Updated**: January 3, 2026 (Feature 16 Complete - 0.3.0-rc.2)
+**Last Updated**: January 6, 2026 (Features 31-32 In Progress - 0.3.0-rc.2)
 
 ## Current Status
 
@@ -46,8 +46,8 @@
 | [Feature 28: "Black Box" Audit Recorder](ROADMAP.md#feature-28) | 📋 Planned | CRITICAL |
 | [Feature 29: Prompt A/B Testing & Hot Reload](ROADMAP.md#feature-29) | 📋 Planned | MEDIUM |
 | [Feature 30: Unity Repackaging & Distribution](ROADMAP.md#feature-30) | 📋 Planned | MEDIUM |
-| [Feature 31: Whisper Speech-to-Text Integration](ROADMAP.md#feature-31) | 📋 Planned | MEDIUM |
-| [Feature 32: Chatterbox Text-to-Speech Integration](ROADMAP.md#feature-32) | 📋 Planned | MEDIUM |
+| [Feature 31: Whisper Speech-to-Text Integration](ROADMAP.md#feature-31) | 🚧 In Progress (~70%) | MEDIUM |
+| [Feature 32: Piper Text-to-Speech Integration](ROADMAP.md#feature-32) | 🚧 In Progress (~65%) | MEDIUM |
 
 **Note**: Detailed feature descriptions, implementation plans, and checklists are in [ROADMAP.md](ROADMAP.md). This document focuses on high-level status and progress tracking.
 
@@ -68,8 +68,13 @@
 3. **Feature 29: Prompt A/B Testing & Hot Reload** - MEDIUM
    - Developer experience enhancement (1-2 weeks)
 
+**In Progress:**
+- 🚧 Feature 31: Whisper Speech-to-Text Integration (~70% - core implementation complete, needs testing/docs)
+- 🚧 Feature 32: Piper Text-to-Speech Integration (~65% - core implementation complete, needs testing/docs)
+
 **Recently Completed:**
 - ✅ Feature 16: Save/Load Game Integration (engine-agnostic persistence layer)
+- ✅ Feature 16 Extension: Game State Management UI (100% - all core functionality complete)
 - ✅ Feature 14: Deterministic Generation Seed (seed parameter + cross-session proof tests)
 - ✅ Feature 23: Structured Input/Context
 - ✅ Feature 12 & 13: Structured Output

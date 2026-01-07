@@ -178,6 +178,12 @@ namespace LlamaBrain.Persona
     public int CanonicalMutationAttempts { get; set; }
 
     /// <summary>
+    /// Number of authority violations (source lacked authority to modify target).
+    /// Tracked when ValidateMutation returns false.
+    /// </summary>
+    public int AuthorityViolations { get; set; }
+
+    /// <summary>
     /// Success rate as a percentage.
     /// </summary>
     public float SuccessRate => TotalAttempted > 0 ? (float)TotalSucceeded / TotalAttempted * 100f : 0f;
@@ -476,6 +482,7 @@ namespace LlamaBrain.Persona
       statistics.RelationshipsTransformed = 0;
       statistics.IntentsEmitted = 0;
       statistics.CanonicalMutationAttempts = 0;
+      statistics.AuthorityViolations = 0;
     }
 
     #region Private Execution Methods
@@ -512,6 +519,10 @@ namespace LlamaBrain.Persona
         Log($"[MutationController] Appended episodic memory: {mutation.Content}");
         return MutationExecutionResult.Succeeded(mutation, entry);
       }
+
+      // Track authority violations
+      if (config.EnableStatistics && result.FailureReason?.Contains("lacks authority") == true)
+        statistics.AuthorityViolations++;
 
       return MutationExecutionResult.Failed(mutation, result.FailureReason ?? "Unknown error");
     }
@@ -554,6 +565,10 @@ namespace LlamaBrain.Persona
         Log($"[MutationController] Transformed belief '{mutation.Target}': {mutation.Content}");
         return MutationExecutionResult.Succeeded(mutation, entry);
       }
+
+      // Track authority violations
+      if (config.EnableStatistics && result.FailureReason?.Contains("lacks authority") == true)
+        statistics.AuthorityViolations++;
 
       return MutationExecutionResult.Failed(mutation, result.FailureReason ?? "Unknown error");
     }
@@ -601,6 +616,10 @@ namespace LlamaBrain.Persona
         Log($"[MutationController] Transformed relationship with '{mutation.Target}': {mutation.Content}");
         return MutationExecutionResult.Succeeded(mutation, entry);
       }
+
+      // Track authority violations
+      if (config.EnableStatistics && result.FailureReason?.Contains("lacks authority") == true)
+        statistics.AuthorityViolations++;
 
       return MutationExecutionResult.Failed(mutation, result.FailureReason ?? "Unknown error");
     }

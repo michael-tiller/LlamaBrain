@@ -22,7 +22,7 @@ UniTask is a high-performance async/await library for Unity that provides zero-a
 
 **License:** MIT License
 
-**Tested with:** Unity 2022.3 LTS
+**Tested with:** Unity 6000.0.58f2 LTS
 
 **Installation:**
 
@@ -59,7 +59,7 @@ TextMeshPro (TMP) is Unity's advanced text rendering system that provides high-q
 
 **License:** Distributed by Unity as package `com.unity.textmeshpro` via Package Manager; install separately via Unity.
 
-**Tested with:** Unity 2022.3 LTS
+**Tested with:** Unity 6000.0.58f2 LTS
 
 **Installation:**
 
@@ -100,13 +100,13 @@ Unity's Starter Assets – Third Person character controller used in LlamaBrain 
 
 **License:** Non-standard Unity license (Standard Asset Store EULA). **Not redistributed** in this repository.
 
-**Tested with:** Unity 2022.3 LTS
+**Tested with:** Unity 6000.0.58f2 LTS
 
 **Installation:**
 
 1. Download from the Unity Asset Store
 2. Install via Package Manager (My Assets) or Asset Store tooling, depending on Unity version
-3. Ensure compatibility with Unity 2022.3 LTS or higher
+3. Ensure compatibility with Unity 6000.0.58f2 LTS or higher
 
 **Usage in LlamaBrain:**
 - Used in sample scenes for NPC movement and interaction
@@ -135,7 +135,7 @@ SaveGameFree is a free Unity asset for saving and loading game data. It provides
 **Latest GitHub Release:**  
 [Version 2.5.0](https://github.com/BayatGames/SaveGameFree/releases/tag/2.5.0) (Apr 1, 2022)
 
-**Tested with:** Unity 2022.3 LTS
+**Tested with:** Unity 6000.0.58f2 LTS
 
 **Note:** SaveGameFree is required for Feature 16 (Save/Load Game Integration) to persist game state and InteractionCount across sessions.
 
@@ -194,7 +194,7 @@ SaveGameFree is a free Unity asset for saving and loading game data. It provides
 Before using LlamaBrain Runtime, ensure you have:
 
 **Core Runtime:**
-- [ ] Unity 2022.3 LTS or higher installed
+- [ ] Unity 6000.0.58f2 LTS
 - [ ] TextMeshPro package installed via Package Manager
 - [ ] UniTask installed via Package Manager (Git URL)
 

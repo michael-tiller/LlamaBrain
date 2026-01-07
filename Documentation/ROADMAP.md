@@ -2,7 +2,7 @@
 
 **Goal**: Implement the complete "Continuity Emerges from Deterministic State Reconstruction Around a Stateless Generator" architectural pattern.
 
-**Last Updated**: January 3, 2026
+**Last Updated**: January 6, 2026
 
 ---
 
@@ -48,8 +48,8 @@
 | [Feature 28: "Black Box" Audit Recorder](#feature-28) | 📋 Planned | CRITICAL |
 | [Feature 29: Prompt A/B Testing & Hot Reload](#feature-29) | 📋 Planned | MEDIUM |
 | [Feature 30: Unity Repackaging & Distribution](#feature-30) | 📋 Planned | MEDIUM |
-| [Feature 31: Whisper Speech-to-Text Integration](#feature-31) | 📋 Planned | MEDIUM |
-| [Feature 32: Chatterbox Text-to-Speech Integration](#feature-32) | 📋 Planned | MEDIUM |
+| [Feature 31: Whisper Speech-to-Text Integration](#feature-31) | 🚧 In Progress (~70%) | MEDIUM |
+| [Feature 32: Piper Text-to-Speech Integration](#feature-32) | 🚧 In Progress (~65%) | MEDIUM |
 
 ---
 
@@ -1725,6 +1725,53 @@ Engine-agnostic persistence abstraction layer with Unity/SaveGameFree implementa
 - [x] `LlamaBrainSaveManager` Unity component for easy save/load
 - [x] All 33 tests passing
 - [x] Documentation complete with examples
+
+### Feature 16 Extension: Game State Management UI
+
+**Status**: ✅ **Complete** (100%)  
+**Lines of Code**: ~298 lines
+
+**Implementation Status**: Full save/load UI system implemented for RedRoom demo. All core functionality complete. Optional polish features deferred.
+
+#### Components Implemented
+
+**RedRoomGameController** (15 lines)
+- [x] Singleton pattern for game state management
+- [x] Scene transition management (handled via LlamaBrainSaveManager integration)
+- [x] Integration with LlamaBrainSaveManager
+
+**MainMenu** (26 lines)  
+- [x] Continue button (loads most recent save)
+- [x] New Game button integration
+- [x] Dynamic continue button state based on save existence
+- [x] Load game menu access (via UI panel/hatch)
+
+**LoadGameMenu** (133 lines)
+- [x] Save slot browser with scrollview
+- [x] Integration with LlamaBrainSaveManager.ListSlots()
+- [x] Dynamic save slot element generation
+- [x] Save metadata display (slot name, timestamp)
+- [x] **Save slot delete functionality with confirmation dialog**
+- [x] Empty save state handling
+
+**LoadGameScrollViewElement** (56 lines)
+- [x] Individual save slot display with visual selection feedback
+- [x] Load button per slot
+- [x] Delete button per slot
+- [x] Save metadata display (timestamp formatted, persona count available)
+
+**PausePanel** (83 lines)
+- [x] Resume/Pause functionality with ESC key
+- [x] Save integration via LlamaBrainSaveManager
+- [x] Quit functionality (scene reload/transition)
+- [x] In-game menu navigation
+- [x] Confirmation dialogs (via SetActive pattern on Unity UI panels)
+
+#### Optional Future Enhancements (Not Blocking)
+- [ ] Save slot rename functionality  
+- [ ] Save thumbnail previews
+- [ ] Extended metadata display (playtime, current location)
+- [ ] Overwrite confirmation for new saves
 
 ### Future Enhancements
 
@@ -3692,8 +3739,10 @@ Split the Unity runtime into its own dedicated repository and implement comprehe
 ## Feature 31: Whisper Speech-to-Text Integration
 
 **Priority**: MEDIUM - Enhances player experience with voice input  
-**Status**: 📋 Planned  
+**Status**: 🚧 In Progress (~70% Complete)  
 **Dependencies**: Unity Audio System, whisper.unity package
+
+**Implementation Status**: Core components fully implemented (NpcVoiceInput: 338 lines, NpcVoiceController: 440 lines). Whisper integration complete with VAD, streaming transcription, events. Missing: platform testing, confidence thresholds, comprehensive docs.
 
 ### Overview
 
@@ -3708,26 +3757,26 @@ Integrate [whisper.unity](https://github.com/Macoron/whisper.unity) for local sp
 ### Definition of Done
 
 #### 31.1 Package Integration
-- [ ] Add whisper.unity package to Unity project (via Git UPM or manual installation)
-- [ ] Configure WhisperManager in scene with appropriate model (tiny/small/medium)
-- [ ] Set up GPU acceleration (Vulkan/Metal) if available
+- [x] Add whisper.unity package to Unity project (via Git UPM or manual installation)
+- [x] Configure WhisperManager in scene with appropriate model (tiny/small/medium)
+- [ ] Set up GPU acceleration (Vulkan/Metal) if available  
 - [ ] Configure model weights in StreamingAssets folder
 - [ ] Test microphone permissions on target platforms (Windows, macOS, Linux, iOS, Android)
 
-#### 31.2 Voice Input Component
-- [ ] Create `VoiceInputComponent.cs` or extend `DialoguePanelController.cs` with voice input
-- [ ] Implement hold-to-speak pattern (hold key/button, speak, release)
-- [ ] Add visual feedback for recording state ("listening..." indicator)
-- [ ] Implement recording start/stop with WhisperManager API
-- [ ] Handle transcription results and feed into existing text input pipeline
-- [ ] Add toggle to enable/disable voice input in UI settings
+#### 31.2 Voice Input Component  
+- [x] Create `NpcVoiceInput.cs` for voice input handling
+- [x] Implement VAD-based always-listening pattern with silence detection
+- [x] Add visual feedback via UnityEvents (OnListeningStarted/Stopped)
+- [x] Implement recording start/stop with WhisperManager API
+- [x] Handle transcription results via OnTranscriptionComplete event
+- [x] Add toggle support (alwaysListening, enableTextFallback)
 
 #### 31.3 Integration with LlamaBrain Pipeline
-- [ ] Transcribed text flows through existing `SendPlayerInputAsync()` method
-- [ ] No changes required to core LlamaBrain validation or inference pipeline
-- [ ] Voice input treated identically to typed text (same validation, same constraints)
+- [x] Transcribed text flows through existing `SendPlayerInputAsync()` method (via NpcVoiceController)
+- [x] No changes required to core LlamaBrain validation or inference pipeline
+- [x] Voice input treated identically to typed text (same validation, same constraints)
 - [ ] Add transcription confidence threshold (filter low-confidence transcriptions)
-- [ ] Implement fallback to text input if STT fails or returns empty result
+- [x] Implement fallback to text input if STT fails or returns empty result
 
 #### 31.4 Error Handling & Validation
 - [ ] Handle microphone permission denials gracefully
@@ -3741,8 +3790,6 @@ Integrate [whisper.unity](https://github.com/Macoron/whisper.unity) for local sp
 - [ ] Test on Windows (x86_64, optional Vulkan)
 - [ ] Test on macOS (Intel and ARM, optional Metal)
 - [ ] Test on Linux (x86_64, optional Vulkan)
-- [ ] Test on iOS (Device and Simulator, optional Metal)
-- [ ] Test on Android (ARM64)
 - [ ] Handle platform-specific microphone permission requests
 
 #### 31.6 Performance & Optimization
@@ -3800,8 +3847,10 @@ Integrate [whisper.unity](https://github.com/Macoron/whisper.unity) for local sp
 ## Feature 32: Piper Text-to-Speech Integration
 
 **Priority**: MEDIUM - Enhances NPC dialogue with voice output  
-**Status**: 📋 Planned  
-**Dependencies**: Unity Sentis, piper.unity package, .onnx voice models
+**Status**: 🚧 In Progress (~65% Complete)  
+**Dependencies**: Unity Sentis, piper.unity (uPiper) package, .onnx voice models
+
+**Implementation Status**: Core components fully implemented (NpcVoiceOutput: 498 lines, NpcSpeechConfig: 81 lines). Unity Sentis integration complete with phonemization (Japanese/English), async audio generation, events. Missing: audio caching, editor preview, platform testing, comprehensive docs.
 
 ### Overview
 
@@ -3817,43 +3866,43 @@ Integrate [piper.unity](https://github.com/Macoron/piper.unity) for local text-t
 ### Definition of Done
 
 #### 32.1 Package Integration
-- [ ] Add piper.unity package to Unity project (via Git UPM or manual installation)
-- [ ] Configure Unity Sentis for ONNX model inference
+- [x] Add piper.unity (uPiper) package to Unity project (via Git UPM or manual installation)
+- [x] Configure Unity Sentis for ONNX model inference (InferenceAudioGenerator)
 - [ ] Set up PiperManager component in scene
 - [ ] Download and configure .onnx voice models (e.g., `en_US-lessac-medium.onnx`)
 - [ ] Place voice models in Assets folder (Unity Sentis auto-converts to model assets)
 - [ ] Test TTS generation with sample text
 
 #### 32.2 Unity Integration
-- [ ] Create `PiperTTSComponent.cs` or extend `LlamaBrainAgent.cs` with TTS support
-- [ ] Integrate PiperManager API for audio generation
-- [ ] Implement async audio generation with Unity Sentis
+- [x] Create `NpcVoiceOutput.cs` for TTS handling
+- [x] Integrate uPiper API for audio generation (InferenceAudioGenerator, PhonemeEncoder)
+- [x] Implement async audio generation with Unity Sentis
 - [ ] Add audio caching system (cache generated audio by text + voice model hash)
-- [ ] Integrate with Unity AudioSource for playback
-- [ ] Add TTS enable/disable toggle in LlamaBrainAgent or settings
+- [x] Integrate with Unity AudioSource for playback
+- [x] Add TTS enable/disable via NpcVoiceController component
 
 #### 32.3 Voice Management
-- [ ] Create `VoiceProfile` ScriptableObject for NPC voice configuration
-- [ ] Store .onnx voice model references per NPC
-- [ ] Add voice profile field to PersonaConfig or LlamaBrainAgent
-- [ ] Implement voice model validation (format, compatibility)
+- [x] Create `NpcSpeechConfig` ScriptableObject for NPC voice configuration
+- [x] Store voice model references per NPC (modelPath, pitch, rate, volume)
+- [x] Add speech config field to NpcVoiceController component
+- [x] Implement voice model validation and loading (LoadVoiceModelAsync)
 - [ ] Support multiple voice models per NPC (different languages, styles)
 - [ ] Add voice preview functionality in Unity editor
 - [ ] Document voice model selection and acquisition (Hugging Face models)
 
 #### 32.4 Integration with LlamaBrain Pipeline
-- [ ] Hook TTS generation after text response validation in `SendWithSnapshotAsync()`
-- [ ] Generate audio only for validated, final responses (not retries)
-- [ ] Pass validated text to TTS service (maintains validation boundary)
-- [ ] Play audio simultaneously with text display
-- [ ] Handle TTS generation failures (fallback to text-only display)
-- [ ] Add TTS generation timeout (prevent hanging on service failures)
+- [x] Hook TTS generation after LlamaBrainAgent response via NpcVoiceController
+- [x] Generate audio for validated responses (integrated via event-driven architecture)
+- [x] Pass validated text to TTS service (maintains validation boundary)
+- [x] Play audio via AudioSource component
+- [x] Handle TTS generation failures (OnSpeakingFailed event, fallback to text)
+- [x] Add TTS generation timeout via CancellationToken
 
 #### 32.5 Text Processing & SSML Support
-- [ ] Clean text before TTS generation (remove markdown, special characters)
+- [x] Clean text before TTS generation (phonemization pipeline handles this)
 - [ ] Handle SSML tags if supported by voice models
-- [ ] Process punctuation for natural speech pauses
-- [ ] Handle multilingual text (switch voice models based on language detection)
+- [x] Process punctuation for natural speech pauses (phonemization handles this)
+- [x] Handle multilingual text (Japanese and English phonemizers implemented)
 - [ ] Validate text length limits for TTS generation
 
 #### 32.6 Audio Playback & Synchronization

@@ -2,7 +2,7 @@
 
 This guide shows how to use all nine components of the LlamaBrain architecture in your Unity project. The system ensures deterministic, controlled AI behavior while maintaining the flexibility and creativity of Large Language Models.
 
-**Last Updated**: December 31, 2025
+**Last Updated**: January 6, 2026
 
 ---
 
@@ -1455,6 +1455,451 @@ Debug.Log($"Beliefs: {stats.BeliefCount} (Active: {stats.ActiveBeliefCount})");
 ```
 
 **Location**: `LlamaBrain/Source/Persona/AuthoritativeMemorySystem.cs` (lines 376-409)
+
+---
+
+## Voice System Integration (Features 31-32)
+
+**Purpose**: Enable voice-based interactions with NPCs through microphone input and text-to-speech output.
+
+**Features**:
+- **Feature 31**: Whisper.unity integration for speech-to-text (voice input)
+- **Feature 32**: Piper.unity integration for text-to-speech (voice output)
+
+### Overview
+
+The voice system provides a complete solution for spoken dialogue with NPCs. Player speech is transcribed to text via Whisper, processed through the standard LlamaBrain pipeline, and NPC responses are converted to speech via TTS.
+
+**Architecture Flow**:
+```
+Player Speaks → Microphone → NpcVoiceInput → Whisper (STT) → 
+LlamaBrainAgent (Standard Pipeline) → NpcVoiceOutput → TTS → Audio Playback
+```
+
+### Components
+
+#### 1. NpcVoiceController
+
+Central component managing voice input/output coordination.
+
+**Setup**:
+```csharp
+// On NPC GameObject
+public class VoiceNPC : MonoBehaviour
+{
+    [SerializeField] private NpcSpeechConfig speechConfig;
+    private NpcVoiceController voiceController;
+    private LlamaBrainAgent agent;
+    
+    void Start()
+    {
+        agent = GetComponent<LlamaBrainAgent>();
+        voiceController = gameObject.AddComponent<NpcVoiceController>();
+        voiceController.Initialize(agent, speechConfig);
+        
+        // Hook up events
+        voiceController.OnTranscriptionReceived += HandleTranscription;
+        voiceController.OnSpeechStarted += () => Debug.Log("NPC speaking...");
+        voiceController.OnSpeechCompleted += () => Debug.Log("NPC finished speaking");
+    }
+    
+    private async void HandleTranscription(string transcribedText)
+    {
+        Debug.Log($"Player said: {transcribedText}");
+        // Agent processes and responds automatically
+    }
+    
+    public void ToggleListening()
+    {
+        if (voiceController.IsListening)
+            voiceController.StopListening();
+        else
+            voiceController.StartListening();
+    }
+}
+```
+
+**Key Methods**:
+- `Initialize(LlamaBrainAgent, NpcSpeechConfig)` - Set up voice controller
+- `StartListening()` - Begin recording microphone input
+- `StopListening()` - Stop recording and transcribe
+- `Speak(string text)` - Convert text to speech and play
+
+**Events**:
+- `OnTranscriptionReceived(string)` - Fired when speech is transcribed
+- `OnSpeechStarted()` - Fired when TTS begins playback
+- `OnSpeechCompleted()` - Fired when TTS finishes playback
+- `OnListeningStarted()` - Fired when microphone starts recording
+- `OnListeningStopped()` - Fired when microphone stops recording
+
+#### 2. NpcVoiceInput
+
+Handles microphone input and speech-to-text transcription.
+
+**Key Features**:
+- Microphone device selection
+- Whisper model integration (local or API)
+- Voice activity detection (VAD)
+- Automatic silence detection
+- Audio preprocessing (noise reduction, normalization)
+
+**Configuration** (via NpcSpeechConfig):
+```csharp
+// Voice Input Settings
+inputSettings.microphoneDevice = null; // null = default device
+inputSettings.whisperModelPath = "path/to/whisper-model.bin";
+inputSettings.useWhisperAPI = false; // Use local Whisper model
+inputSettings.whisperAPIKey = ""; // If using API
+inputSettings.silenceThreshold = 0.01f; // Audio level threshold
+inputSettings.silenceDuration = 2.0f; // Seconds of silence before auto-stop
+inputSettings.maxRecordingDuration = 30.0f; // Maximum recording length
+```
+
+#### 3. NpcVoiceOutput
+
+Handles text-to-speech conversion and audio playback.
+
+**Key Features**:
+- Multiple TTS provider support (local, API-based)
+- Voice parameter configuration (pitch, speed, volume)
+- Audio caching for repeated phrases
+- Integration with Unity AudioSource
+
+**Configuration** (via NpcSpeechConfig):
+```csharp
+// Voice Output Settings
+outputSettings.ttsProvider = TTSProvider.Local; // or TTSProvider.API
+outputSettings.voiceId = "en-US-Standard-A"; // Voice selection
+outputSettings.pitch = 1.0f; // Voice pitch multiplier
+outputSettings.speed = 1.0f; // Speech speed multiplier
+outputSettings.volume = 1.0f; // Audio volume
+outputSettings.useAudioCache = true; // Cache common phrases
+```
+
+#### 4. NpcSpeechConfig
+
+ScriptableObject for voice system configuration.
+
+**Creation**:
+1. Right-click in Project window
+2. `Create → LlamaBrain → Voice → NPC Speech Config`
+3. Configure in Inspector
+4. Assign to NpcVoiceController
+
+**Settings**:
+- **Input Settings**: Microphone, Whisper, VAD
+- **Output Settings**: TTS provider, voice, audio parameters
+- **Integration Settings**: Agent reference, audio source
+- **Debug Settings**: Logging, visualization
+
+### Example: Complete Voice-Enabled NPC
+
+```csharp
+using UnityEngine;
+using LlamaBrain.Runtime.Core;
+using LlamaBrain.Runtime.Core.Voice;
+
+public class CompleteVoiceNPC : MonoBehaviour
+{
+    [Header("Components")]
+    [SerializeField] private LlamaBrainAgent agent;
+    [SerializeField] private NpcSpeechConfig speechConfig;
+    
+    [Header("UI")]
+    [SerializeField] private GameObject listeningIndicator;
+    [SerializeField] private GameObject speakingIndicator;
+    
+    private NpcVoiceController voiceController;
+    
+    void Start()
+    {
+        // Initialize voice controller
+        voiceController = gameObject.AddComponent<NpcVoiceController>();
+        voiceController.Initialize(agent, speechConfig);
+        
+        // Hook up events for UI feedback
+        voiceController.OnListeningStarted += () => 
+        {
+            listeningIndicator.SetActive(true);
+            Debug.Log("Listening to player...");
+        };
+        
+        voiceController.OnListeningStopped += () => 
+        {
+            listeningIndicator.SetActive(false);
+            Debug.Log("Processing speech...");
+        };
+        
+        voiceController.OnTranscriptionReceived += (text) =>
+        {
+            Debug.Log($"Transcribed: {text}");
+            // Agent automatically processes through full pipeline:
+            // 1. Create interaction context
+            // 2. Evaluate expectancy rules
+            // 3. Retrieve memory context
+            // 4. Assemble prompt
+            // 5. Query LLM
+            // 6. Validate output
+            // 7. Mutate memory
+            // 8. Return response (or fallback)
+        };
+        
+        voiceController.OnSpeechStarted += () => 
+        {
+            speakingIndicator.SetActive(true);
+            Debug.Log("NPC speaking...");
+        };
+        
+        voiceController.OnSpeechCompleted += () => 
+        {
+            speakingIndicator.SetActive(false);
+            Debug.Log("NPC finished speaking");
+        };
+    }
+    
+    void Update()
+    {
+        // Toggle listening with Space key
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            if (voiceController.IsListening)
+                voiceController.StopListening();
+            else
+                voiceController.StartListening();
+        }
+        
+        // Manual stop with Escape
+        if (Input.GetKeyDown(KeyCode.Escape) && voiceController.IsListening)
+        {
+            voiceController.StopListening();
+        }
+    }
+    
+    // Programmatic speech (e.g., for cutscenes)
+    public void SayGreeting()
+    {
+        voiceController.Speak("Hello traveler! How can I help you today?");
+    }
+}
+```
+
+### Integration with LlamaBrainAgent
+
+The voice system integrates seamlessly with the existing LlamaBrain pipeline:
+
+```csharp
+// In NpcVoiceController (simplified internal flow)
+private async void ProcessTranscription(string transcribedText)
+{
+    // 1. Transcription received from Whisper
+    OnTranscriptionReceived?.Invoke(transcribedText);
+    
+    // 2. Send to LlamaBrainAgent (goes through full pipeline)
+    var response = await agent.SendPlayerInputAsync(transcribedText);
+    
+    // 3. Convert response to speech
+    if (!string.IsNullOrEmpty(response))
+    {
+        await Speak(response);
+    }
+}
+```
+
+**Key Points**:
+- Voice input is converted to text **before** entering the pipeline
+- Standard validation, memory, and fallback systems apply
+- Voice output is generated **after** validation succeeds
+- All architectural guarantees maintained (determinism, validation, authority)
+
+### Whisper Integration
+
+**Local Whisper** (Recommended for Privacy):
+```csharp
+// Configure for local Whisper model
+speechConfig.inputSettings.useWhisperAPI = false;
+speechConfig.inputSettings.whisperModelPath = "Assets/Models/whisper-base.bin";
+speechConfig.inputSettings.whisperLanguage = "en"; // or "auto" for detection
+```
+
+**Whisper API** (Cloud-based):
+```csharp
+// Configure for Whisper API
+speechConfig.inputSettings.useWhisperAPI = true;
+speechConfig.inputSettings.whisperAPIKey = "your-api-key";
+speechConfig.inputSettings.whisperAPIEndpoint = "https://api.openai.com/v1/audio/transcriptions";
+```
+
+### TTS Provider Options
+
+**1. Local TTS** (Platform-dependent):
+```csharp
+outputSettings.ttsProvider = TTSProvider.Local;
+outputSettings.voiceId = "Microsoft David Desktop"; // Windows
+// or "com.apple.speech.synthesis.voice.Alex" // macOS
+```
+
+**2. Cloud TTS** (Google, Azure, AWS):
+```csharp
+outputSettings.ttsProvider = TTSProvider.GoogleCloudTTS;
+outputSettings.voiceId = "en-US-Standard-B";
+outputSettings.apiKey = "your-google-cloud-api-key";
+```
+
+### Performance Considerations
+
+**Audio Processing**:
+- Whisper transcription: ~1-3 seconds (local, depends on audio length)
+- TTS generation: ~0.5-2 seconds (depends on provider and text length)
+- Total voice round-trip: ~2-6 seconds + LLM processing time
+
+**Optimization Tips**:
+1. Use local Whisper model for faster transcription
+2. Cache common TTS phrases in NpcSpeechConfig
+3. Pre-generate TTS for frequently used responses
+4. Use smaller Whisper models (base, small) for real-time conversations
+5. Consider streaming TTS for longer responses
+
+### Troubleshooting
+
+**Microphone Not Detecting**:
+- Check `Microphone.devices` array for available devices
+- Verify microphone permissions (Windows/macOS security settings)
+- Test with `speechConfig.inputSettings.microphoneDevice = null` (default)
+
+**Transcription Quality Issues**:
+- Increase `silenceThreshold` if background noise is detected
+- Use larger Whisper model (medium, large) for better accuracy
+- Set correct `whisperLanguage` instead of "auto"
+
+**TTS Not Playing**:
+- Verify AudioSource component is attached
+- Check audio output device settings
+- Ensure TTS provider credentials are valid
+- Test with simple phrase: `voiceController.Speak("Test")`
+
+**Voice/Agent Integration Issues**:
+- Ensure LlamaBrainAgent is properly initialized before voice controller
+- Check that agent's PersonaConfig and BrainSettings are configured
+- Verify agent is responding to text input before adding voice
+
+### Files Reference
+
+**Voice System**:
+- `Runtime/Core/Voice/NpcVoiceController.cs` - Main controller
+- `Runtime/Core/Voice/NpcVoiceInput.cs` - Microphone + Whisper
+- `Runtime/Core/Voice/NpcVoiceOutput.cs` - TTS + Audio
+- `Runtime/Core/Voice/NpcSpeechConfig.cs` - Configuration asset
+
+**Integration**:
+- Voice system works with all existing LlamaBrainAgent features
+- Compatible with validation rules, expectancy constraints, memory mutations
+- Maintains deterministic pipeline guarantees
+
+---
+
+## Save/Load UI System (Feature 16 Extension)
+
+**Purpose**: Provide complete user interface for game state management including main menu, save/load screens, and pause menu.
+
+### Overview
+
+The save/load UI system provides a complete, production-ready interface for managing game state persistence. It integrates with LlamaBrainSaveManager (Feature 16) to provide seamless save/load functionality with a user-friendly UI.
+
+### Key Components
+
+#### RedRoomGameController
+Main game controller managing scene transitions and game state.
+
+#### MainMenu
+Main menu UI panel with new game and load game options.
+- Prefab: `Prefabs/UI/Panel_MainMenu.prefab`
+
+#### LoadGameMenu
+Save slot browser showing all available saves with metadata.
+- Prefab: `Prefabs/UI/Panel_LoadGame.prefab`
+
+#### LoadGameScrollViewElement
+Individual save slot entry displaying metadata and load button.
+- Prefab: `Prefabs/UI/Element_SaveGameEntry.prefab`
+
+#### PausePanel
+In-game pause menu with save, load, and quit options.
+- Prefab: `Prefabs/UI/Panel_Pause.prefab`
+
+### Basic Usage
+
+```csharp
+using UnityEngine;
+using LlamaBrain.Runtime.Persistence;
+
+public class GameStateExample : MonoBehaviour
+{
+    [SerializeField] private LlamaBrainSaveManager saveManager;
+    
+    // Quick save (F5)
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.F5))
+        {
+            QuickSave();
+        }
+        
+        if (Input.GetKeyDown(KeyCode.F9))
+        {
+            QuickLoad();
+        }
+    }
+    
+    private async void QuickSave()
+    {
+        var result = await saveManager.QuickSave();
+        if (result.Success)
+        {
+            Debug.Log("Quick save successful");
+        }
+    }
+    
+    private async void QuickLoad()
+    {
+        var result = await saveManager.QuickLoad();
+        if (result.Success)
+        {
+            Debug.Log("Quick load successful");
+        }
+    }
+    
+    // Named save slot
+    private async void SaveToSlot(string slotName)
+    {
+        var result = await saveManager.SaveToSlot(slotName);
+        if (result.Success)
+        {
+            Debug.Log($"Saved to slot: {slotName}");
+        }
+    }
+    
+    // Load from slot
+    private async void LoadFromSlot(string slotName)
+    {
+        var result = await saveManager.LoadFromSlot(slotName);
+        if (result.Success)
+        {
+            Debug.Log($"Loaded from slot: {slotName}");
+        }
+    }
+}
+```
+
+### Files Reference
+
+**UI System**:
+- `Runtime/RedRoom/RedRoomGameController.cs`
+- `Runtime/RedRoom/UI/MainMenu.cs`
+- `Runtime/RedRoom/UI/LoadGameMenu.cs`
+- `Runtime/RedRoom/UI/LoadGameScrollViewElement.cs`
+- `Runtime/RedRoom/UI/PausePanel.cs`
+
+**See**: RedRoom sample scene for complete working example
 
 ---
 

@@ -567,8 +567,10 @@ namespace LlamaBrain.Runtime.Core
           var isSingleLine = (runtimeProfile?.SystemPrompt ?? "").Contains("one line");
           var effectiveMaxTokens = isSingleLine ? System.Math.Min(maxResponseTokens, 24) : maxResponseTokens;
 
-          // Send to LLM
-          var metrics = await client.SendPromptWithMetricsAsync(prompt, maxTokens: effectiveMaxTokens);
+          // Send to LLM with deterministic seed (Double-Lock Pattern: Lock 2 - Entropy Locking)
+          // InteractionCount serves as the seed for deterministic token selection
+          var seed = currentInteractionContext?.InteractionCount;
+          var metrics = await client.SendPromptWithMetricsAsync(prompt, maxTokens: effectiveMaxTokens, seed: seed);
           attemptStopwatch.Stop();
 
           // Check if truncated

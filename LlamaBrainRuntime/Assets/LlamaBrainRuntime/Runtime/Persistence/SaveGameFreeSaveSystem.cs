@@ -16,6 +16,7 @@ namespace LlamaBrain.Runtime.Persistence
   {
     private const string SaveDirectoryPrefix = "LlamaBrain/Saves/";
     private const string MetadataFileName = "_metadata";
+    private const string ActiveSlotFileName = "_active_slot";
 
     /// <summary>
     /// Creates a new SaveGameFree-based save system.
@@ -254,5 +255,69 @@ namespace LlamaBrain.Runtime.Persistence
     {
       public List<SaveSlotInfo> Slots = new List<SaveSlotInfo>();
     }
+
+    /// <summary>
+    /// Helper class to store the active slot name.
+    /// </summary>
+    [Serializable]
+    private class ActiveSlotData
+    {
+      public string SlotName;
+    }
+
+    #region Active Slot Management
+
+    /// <summary>
+    /// Gets the currently active save slot name.
+    /// </summary>
+    /// <returns>The active slot name, or null if none is set</returns>
+    public string GetActiveSlot()
+    {
+      try
+      {
+        var activeSlotId = SaveDirectoryPrefix + ActiveSlotFileName;
+        if (!SaveGame.Exists(activeSlotId))
+          return null;
+
+        var data = SaveGame.Load<ActiveSlotData>(activeSlotId);
+        return data?.SlotName;
+      }
+      catch (Exception ex)
+      {
+        Debug.LogWarning($"[LlamaBrain] Failed to load active slot: {ex.Message}");
+        return null;
+      }
+    }
+
+    /// <summary>
+    /// Sets the currently active save slot name.
+    /// </summary>
+    /// <param name="slotName">The slot name to set as active, or null to clear</param>
+    public void SetActiveSlot(string slotName)
+    {
+      try
+      {
+        var activeSlotId = SaveDirectoryPrefix + ActiveSlotFileName;
+
+        if (string.IsNullOrEmpty(slotName))
+        {
+          // Clear active slot
+          if (SaveGame.Exists(activeSlotId))
+          {
+            SaveGame.Delete(activeSlotId);
+          }
+          return;
+        }
+
+        var data = new ActiveSlotData { SlotName = slotName };
+        SaveGame.Save(activeSlotId, data);
+      }
+      catch (Exception ex)
+      {
+        Debug.LogWarning($"[LlamaBrain] Failed to save active slot: {ex.Message}");
+      }
+    }
+
+    #endregion
   }
 }

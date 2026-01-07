@@ -2,6 +2,7 @@ using UnityEngine;
 using TMPro;
 using LlamaBrain.Runtime.RedRoom.Interaction;
 using LlamaBrain.Runtime.RedRoom.AI;
+using UnityEngine.SceneManagement;
 
 namespace LlamaBrain.Runtime.RedRoom.UI
 {
@@ -10,11 +11,25 @@ namespace LlamaBrain.Runtime.RedRoom.UI
   /// </summary>
   public class RedRoomCanvas : MonoBehaviour
   {
+    public enum EState
+    {
+      None = 0,
+      MainMenu = 1,
+      Game = 2,
+      LoadGameMenu = 3
+    }
+
+    
     [SerializeField] private GameObject _conversationPanel;
     [SerializeField] private TextMeshProUGUI _text;
     [SerializeField] private GameObject _playerRaycastHitIndicator;
+    
+    [SerializeField] private MainMenu mainMenuPanel;
+    [SerializeField] private PausePanel pausePanel;
+    [SerializeField] private LoadGameMenu loadGameMenu;
 
     private NpcFollowerExample currentNpc = null;
+    public EState State { get; private set; } = EState.None;
 
     /// <summary>
     /// Gets the singleton instance of the RedRoomCanvas.
@@ -29,9 +44,45 @@ namespace LlamaBrain.Runtime.RedRoom.UI
         return;
       }
       Instance = this;
+      Time.timeScale = 0f;
+      Cursor.lockState = CursorLockMode.None;
+    }
+    
+    private void Start()
+    {
+      State = EState.None;
+      ShowMainMenu();
+      Time.timeScale = 0f;
+      Cursor.lockState = CursorLockMode.None;
     }
 
     private void Update()
+    {
+      switch (State)
+      {
+        case EState.MainMenu:
+        case EState.LoadGameMenu:
+          UpdateMenus();
+          break;
+        case EState.Game:
+          UpdateGame();
+          break;
+        default:
+          break;
+      }
+    }
+
+    private void UpdateMenus()
+    {
+      
+      if (Cursor.lockState != CursorLockMode.None)
+      {
+        Cursor.lockState = CursorLockMode.None;
+      }
+      
+    }
+    
+    private void UpdateGame()
     {
       // E key: Toggle conversation
       if (Input.GetKeyDown(KeyCode.E))
@@ -108,6 +159,8 @@ namespace LlamaBrain.Runtime.RedRoom.UI
       if (!string.IsNullOrEmpty(text))
       {
         ShowConversation(text);
+        // Also speak the cached response if voice is enabled
+        trigger.SpeakCachedResponse();
       }
       else
       {
@@ -175,6 +228,33 @@ namespace LlamaBrain.Runtime.RedRoom.UI
     {
       _conversationPanel.SetActive(false);
       RefreshIndicator();
+    }
+    
+    public void ShowMainMenu()
+    {
+      mainMenuPanel.gameObject.SetActive(true);
+      loadGameMenu.gameObject.SetActive(false);
+      State = EState.MainMenu;
+    }
+    
+    public void ShowLoadGameMenu()
+    {
+      mainMenuPanel.gameObject.SetActive(false);
+      loadGameMenu.gameObject.SetActive(true);
+      State = EState.LoadGameMenu;
+    }
+
+    public void ShowGamePanels()
+    {
+      loadGameMenu.gameObject.SetActive(false);
+      mainMenuPanel.gameObject.SetActive(false);
+      pausePanel.Resume();
+      State = EState.Game;
+    }
+
+    public void ConfirmQuit()
+    {
+      SceneManager.LoadScene(0, LoadSceneMode.Single);
     }
   }
 }
