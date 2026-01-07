@@ -159,7 +159,7 @@ namespace LlamaBrain.Runtime.RedRoom.UI
       if (_trackedAgent != null && _trackedAgent.IsInitialized) return;
 
       // Find first initialized agent in scene
-      var agents = FindObjectsOfType<LlamaBrainAgent>();
+      var agents = FindObjectsByType<LlamaBrainAgent>(FindObjectsSortMode.None);
       foreach (var agent in agents)
       {
         if (agent.IsInitialized)

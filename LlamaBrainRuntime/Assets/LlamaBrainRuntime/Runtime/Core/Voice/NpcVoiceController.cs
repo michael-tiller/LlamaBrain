@@ -30,9 +30,11 @@ namespace LlamaBrain.Runtime.Core.Voice
     [Tooltip("Reference to WhisperManager in the scene.")]
     private WhisperManager whisperManager;
 
+#pragma warning disable CS0414 // whisperLanguage is reserved for future speech recognition configuration
     [SerializeField]
-    [Tooltip("Language for speech recognition.")]
+    [Tooltip("Language for speech recognition (reserved for future use).")]
     private string whisperLanguage = "en";
+#pragma warning restore CS0414
 
     [Header("Input Mode")]
     [SerializeField]
@@ -189,7 +191,7 @@ namespace LlamaBrain.Runtime.Core.Voice
       // Set whisper manager reference
       if (whisperManager == null)
       {
-        whisperManager = FindObjectOfType<WhisperManager>();
+        whisperManager = FindAnyObjectByType<WhisperManager>();
       }
 
       // Initialize components

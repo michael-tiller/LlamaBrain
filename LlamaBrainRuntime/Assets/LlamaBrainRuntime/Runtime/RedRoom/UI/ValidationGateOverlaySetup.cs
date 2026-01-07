@@ -64,7 +64,7 @@ namespace LlamaBrain.Runtime.RedRoom.UI
         var canvas = _targetCanvas;
         if (canvas == null)
         {
-          canvas = FindObjectOfType<Canvas>();
+          canvas = FindAnyObjectByType<Canvas>();
         }
         if (canvas == null)
         {
@@ -301,7 +301,7 @@ namespace LlamaBrain.Runtime.RedRoom.UI
       var canvas = _targetCanvas;
       if (canvas == null)
       {
-        canvas = FindObjectOfType<Canvas>();
+        canvas = FindAnyObjectByType<Canvas>();
       }
       if (canvas == null)
       {

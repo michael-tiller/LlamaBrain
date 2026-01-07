@@ -15,7 +15,9 @@ public class PausePanel : MonoBehaviour
   private CanvasGroup canvasGroup;
 
   private bool isVisible;
+#pragma warning disable CS0414 // isPaused tracks pause state for external queries
   private bool isPaused;
+#pragma warning restore CS0414
 
   private void Reset()
   {

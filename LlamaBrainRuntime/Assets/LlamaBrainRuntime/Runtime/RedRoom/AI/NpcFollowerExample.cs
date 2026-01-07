@@ -1734,7 +1734,7 @@ namespace LlamaBrain.Runtime.RedRoom.AI
           debugText.fontSize = 24;
           debugText.alignment = TextAlignmentOptions.TopLeft;
           debugText.color = Color.white;
-          debugText.enableWordWrapping = false;
+          debugText.textWrappingMode = TextWrappingModes.NoWrap;
           debugText.overflowMode = TextOverflowModes.Overflow;
         }
       }

@@ -221,12 +221,12 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
             brainAgent);
         }
 
-        var finalResponse = response ?? currentFallbackText;
+        var finalResponse = response ?? currentFallbackText ?? "";
         onConversationTextGenerated?.Invoke(finalResponse);
 
         // Note: Speech is NOT triggered here - it's pre-cached.
         // Speech will be triggered when player interacts (presses E) via TriggerConversation()
-        Debug.Log($"[NpcDialogueTrigger] Response pre-cached. enableVoice={enableVoice}, length={finalResponse?.Length ?? 0}. Press E to hear it.");
+        Debug.Log($"[NpcDialogueTrigger] Response pre-cached. enableVoice={enableVoice}, length={finalResponse.Length}. Press E to hear it.");
 
         return finalResponse;
       }

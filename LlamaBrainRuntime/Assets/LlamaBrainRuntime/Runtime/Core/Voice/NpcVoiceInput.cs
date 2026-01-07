@@ -129,7 +129,7 @@ namespace LlamaBrain.Runtime.Core.Voice
       // Wait for WhisperManager to be ready
       if (whisperManager == null)
       {
-        whisperManager = FindObjectOfType<WhisperManager>();
+        whisperManager = FindAnyObjectByType<WhisperManager>();
         if (whisperManager == null)
         {
           Debug.LogError("[NpcVoiceInput] No WhisperManager found in scene");

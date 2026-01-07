@@ -1727,7 +1727,7 @@ namespace LlamaBrain.Runtime.Core
     {
       try
       {
-        var brainServer = UnityEngine.Object.FindObjectOfType<BrainServer>();
+        var brainServer = UnityEngine.Object.FindAnyObjectByType<BrainServer>();
         if (brainServer != null)
         {
           brainServer.ConfigureAgent(this);

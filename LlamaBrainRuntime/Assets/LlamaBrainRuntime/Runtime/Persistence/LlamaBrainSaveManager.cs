@@ -32,9 +32,11 @@ namespace LlamaBrain.Runtime.Persistence
     [Tooltip("Automatically find and register all LlamaBrainAgent instances in the scene")]
     private bool autoFindAgents = true;
 
+#pragma warning disable CS0414 // defaultSlotName reserved for future quick save/load implementation
     [SerializeField]
     [Tooltip("Name of the default save slot for quick save/load")]
     private string defaultSlotName = "autosave";
+#pragma warning restore CS0414
 
     /// <summary>
     /// Event fired when a save operation completes.
@@ -156,7 +158,7 @@ namespace LlamaBrain.Runtime.Persistence
     /// </summary>
     public void AutoRegisterAgents()
     {
-      var agents = FindObjectsOfType<LlamaBrainAgent>();
+      var agents = FindObjectsByType<LlamaBrainAgent>(FindObjectsSortMode.None);
       foreach (var agent in agents)
       {
         RegisterAgent(agent);
