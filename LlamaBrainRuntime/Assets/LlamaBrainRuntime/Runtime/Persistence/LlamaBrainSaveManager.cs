@@ -420,6 +420,7 @@ namespace LlamaBrain.Runtime.Persistence
     /// Quick save to the active slot.
     /// If no active slot exists, creates a new game first.
     /// </summary>
+    /// <returns>The result of the save operation.</returns>
     public SaveResult QuickSave()
     {
       return SaveGame();
@@ -429,6 +430,7 @@ namespace LlamaBrain.Runtime.Persistence
     /// Quick load from the active slot.
     /// Returns false if no active slot exists.
     /// </summary>
+    /// <returns>True if the load was successful, false otherwise.</returns>
     public bool QuickLoad()
     {
       if (!HasActiveGame)
@@ -442,6 +444,8 @@ namespace LlamaBrain.Runtime.Persistence
     /// <summary>
     /// Checks if a save slot exists.
     /// </summary>
+    /// <param name="slotName">The name of the slot to check.</param>
+    /// <returns>True if the slot exists, false otherwise.</returns>
     public bool SlotExists(string slotName)
     {
       return _saveSystem?.SlotExists(slotName) ?? false;
@@ -451,6 +455,8 @@ namespace LlamaBrain.Runtime.Persistence
     /// Deletes a save slot.
     /// If the deleted slot is the active slot, clears the active slot.
     /// </summary>
+    /// <param name="slotName">The name of the slot to delete.</param>
+    /// <returns>True if the slot was deleted successfully, false otherwise.</returns>
     public bool DeleteSlot(string slotName)
     {
       var result = _saveSystem?.DeleteSlot(slotName) ?? false;
@@ -467,6 +473,7 @@ namespace LlamaBrain.Runtime.Persistence
     /// <summary>
     /// Gets a list of all available save slots.
     /// </summary>
+    /// <returns>A read-only list of save slot information, sorted by save time descending.</returns>
     public IReadOnlyList<SaveSlotInfo> ListSlots()
     {
       return _saveSystem?.ListSlots() ?? new List<SaveSlotInfo>();
@@ -478,8 +485,19 @@ namespace LlamaBrain.Runtime.Persistence
   /// </summary>
   public class AgentSaveData
   {
+    /// <summary>
+    /// Gets or sets the persona ID for this agent.
+    /// </summary>
     public string PersonaId { get; set; }
+    
+    /// <summary>
+    /// Gets or sets the memory snapshot for this agent.
+    /// </summary>
     public PersonaMemorySnapshot MemorySnapshot { get; set; }
+    
+    /// <summary>
+    /// Gets or sets the conversation history snapshot for this agent.
+    /// </summary>
     public ConversationHistorySnapshot ConversationHistory { get; set; }
   }
 }

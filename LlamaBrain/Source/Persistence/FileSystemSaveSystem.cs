@@ -77,17 +77,11 @@ namespace LlamaBrain.Persistence
           return SaveResult.Failed($"Save data exceeds maximum size of {MaxFileSizeBytes / (1024 * 1024)}MB");
         }
 
-        // Atomic write: write to temp file, then move
+        // Atomic write: write to temp file, then atomically replace
         _fileSystem.WriteAllText(tempPath, json);
 
-        // Remove existing file if present
-        if (_fileSystem.FileExists(filePath))
-        {
-          _fileSystem.DeleteFile(filePath);
-        }
-
-        // Move temp to final location
-        _fileSystem.MoveFile(tempPath, filePath);
+        // Atomically replace existing file (or move if no existing file)
+        _fileSystem.ReplaceFile(tempPath, filePath);
 
         return SaveResult.Succeeded(slotName, data.SavedAtUtcTicks);
       }

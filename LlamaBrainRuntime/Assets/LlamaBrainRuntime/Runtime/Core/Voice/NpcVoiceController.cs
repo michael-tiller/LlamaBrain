@@ -50,24 +50,45 @@ namespace LlamaBrain.Runtime.Core.Voice
 
     [Header("Events")]
     [Tooltip("Fired when player speech is recognized.")]
+    /// <summary>
+    /// Event fired when player speech is recognized. The string parameter contains the transcribed text.
+    /// </summary>
     public UnityEvent<string> OnPlayerSpeechRecognized = new UnityEvent<string>();
 
     [Tooltip("Fired when NPC response is generated.")]
+    /// <summary>
+    /// Event fired when NPC response is generated. The string parameter contains the response text.
+    /// </summary>
     public UnityEvent<string> OnNpcResponseGenerated = new UnityEvent<string>();
 
     [Tooltip("Fired when NPC starts listening for input.")]
+    /// <summary>
+    /// Event fired when the NPC starts listening for voice input.
+    /// </summary>
     public UnityEvent OnListeningStarted = new UnityEvent();
 
     [Tooltip("Fired when NPC stops listening.")]
+    /// <summary>
+    /// Event fired when the NPC stops listening for voice input.
+    /// </summary>
     public UnityEvent OnListeningStopped = new UnityEvent();
 
     [Tooltip("Fired when NPC starts speaking.")]
+    /// <summary>
+    /// Event fired when the NPC starts speaking.
+    /// </summary>
     public UnityEvent OnSpeakingStarted = new UnityEvent();
 
     [Tooltip("Fired when NPC finishes speaking.")]
+    /// <summary>
+    /// Event fired when the NPC finishes speaking.
+    /// </summary>
     public UnityEvent OnSpeakingFinished = new UnityEvent();
 
     [Tooltip("Fired when silence timeout is reached.")]
+    /// <summary>
+    /// Event fired when the silence timeout is reached and the conversation ends automatically.
+    /// </summary>
     public UnityEvent OnSilenceTimeout = new UnityEvent();
 
     private NpcVoiceInput _voiceInput;
@@ -272,6 +293,7 @@ namespace LlamaBrain.Runtime.Core.Voice
     /// Process text input (for text fallback mode).
     /// </summary>
     /// <param name="text">Player input text.</param>
+    /// <returns>A task that completes with the NPC's response text, or an empty string if cancelled or no input provided.</returns>
     public async UniTask<string> ProcessTextInputAsync(string text)
     {
       if (!_isInConversation)
@@ -290,6 +312,8 @@ namespace LlamaBrain.Runtime.Core.Voice
     /// <summary>
     /// Listen for voice input and return the transcribed text.
     /// </summary>
+    /// <param name="ct">Cancellation token to cancel the listening operation.</param>
+    /// <returns>A task that completes with the transcribed text, or an empty string if cancelled or no input detected.</returns>
     public async UniTask<string> ListenAsync(CancellationToken ct = default)
     {
       if (!_isInConversation)
@@ -307,6 +331,9 @@ namespace LlamaBrain.Runtime.Core.Voice
     /// <summary>
     /// Speak the given text using TTS.
     /// </summary>
+    /// <param name="text">The text to speak.</param>
+    /// <param name="ct">Cancellation token to cancel the speaking operation.</param>
+    /// <returns>A task that completes when the speech finishes or is cancelled.</returns>
     public async UniTask SpeakAsync(string text, CancellationToken ct = default)
     {
       if (string.IsNullOrWhiteSpace(text))
@@ -329,6 +356,7 @@ namespace LlamaBrain.Runtime.Core.Voice
     /// <summary>
     /// Process a full voice interaction: listen -> agent -> speak.
     /// </summary>
+    /// <returns>A task that completes with the NPC's response text, or an empty string if cancelled or no input detected.</returns>
     public async UniTask<string> ProcessVoiceInputAsync()
     {
       if (!_isInConversation)
@@ -428,6 +456,7 @@ namespace LlamaBrain.Runtime.Core.Voice
     /// <summary>
     /// Get time remaining before silence timeout.
     /// </summary>
+    /// <returns>The time remaining in seconds before silence timeout, or 0 if not in conversation.</returns>
     public float GetSilenceTimeRemaining()
     {
       if (!_isInConversation)

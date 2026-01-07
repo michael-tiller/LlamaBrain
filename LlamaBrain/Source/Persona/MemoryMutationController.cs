@@ -179,7 +179,7 @@ namespace LlamaBrain.Persona
 
     /// <summary>
     /// Number of authority violations (source lacked authority to modify target).
-    /// Tracked when ValidateMutation returns false.
+    /// Incremented after mutation execution when the failure reason contains "lacks authority".
     /// </summary>
     public int AuthorityViolations { get; set; }
 
@@ -264,6 +264,12 @@ namespace LlamaBrain.Persona
   /// </summary>
   public class MemoryMutationController
   {
+    /// <summary>
+    /// Known failure reason indicating an authority violation.
+    /// Used for robust matching instead of substring search.
+    /// </summary>
+    private const string AuthorityViolationReason = "lacks authority";
+
     private readonly MutationControllerConfig config;
     private readonly MutationStatistics statistics = new MutationStatistics();
 
@@ -520,9 +526,7 @@ namespace LlamaBrain.Persona
         return MutationExecutionResult.Succeeded(mutation, entry);
       }
 
-      // Track authority violations
-      if (config.EnableStatistics && result.FailureReason?.Contains("lacks authority") == true)
-        statistics.AuthorityViolations++;
+      TrackAuthorityViolationIfNeeded(result.FailureReason);
 
       return MutationExecutionResult.Failed(mutation, result.FailureReason ?? "Unknown error");
     }
@@ -566,9 +570,7 @@ namespace LlamaBrain.Persona
         return MutationExecutionResult.Succeeded(mutation, entry);
       }
 
-      // Track authority violations
-      if (config.EnableStatistics && result.FailureReason?.Contains("lacks authority") == true)
-        statistics.AuthorityViolations++;
+      TrackAuthorityViolationIfNeeded(result.FailureReason);
 
       return MutationExecutionResult.Failed(mutation, result.FailureReason ?? "Unknown error");
     }
@@ -617,9 +619,7 @@ namespace LlamaBrain.Persona
         return MutationExecutionResult.Succeeded(mutation, entry);
       }
 
-      // Track authority violations
-      if (config.EnableStatistics && result.FailureReason?.Contains("lacks authority") == true)
-        statistics.AuthorityViolations++;
+      TrackAuthorityViolationIfNeeded(result.FailureReason);
 
       return MutationExecutionResult.Failed(mutation, result.FailureReason ?? "Unknown error");
     }
@@ -667,6 +667,34 @@ namespace LlamaBrain.Persona
     {
       WorldIntentEmitsForTests++;
       OnWorldIntentEmitted?.Invoke(this, new WorldIntentEventArgs(intent, npcId));
+    }
+
+    /// <summary>
+    /// Checks if a failure reason indicates an authority violation and tracks it in statistics.
+    /// Centralizes authority violation detection to avoid duplicate substring matching.
+    /// </summary>
+    /// <param name="failureReason">The failure reason from a mutation result.</param>
+    private void TrackAuthorityViolationIfNeeded(string? failureReason)
+    {
+      if (!config.EnableStatistics)
+        return;
+
+      if (IsAuthorityViolation(failureReason))
+        statistics.AuthorityViolations++;
+    }
+
+    /// <summary>
+    /// Determines if a failure reason indicates an authority violation.
+    /// </summary>
+    /// <param name="failureReason">The failure reason to check.</param>
+    /// <returns>True if the failure reason indicates an authority violation.</returns>
+    private static bool IsAuthorityViolation(string? failureReason)
+    {
+      if (string.IsNullOrEmpty(failureReason))
+        return false;
+
+      // Use ordinal comparison for consistent, culture-invariant matching
+      return failureReason.IndexOf(AuthorityViolationReason, StringComparison.Ordinal) >= 0;
     }
 
     private void Log(string message)

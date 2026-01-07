@@ -206,6 +206,7 @@ namespace LlamaBrain.Runtime.Demo.UI
         /// <summary>
         /// Sets the voice controller for voice-enabled conversations.
         /// </summary>
+        /// <param name="controller">The voice controller to use for voice interactions.</param>
         public void SetVoiceController(NpcVoiceController controller)
         {
             // Unsubscribe from old controller

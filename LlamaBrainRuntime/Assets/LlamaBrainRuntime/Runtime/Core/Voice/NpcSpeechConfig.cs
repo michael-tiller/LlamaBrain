@@ -12,45 +12,82 @@ namespace LlamaBrain.Runtime.Core.Voice
     /// <summary>
     /// Preset voice models available for selection.
     /// </summary>
+    /// <summary>
+    /// Preset voice models available for selection.
+    /// </summary>
     public enum VoiceModelPreset
     {
+      /// <summary>
+      /// English voice model using Lessac high quality preset.
+      /// </summary>
       EnglishLessacHigh = 0,
+      /// <summary>
+      /// English voice model using LJSpeech high quality preset.
+      /// </summary>
       EnglishLjspeechHigh = 1,
+      /// <summary>
+      /// Japanese voice model using test medium quality preset.
+      /// </summary>
       JapaneseTestMedium = 2,
+      /// <summary>
+      /// Custom voice model specified by path.
+      /// </summary>
       Custom = 99
     }
 
     [Header("Voice Model Selection")]
     [Tooltip("Select a preset voice model or choose Custom to specify a path.")]
+    /// <summary>
+    /// The voice model preset to use for speech synthesis.
+    /// </summary>
     public VoiceModelPreset VoicePreset = VoiceModelPreset.EnglishLessacHigh;
 
     [Tooltip("Path to custom model (only used when VoicePreset is Custom).")]
+    /// <summary>
+    /// Path to a custom voice model file (only used when VoicePreset is Custom).
+    /// </summary>
     public string CustomModelPath = "";
 
     [Header("Prosody Controls")]
     [Tooltip("Controls speech speed. Lower = slower, clearer speech. Higher = faster.")]
     [Range(0.5f, 2.0f)]
+    /// <summary>
+    /// Controls speech speed. Lower values produce slower, clearer speech. Higher values produce faster speech.
+    /// </summary>
     public float LengthScale = 1.0f;
 
     [Tooltip("Controls voice variation/randomness. Lower = more consistent, higher = more varied.")]
     [Range(0.0f, 2.0f)]
+    /// <summary>
+    /// Controls voice variation and randomness. Lower values produce more consistent speech. Higher values produce more varied speech.
+    /// </summary>
     public float NoiseScale = 0.667f;
 
     [Tooltip("Additional noise parameter for voice variation.")]
     [Range(0.0f, 2.0f)]
+    /// <summary>
+    /// Additional noise parameter for voice variation control.
+    /// </summary>
     public float NoiseW = 0.8f;
 
     [Header("Audio Settings")]
     [Tooltip("Whether to normalize audio output to prevent clipping.")]
+    /// <summary>
+    /// Whether to normalize audio output to prevent clipping.
+    /// </summary>
     public bool NormalizeAudio = true;
 
     [Tooltip("Output volume multiplier.")]
     [Range(0.0f, 2.0f)]
+    /// <summary>
+    /// Output volume multiplier for the generated speech.
+    /// </summary>
     public float Volume = 1.0f;
 
     /// <summary>
     /// Gets the model name for the current preset.
     /// </summary>
+    /// <returns>The model name string for the current voice preset.</returns>
     public string GetModelName()
     {
       return VoicePreset switch
@@ -66,6 +103,7 @@ namespace LlamaBrain.Runtime.Core.Voice
     /// <summary>
     /// Gets the language code for the current preset.
     /// </summary>
+    /// <returns>The ISO language code (e.g., "en", "ja") for the current voice preset.</returns>
     public string GetLanguage()
     {
       return VoicePreset switch

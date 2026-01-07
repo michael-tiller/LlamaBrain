@@ -68,7 +68,7 @@ namespace LlamaBrain.Tests.Persistence
     #region Save Tests
 
     [Test]
-    public void Save_WithValidData_WritesToTempThenMoves()
+    public void Save_WithValidData_WritesToTempThenAtomicallyReplaces()
     {
       // Arrange
       var saveSystem = new FileSystemSaveSystem(_testSaveDir, _fileSystem, _clock);
@@ -82,13 +82,13 @@ namespace LlamaBrain.Tests.Persistence
       _fileSystem.Received(1).WriteAllText(
         Arg.Is<string>(s => s.EndsWith(".tmp")),
         Arg.Any<string>());
-      _fileSystem.Received(1).MoveFile(
+      _fileSystem.Received(1).ReplaceFile(
         Arg.Is<string>(s => s.EndsWith(".tmp")),
         Arg.Is<string>(s => s.EndsWith(".llamasave")));
     }
 
     [Test]
-    public void Save_WithExistingFile_DeletesOldBeforeMove()
+    public void Save_WithExistingFile_UsesAtomicReplace()
     {
       // Arrange
       var saveSystem = new FileSystemSaveSystem(_testSaveDir, _fileSystem, _clock);
@@ -100,7 +100,13 @@ namespace LlamaBrain.Tests.Persistence
 
       // Assert
       Assert.That(result.Success, Is.True);
-      _fileSystem.Received(1).DeleteFile(Arg.Is<string>(s => s.EndsWith(".llamasave")));
+      // Should use atomic ReplaceFile, not separate DeleteFile + MoveFile
+      _fileSystem.Received(1).ReplaceFile(
+        Arg.Is<string>(s => s.EndsWith(".tmp")),
+        Arg.Is<string>(s => s.EndsWith(".llamasave")));
+      // Verify the old non-atomic pattern is NOT used
+      _fileSystem.DidNotReceive().DeleteFile(Arg.Is<string>(s => s.EndsWith(".llamasave")));
+      _fileSystem.DidNotReceive().MoveFile(Arg.Any<string>(), Arg.Any<string>());
     }
 
     [Test]
@@ -145,7 +151,7 @@ namespace LlamaBrain.Tests.Persistence
       Assert.That(result.Success, Is.True);
       // Verify path separators were replaced (no / or \ in the filename part)
       // The sanitized name will be in the saves directory, not escaped
-      _fileSystem.Received(1).MoveFile(
+      _fileSystem.Received(1).ReplaceFile(
         Arg.Any<string>(),
         Arg.Is<string>(s => s.StartsWith(_testSaveDir) && !s.Contains("/")));
     }

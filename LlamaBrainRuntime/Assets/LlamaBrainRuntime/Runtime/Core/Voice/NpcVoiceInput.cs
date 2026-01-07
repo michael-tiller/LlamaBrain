@@ -43,18 +43,33 @@ namespace LlamaBrain.Runtime.Core.Voice
 
     [Header("Events")]
     [Tooltip("Fired when a complete transcription is available.")]
+    /// <summary>
+    /// Event fired when a complete transcription is available. The string parameter contains the final transcribed text.
+    /// </summary>
     public UnityEvent<string> OnTranscriptionComplete = new UnityEvent<string>();
 
     [Tooltip("Fired when partial transcription is available (streaming).")]
+    /// <summary>
+    /// Event fired when partial transcription is available during streaming. The string parameter contains the current partial transcription.
+    /// </summary>
     public UnityEvent<string> OnPartialTranscription = new UnityEvent<string>();
 
     [Tooltip("Fired when listening starts.")]
+    /// <summary>
+    /// Event fired when listening for voice input starts.
+    /// </summary>
     public UnityEvent OnListeningStarted = new UnityEvent();
 
     [Tooltip("Fired when listening stops.")]
+    /// <summary>
+    /// Event fired when listening for voice input stops.
+    /// </summary>
     public UnityEvent OnListeningStopped = new UnityEvent();
 
     [Tooltip("Fired when voice activity is detected.")]
+    /// <summary>
+    /// Event fired when voice activity detection state changes. The bool parameter indicates whether speech is currently detected.
+    /// </summary>
     public UnityEvent<bool> OnVoiceActivityChanged = new UnityEvent<bool>();
 
     private WhisperStream _whisperStream;
@@ -105,6 +120,7 @@ namespace LlamaBrain.Runtime.Core.Voice
     /// <summary>
     /// Initialize the STT system.
     /// </summary>
+    /// <returns>A task that completes when initialization is finished.</returns>
     public async UniTask InitializeAsync()
     {
       if (_isInitialized)
@@ -275,8 +291,8 @@ namespace LlamaBrain.Runtime.Core.Voice
 
       _listenCompletionSource = new TaskCompletionSource<string>();
 
-      // Register cancellation
-      ct.Register(() =>
+      // Register cancellation and capture the registration for disposal
+      var cancellationRegistration = ct.Register(() =>
       {
         StopListening();
         _listenCompletionSource.TrySetCanceled();
@@ -291,6 +307,11 @@ namespace LlamaBrain.Runtime.Core.Voice
       catch (TaskCanceledException)
       {
         return "";
+      }
+      finally
+      {
+        // Dispose the registration to unregister the callback and prevent memory leak
+        cancellationRegistration.Dispose();
       }
     }
 
@@ -330,6 +351,7 @@ namespace LlamaBrain.Runtime.Core.Voice
     /// <summary>
     /// Get the current partial transcription.
     /// </summary>
+    /// <returns>The current partial transcription text, or an empty string if no transcription is available.</returns>
     public string GetCurrentTranscription()
     {
       return _currentTranscription;

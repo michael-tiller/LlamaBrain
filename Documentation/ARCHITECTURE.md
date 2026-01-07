@@ -1682,7 +1682,7 @@ dotnet test --filter "Category=RequiresLlamaServer"
 
 **When these tests pass against a llama.cpp server, they provide strong empirical evidence of reproducibility under the tested configuration**, regardless of the inherent randomness of the underlying AI model.
 
-**See**: [ROADMAP.md](ROADMAP.md#feature-14-deterministic-generation-seed) for detailed implementation plan.
+**See**: [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md#feature-14) for implementation details.
 
 ## Unity Integration Features
 

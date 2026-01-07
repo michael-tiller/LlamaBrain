@@ -16,31 +16,31 @@
 
 | Feature | Status | Completion |
 |-------|--------|------------|
-| [Feature 1: Determinism Layer](ROADMAP.md#feature-1) | ✅ Complete | 100% |
-| [Feature 2: Structured Memory System](ROADMAP.md#feature-2) | ✅ Complete | 100% |
-| [Feature 3: State Snapshot & Context Retrieval](ROADMAP.md#feature-3) | ✅ Complete | 100% |
-| [Feature 4: Ephemeral Working Memory](ROADMAP.md#feature-4) | ✅ Complete | 100% |
-| [Feature 5: Output Validation System](ROADMAP.md#feature-5) | ✅ Complete | 100% |
-| [Feature 6: Controlled Memory Mutation](ROADMAP.md#feature-6) | ✅ Complete | 100% |
-| [Feature 7: Enhanced Fallback System](ROADMAP.md#feature-7) | ✅ Complete | 100% |
-| [Feature 8: RedRoom Integration](ROADMAP.md#feature-8) | ✅ Complete | 100% |
-| [Feature 9: Documentation](ROADMAP.md#feature-9) | ✅ Complete | 100% |
-| [Feature 10: Deterministic Proof Gap Testing](ROADMAP.md#feature-10) | ✅ Complete | 100% |
+| [Feature 1: Determinism Layer](DEVELOPMENT_LOG.md#feature-1) | ✅ Complete | 100% |
+| [Feature 2: Structured Memory System](DEVELOPMENT_LOG.md#feature-2) | ✅ Complete | 100% |
+| [Feature 3: State Snapshot & Context Retrieval](DEVELOPMENT_LOG.md#feature-3) | ✅ Complete | 100% |
+| [Feature 4: Ephemeral Working Memory](DEVELOPMENT_LOG.md#feature-4) | ✅ Complete | 100% |
+| [Feature 5: Output Validation System](DEVELOPMENT_LOG.md#feature-5) | ✅ Complete | 100% |
+| [Feature 6: Controlled Memory Mutation](DEVELOPMENT_LOG.md#feature-6) | ✅ Complete | 100% |
+| [Feature 7: Enhanced Fallback System](DEVELOPMENT_LOG.md#feature-7) | ✅ Complete | 100% |
+| [Feature 8: RedRoom Integration](DEVELOPMENT_LOG.md#feature-8) | ✅ Complete | 100% |
+| [Feature 9: Documentation](DEVELOPMENT_LOG.md#feature-9) | ✅ Complete | 100% |
+| [Feature 10: Deterministic Proof Gap Testing](DEVELOPMENT_LOG.md#feature-10) | ✅ Complete | 100% |
 | [Feature 11: RAG-Based Memory Retrieval](ROADMAP.md#feature-11) | 📋 Planned | MEDIUM |
-| [Feature 12: Dedicated Structured Output](ROADMAP.md#feature-12) | ✅ Complete | 100% |
-| [Feature 13: Structured Output Integration](ROADMAP.md#feature-13) | ✅ Complete | 100% |
-| [Feature 14: Deterministic Generation Seed](ROADMAP.md#feature-14) | ✅ Complete | 100% |
+| [Feature 12: Dedicated Structured Output](DEVELOPMENT_LOG.md#feature-12) | ✅ Complete | 100% |
+| [Feature 13: Structured Output Integration](DEVELOPMENT_LOG.md#feature-13) | ✅ Complete | 100% |
+| [Feature 14: Deterministic Generation Seed](DEVELOPMENT_LOG.md#feature-14) | ✅ Complete | 100% |
 | [Feature 15: Multiple NPC Support](ROADMAP.md#feature-15) | 📋 Planned | MEDIUM |
-| [Feature 16: Save/Load Game Integration](ROADMAP.md#feature-16) | ✅ Complete | 100% |
+| [Feature 16: Save/Load Game Integration](DEVELOPMENT_LOG.md#feature-16) | ✅ Complete | 100% |
 | [Feature 17: Token Cost Tracking & Analytics](ROADMAP.md#feature-17) | 📋 Planned | MEDIUM |
 | [Feature 18: Concurrent Request Handling & Thread Safety](ROADMAP.md#feature-18) | 📋 Planned | MEDIUM |
 | [Feature 19: Health Check & Resilience](ROADMAP.md#feature-19) | 📋 Planned | MEDIUM |
 | [Feature 20: Memory Change History Visualization](ROADMAP.md#feature-20) | 📋 Planned | LOW |
 | [Feature 21: Sidecar Host](ROADMAP.md#feature-21) | 📋 Planned | MEDIUM |
 | [Feature 22: Unreal Engine Support](ROADMAP.md#feature-22) | 📋 Planned | MEDIUM |
-| [Feature 23: Structured Input/Context](ROADMAP.md#feature-23) | ✅ Complete | 100% |
+| [Feature 23: Structured Input/Context](DEVELOPMENT_LOG.md#feature-23) | ✅ Complete | 100% |
 | [Feature 24: "I've seen this" Recognition](ROADMAP.md#feature-24) | 📋 Planned | MEDIUM |
-| [Feature 25: NLP Belief Contradiction Detection](#feature-25) | 📋 Planned | MEDIUM |
+| [Feature 25: NLP Belief Contradiction Detection](ROADMAP.md#feature-25) | 📋 Planned | MEDIUM |
 | [Feature 26: Narrative Consolidation](ROADMAP.md#feature-26) | 📋 Planned | MEDIUM |
 | [Feature 27: Smart KV Cache Management](ROADMAP.md#feature-27) | 📋 Planned | CRITICAL |
 | [Feature 28: "Black Box" Audit Recorder](ROADMAP.md#feature-28) | 📋 Planned | CRITICAL |
@@ -49,7 +49,7 @@
 | [Feature 31: Whisper Speech-to-Text Integration](ROADMAP.md#feature-31) | 🚧 In Progress (~70%) | MEDIUM |
 | [Feature 32: Piper Text-to-Speech Integration](ROADMAP.md#feature-32) | 🚧 In Progress (~65%) | MEDIUM |
 
-**Note**: Detailed feature descriptions, implementation plans, and checklists are in [ROADMAP.md](ROADMAP.md). This document focuses on high-level status and progress tracking.
+**Note**: Completed feature logs are in [DEVELOPMENT_LOG.md](./DEVELOPMENT_LOG.md). Planned and in-progress feature details are in [ROADMAP.md](./ROADMAP.md). This document focuses on high-level status and progress tracking.
 
 ---
 

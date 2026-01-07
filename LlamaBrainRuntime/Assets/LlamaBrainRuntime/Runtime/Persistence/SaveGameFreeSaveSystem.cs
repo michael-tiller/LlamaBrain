@@ -33,6 +33,9 @@ namespace LlamaBrain.Runtime.Persistence
     }
 
     /// <inheritdoc/>
+    /// <param name="slotName">The name of the slot to save to.</param>
+    /// <param name="data">The save data to persist.</param>
+    /// <returns>The result of the save operation.</returns>
     public SaveResult Save(string slotName, SaveData data)
     {
       if (string.IsNullOrEmpty(slotName))
@@ -61,6 +64,8 @@ namespace LlamaBrain.Runtime.Persistence
     }
 
     /// <inheritdoc/>
+    /// <param name="slotName">The name of the slot to load from.</param>
+    /// <returns>The loaded save data, or null if the slot doesn't exist or loading failed.</returns>
     public SaveData Load(string slotName)
     {
       if (string.IsNullOrEmpty(slotName))
@@ -83,6 +88,8 @@ namespace LlamaBrain.Runtime.Persistence
     }
 
     /// <inheritdoc/>
+    /// <param name="slotName">The name of the slot to check.</param>
+    /// <returns>True if the slot exists, false otherwise.</returns>
     public bool SlotExists(string slotName)
     {
       if (string.IsNullOrEmpty(slotName))
@@ -100,6 +107,8 @@ namespace LlamaBrain.Runtime.Persistence
     }
 
     /// <inheritdoc/>
+    /// <param name="slotName">The name of the slot to delete.</param>
+    /// <returns>True if the slot was deleted successfully, false otherwise.</returns>
     public bool DeleteSlot(string slotName)
     {
       if (string.IsNullOrEmpty(slotName))
@@ -127,6 +136,7 @@ namespace LlamaBrain.Runtime.Persistence
     }
 
     /// <inheritdoc/>
+    /// <returns>A read-only list of save slot information, sorted by save time descending.</returns>
     public IReadOnlyList<SaveSlotInfo> ListSlots()
     {
       try

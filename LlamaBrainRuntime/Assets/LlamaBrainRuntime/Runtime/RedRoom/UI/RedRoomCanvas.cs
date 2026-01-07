@@ -11,13 +11,28 @@ namespace LlamaBrain.Runtime.RedRoom.UI
   /// </summary>
   public class RedRoomCanvas : MonoBehaviour
   {
-    public enum EState
-    {
-      None = 0,
-      MainMenu = 1,
-      Game = 2,
-      LoadGameMenu = 3
-    }
+  /// <summary>
+  /// Represents the current UI state of the Red Room canvas.
+  /// </summary>
+  public enum EState
+  {
+    /// <summary>
+    /// No specific state (initial state).
+    /// </summary>
+    None = 0,
+    /// <summary>
+    /// Main menu is displayed.
+    /// </summary>
+    MainMenu = 1,
+    /// <summary>
+    /// Game is active and running.
+    /// </summary>
+    Game = 2,
+    /// <summary>
+    /// Load game menu is displayed.
+    /// </summary>
+    LoadGameMenu = 3
+  }
 
     
     [SerializeField] private GameObject _conversationPanel;
@@ -29,6 +44,10 @@ namespace LlamaBrain.Runtime.RedRoom.UI
     [SerializeField] private LoadGameMenu loadGameMenu;
 
     private NpcFollowerExample currentNpc = null;
+    
+    /// <summary>
+    /// Gets the current UI state of the canvas.
+    /// </summary>
     public EState State { get; private set; } = EState.None;
 
     /// <summary>
@@ -230,6 +249,9 @@ namespace LlamaBrain.Runtime.RedRoom.UI
       RefreshIndicator();
     }
     
+    /// <summary>
+    /// Shows the main menu and sets the state to MainMenu.
+    /// </summary>
     public void ShowMainMenu()
     {
       mainMenuPanel.gameObject.SetActive(true);
@@ -237,6 +259,9 @@ namespace LlamaBrain.Runtime.RedRoom.UI
       State = EState.MainMenu;
     }
     
+    /// <summary>
+    /// Shows the load game menu and sets the state to LoadGameMenu.
+    /// </summary>
     public void ShowLoadGameMenu()
     {
       mainMenuPanel.gameObject.SetActive(false);
@@ -244,6 +269,9 @@ namespace LlamaBrain.Runtime.RedRoom.UI
       State = EState.LoadGameMenu;
     }
 
+    /// <summary>
+    /// Shows the game panels and sets the state to Game.
+    /// </summary>
     public void ShowGamePanels()
     {
       loadGameMenu.gameObject.SetActive(false);
@@ -252,6 +280,9 @@ namespace LlamaBrain.Runtime.RedRoom.UI
       State = EState.Game;
     }
 
+    /// <summary>
+    /// Confirms quitting and loads the first scene.
+    /// </summary>
     public void ConfirmQuit()
     {
       SceneManager.LoadScene(0, LoadSceneMode.Single);

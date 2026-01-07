@@ -129,7 +129,7 @@ LlamaBrainForUnity/
 
 ## Development Status
 
-All 9 architectural components implemented. See **[STATUS.md](../../Documentation/STATUS.md)** for feature status and **[COVERAGE_REPORT.md](../../../LlamaBrain/COVERAGE_REPORT.md)** for test metrics.
+All 9 architectural components implemented. See **[STATUS.md](../../Documentation/STATUS.md)** for feature status and **[COVERAGE_REPORT.md](../../LlamaBrain/COVERAGE_REPORT.md)** for test metrics.
 
 ## Resources
 

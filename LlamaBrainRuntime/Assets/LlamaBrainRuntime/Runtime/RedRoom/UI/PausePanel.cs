@@ -5,6 +5,9 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
 
+/// <summary>
+/// Pause menu panel that can be toggled during gameplay. Provides options to save, resume, or quit.
+/// </summary>
 [RequireComponent(typeof(CanvasGroup))]
 public class PausePanel : MonoBehaviour
 {
@@ -24,11 +27,18 @@ public class PausePanel : MonoBehaviour
     SetCanvasGroup(false);
   }
 
+  /// <summary>
+  /// Toggles the visibility of the pause panel.
+  /// </summary>
   public void ToggleCanvasGroup()
   {
     SetCanvasGroup(!isVisible);
   }
 
+  /// <summary>
+  /// Sets the visibility and interactability of the pause panel.
+  /// </summary>
+  /// <param name="value">True to show and enable the panel, false to hide and disable it.</param>
   public void SetCanvasGroup(bool value)
   {
     canvasGroup.alpha = value ? 1 : 0;
@@ -48,6 +58,9 @@ public class PausePanel : MonoBehaviour
     else Resume();
   }
 
+  /// <summary>
+  /// Pauses the game and shows the pause panel.
+  /// </summary>
   public void Pause()
   {
     SetCanvasGroup(true);
@@ -56,6 +69,9 @@ public class PausePanel : MonoBehaviour
     isPaused = true;
   }
 
+  /// <summary>
+  /// Resumes the game and hides the pause panel.
+  /// </summary>
   public void Resume()
   {
     SetCanvasGroup(false);
@@ -64,6 +80,9 @@ public class PausePanel : MonoBehaviour
     isPaused = false;
   }
 
+  /// <summary>
+  /// Confirms quitting and restarts the scene.
+  /// </summary>
   public void ConfirmQuit()
   {
     RestartAsync().Forget();
@@ -76,6 +95,9 @@ public class PausePanel : MonoBehaviour
     Cursor.lockState = CursorLockMode.None;
   }
 
+  /// <summary>
+  /// Saves the current game state.
+  /// </summary>
   public void Save()
   {
     LlamaBrainSaveManager.Instance.SaveGame();

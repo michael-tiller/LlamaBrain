@@ -31,12 +31,21 @@ namespace LlamaBrain.Runtime.Core.Voice
 
     [Header("Events")]
     [Tooltip("Fired when the NPC starts speaking.")]
+    /// <summary>
+    /// Event fired when the NPC starts speaking.
+    /// </summary>
     public UnityEvent OnSpeakingStarted = new UnityEvent();
 
     [Tooltip("Fired when the NPC finishes speaking.")]
+    /// <summary>
+    /// Event fired when the NPC finishes speaking.
+    /// </summary>
     public UnityEvent OnSpeakingFinished = new UnityEvent();
 
     [Tooltip("Fired when audio generation fails.")]
+    /// <summary>
+    /// Event fired when audio generation fails. The string parameter contains the error message.
+    /// </summary>
     public UnityEvent<string> OnSpeakingFailed = new UnityEvent<string>();
 
     private AudioSource _audioSource;
@@ -104,6 +113,7 @@ namespace LlamaBrain.Runtime.Core.Voice
     /// <summary>
     /// Initialize the TTS system.
     /// </summary>
+    /// <returns>A task that completes when initialization is finished.</returns>
     public async UniTask InitializeAsync()
     {
       if (_isInitialized)
@@ -172,7 +182,8 @@ namespace LlamaBrain.Runtime.Core.Voice
     /// Speak the given text using TTS.
     /// </summary>
     /// <param name="text">Text to speak.</param>
-    /// <param name="ct">Cancellation token.</param>
+    /// <param name="ct">Cancellation token to cancel the speaking operation.</param>
+    /// <returns>A task that completes when the speech finishes or is cancelled.</returns>
     public async UniTask SpeakAsync(string text, CancellationToken ct = default)
     {
       if (string.IsNullOrWhiteSpace(text))
