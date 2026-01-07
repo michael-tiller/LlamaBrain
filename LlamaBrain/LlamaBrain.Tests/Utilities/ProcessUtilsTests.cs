@@ -1371,11 +1371,8 @@ namespace LlamaBrain.Tests.Utilities
 
       // Act - Try to kill already-exited process (should handle gracefully)
       // This exercises error handling paths when process state changes
-      var result = ProcessUtils.KillProcess("cmd", forceKill: true);
-
-      // Assert - Should not throw, returns based on whether any cmd processes were killed
-      // The result depends on whether other cmd processes exist
-      Assert.That(result, Is.True.Or.False);
+      // Assert - Should not throw, handles gracefully even if process already exited
+      Assert.DoesNotThrow(() => ProcessUtils.KillProcess("cmd", forceKill: true));
 
       process.Dispose();
     }
