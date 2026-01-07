@@ -631,6 +631,131 @@ namespace LlamaBrain.Tests.Utilities
     }
 
     #endregion
+
+    #region ReplaceFile Tests
+
+    [Test]
+    public void ReplaceFile_DestinationDoesNotExist_MovesSourceToDestination()
+    {
+      // Arrange
+      var sourceContent = "Source content";
+      var sourceFile = Path.Combine(_testBaseDir, "source.txt");
+      var destFile = Path.Combine(_testBaseDir, "dest.txt");
+      File.WriteAllText(sourceFile, sourceContent);
+
+      // Act
+      _fileSystem.ReplaceFile(sourceFile, destFile);
+
+      // Assert
+      Assert.That(File.Exists(sourceFile), Is.False);
+      Assert.That(File.Exists(destFile), Is.True);
+      Assert.That(File.ReadAllText(destFile), Is.EqualTo(sourceContent));
+    }
+
+    [Test]
+    public void ReplaceFile_DestinationExists_ReplacesAtomically()
+    {
+      // Arrange
+      var sourceContent = "New content";
+      var destContent = "Old content";
+      var sourceFile = Path.Combine(_testBaseDir, "source.txt");
+      var destFile = Path.Combine(_testBaseDir, "dest.txt");
+      File.WriteAllText(sourceFile, sourceContent);
+      File.WriteAllText(destFile, destContent);
+
+      // Act
+      _fileSystem.ReplaceFile(sourceFile, destFile);
+
+      // Assert
+      Assert.That(File.Exists(sourceFile), Is.False);
+      Assert.That(File.Exists(destFile), Is.True);
+      Assert.That(File.ReadAllText(destFile), Is.EqualTo(sourceContent));
+    }
+
+    [Test]
+    public void ReplaceFile_DestinationExists_CleansUpBackupFile()
+    {
+      // Arrange
+      var sourceFile = Path.Combine(_testBaseDir, "source.txt");
+      var destFile = Path.Combine(_testBaseDir, "dest.txt");
+      var backupFile = destFile + ".bak";
+      File.WriteAllText(sourceFile, "source");
+      File.WriteAllText(destFile, "dest");
+
+      // Act
+      _fileSystem.ReplaceFile(sourceFile, destFile);
+
+      // Assert
+      Assert.That(File.Exists(backupFile), Is.False);
+    }
+
+    [Test]
+    public void ReplaceFile_StaleBackupExists_RemovesStaleBackup()
+    {
+      // Arrange
+      var sourceFile = Path.Combine(_testBaseDir, "source.txt");
+      var destFile = Path.Combine(_testBaseDir, "dest.txt");
+      var backupFile = destFile + ".bak";
+      File.WriteAllText(sourceFile, "source");
+      File.WriteAllText(destFile, "dest");
+      File.WriteAllText(backupFile, "stale backup");
+
+      // Act
+      _fileSystem.ReplaceFile(sourceFile, destFile);
+
+      // Assert
+      Assert.That(File.Exists(backupFile), Is.False);
+      Assert.That(File.ReadAllText(destFile), Is.EqualTo("source"));
+    }
+
+    [Test]
+    public void ReplaceFile_NonExistentSource_ThrowsFileNotFoundException()
+    {
+      // Arrange
+      var nonExistentSource = Path.Combine(_testBaseDir, "nonexistent.txt");
+      var destFile = Path.Combine(_testBaseDir, "dest.txt");
+
+      // Act & Assert
+      Assert.Throws<FileNotFoundException>(() => _fileSystem.ReplaceFile(nonExistentSource, destFile));
+    }
+
+    [Test]
+    public void ReplaceFile_PreservesContentIntegrity()
+    {
+      // Arrange - test with larger content to ensure atomic replacement
+      var sourceContent = new string('X', 10000);
+      var destContent = new string('Y', 5000);
+      var sourceFile = Path.Combine(_testBaseDir, "source.txt");
+      var destFile = Path.Combine(_testBaseDir, "dest.txt");
+      File.WriteAllText(sourceFile, sourceContent);
+      File.WriteAllText(destFile, destContent);
+
+      // Act
+      _fileSystem.ReplaceFile(sourceFile, destFile);
+
+      // Assert
+      Assert.That(File.ReadAllText(destFile), Is.EqualTo(sourceContent));
+      Assert.That(File.ReadAllText(destFile).Length, Is.EqualTo(10000));
+    }
+
+    [Test]
+    public void ReplaceFile_SpecialCharactersInContent_PreservesContent()
+    {
+      // Arrange
+      var sourceContent = "Special chars: <>&'\"\nNewline\tTab\r\nCRLF";
+      var sourceFile = Path.Combine(_testBaseDir, "source.txt");
+      var destFile = Path.Combine(_testBaseDir, "dest.txt");
+      File.WriteAllText(sourceFile, sourceContent);
+      File.WriteAllText(destFile, "old content");
+
+      // Act
+      _fileSystem.ReplaceFile(sourceFile, destFile);
+
+      // Assert
+      Assert.That(File.ReadAllText(destFile), Is.EqualTo(sourceContent));
+    }
+
+    #endregion
   }
 }
 

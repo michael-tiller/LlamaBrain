@@ -122,6 +122,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `Source/Persistence/Dtos/BeliefDto.cs`
     - `Source/Persistence/Dtos/DialogueEntryDto.cs`
   - **Documentation**: Updated STATUS.md, ROADMAP.md
+- **Test Coverage Improvements** ✅
+  - **Persistence Test Suite Expansion**
+    - Added `ConversationHistorySnapshotTests.cs` (340 lines) - Comprehensive tests for conversation history serialization
+    - Added `DialogueEntryDtoTests.cs` (263 lines) - DTO serialization and validation tests
+    - Added `SaveDataTests.cs` (462 lines) - Save data container and versioning tests
+  - **Integration Test Enhancements**
+    - Expanded `StructuredPipelineIntegrationTests.cs` (+500 lines) - Additional structured pipeline integration scenarios
+  - **Utility Test Expansion**
+    - Enhanced `FileSystemTests.cs` (+125 lines) - Additional file system operation coverage
+    - Enhanced `ProcessUtilsTests.cs` (+273 lines) - Comprehensive process utility test coverage
+  - **Structured Output Test Expansion**
+    - Expanded `JsonSchemaBuilderTests.cs` (+509 lines) - Additional JSON schema generation and validation tests
+  - **Coverage Report Updates**
+    - Updated `COVERAGE_REPORT.md` with latest coverage statistics (91.37% line coverage, 84.94% branch coverage)
+    - Updated `coverage-analysis.csv` with latest metrics
+  - **Total**: ~2,601 lines of new test code across 9 files
 
 ### Unity Runtime
 
