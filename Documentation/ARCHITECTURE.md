@@ -1682,7 +1682,14 @@ dotnet test --filter "Category=RequiresLlamaServer"
 
 **When these tests pass against a llama.cpp server, they provide strong empirical evidence of reproducibility under the tested configuration**, regardless of the inherent randomness of the underlying AI model.
 
-**See**: [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md#feature-14) for implementation details.
+**Logging**: LlamaBrainAgent logs seed usage for debugging:
+- `[LlamaBrainAgent] Using deterministic seed: 5 (InteractionCount)` - when seed is used
+- `[LlamaBrainAgent] No seed provided, using non-deterministic mode` - when no seed
+
+**See**:
+- [DETERMINISM_CONTRACT.md](DETERMINISM_CONTRACT.md#seed-based-determinism-feature-14) for hardware determinism guarantees and detailed documentation
+- [USAGE_GUIDE.md](../LlamaBrainRuntime/Assets/LlamaBrainRuntime/Documentation/USAGE_GUIDE.md#seed-based-determinism-feature-14) for configuration examples
+- [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md#feature-14) for implementation details
 
 ## Unity Integration Features
 

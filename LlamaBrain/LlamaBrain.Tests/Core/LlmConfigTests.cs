@@ -22,6 +22,7 @@ namespace LlamaBrain.Tests.Core
       Assert.That(config.TopP, Is.EqualTo(0.9f));
       Assert.That(config.TopK, Is.EqualTo(40));
       Assert.That(config.RepeatPenalty, Is.EqualTo(1.1f));
+      Assert.That(config.Seed, Is.Null);
       Assert.That(config.StopSequences, Is.Not.Null);
       Assert.That(config.StopSequences.Length, Is.GreaterThan(0));
     }
@@ -399,6 +400,85 @@ namespace LlamaBrain.Tests.Core
 
     #endregion
 
+    #region Seed Tests
+
+    [Test]
+    public void Seed_DefaultValue_IsNull()
+    {
+      // Arrange & Act
+      var config = new LlmConfig();
+
+      // Assert
+      Assert.That(config.Seed, Is.Null);
+    }
+
+    [Test]
+    public void Seed_NullValue_SetsCorrectly()
+    {
+      // Arrange
+      var config = new LlmConfig { Seed = 42 };
+
+      // Act
+      config.Seed = null;
+
+      // Assert
+      Assert.That(config.Seed, Is.Null);
+    }
+
+    [Test]
+    public void Seed_NegativeOne_SetsCorrectly()
+    {
+      // Arrange
+      var config = new LlmConfig();
+
+      // Act
+      config.Seed = -1;
+
+      // Assert
+      Assert.That(config.Seed, Is.EqualTo(-1));
+    }
+
+    [Test]
+    public void Seed_Zero_SetsCorrectly()
+    {
+      // Arrange
+      var config = new LlmConfig();
+
+      // Act
+      config.Seed = 0;
+
+      // Assert
+      Assert.That(config.Seed, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void Seed_PositiveValue_SetsCorrectly()
+    {
+      // Arrange
+      var config = new LlmConfig();
+
+      // Act
+      config.Seed = 12345;
+
+      // Assert
+      Assert.That(config.Seed, Is.EqualTo(12345));
+    }
+
+    [Test]
+    public void Seed_LargeValue_SetsCorrectly()
+    {
+      // Arrange
+      var config = new LlmConfig();
+
+      // Act
+      config.Seed = int.MaxValue;
+
+      // Assert
+      Assert.That(config.Seed, Is.EqualTo(int.MaxValue));
+    }
+
+    #endregion
+
     #region StopSequences Tests
 
     [Test]
@@ -577,6 +657,7 @@ namespace LlamaBrain.Tests.Core
       Assert.That(clone.TopP, Is.EqualTo(original.TopP));
       Assert.That(clone.TopK, Is.EqualTo(original.TopK));
       Assert.That(clone.RepeatPenalty, Is.EqualTo(original.RepeatPenalty));
+      Assert.That(clone.Seed, Is.EqualTo(original.Seed));
       Assert.That(clone.StopSequences, Is.Not.Null);
       Assert.That(clone.StopSequences, Is.Not.SameAs(original.StopSequences));
       Assert.That(clone.StopSequences, Is.EqualTo(original.StopSequences));
@@ -593,6 +674,7 @@ namespace LlamaBrain.Tests.Core
         TopP = 0.95f,
         TopK = 50,
         RepeatPenalty = 1.2f,
+        Seed = 42,
         StopSequences = new string[] { "END", "STOP", "DONE" }
       };
 
@@ -607,6 +689,7 @@ namespace LlamaBrain.Tests.Core
       Assert.That(clone.TopP, Is.EqualTo(0.95f));
       Assert.That(clone.TopK, Is.EqualTo(50));
       Assert.That(clone.RepeatPenalty, Is.EqualTo(1.2f));
+      Assert.That(clone.Seed, Is.EqualTo(42));
       Assert.That(clone.StopSequences, Is.Not.Null);
       Assert.That(clone.StopSequences, Is.Not.SameAs(original.StopSequences));
       Assert.That(clone.StopSequences, Is.EqualTo(original.StopSequences));
@@ -620,19 +703,23 @@ namespace LlamaBrain.Tests.Core
       var original = new LlmConfig
       {
         MaxTokens = 100,
-        Temperature = 0.7f
+        Temperature = 0.7f,
+        Seed = 42
       };
 
       // Act
       var clone = original.Clone();
       clone.MaxTokens = 200;
       clone.Temperature = 0.9f;
+      clone.Seed = 999;
 
       // Assert
       Assert.That(original.MaxTokens, Is.EqualTo(100));
       Assert.That(original.Temperature, Is.EqualTo(0.7f));
+      Assert.That(original.Seed, Is.EqualTo(42));
       Assert.That(clone.MaxTokens, Is.EqualTo(200));
       Assert.That(clone.Temperature, Is.EqualTo(0.9f));
+      Assert.That(clone.Seed, Is.EqualTo(999));
     }
 
     [Test]

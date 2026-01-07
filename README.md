@@ -375,15 +375,33 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 **Core Architecture**: Complete and production-ready. The determinism boundary, validation gate, and authoritative memory system are fully implemented and tested.
 
-**Completed**: Structured Output (Features 12, 13), Deterministic Seed (Feature 14), Structured Input (Feature 23)
+**Completed**: Structured Output (Features 12, 13) - Enhanced with schema versioning and complex parameters, Deterministic Seed (Feature 14) - Documentation complete, Structured Input (Feature 23) - Enhanced with relationships and partial context
 
-**Current Focus**: Save/Load Integration (Feature 16), KV Cache (Feature 27), Audit Recorder (Feature 28)
+**Current Focus**: KV Cache (Feature 27), Audit Recorder (Feature 28), Hot Reload (Feature 29)
 
 **See [STATUS.md](Documentation/STATUS.md) for milestone progress.**
 
 ---
 
 ### Recent Additions (0.3.0-rc.2)
+- **Structured Output Enhancements** (Feature 12 & 13 - ✅ Complete)
+  - Schema versioning system with migration support (`SchemaVersion.cs`)
+  - Complex intent parameters with typed classes (`IntentParameters.cs`)
+  - Relationship authority validation (`RelationshipAuthorityValidator.cs`)
+  - 105+ new tests covering all enhancements
+- **Structured Input Enhancements** (Feature 23 - ✅ Complete)
+  - Relationship entry schema with full metadata (`RelationshipEntry.cs`)
+  - Partial context builder with fluent API (`PartialContextBuilder.cs`)
+  - Validation requirements (min/max length, required/forbidden keywords)
+  - Authority boundaries for constraint source tracking
+  - Dialogue metadata (emotion, location, trigger, turnNumber)
+  - 105+ new tests covering all enhancements
+- **Seed-Based Determinism Documentation** (Feature 14 - ✅ Complete)
+  - Comprehensive determinism contract in `DETERMINISM_CONTRACT.md`
+  - Double-lock system explanation (Context + Entropy locking)
+  - Hardware determinism limitations and guarantees
+  - Cross-device reproducibility expectations
+  - Backward compatibility guide
 - **Voice Integration**: Microphone input and speech output for NPCs (Features 31-32 - ~70% Complete)
   - NpcVoiceController for centralized voice management (440 lines)
   - Whisper.unity integration for speech-to-text with VAD (Feature 31 - 338 lines)

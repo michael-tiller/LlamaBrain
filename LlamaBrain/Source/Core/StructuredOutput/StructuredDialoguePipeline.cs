@@ -196,6 +196,7 @@ namespace LlamaBrain.Core.StructuredOutput
                 var parsedOutput = await _agent.SendNativeDialogueAsync(
                     playerInput,
                     StructuredOutputFormat.JsonSchema,
+                    seed: null,
                     cancellationToken);
 
                 if (!parsedOutput.Success)
@@ -232,7 +233,7 @@ namespace LlamaBrain.Core.StructuredOutput
                 _metrics.RecordFallbackToRegex();
 
                 // Send without structured output constraint
-                var response = await _agent.SendMessageAsync(playerInput, cancellationToken);
+                var response = await _agent.SendMessageAsync(playerInput, seed: null, cancellationToken);
 
                 // Parse with regex
                 var parsedOutput = _regexParser.Parse(response);
@@ -269,7 +270,7 @@ namespace LlamaBrain.Core.StructuredOutput
             try
             {
                 // Send without structured output constraint
-                var response = await _agent.SendMessageAsync(playerInput, cancellationToken);
+                var response = await _agent.SendMessageAsync(playerInput, seed: null, cancellationToken);
 
                 // Parse with regex
                 var parsedOutput = _regexParser.Parse(response);

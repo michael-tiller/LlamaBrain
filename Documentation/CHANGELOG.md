@@ -71,10 +71,111 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - UI prefab references and organization
 - Save/load system integration with RedRoom demo
 - Voice system integration with dialogue triggers
+- **InteractionCount Increment Bug** - Fixed `InteractionCount` only incrementing when `storeConversationHistory` was enabled, breaking determinism when history storage was disabled. Now increments on any successful interaction regardless of history storage settings.
 
 ### Core Library
 
 #### Added
+- **Structured Output Enhancements (Feature 12 Completion)** ✅
+  - **Schema Versioning System**
+    - Added `SchemaVersion.cs` with version parsing, comparison, and migration support
+    - Version format: `major.minor.patch` with compatibility checking
+    - Automatic version detection from JSON schemas
+    - Migration support for backward compatibility
+    - 49 tests in `SchemaVersionTests.cs` covering version parsing, comparison, compatibility, and migration
+  - **Complex Intent Parameters**
+    - Added `IntentParameters.cs` with typed parameter classes:
+      - `GiveItemParameters` - Item name, quantity, target entity
+      - `MoveToParameters` - Destination coordinates, speed
+      - `InteractParameters` - Target entity, interaction type
+    - Added `IntentParameterExtensions` for safe extraction from `Dictionary<string, object>`
+    - Support for `GetArray<T>()` and `GetNested()` for complex parameter types
+    - Enhanced `GetArray<T>()` to handle JArray, JToken, IList, IEnumerable, and ArrayList from JSON deserialization
+    - Added `ConvertElement<T>()` helper for robust type conversion with JToken support
+    - 18 tests passing in `ComplexIntentParametersTests.cs` (expanded with collection type tests)
+  - **Relationship Authority Validation**
+    - Added `RelationshipAuthorityValidator.cs` for owner-based and confidence threshold validation
+    - Validates relationship entry authority before inclusion in context
+    - Supports owner-based filtering and confidence-based filtering
+    - 27 tests passing in `RelationshipAuthorityTests.cs`
+  - **Files Added**:
+    - `Source/Core/StructuredOutput/SchemaVersion.cs`
+    - `Source/Core/StructuredOutput/IntentParameters.cs`
+    - `Source/Core/StructuredOutput/RelationshipAuthorityValidator.cs`
+  - **Files Modified**:
+    - `Source/Core/StructuredOutput/JsonSchemaBuilder.cs` - Added version support
+    - `Source/Core/StructuredOutput/StructuredSchemaValidator.cs` - Enhanced validation
+    - `Source/Core/StructuredOutput/StructuredDialoguePipeline.cs` - Complex parameter support
+- **Structured Input Enhancements (Feature 23 Completion)** ✅
+  - **Relationship Entry Schema**
+    - Added `RelationshipEntry.cs` with full schema:
+      - `sourceEntity`, `targetEntity` - Entity identifiers
+      - `affinity`, `trust`, `familiarity` - Relationship metrics
+      - `history` - Relationship history array
+      - `tags` - Relationship tags array
+    - Integrated into `ContextSection.Relationships` property
+    - 21 tests passing in `RelationshipEntryTests.cs`
+  - **Partial Context Builder**
+    - Added `PartialContextBuilder.cs` with fluent API for incremental context construction
+    - Methods: `WithCanonicalFacts()`, `WithBeliefs()`, `WithRelationships()`, `WithDialogue()`
+    - All `ContextSection` properties nullable with `NullValueHandling.Ignore`
+    - Enables selective context inclusion for token efficiency
+    - 18 tests passing in `PartialContextTests.cs`
+  - **Validation Requirements**
+    - Added `ValidationRequirements` to `ConstraintSection`:
+      - `minResponseLength`, `maxResponseLength` - Response length constraints
+      - `requiredKeywords` - Required keywords array
+      - `forbiddenKeywords` - Forbidden keywords array
+    - Integrated into constraint validation pipeline
+    - 13 tests passing in `ValidationRequirementsTests.cs`
+  - **Authority Boundaries**
+    - Added `Authority` field to constraints with source tracking:
+      - `system` - System-level constraints
+      - `designer` - Designer-defined constraints
+      - `npc` - NPC-specific constraints
+      - `player` - Player-influenced constraints
+    - Enables authority-based constraint filtering
+  - **Dialogue Metadata**
+    - Added `DialogueMetadata` to `StructuredDialogueEntry`:
+      - `emotion` - Emotional state
+      - `location` - Conversation location
+      - `trigger` - Trigger identifier
+      - `turnNumber` - Turn sequence number
+    - Added `Timestamp` (float?) to dialogue entries
+    - 14 tests passing in `DialogueMetadataTests.cs`
+  - **Files Added**:
+    - `Source/Core/StructuredInput/PartialContextBuilder.cs`
+    - `Source/Core/StructuredInput/Schemas/RelationshipEntry.cs`
+  - **Files Modified**:
+    - `Source/Core/StructuredInput/Schemas/ConstraintSection.cs` - Added ValidationRequirements and Authority
+    - `Source/Core/StructuredInput/Schemas/ContextSection.cs` - Added Relationships property
+    - `Source/Core/StructuredInput/Schemas/DialogueSection.cs` - Added Timestamp and Metadata
+    - `Source/Core/StructuredInput/Schemas/ContextJsonSchema.cs` - Updated schema structure
+- **Seed-Based Determinism Documentation (Feature 14)** ✅
+  - **Comprehensive Documentation**
+    - Added comprehensive seed-based determinism section to `DETERMINISM_CONTRACT.md`:
+      - Double-lock system explanation (Context Locking + Entropy Locking)
+      - Seed parameter flow through the system
+      - Seed behavior by value (null, 0, 1+, -1)
+      - Retry behavior (same seed for all retry attempts)
+      - Per-interaction vs per-attempt seed semantics
+      - Hardware determinism limitations and guarantees
+      - Cross-device reproducibility expectations
+      - Backward compatibility and migration guide
+    - Updated `ARCHITECTURE.md` with seed usage logging information:
+      - `[LlamaBrainAgent] Using deterministic seed: 5 (InteractionCount)`
+      - `[LlamaBrainAgent] No seed provided, using non-deterministic mode`
+    - Updated `DEVELOPMENT_LOG.md` marking deferred items as complete:
+      - Schema versioning (Feature 12.3)
+      - Complex intent parameters (Feature 13.3)
+      - Relationship entries (Feature 23.2)
+      - Partial context support (Feature 23.5)
+      - Validation requirements (Feature 23.2)
+      - Authority boundaries (Feature 23.2)
+      - Dialogue metadata (Feature 23.2)
+  - **Integration Testing**
+    - Added `BrainAgentSeedIntegrationTests.cs` for seed integration testing
+    - Tests verify seed extraction from `InteractionContext` and propagation to API client
 - **Feature 16: Save/Load Game Integration - COMPLETE** ✅
   - **Engine-Agnostic Persistence Abstraction** (`LlamaBrain/Source/Persistence/`)
     - `ISaveSystem` interface for engine-agnostic save/load operations
@@ -138,6 +239,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Updated `COVERAGE_REPORT.md` with latest coverage statistics (91.37% line coverage, 84.94% branch coverage)
     - Updated `coverage-analysis.csv` with latest metrics
   - **Total**: ~2,601 lines of new test code across 9 files
+
+#### Fixed
+- **Test Count Corrections** - Fixed incorrect test counts in changelog documentation (was showing 88 for all tests, now shows accurate counts: 18, 27, 21, 18, 13, 14)
+- **Nullable Reference Warnings** - Fixed nullable reference warnings in test files by adding null-forgiving operators for nullable properties in ContextSerializer, DialogueMetadata, and StructuredContextProvider tests
+- **IntentParameters GetArray Enhancement** - Enhanced `GetArray<T>()` method to handle JArray, JToken, IList, IEnumerable, and ArrayList from JSON deserialization, improving compatibility with various JSON deserializers
 
 ### Unity Runtime
 

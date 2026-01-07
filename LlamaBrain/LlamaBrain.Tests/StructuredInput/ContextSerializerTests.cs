@@ -215,12 +215,12 @@ namespace LlamaBrain.Tests.StructuredInput
             // Assert
             Assert.That(deserialized, Is.Not.Null);
             Assert.That(deserialized!.SchemaVersion, Is.EqualTo(original.SchemaVersion));
-            Assert.That(deserialized.Context.CanonicalFacts, Is.EqualTo(original.Context.CanonicalFacts));
-            Assert.That(deserialized.Context.WorldState.Count, Is.EqualTo(original.Context.WorldState.Count));
-            Assert.That(deserialized.Context.EpisodicMemories.Count, Is.EqualTo(original.Context.EpisodicMemories.Count));
-            Assert.That(deserialized.Context.Beliefs.Count, Is.EqualTo(original.Context.Beliefs.Count));
-            Assert.That(deserialized.Constraints.Prohibitions, Is.EqualTo(original.Constraints.Prohibitions));
-            Assert.That(deserialized.Dialogue.PlayerInput, Is.EqualTo(original.Dialogue.PlayerInput));
+            Assert.That(deserialized.Context!.CanonicalFacts, Is.EqualTo(original.Context.CanonicalFacts));
+            Assert.That(deserialized.Context.WorldState!.Count, Is.EqualTo(original.Context.WorldState.Count));
+            Assert.That(deserialized.Context.EpisodicMemories!.Count, Is.EqualTo(original.Context.EpisodicMemories.Count));
+            Assert.That(deserialized.Context.Beliefs!.Count, Is.EqualTo(original.Context.Beliefs.Count));
+            Assert.That(deserialized.Constraints!.Prohibitions, Is.EqualTo(original.Constraints.Prohibitions));
+            Assert.That(deserialized.Dialogue!.PlayerInput, Is.EqualTo(original.Dialogue.PlayerInput));
         }
 
         #endregion
@@ -442,8 +442,8 @@ namespace LlamaBrain.Tests.StructuredInput
             // Assert
             Assert.That(deserialized, Is.Not.Null);
             Assert.That(deserialized!.SchemaVersion, Is.EqualTo(original.SchemaVersion));
-            Assert.That(deserialized.Context.CanonicalFacts, Is.EqualTo(original.Context.CanonicalFacts));
-            Assert.That(deserialized.Dialogue.PlayerInput, Is.EqualTo(original.Dialogue.PlayerInput));
+            Assert.That(deserialized.Context!.CanonicalFacts, Is.EqualTo(original.Context.CanonicalFacts));
+            Assert.That(deserialized.Dialogue!.PlayerInput, Is.EqualTo(original.Dialogue.PlayerInput));
         }
 
         [Test]

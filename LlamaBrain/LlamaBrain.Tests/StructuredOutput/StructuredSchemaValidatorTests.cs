@@ -294,7 +294,7 @@ namespace LlamaBrain.Tests.StructuredOutput
                 IntentType = "follow_player",
                 Target = "player",
                 Priority = 5,
-                Parameters = new Dictionary<string, string> { { "speed", "walk" } }
+                Parameters = new Dictionary<string, object> { { "speed", "walk" } }
             };
 
             var result = StructuredSchemaValidator.ValidateIntent(intent);
