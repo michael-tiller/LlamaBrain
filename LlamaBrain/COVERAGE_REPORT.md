@@ -1,26 +1,23 @@
 # Test Coverage Report
 
 **Generated:** 2026-01-07
-**Overall Coverage:** 91.3% line coverage (9,614/10,530 lines), 84.63% branch coverage (2,902/3,429 branches)
+**Overall Coverage:** 91.69% line coverage (9,656/10,530 lines), 84.86% branch coverage (2,905/3,423 branches)
 **Total Files Analyzed:** 102 source files
-**Total Tests:** 2,254 tests (2,246 passed, 8 failed, 5 skipped)
+**Total Tests:** 2,854 tests (2,849 passed, 0 failed, 5 skipped)
 
 ## Summary
 
 | Metric | Value |
 |--------|-------|
-| Files with 0% coverage | 1 |
+| Files with 0% coverage | 0 ✅ |
 | Files with < 50% coverage | 0 ✅ |
 | Files with 50-80% coverage | 4 |
-| Files with >= 80% coverage | 97 |
+| Files with >= 80% coverage | 98 |
 
-## Coverage Changes (2026-01-07)
-
-### Files Below 80% (5 remaining)
+### Files Below 80% (4 remaining)
 
 | File | Coverage | Branch | Priority |
 |------|----------|--------|----------|
-| `Core\Audit\AuditCaptureContext.cs` | 0% | 0% | High - new file with no coverage |
 | `Core\ServerManager.cs` | 68.8% | 89.55% ✅ | Medium - complex process management |
 | `Core\StructuredOutput\IntentParameters.cs` | 70.68% | 84% | Medium - structured output parameters |
 | `Core\StructuredInput\PartialContextBuilder.cs` | 73.02% | 100% ✅ | Low - perfect branch coverage |
@@ -28,7 +25,7 @@
 
 ## Files with Good Coverage (>= 80%)
 
-**97 files** have good test coverage (>= 80%):
+**98 files** have good test coverage (>= 80%):
 
 **Perfect Coverage (100%):**
 - `Core\PromptComposer.cs` - 379/379 lines, 100% branch
@@ -82,6 +79,7 @@
 - `Core\Inference\KvCacheConfig.cs` - 26/26 lines
 - `Core\Audit\ExportOptions.cs` - 6/6 lines
 - `Core\Audit\AuditRecord.cs` - 27/27 lines
+- `Core\Audit\AuditCaptureContext.cs` - 42/42 lines, 100% branch
 
 **Excellent Coverage (95-99%):**
 - `Core\Audit\ReplayEngine.cs` - 99.25% (133/134 lines, 100% branch)

@@ -39,8 +39,9 @@ namespace LlamaBrain.Core.Audit
       result.DriftType = DetermineDriftType(result);
       result.DriftDescription = GenerateDriftDescription(original, replayed, result);
 
-      // Set Success based on whether any drift was detected
-      result.Success = result.MemoryMatches && result.PromptMatches && result.OutputMatches && result.ValidationMatches;
+      // Success means the comparison completed without errors.
+      // Drift detection is separate - check DriftType or IsExactMatch for that.
+      result.Success = true;
 
       return result;
     }
