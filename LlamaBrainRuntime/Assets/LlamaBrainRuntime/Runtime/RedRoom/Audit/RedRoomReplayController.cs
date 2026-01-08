@@ -621,13 +621,21 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
     /// </summary>
     public static void ProcessQueue()
     {
-      lock (_lock)
+      while (true)
       {
-        while (_queue.Count > 0)
+        Action? work = null;
+        lock (_lock)
+        {
+          if (_queue.Count == 0)
+            break;
+          work = _queue.Dequeue();
+        }
+
+        if (work != null)
         {
           try
           {
-            _queue.Dequeue()?.Invoke();
+            work();
           }
           catch (Exception ex)
           {

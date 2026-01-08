@@ -152,6 +152,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Fixed
 - Fixes an issue with the CI pipeline not firing properly.
+- **Audit Recorder Improvements**:
+  - Fixed `DebugPackage.ValidateIntegrity()` to use non-mutating hash computation (prevents state corruption during validation)
+  - Fixed `DebugPackageExporter.Export()` to validate NPC ID for null and whitespace (prevents invalid exports)
+  - Fixed `DriftDetector.Compare()` to correctly initialize `Success` property based on actual drift detection results
+  - Fixed `AuditRecorderBridge.Awake()` initialization order and error handling (prevents singleton corruption on initialization failure)
+  - Fixed `AuditRecorderBridge.ExportDebugPackageJson()` to pass `ModelFingerprint` parameter correctly to exporter
+  - Fixed `AuditRecorderBridge.SaveDebugPackage()` to create directory structure if missing (prevents file save failures)
+  - Fixed `RedRoomReplayController.ProcessQueue()` thread safety by releasing lock before executing work items (prevents deadlocks)
+  - Fixed typo in test method name: `Record_MultipleRecords_DifferentNpcs_CreatesSeperateBuffers` → `CreatesSeparateBuffers`
+- **Audit Recorder Enhancements**:
+  - Added `ReplayResult.IsExactMatch` convenience property for checking exact replay matches
+  - Improved `DebugPackage` integrity hash computation to order records consistently for deterministic hashing
 
 ## [0.3.0-rc.2] 2026-01-07
 

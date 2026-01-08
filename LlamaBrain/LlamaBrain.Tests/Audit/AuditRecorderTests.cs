@@ -90,7 +90,7 @@ namespace LlamaBrain.Tests.Audit
     }
 
     [Test]
-    public void Record_MultipleRecords_DifferentNpcs_CreatesSeperateBuffers()
+    public void Record_MultipleRecords_DifferentNpcs_CreatesSeparateBuffers()
     {
       // Arrange
       var recorder = new AuditRecorder();

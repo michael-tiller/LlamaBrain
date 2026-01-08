@@ -101,6 +101,11 @@ namespace LlamaBrain.Core.Audit
     public bool ValidationMatches { get; set; }
 
     /// <summary>
+    /// Whether the replay matches the original exactly (no drift detected).
+    /// </summary>
+    public bool IsExactMatch => DriftType == DriftType.None;
+
+    /// <summary>
     /// Creates a successful replay result with no drift.
     /// </summary>
     public static RecordReplayResult Succeeded(AuditRecord original, AuditRecord replayed)

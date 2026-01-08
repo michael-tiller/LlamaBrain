@@ -120,10 +120,10 @@ namespace LlamaBrain.Core.Audit
     #region Methods
 
     /// <summary>
-    /// Computes the integrity hash from package content.
-    /// Call this after setting all properties and before export.
+    /// Computes the integrity hash string from package content without mutating state.
     /// </summary>
-    public void ComputeIntegrityHash()
+    /// <returns>The computed SHA256 hash string.</returns>
+    private string GetIntegrityHashString()
     {
       var sb = new StringBuilder();
 
@@ -141,12 +141,21 @@ namespace LlamaBrain.Core.Audit
       }
 
       // Include record hashes (not full records, for performance)
-      foreach (var record in Records)
+      foreach (var record in Records.OrderBy(r => r.RecordId, StringComparer.Ordinal))
       {
         sb.AppendLine($"Record:{record.RecordId}|{record.OutputHash}");
       }
 
-      PackageIntegrityHash = AuditHasher.ComputeSha256(sb.ToString());
+      return AuditHasher.ComputeSha256(sb.ToString());
+    }
+
+    /// <summary>
+    /// Computes the integrity hash from package content.
+    /// Call this after setting all properties and before export.
+    /// </summary>
+    public void ComputeIntegrityHash()
+    {
+      PackageIntegrityHash = GetIntegrityHashString();
     }
 
     /// <summary>
@@ -158,13 +167,8 @@ namespace LlamaBrain.Core.Audit
       if (string.IsNullOrEmpty(PackageIntegrityHash))
         return false;
 
-      var savedHash = PackageIntegrityHash;
-      ComputeIntegrityHash();
-      var isValid = PackageIntegrityHash == savedHash;
-
-      // Restore original hash (in case it was valid)
-      PackageIntegrityHash = savedHash;
-      return isValid;
+      var computedHash = GetIntegrityHashString();
+      return PackageIntegrityHash == computedHash;
     }
 
     /// <summary>

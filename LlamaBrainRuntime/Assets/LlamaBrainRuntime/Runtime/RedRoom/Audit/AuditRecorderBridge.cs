@@ -82,8 +82,18 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
         return;
       }
 
-      Instance = this;
-      InitializeRecorder();
+      try
+      {
+        InitializeRecorder();
+        Instance = this;
+      }
+      catch (Exception ex)
+      {
+        Debug.LogError($"[AuditRecorderBridge] Failed to initialize recorder: {ex.Message}\n{ex}");
+        Instance = null;
+        Destroy(gameObject);
+        return;
+      }
     }
 
     private void OnDestroy()
@@ -304,11 +314,10 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
       {
         CreatorNotes = notes ?? "",
         GameVersion = _gameVersion,
-        SceneName = _currentSceneName,
-        ModelFingerprint = _modelFingerprint ?? new ModelFingerprint()
+        SceneName = _currentSceneName
       };
 
-      var package = exporter.Export(_recorder, options);
+      var package = exporter.Export(_recorder, _modelFingerprint ?? new ModelFingerprint(), options);
 
       if (verboseLogging)
       {
@@ -337,6 +346,12 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
     /// <param name="notes">Optional notes to include.</param>
     public void SaveDebugPackage(string filePath, string? notes = null)
     {
+      var dir = System.IO.Path.GetDirectoryName(filePath);
+      if (!string.IsNullOrEmpty(dir))
+      {
+        System.IO.Directory.CreateDirectory(dir);
+      }
+
       var json = ExportDebugPackageJson(notes);
       System.IO.File.WriteAllText(filePath, json);
 

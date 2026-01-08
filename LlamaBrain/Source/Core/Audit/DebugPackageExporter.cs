@@ -93,8 +93,11 @@ namespace LlamaBrain.Core.Audit
       if (recorder == null)
         throw new ArgumentNullException(nameof(recorder));
 
-      if (string.IsNullOrEmpty(npcId))
+      if (npcId == null)
         throw new ArgumentNullException(nameof(npcId));
+
+      if (string.IsNullOrWhiteSpace(npcId))
+        throw new ArgumentException("NPC ID cannot be empty or whitespace.", nameof(npcId));
 
       var package = new DebugPackage
       {

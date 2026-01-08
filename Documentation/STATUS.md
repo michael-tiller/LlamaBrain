@@ -113,7 +113,7 @@
 **Status**: Complete
 
 ### Milestone 5: v0.3.0 - The Production Update (Features 12, 13, 23, 14, 16, 27, 28, 29, 10 completion) 🚧
-**Status**: 🚧 In Progress (0.3.0-rc.2)
+**Status**: 🚧 In Progress (0.3.0-rc.3)
 **Prerequisite**: **Milestone 4 (v0.2.0) must be released** before starting Milestone 5 features.
 
 **Completed:**
