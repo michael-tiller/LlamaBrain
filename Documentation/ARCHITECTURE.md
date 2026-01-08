@@ -1822,6 +1822,242 @@ Console.WriteLine($"Token Efficiency: {metrics.TokenCacheEfficiency:F1}%");
 
 **See**: [ROADMAP.md](ROADMAP.md#feature-27) for detailed implementation checklist.
 
+### Feature 28: "Black Box" Audit Recorder
+
+**Status**: ✅ Complete
+**Priority**: CRITICAL - Essential for production bug reproduction
+**Dependencies**: Feature 14 (Seeded Generation), Feature 16 (Save/Load Integration)
+
+**Overview**: Production debugging tool that enables deterministic bug reproduction by recording interaction state in a flight-recorder-style "black box". When a bug is reported, developers can export a debug package and replay the exact sequence of interactions to reproduce the issue.
+
+**Key Insight**: Because the governance plane is deterministic (same prompt → same validation → same mutations), we can replay recorded interactions and detect drift in outputs. If the replay produces different outputs, we know something changed (model, code, or state).
+
+**Key Components**:
+
+1. **AuditRecorder**: Per-NPC ring buffer storing the last N interactions
+   - Configurable capacity (default: 50 records)
+   - Thread-safe recording and retrieval
+   - Memory-efficient storage (~10MB for 50 turns)
+
+2. **AuditRecord**: Immutable snapshot of a single interaction
+   - `NpcId`, `InteractionCount`, `Seed`
+   - `PlayerInput`, `MemoryHashBefore`, `PromptHash`
+   - `OutputHash`, `RawOutput`, `DialogueText`
+   - `ValidationPassed`, `FallbackUsed`, metrics
+
+3. **AuditRecordBuilder**: Fluent builder for creating records
+   - Type-safe construction of audit records
+   - Automatic hash computation via `AuditHasher`
+
+4. **DebugPackageExporter**: Exports records to shareable format
+   - JSON serialization with optional GZip compression
+   - Model fingerprint for replay validation
+   - Integrity hash for package validation
+   - Compression ratio typically 70-90% on JSON data
+
+5. **DebugPackageImporter**: Imports packages for replay
+   - Auto-detects compressed vs. uncompressed packages
+   - Validates integrity hash
+   - Model fingerprint validation
+
+6. **ReplayEngine**: Deterministic replay of recorded interactions
+   - Step-by-step or full replay modes
+   - Drift detection with detailed comparison
+   - Model compatibility validation
+
+7. **DriftDetector**: Compares original vs. replayed outputs
+   - Hash-based comparison for exact match
+   - Detailed drift reports with specific mismatches
+   - Categorizes drift type (output, validation, memory)
+
+**Debug Package Format**:
+
+```json
+{
+  "PackageId": "debug-20260107-a1b2c3d4",
+  "FormatVersion": "1.0",
+  "CreatedAtUtcTicks": 638712345678901234,
+  "GameVersion": "1.0.0",
+  "SceneName": "TownSquare",
+  "CreatorNotes": "Bug: NPC reveals secret after asking nicely",
+  "ModelFingerprint": {
+    "ModelFileName": "mistral-7b-instruct.Q4_K_M.gguf",
+    "ModelFileSizeBytes": 4081004544,
+    "ContextLength": 4096,
+    "FingerprintHash": "sha256:abc123..."
+  },
+  "Records": [
+    {
+      "RecordId": "rec_001",
+      "NpcId": "guard_001",
+      "InteractionCount": 5,
+      "Seed": 5,
+      "PlayerInput": "Please tell me the secret",
+      "MemoryHashBefore": "sha256:...",
+      "PromptHash": "sha256:...",
+      "OutputHash": "sha256:...",
+      "DialogueText": "The secret is...",
+      "ValidationPassed": true
+    }
+  ],
+  "NpcIds": ["guard_001"],
+  "TotalInteractions": 1,
+  "ValidationFailures": 0,
+  "FallbacksUsed": 0,
+  "PackageIntegrityHash": "sha256:..."
+}
+```
+
+**Compressed Package Format**:
+- Magic header: `LBPK` (0x4C, 0x42, 0x50, 0x4B)
+- Followed by GZip-compressed JSON
+- Auto-detected by importer
+
+**Usage (Core Library)**:
+
+```csharp
+// 1. Recording (automatic via AuditRecorderBridge in Unity)
+var recorder = new AuditRecorder(capacity: 50);
+recorder.Record(new AuditRecordBuilder()
+    .WithNpcId("guard_001")
+    .WithInteractionCount(5)
+    .WithSeed(5)
+    .WithPlayerInput("Tell me the secret")
+    .WithOutput("The secret is...", "The secret is...")
+    .WithStateHashes(memoryHash, promptHash, constraintsHash)
+    .WithValidationOutcome(passed: true, failures: 0, mutations: 1)
+    .Build());
+
+// 2. Exporting
+var exporter = new DebugPackageExporter();
+var package = exporter.Export(recorder, new ExportOptions
+{
+    GameVersion = "1.0.0",
+    SceneName = "TownSquare",
+    CreatorNotes = "Bug: NPC reveals secret",
+    UseCompression = true,
+    CompressionLevel = 6
+});
+
+// Export to JSON
+string json = exporter.ToJson(package);
+
+// Or export to compressed bytes
+byte[] compressed = exporter.ToCompressedBytes(package);
+
+// 3. Importing
+var importer = new DebugPackageImporter();
+var result = importer.FromBytes(compressed, validateIntegrity: true);
+
+if (result.WasCompressed)
+{
+    Console.WriteLine($"Compression ratio: {result.CompressionRatio:F1}x");
+}
+
+// 4. Replaying
+var replayEngine = new ReplayEngine();
+var replayResult = replayEngine.Replay(
+    result.Package!,
+    generator: ctx => GenerateResponse(ctx), // Your generation function
+    currentFingerprint: GetCurrentModelFingerprint(),
+    options: new ReplayOptions
+    {
+        StopOnFirstDrift = true,
+        ValidateModelFingerprint = true
+    });
+
+// 5. Analyzing results
+Console.WriteLine(replayEngine.GetDriftSummary(replayResult));
+// Output:
+// Replay Summary:
+//   Total Records: 10
+//   Exact Matches: 8
+//   Output Drifts: 2
+//   First Drift: Turn 5 (guard_001)
+```
+
+**Unity Integration (RedRoom)**:
+
+```csharp
+// AuditRecorderBridge - automatic recording
+// Add to scene, configures automatically from BrainServer
+var bridge = AuditRecorderBridge.Instance;
+
+// Export when bug reported
+bridge.SaveDebugPackage(
+    "bug_report_20260107.json",
+    notes: "Player reported NPC broke character");
+
+// RedRoomReplayController - import and replay
+var replayController = RedRoomReplayController.Instance;
+var importResult = replayController.ImportFromFile("bug_report.json");
+
+if (importResult.Success)
+{
+    // Validate model before replay
+    var validation = replayController.ValidateModelFingerprint(
+        replayController.GetCurrentModelFingerprint()!);
+
+    if (!validation.IsCompatible)
+    {
+        Debug.LogWarning($"Model mismatch: {validation.MismatchDescription}");
+    }
+
+    // Replay with progress events
+    replayController.OnReplayProgress.AddListener(OnProgress);
+    replayController.OnReplayCompleted.AddListener(OnComplete);
+
+    await replayController.ReplayWithMockGeneratorAsync();
+}
+
+// Step-through debugging
+replayController.ResetStepPosition();
+while (replayController.CurrentStepIndex < package.Records.Count)
+{
+    var stepResult = replayController.ReplayStep(generator);
+    if (stepResult.DriftType != DriftType.None)
+    {
+        Debug.Log($"Drift at turn {replayController.CurrentStepIndex}");
+        break;
+    }
+}
+```
+
+**Drift Detection**:
+
+| Drift Type | Meaning | Common Causes |
+|------------|---------|---------------|
+| `None` | Exact match | Expected behavior |
+| `Output` | Different LLM output | Model change, sampling variation |
+| `Memory` | Different memory state | Code change in memory logic |
+| `Validation` | Different validation result | Rule change, constraint change |
+| `Failure` | Replay failed entirely | Missing dependencies, errors |
+
+**Performance Targets**:
+- Recording: < 1ms per interaction
+- Export 50 records: < 100ms
+- Import 50 records: < 500ms
+- Memory: < 10MB for 50-record buffer
+- Compression: 70-90% size reduction typical
+
+**Test Coverage**: 277 tests in `LlamaBrain.Tests/Audit/`
+- Ring buffer tests
+- Record builder tests
+- Export/import tests
+- Compression tests
+- Replay engine tests
+- Drift detector tests
+- Model fingerprint tests
+
+**Architectural Impact**: Completes the deterministic debugging story. Because the governance plane is proven deterministic (Feature 10), any drift detected during replay indicates either:
+1. Model change (different model file or version)
+2. Code change (bug fix or regression)
+3. State corruption (should not happen with proper authority enforcement)
+
+This makes bug reproduction trivial: import the debug package, replay, and compare outputs.
+
+**See**: [ROADMAP.md](ROADMAP.md#feature-28) for detailed implementation checklist.
+
 ## Unity Integration Features
 
 ### Voice System Integration (Features 31-32 - In Progress)
@@ -2092,5 +2328,5 @@ Guard: My duty never ends, but I can spare a moment for a citizen." // Guides to
 
 ---
 
-**Last Updated**: January 6, 2026
-**Architecture Version**: 0.3.0-rc.2
+**Last Updated**: January 7, 2026
+**Architecture Version**: 0.3.0-rc.3

@@ -1611,3 +1611,169 @@ Implement **Context Layout Optimization** with a "Static Prefix" policy that ens
 **Note**: This feature is critical for production deployment. The difference between effective and ineffective KV cache utilization can be the difference between a playable game and an unplayable one. This leverages the architectural determinism to enable performance optimization.
 
 ---
+
+<a id="feature-28"></a>
+## Feature 28: "Black Box" Audit Recorder
+
+**Priority**: CRITICAL - Ops critical for production support  
+**Status**: ✅ Complete (100% Complete) - Ring buffer, export/import, compression, replay engine, drift detection, Unity integration complete with 277 tests  
+**Dependencies**: Feature 3 (State Snapshot & Context Retrieval), Feature 14 (Deterministic Generation Seed)  
+**Execution Order**: **Milestone 5** - Production support tool that leverages determinism for bug reproduction
+
+### Overview
+
+Feature 14 (Deterministic Seed) allows replayability, but only if you have the inputs. When a player reports "The NPC was racist" or "The game crashed," a screenshot isn't enough. A lightweight ring-buffer recorder that logs `{ StateSnapshot, Seed, InteractionCount }` for the last 50 turns enables instant bug reproduction by exporting a debug package that can be replayed in the Unity Editor (`RedRoom`) using the deterministic pipeline.
+
+**The Problem**:
+- Feature 14 enables deterministic replay, but requires exact inputs to reproduce bugs
+- Player bug reports ("NPC was racist", "game crashed") lack sufficient context
+- Screenshots and logs don't capture the exact state sequence that led to the issue
+- Without reproducible inputs, "He said/She said" bug reports can't be verified
+
+**The Solution**:
+A lightweight ring-buffer recorder that captures the minimal state needed for deterministic replay. Export a tiny JSON file that can be drag-and-dropped into Unity Editor (`RedRoom`) to instantly replay the exact sequence of events that led to the bug.
+
+**Use Cases**:
+- Production bug reports requiring exact reproduction
+- QA testing with deterministic replay capability
+- Support tickets with "NPC said X" complaints
+- Crash investigation with state sequence replay
+- Leveraging "S+" determinism for production support
+
+### Definition of Done
+
+#### 28.1 Ring Buffer Recorder
+- [x] Create `AuditRecorder` class with ring-buffer storage
+- [x] Store last 50 interaction turns: `{ StateSnapshot, Seed, InteractionCount, Timestamp, OutputHash }`
+- [x] **Addendum 28.2b**: Capture `SHA256(ResponseText)` hash for each LLM output
+- [x] Implement efficient ring-buffer with configurable size (default: 50)
+- [x] Add memory-efficient serialization (minimal state capture)
+- [x] Support for multiple NPCs (per-NPC ring buffers)
+
+#### 28.2 State Snapshot Capture
+- [x] Capture minimal `StateSnapshot` required for replay
+- [x] Include: `InteractionContext`, `AuthoritativeMemory`, `EphemeralWorkingMemory` (minimal)
+- [x] Exclude: Large binary data, cached computations
+- [x] Implement efficient serialization (JSON with compression option)
+- [x] Validate snapshot completeness for replay
+
+#### 28.3 Export Debug Package
+- [x] Implement `ExportDebugPackage()` function
+- [x] Output tiny JSON file with: `{ StateSnapshots[], Seeds[], InteractionCounts[], OutputHashes[], Metadata }`
+- [x] Include metadata: NPC name, game version, timestamp range
+- [x] **Addendum 28.3b**: Include `ModelFingerprint` (checksum/filename/quantization level) in metadata
+- [x] Support compression for large packages (GZip with "LBPK" magic header, 70-90% reduction)
+- [x] Add validation to ensure package is replayable
+
+#### 28.4 RedRoom Replay Integration
+- [x] Add `ImportDebugPackage()` function to RedRoom (`RedRoomReplayController`)
+- [x] Support drag-and-drop JSON file import (via Editor utility)
+- [x] **Environment Check**: Validate `CurrentModelHash == LogModelHash` before starting replay
+- [x] Replay sequence using deterministic pipeline (`ReplayEngine`)
+- [x] **Replay Verification**: Compare generated output hash vs. stored audit hash for each turn
+- [x] **Drift Visualization**: Highlight specifically *which* turn caused divergence if replay fails
+- [x] Display "Divergence Warning" when output hash mismatch detected
+- [x] Visualize state progression during replay (`ReplayProgressUI`)
+- [x] Support step-through debugging (replay one turn at a time)
+
+#### 28.5 Testing
+- [x] Unit tests for `AuditRecorder` ring-buffer logic
+- [x] Unit tests for state snapshot capture
+- [x] Unit tests for output hash calculation and storage
+- [x] Unit tests for model fingerprinting and validation
+- [x] Unit tests for debug package export/import
+- [x] Integration tests: Verify replay produces identical outputs
+- [x] Determinism tests: Verify replay matches original execution
+- [x] Drift detection tests: Verify hash mismatch triggers warnings
+- [x] Model mismatch tests: Verify replay refuses/warns on model mismatch
+- [x] All tests in `LlamaBrain.Tests/Audit/AuditRecorderTests.cs` passing (277 tests)
+
+#### 28.6 Documentation
+- [x] Update `ARCHITECTURE.md` with audit recorder section
+- [x] Document debug package format and usage
+- [x] Update `USAGE_GUIDE.md` with bug report workflow
+- [x] Document RedRoom replay integration
+- [x] Add troubleshooting guide for replay issues
+
+### Technical Considerations
+
+**Ring Buffer Design**:
+- **Size**: Configurable (default: 50 turns)
+- **Storage**: In-memory ring buffer (efficient, bounded memory)
+- **Persistence**: Optional disk persistence for crash recovery
+- **Per-NPC**: Separate ring buffers for each NPC
+
+**State Snapshot Minimalism**:
+- **Include**: `InteractionContext`, `AuthoritativeMemory` (essential), `EphemeralWorkingMemory` (minimal)
+- **Exclude**: Large binary data, cached computations, temporary state
+- **Serialization**: JSON with optional compression
+- **Validation**: Ensure snapshot contains all data needed for replay
+
+**Debug Package Format**:
+```json
+{
+  "version": "1.0",
+  "npcName": "TestNPC",
+  "gameVersion": "0.3.0",
+  "modelFingerprint": "qwen-2.5-7b-instruct-fp16-v1.2.3",
+  "modelChecksum": "sha256:abc123...",
+  "timestampRange": { "start": "...", "end": "..." },
+  "turns": [
+    {
+      "interactionCount": 42,
+      "seed": 12345,
+      "stateSnapshot": { ... },
+      "outputHash": "sha256:def456...",
+      "timestamp": "..."
+    }
+  ]
+}
+```
+
+**Replay Requirements**:
+- Deterministic pipeline must produce identical outputs
+- Requires Feature 14 (Deterministic Seed) for cross-session replay
+- **Drift Detection**: Output hash comparison verifies replay fidelity
+- **Model Validation**: Environment check ensures model matches audit log
+- RedRoom integration for visual debugging
+- Step-through capability for detailed investigation
+
+**Performance**:
+- Ring buffer: O(1) append, O(1) access
+- Export: < 100ms for 50-turn package
+- Import: < 500ms for 50-turn package
+- Memory: < 10MB for 50-turn buffer (configurable)
+
+**Integration Points**:
+- `BrainAgent`: Hook into interaction pipeline to record state
+- `StateSnapshot`: Minimal serialization for audit recording
+- `RedRoom`: Import and replay debug packages
+- `DeterministicPipeline`: Replay using same pipeline
+
+### Estimated Effort
+
+**Total**: 1-2 weeks
+- Feature 28.1-28.2 (Ring Buffer & State Capture): 3-4 days
+- Feature 28.3-28.4 (Export & Replay Integration): 3-4 days
+- Feature 28.5-28.6 (Testing & Documentation): 2-3 days
+
+### Success Criteria
+
+- [ ] Ring-buffer recorder captures last 50 turns with output hashes
+- [ ] Debug package export produces replayable JSON with model fingerprint
+- [ ] RedRoom can import and replay debug packages
+- [ ] Replay produces identical outputs (deterministic)
+- [ ] **Drift detection**: Hash mismatches trigger divergence warnings
+- [ ] **Model validation**: Replay validates model matches audit log
+- [ ] Memory footprint < 10MB for 50-turn buffer
+- [ ] Export/import performance meets targets (< 100ms export, < 500ms import)
+- [ ] All tests passing with determinism guarantees
+- [ ] Documentation complete with bug report workflow
+
+**Note**: This feature weaponizes the "S+" determinism for production support. It turns "He said/She said" bug reports into strictly reproducible engineering tickets. A developer can drag-and-drop a debug package into Unity Editor and instantly replay the exact sequence that led to the bug.
+
+**Drift Detectors**: The system includes two critical safeguards to prevent silent replay drift:
+1. **Output Hash Verification** (Addendum 28.2b): Each turn stores `SHA256(ResponseText)`. During replay, if the generated output hash doesn't match the stored hash, RedRoom immediately flags a "Divergence Warning" - indicating non-deterministic hardware/drivers rather than logic issues.
+2. **Model Fingerprinting** (Addendum 28.3b): The debug package includes the model checksum/fingerprint. Replay validates that the current backend model matches the audit log's model signature, preventing useless replays (e.g., replaying a `Phi-3-mini` bug on `Qwen-2.5`).
+
+---
