@@ -45,6 +45,15 @@ namespace LlamaBrain.Core
     public bool cache_prompt { get; set; } = false;
 
     /// <summary>
+    /// Number of tokens to keep from the initial prompt during context shift.
+    /// Protects the static prefix (system prompt, canonical facts) from being evicted
+    /// when the context window fills up. Set to the token count of your static prefix.
+    /// -1 = keep all tokens (default), 0 = keep none, N = keep first N tokens.
+    /// </summary>
+    [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+    public int? n_keep { get; set; }
+
+    /// <summary>
     /// Random seed for deterministic generation.
     /// -1 = random (non-deterministic), 0+ = use this exact seed.
     /// null = omit from request (server default behavior).

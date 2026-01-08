@@ -1137,6 +1137,148 @@ namespace LlamaBrain.Tests
 
     #endregion
 
+    #region KV Cache Tests
+
+    [Test]
+    public void EnableKvCaching_DefaultsToFalse()
+    {
+      // Arrange & Act
+      var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
+
+      // Assert
+      Assert.IsFalse(agent.EnableKvCaching);
+    }
+
+    [Test]
+    public void EnableKvCaching_WhenSetToTrue_EnablesKvCacheConfig()
+    {
+      // Arrange
+      var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
+
+      // Act
+      agent.EnableKvCaching = true;
+
+      // Assert
+      Assert.IsTrue(agent.EnableKvCaching);
+      Assert.IsTrue(agent.KvCacheConfig.EnableCaching);
+    }
+
+    [Test]
+    public void KvCacheConfig_CanBeSetDirectly()
+    {
+      // Arrange
+      var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
+      var config = new LlamaBrain.Core.Inference.KvCacheConfig
+      {
+        EnableCaching = true,
+        NKeepTokens = 500
+      };
+
+      // Act
+      agent.KvCacheConfig = config;
+
+      // Assert
+      Assert.IsTrue(agent.EnableKvCaching);
+      Assert.AreEqual(500, agent.KvCacheConfig.NKeepTokens);
+    }
+
+    [Test]
+    public async Task SendMessageAsync_WithKvCachingEnabled_PassesNKeepToApiClient()
+    {
+      // Arrange
+      var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
+      agent.EnableKvCaching = true;
+
+      var expectedMetrics = new CompletionMetrics { Content = "Test response" };
+      int? capturedNKeep = null;
+
+      _apiClient.SendPromptWithMetricsAsync(
+          Arg.Any<string>(),
+          Arg.Any<int?>(),
+          Arg.Any<float?>(),
+          Arg.Any<int?>(),
+          Arg.Any<bool>(),
+          Arg.Do<int?>(n => capturedNKeep = n),
+          Arg.Any<CancellationToken>())
+        .Returns(Task.FromResult(expectedMetrics));
+
+      // Act
+      await agent.SendMessageAsync("Hello");
+
+      // Assert
+      Assert.IsNotNull(capturedNKeep, "nKeep should be passed to API client");
+      Assert.Greater(capturedNKeep!.Value, 0, "nKeep should be calculated from static prefix");
+    }
+
+    [Test]
+    public async Task SendMessageAsync_WithKvCachingEnabled_UsesConfiguredNKeepTokens()
+    {
+      // Arrange
+      var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
+      agent.KvCacheConfig = new LlamaBrain.Core.Inference.KvCacheConfig
+      {
+        EnableCaching = true,
+        NKeepTokens = 200  // Explicit override
+      };
+
+      var expectedMetrics = new CompletionMetrics { Content = "Test response" };
+      int? capturedNKeep = null;
+
+      _apiClient.SendPromptWithMetricsAsync(
+          Arg.Any<string>(),
+          Arg.Any<int?>(),
+          Arg.Any<float?>(),
+          Arg.Any<int?>(),
+          Arg.Any<bool>(),
+          Arg.Do<int?>(n => capturedNKeep = n),
+          Arg.Any<CancellationToken>())
+        .Returns(Task.FromResult(expectedMetrics));
+
+      // Act
+      await agent.SendMessageAsync("Hello");
+
+      // Assert
+      Assert.AreEqual(200, capturedNKeep, "nKeep should use configured NKeepTokens value");
+    }
+
+    [Test]
+    public async Task SendMessageAsync_WithKvCachingDisabled_DoesNotCallMetricsApi()
+    {
+      // Arrange
+      var agent = new BrainAgent(_testProfile, _apiClient, _memoryStore);
+      agent.EnableKvCaching = false;
+
+      _apiClient.SendPromptAsync(
+          Arg.Any<string>(),
+          Arg.Any<int?>(),
+          Arg.Any<float?>(),
+          Arg.Any<int?>(),
+          Arg.Any<CancellationToken>())
+        .Returns(Task.FromResult("Test response"));
+
+      // Act
+      await agent.SendMessageAsync("Hello");
+
+      // Assert
+      await _apiClient.DidNotReceive().SendPromptWithMetricsAsync(
+        Arg.Any<string>(),
+        Arg.Any<int?>(),
+        Arg.Any<float?>(),
+        Arg.Any<int?>(),
+        Arg.Any<bool>(),
+        Arg.Any<int?>(),
+        Arg.Any<CancellationToken>());
+
+      await _apiClient.Received(1).SendPromptAsync(
+        Arg.Any<string>(),
+        Arg.Any<int?>(),
+        Arg.Any<float?>(),
+        Arg.Any<int?>(),
+        Arg.Any<CancellationToken>());
+    }
+
+    #endregion
+
     #region Disposal Tests
 
     [Test]

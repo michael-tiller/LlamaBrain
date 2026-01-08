@@ -219,6 +219,105 @@ namespace LlamaBrain.Tests
 
     #endregion
 
+    #region CompletionRequest n_keep Tests
+
+    [Test]
+    public void CompletionRequest_NKeep_DefaultIsNull()
+    {
+      // Arrange & Act
+      var request = new CompletionRequest();
+
+      // Assert
+      Assert.That(request.n_keep, Is.Null);
+    }
+
+    [Test]
+    public void CompletionRequest_NKeep_CanBeSet()
+    {
+      // Arrange & Act
+      var request = new CompletionRequest { n_keep = 500 };
+
+      // Assert
+      Assert.That(request.n_keep, Is.EqualTo(500));
+    }
+
+    [Test]
+    public void CompletionRequest_NKeepWithNull_OmitsFromJson()
+    {
+      // Arrange
+      var request = new CompletionRequest { prompt = "Test", n_keep = null };
+
+      // Act
+      var json = JsonConvert.SerializeObject(request);
+
+      // Assert - n_keep should be omitted due to NullValueHandling.Ignore attribute
+      Assert.That(json, Does.Not.Contain("\"n_keep\":"));
+    }
+
+    [Test]
+    public void CompletionRequest_NKeepWithValue_IncludesInJson()
+    {
+      // Arrange
+      var request = new CompletionRequest { prompt = "Test", n_keep = 256 };
+
+      // Act
+      var json = JsonConvert.SerializeObject(request);
+
+      // Assert
+      Assert.That(json, Does.Contain("\"n_keep\":256"));
+    }
+
+    [Test]
+    public void CompletionRequest_NKeepWithNegativeOne_IncludesInJson()
+    {
+      // Arrange - n_keep of -1 means "keep all tokens" in llama.cpp
+      var request = new CompletionRequest { prompt = "Test", n_keep = -1 };
+
+      // Act
+      var json = JsonConvert.SerializeObject(request);
+
+      // Assert
+      Assert.That(json, Does.Contain("\"n_keep\":-1"));
+    }
+
+    [Test]
+    public void CompletionRequest_NKeepWithZero_IncludesInJson()
+    {
+      // Arrange - n_keep of 0 means "keep no tokens"
+      var request = new CompletionRequest { prompt = "Test", n_keep = 0 };
+
+      // Act
+      var json = JsonConvert.SerializeObject(request);
+
+      // Assert
+      Assert.That(json, Does.Contain("\"n_keep\":0"));
+    }
+
+    [Test]
+    public void CompletionRequest_FullKvCacheConfig_SerializesCorrectly()
+    {
+      // Arrange - full KV cache configuration scenario
+      var request = new CompletionRequest
+      {
+        prompt = "You are a helpful assistant.\n[Fact] The sky is blue.\nUser: Hello",
+        cache_prompt = true,
+        n_keep = 50, // Protect first 50 tokens (static prefix)
+        seed = 42
+      };
+
+      // Act
+      var json = JsonConvert.SerializeObject(request);
+      var deserialized = JsonConvert.DeserializeObject<CompletionRequest>(json);
+
+      // Assert
+      Assert.That(deserialized, Is.Not.Null);
+      Assert.That(deserialized!.cache_prompt, Is.True);
+      Assert.That(deserialized.n_keep, Is.EqualTo(50));
+      Assert.That(deserialized.seed, Is.EqualTo(42));
+    }
+
+    #endregion
+
     #region ResponseFormat Tests
 
     [Test]

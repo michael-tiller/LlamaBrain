@@ -1691,6 +1691,137 @@ dotnet test --filter "Category=RequiresLlamaServer"
 - [USAGE_GUIDE.md](../LlamaBrainRuntime/Assets/LlamaBrainRuntime/Documentation/USAGE_GUIDE.md#seed-based-determinism-feature-14) for configuration examples
 - [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md#feature-14) for implementation details
 
+### Feature 27: Smart KV Cache Management
+
+**Status**: ✅ Complete
+**Priority**: CRITICAL - Latency critical for production performance
+**Dependencies**: Feature 3 (State Snapshot & Context Retrieval), Feature 23 (Structured Input/Context)
+
+**Overview**: Effective KV (Key-Value) cache utilization in LLM inference requires architectural discipline. If the `PromptAssembler` inserts dynamic timestamps or shuffles memory blocks *before* static content (like System Prompts or Canonical Facts), the inference engine must re-evaluate the first N tokens for every request. This feature implements a **Static Prefix Policy** that ensures byte-stable static content comes first, enabling the inference engine to cache the first N tokens across requests.
+
+**Performance Targets**:
+- Cache hit: < 200ms response time (prefill time near zero)
+- Cache miss: < 1.5s response time (full prefill for 2k+ token context)
+- Target cache hit rate: > 80% for typical gameplay patterns
+
+**Key Components**:
+
+1. **StaticPrefixBoundary Enum**: Defines where the static prefix ends
+   - `AfterSystemPrompt`: Only system prompt is cached (most conservative)
+   - `AfterCanonicalFacts`: System prompt + canonical facts cached (recommended)
+   - `AfterWorldState`: Includes world state (more aggressive)
+   - `AfterConstraints`: Everything except dialogue/input (most aggressive)
+
+2. **KvCacheConfig**: Configuration for cache optimization
+   - `EnableCaching`: Toggle KV caching on/off
+   - `Boundary`: Where to split static/dynamic content
+   - `TrackMetrics`: Enable cache efficiency tracking
+   - `ValidatePrefixStability`: Warn if dynamic content in static prefix
+   - Presets: `Default()`, `Aggressive()`, `Disabled()`
+
+3. **PromptWithCacheInfo**: Cache-aware prompt result
+   - `StaticPrefix`: Byte-stable content (cacheable)
+   - `DynamicSuffix`: Per-request content (dialogue, input)
+   - `FullPrompt`: Complete assembled prompt
+   - Estimated token counts for static/dynamic/total
+
+4. **AssembleWithCacheInfo()**: New PromptAssembler method
+   - Splits prompt at configured boundary
+   - Returns `PromptWithCacheInfo` with static/dynamic separation
+   - Maintains deterministic ordering
+
+5. **CacheEfficiencyMetrics**: Thread-safe metrics tracking
+   - Cache hit/miss counts and rates
+   - Total prompt tokens and cached tokens
+   - Token cache efficiency percentage
+
+**Architectural Impact**:
+
+The static prefix policy leverages the existing deterministic prompt assembly to enable performance optimization. Because canonical facts and system prompts are already byte-stable (proven in Feature 10), they are ideal candidates for KV cache reuse.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    STATIC PREFIX                        │
+│  (Cacheable - same across requests to same NPC)         │
+├─────────────────────────────────────────────────────────┤
+│  System Prompt                                          │
+│  "You are Gareth, a gruff blacksmith..."                │
+├─────────────────────────────────────────────────────────┤
+│  Canonical Facts                                        │
+│  - The village of Thornwood sits at the edge of...      │
+│  - The local tavern is called The Rusted Nail...        │
+├─────────────────────────────────────────────────────────┤
+│                    DYNAMIC SUFFIX                       │
+│  (Per-request - changes with each interaction)          │
+├─────────────────────────────────────────────────────────┤
+│  World State (may change)                               │
+│  Episodic Memories (varies by recency)                  │
+│  Dialogue History (grows with conversation)             │
+│  Player Input (unique per request)                      │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Usage**:
+
+```csharp
+// Configure cache-aware prompt assembly
+var config = new PromptAssemblerConfig
+{
+    KvCacheConfig = KvCacheConfig.Default() // AfterCanonicalFacts boundary
+};
+
+var assembler = new PromptAssembler(config);
+
+// Assemble with cache info
+var cacheInfo = assembler.AssembleWithCacheInfo(
+    workingMemory,
+    npcName: "Gareth");
+
+// Static prefix is byte-stable across requests
+Console.WriteLine($"Static: {cacheInfo.EstimatedStaticTokens} tokens");
+Console.WriteLine($"Dynamic: {cacheInfo.EstimatedDynamicTokens} tokens");
+
+// Send with cache enabled
+var response = await apiClient.SendPromptWithMetricsAsync(
+    cacheInfo.FullPrompt,
+    cachePrompt: true);
+
+// Prefill time should be low on cache hit
+Console.WriteLine($"Prefill: {response.PrefillTimeMs}ms");
+```
+
+**BrainAgent Integration**:
+
+```csharp
+// Enable KV caching on BrainAgent
+brainAgent.EnableKvCaching = true;
+
+// All subsequent requests will use cachePrompt=true
+var response = await brainAgent.SendPromptAsync(prompt);
+```
+
+**Metrics Tracking**:
+
+```csharp
+// Track cache efficiency
+var metrics = new CacheEfficiencyMetrics();
+
+// Record cache results
+metrics.RecordCacheHit(promptTokens: 500, cachedTokens: 400, staticPrefixTokens: 400);
+metrics.RecordCacheMiss(promptTokens: 500, cachedTokens: 0, staticPrefixTokens: 400);
+
+// Check efficiency
+Console.WriteLine($"Hit Rate: {metrics.CacheHitRate:F1}%");
+Console.WriteLine($"Token Efficiency: {metrics.TokenCacheEfficiency:F1}%");
+```
+
+**Test Coverage**: 47 tests
+- `StaticPrefixTests.cs`: 22 tests for static prefix enforcement and boundary behavior
+- `KvCacheTests.cs`: 20 tests for cache metrics tracking and efficiency calculations
+- `KvCachePerformanceTests.cs` (Unity PlayMode): 5 tests for real-world latency verification
+
+**See**: [ROADMAP.md](ROADMAP.md#feature-27) for detailed implementation checklist.
+
 ## Unity Integration Features
 
 ### Voice System Integration (Features 31-32 - In Progress)

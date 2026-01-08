@@ -2,7 +2,7 @@
 
 **Goal**: Implement the complete "Continuity Emerges from Deterministic State Reconstruction Around a Stateless Generator" architectural pattern.
 
-**Last Updated**: January 6, 2026
+**Last Updated**: January 7, 2026
 
 ---
 
@@ -44,7 +44,7 @@
 | [Feature 24: "I've seen this" Recognition](#feature-24) | 📋 Planned | MEDIUM |
 | [Feature 25: NLP Belief Contradiction Detection](#feature-25) | 📋 Planned | MEDIUM |
 | [Feature 26: Narrative Consolidation](#feature-26) | 📋 Planned | MEDIUM |
-| [Feature 27: Smart KV Cache Management](#feature-27) | 📋 Planned | CRITICAL |
+| [Feature 27: Smart KV Cache Management](DEVELOPMENT_LOG.md#feature-27) | ✅ Complete | CRITICAL |
 | [Feature 28: "Black Box" Audit Recorder](#feature-28) | 📋 Planned | CRITICAL |
 | [Feature 29: Prompt A/B Testing & Hot Reload](#feature-29) | 📋 Planned | MEDIUM |
 | [Feature 30: Unity Repackaging & Distribution](#feature-30) | 📋 Planned | MEDIUM |
@@ -85,9 +85,11 @@ The following execution order is **strongly recommended** for v0.3.0 to avoid re
    - **Rationale**: Architecture can now claim "deterministically proven" at byte level. Required for v0.2.0.
 
 ### Phase 5: Production Performance & Operations (Critical for Production)
-5. **Feature 27 (Smart KV Cache Management)** - **DO AFTER Phase 3**
-   - Performance optimization critical for production latency
-   - Enables 200ms responses vs 1.5s (cache hit vs miss)
+5. **Feature 27 (Smart KV Cache Management)** - ✅ **COMPLETE**
+   - Static prefix policy enforced at `AfterCanonicalFacts` boundary
+   - Cache-aware prompt assembly with `AssembleWithCacheInfo()`
+   - Thread-safe metrics tracking (hit/miss rates, efficiency)
+   - 42 tests passing (22 prefix enforcement + 20 cache metrics)
    - **Rationale**: Latency critical - difference between playable and unplayable game
 
 6. **Feature 28 ("Black Box" Audit Recorder)** - **DO AFTER Phase 3**
@@ -1786,118 +1788,6 @@ A background consolidation job that compresses multiple episodic memories into s
 
 ---
 
-<a id="feature-27"></a>
-## Feature 27: Smart KV Cache Management
-
-**Priority**: CRITICAL - Latency critical for production performance  
-**Status**: 📋 Planned (0% Complete)  
-**Dependencies**: Feature 3 (State Snapshot & Context Retrieval), Feature 23 (Structured Input/Context)  
-**Execution Order**: **Milestone 5** - Performance optimization critical for production deployment
-
-### Overview
-
-Effective KV (Key-Value) cache utilization in LLM inference requires architectural discipline. If the `PromptAssembler` inserts dynamic timestamps or shuffles memory blocks *before* static content (like System Prompts or Canonical Facts), the inference engine must re-evaluate the first N tokens for every request, invalidating the cache. This is the difference between a 200ms response (cache hit) and a 1.5s response (re-evaluating 2k tokens of lore).
-
-**The Problem**:
-- `IApiClient` has a `bool cachePrompt` flag, but effective caching requires architectural discipline
-- If dynamic content (timestamps, shuffled memories) appears before static content (System Prompt, Canonical Facts), the KV cache is invalidated
-- Current `PromptAssembler` may not enforce a stable "Static Prefix" policy
-- Without strict context layout optimization, every request re-evaluates static content
-
-**The Solution**:
-Implement **Context Layout Optimization** with a "Static Prefix" policy that ensures byte-stable static content comes first, enabling the inference engine to cache the first N tokens across requests.
-
-**Use Cases**:
-- Production game deployments requiring sub-500ms response times
-- NPCs with extensive world lore (2k+ tokens of canonical facts)
-- High-frequency interaction scenarios (multiple players, multiple NPCs)
-- Cost optimization through reduced token re-evaluation
-
-### Definition of Done
-
-#### 27.1 Static Prefix Policy
-- [ ] Define "Static Prefix" as: `System Prompt` + `Canonical Facts` (World Lore)
-- [ ] Enforce that static prefix must always come first in prompt assembly
-- [ ] Ensure static prefix remains byte-stable across requests (no dynamic content)
-- [ ] Add validation to detect static prefix violations
-- [ ] Document static prefix requirements in `PromptAssemblerConfig`
-
-#### 27.2 Context Layout Optimization
-- [ ] Update `PromptAssembler` to enforce static prefix ordering
-- [ ] Implement "Sliding Window" logic that strictly appends new dialogue without shifting static prefix indices
-- [ ] Ensure dynamic content (timestamps, interaction history) appears only after static prefix
-- [ ] Maintain deterministic ordering while preserving cache efficiency
-- [ ] Add configuration options for static prefix boundaries
-
-#### 27.3 Cache Validation & Metrics
-- [ ] Add metrics to track cache hit/miss rates
-- [ ] Add validation to detect cache invalidation patterns
-- [ ] Implement cache efficiency reporting in `BrainMetrics`
-- [ ] Add RedRoom overlay to visualize cache utilization
-- [ ] Document cache performance benchmarks
-
-#### 27.4 Integration & Testing
-- [ ] Unit tests for static prefix enforcement
-- [ ] Unit tests for sliding window logic
-- [ ] Integration tests: Verify cache hit rates improve with static prefix
-- [ ] Performance tests: Measure latency improvement (target: 200ms vs 1.5s for cached vs uncached)
-- [ ] Determinism tests: Verify static prefix doesn't break determinism guarantees
-- [ ] All tests in `LlamaBrain.Tests/Performance/KvCacheTests.cs` passing
-
-#### 27.5 Documentation
-- [ ] Update `ARCHITECTURE.md` with KV cache management section
-- [ ] Document static prefix policy and best practices
-- [ ] Update `USAGE_GUIDE.md` with cache optimization examples
-- [ ] Document cache metrics and performance tuning
-- [ ] Add troubleshooting guide for cache issues
-
-### Technical Considerations
-
-**Static Prefix Requirements**:
-- **System Prompt**: Must be byte-stable (no dynamic timestamps, no shuffling)
-- **Canonical Facts**: Must be byte-stable (ordered deterministically, no dynamic content)
-- **Boundary**: Static prefix ends before first dynamic content (dialogue history, timestamps)
-- **Validation**: Detect if dynamic content appears before static prefix boundary
-
-**Sliding Window Logic**:
-- New dialogue strictly appended after static prefix
-- Never shift static prefix token indices
-- Maintain deterministic ordering for dialogue history
-- Preserve cache efficiency while maintaining determinism
-
-**Performance Targets**:
-- **Cache Hit**: < 200ms response time (static prefix cached)
-- **Cache Miss**: < 1.5s response time (full re-evaluation)
-- **Cache Hit Rate**: > 80% for typical gameplay patterns
-- **Token Savings**: Reduce re-evaluation of static prefix tokens by 80%+
-
-**Integration Points**:
-- `PromptAssembler`: Enforce static prefix ordering
-- `IApiClient`: Leverage `cachePrompt` flag with optimized context layout
-- `BrainMetrics`: Track cache efficiency metrics
-- `RedRoom`: Visualize cache utilization
-
-### Estimated Effort
-
-**Total**: 1-2 weeks
-- Feature 27.1-27.2 (Static Prefix & Context Layout): 4-5 days
-- Feature 27.3 (Cache Validation & Metrics): 2-3 days
-- Feature 27.4-27.5 (Integration & Documentation): 2-3 days
-
-### Success Criteria
-
-- [ ] Static prefix policy enforced in `PromptAssembler`
-- [ ] Context layout optimized for KV cache efficiency
-- [ ] Cache hit rate > 80% for typical gameplay patterns
-- [ ] Latency improvement: < 200ms for cached requests vs < 1.5s for uncached
-- [ ] Determinism guarantees preserved (static prefix doesn't break determinism)
-- [ ] All tests passing with performance benchmarks met
-- [ ] Documentation complete with cache optimization guide
-
-**Note**: This feature is critical for production deployment. The difference between effective and ineffective KV cache utilization can be the difference between a playable game and an unplayable one. This leverages the architectural determinism to enable performance optimization.
-
----
-
 <a id="feature-28"></a>
 ## Feature 28: "Black Box" Audit Recorder
 
@@ -1930,7 +1820,8 @@ A lightweight ring-buffer recorder that captures the minimal state needed for de
 
 #### 28.1 Ring Buffer Recorder
 - [ ] Create `AuditRecorder` class with ring-buffer storage
-- [ ] Store last 50 interaction turns: `{ StateSnapshot, Seed, InteractionCount, Timestamp }`
+- [ ] Store last 50 interaction turns: `{ StateSnapshot, Seed, InteractionCount, Timestamp, OutputHash }`
+- [ ] **Addendum 28.2b**: Capture `SHA256(ResponseText)` hash for each LLM output
 - [ ] Implement efficient ring-buffer with configurable size (default: 50)
 - [ ] Add memory-efficient serialization (minimal state capture)
 - [ ] Support for multiple NPCs (per-NPC ring buffers)
@@ -1944,24 +1835,33 @@ A lightweight ring-buffer recorder that captures the minimal state needed for de
 
 #### 28.3 Export Debug Package
 - [ ] Implement `ExportDebugPackage()` function
-- [ ] Output tiny JSON file with: `{ StateSnapshots[], Seeds[], InteractionCounts[], Metadata }`
+- [ ] Output tiny JSON file with: `{ StateSnapshots[], Seeds[], InteractionCounts[], OutputHashes[], Metadata }`
 - [ ] Include metadata: NPC name, game version, timestamp range
+- [ ] **Addendum 28.3b**: Include `ModelFingerprint` (checksum/filename/quantization level) in metadata
 - [ ] Support compression for large packages
 - [ ] Add validation to ensure package is replayable
 
 #### 28.4 RedRoom Replay Integration
 - [ ] Add `ImportDebugPackage()` function to RedRoom
 - [ ] Support drag-and-drop JSON file import
+- [ ] **Environment Check**: Validate `CurrentModelHash == LogModelHash` before starting replay
 - [ ] Replay sequence using deterministic pipeline
+- [ ] **Replay Verification**: Compare generated output hash vs. stored audit hash for each turn
+- [ ] **Drift Visualization**: Highlight specifically *which* turn caused divergence if replay fails
+- [ ] Display "Divergence Warning" when output hash mismatch detected
 - [ ] Visualize state progression during replay
 - [ ] Support step-through debugging (replay one turn at a time)
 
 #### 28.5 Testing
 - [ ] Unit tests for `AuditRecorder` ring-buffer logic
 - [ ] Unit tests for state snapshot capture
+- [ ] Unit tests for output hash calculation and storage
+- [ ] Unit tests for model fingerprinting and validation
 - [ ] Unit tests for debug package export/import
 - [ ] Integration tests: Verify replay produces identical outputs
 - [ ] Determinism tests: Verify replay matches original execution
+- [ ] Drift detection tests: Verify hash mismatch triggers warnings
+- [ ] Model mismatch tests: Verify replay refuses/warns on model mismatch
 - [ ] All tests in `LlamaBrain.Tests/Audit/AuditRecorderTests.cs` passing
 
 #### 28.6 Documentation
@@ -1991,12 +1891,15 @@ A lightweight ring-buffer recorder that captures the minimal state needed for de
   "version": "1.0",
   "npcName": "TestNPC",
   "gameVersion": "0.3.0",
+  "modelFingerprint": "qwen-2.5-7b-instruct-fp16-v1.2.3",
+  "modelChecksum": "sha256:abc123...",
   "timestampRange": { "start": "...", "end": "..." },
   "turns": [
     {
       "interactionCount": 42,
       "seed": 12345,
       "stateSnapshot": { ... },
+      "outputHash": "sha256:def456...",
       "timestamp": "..."
     }
   ]
@@ -2006,6 +1909,8 @@ A lightweight ring-buffer recorder that captures the minimal state needed for de
 **Replay Requirements**:
 - Deterministic pipeline must produce identical outputs
 - Requires Feature 14 (Deterministic Seed) for cross-session replay
+- **Drift Detection**: Output hash comparison verifies replay fidelity
+- **Model Validation**: Environment check ensures model matches audit log
 - RedRoom integration for visual debugging
 - Step-through capability for detailed investigation
 
@@ -2030,16 +1935,22 @@ A lightweight ring-buffer recorder that captures the minimal state needed for de
 
 ### Success Criteria
 
-- [ ] Ring-buffer recorder captures last 50 turns
-- [ ] Debug package export produces replayable JSON
+- [ ] Ring-buffer recorder captures last 50 turns with output hashes
+- [ ] Debug package export produces replayable JSON with model fingerprint
 - [ ] RedRoom can import and replay debug packages
 - [ ] Replay produces identical outputs (deterministic)
+- [ ] **Drift detection**: Hash mismatches trigger divergence warnings
+- [ ] **Model validation**: Replay validates model matches audit log
 - [ ] Memory footprint < 10MB for 50-turn buffer
 - [ ] Export/import performance meets targets (< 100ms export, < 500ms import)
 - [ ] All tests passing with determinism guarantees
 - [ ] Documentation complete with bug report workflow
 
 **Note**: This feature weaponizes the "S+" determinism for production support. It turns "He said/She said" bug reports into strictly reproducible engineering tickets. A developer can drag-and-drop a debug package into Unity Editor and instantly replay the exact sequence that led to the bug.
+
+**Drift Detectors**: The system includes two critical safeguards to prevent silent replay drift:
+1. **Output Hash Verification** (Addendum 28.2b): Each turn stores `SHA256(ResponseText)`. During replay, if the generated output hash doesn't match the stored hash, RedRoom immediately flags a "Divergence Warning" - indicating non-deterministic hardware/drivers rather than logic issues.
+2. **Model Fingerprinting** (Addendum 28.3b): The debug package includes the model checksum/fingerprint. Replay validates that the current backend model matches the audit log's model signature, preventing useless replays (e.g., replaying a `Phi-3-mini` bug on `Qwen-2.5`).
 
 ---
 

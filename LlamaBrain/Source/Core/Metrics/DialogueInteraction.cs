@@ -101,7 +101,33 @@ namespace LlamaBrain.Core.Metrics
     /// Tokens generated per second.
     /// </summary>
     public double TokensPerSecond { get; set; }
-    
+
+    // KV Cache Metrics (Feature 27)
+    /// <summary>
+    /// Estimated tokens in the static prefix (system prompt + canonical facts).
+    /// Used for calculating cache efficiency.
+    /// </summary>
+    public int StaticPrefixTokens { get; set; }
+
+    /// <summary>
+    /// Cache efficiency: ratio of cached tokens to static prefix tokens.
+    /// A value close to 1.0 indicates optimal cache utilization.
+    /// Returns 0 if no static prefix tokens were tracked.
+    /// </summary>
+    public double CacheEfficiency
+    {
+      get
+      {
+        if (StaticPrefixTokens == 0) return 0.0;
+        return (double)CachedTokenCount / StaticPrefixTokens;
+      }
+    }
+
+    /// <summary>
+    /// Whether KV caching was enabled for this interaction.
+    /// </summary>
+    public bool KvCachingEnabled { get; set; }
+
     // Quality Flags
     /// <summary>
     /// Whether the response was truncated.

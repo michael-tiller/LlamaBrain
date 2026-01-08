@@ -99,6 +99,18 @@ namespace LlamaBrain.Core.Inference
         StructuredContextConfig.PreferredFormat != StructuredContextFormat.None;
 
     /// <summary>
+    /// Optional KV cache configuration.
+    /// When set with EnableCaching=true, prompts will be assembled with cache-aware
+    /// static prefix/dynamic suffix split for optimal KV cache utilization.
+    /// </summary>
+    public KvCacheConfig? KvCacheConfig { get; set; }
+
+    /// <summary>
+    /// Whether KV cache optimization is enabled.
+    /// </summary>
+    public bool UseKvCache => KvCacheConfig?.EnableCaching ?? false;
+
+    /// <summary>
     /// Creates a default configuration.
     /// </summary>
     public static PromptAssemblerConfig Default => new PromptAssemblerConfig();
@@ -532,6 +544,189 @@ namespace LlamaBrain.Core.Inference
     public int EstimateCharacters(int tokens)
     {
       return (int)(tokens * _config.CharsPerToken);
+    }
+
+    /// <summary>
+    /// Assembles a prompt with cache-aware static prefix/dynamic suffix split.
+    /// The static prefix contains byte-stable content (system prompt, canonical facts)
+    /// that can be cached by the LLM inference engine.
+    /// </summary>
+    /// <param name="workingMemory">The working memory</param>
+    /// <param name="npcName">Optional NPC name for the response prompt</param>
+    /// <param name="retryFeedback">Optional retry feedback from previous attempt</param>
+    /// <param name="kvCacheConfig">Optional KV cache configuration override</param>
+    /// <returns>The prompt with cache info including static/dynamic split</returns>
+    public PromptWithCacheInfo AssembleWithCacheInfo(
+      EphemeralWorkingMemory workingMemory,
+      string? npcName = null,
+      string? retryFeedback = null,
+      KvCacheConfig? kvCacheConfig = null)
+    {
+      if (workingMemory == null) throw new ArgumentNullException(nameof(workingMemory));
+
+      var effectiveConfig = kvCacheConfig ?? _config.KvCacheConfig ?? KvCacheConfig.Default();
+      var effectiveNpcName = npcName ?? _config.DefaultNpcName;
+
+      var prefixBuilder = new StringBuilder();
+      var suffixBuilder = new StringBuilder();
+      var breakdown = new PromptSectionBreakdown();
+      var wasTruncated = workingMemory.WasTruncated;
+
+      // === STATIC PREFIX ===
+      // These sections are byte-stable and cacheable
+
+      // 1. System prompt (always in static prefix)
+      if (!string.IsNullOrEmpty(workingMemory.SystemPrompt))
+      {
+        var systemSection = string.Format(_config.SystemPromptFormat, workingMemory.SystemPrompt);
+        prefixBuilder.Append(systemSection);
+        breakdown.SystemPrompt = systemSection.Length;
+      }
+
+      // 2. Context header (always in static prefix)
+      var hasAnyContext = workingMemory.CanonicalFacts.Count > 0 ||
+                          workingMemory.WorldState.Count > 0 ||
+                          workingMemory.EpisodicMemories.Count > 0 ||
+                          workingMemory.Beliefs.Count > 0;
+
+      if (hasAnyContext)
+      {
+        prefixBuilder.Append(_config.ContextHeader);
+        prefixBuilder.Append("\n");
+        breakdown.Formatting += _config.ContextHeader.Length + 1;
+      }
+
+      // 3. Canonical facts (always in static prefix - immutable)
+      var factsText = workingMemory.GetFormattedCanonicalFacts();
+      if (!string.IsNullOrEmpty(factsText))
+      {
+        prefixBuilder.Append(factsText);
+        breakdown.Context += factsText.Length;
+      }
+
+      // Determine what goes where based on boundary
+      bool worldStateInPrefix = effectiveConfig.Boundary >= StaticPrefixBoundary.AfterWorldState;
+      bool constraintsInPrefix = effectiveConfig.Boundary >= StaticPrefixBoundary.AfterConstraints;
+
+      // 4. World state (in prefix if boundary >= AfterWorldState)
+      var worldStateText = workingMemory.GetFormattedWorldState();
+      if (!string.IsNullOrEmpty(worldStateText))
+      {
+        // Add newline separator if there was facts content before
+        if (!string.IsNullOrEmpty(factsText))
+        {
+          if (worldStateInPrefix)
+            prefixBuilder.Append("\n");
+          else
+            suffixBuilder.Append("\n");
+        }
+
+        if (worldStateInPrefix)
+          prefixBuilder.Append(worldStateText);
+        else
+          suffixBuilder.Append(worldStateText);
+
+        breakdown.Context += worldStateText.Length;
+      }
+
+      // === DYNAMIC SUFFIX ===
+      // These sections vary per request
+
+      // 5. Episodic memories and beliefs (always dynamic)
+      var afterWorldStateText = workingMemory.GetFormattedContextAfterWorldState();
+      if (!string.IsNullOrEmpty(afterWorldStateText))
+      {
+        // Add newline if there was prior content
+        var hasWorldStateContent = !string.IsNullOrEmpty(worldStateText);
+        var hasFactsContent = !string.IsNullOrEmpty(factsText);
+        if (hasWorldStateContent || hasFactsContent)
+        {
+          suffixBuilder.Append("\n");
+        }
+        suffixBuilder.Append(afterWorldStateText);
+        breakdown.Context += afterWorldStateText.Length;
+      }
+
+      // 6. Constraints
+      if (_config.IncludeConstraints && workingMemory.Constraints.HasConstraints)
+      {
+        var constraintText = workingMemory.Constraints.ToPromptInjection();
+        if (constraintsInPrefix)
+          prefixBuilder.Append(constraintText);
+        else
+          suffixBuilder.Append(constraintText);
+        breakdown.Constraints = constraintText.Length;
+      }
+
+      // 7. Retry feedback (always dynamic)
+      if (_config.IncludeRetryFeedback && !string.IsNullOrEmpty(retryFeedback))
+      {
+        suffixBuilder.Append("\n");
+        suffixBuilder.Append(retryFeedback);
+        breakdown.RetryFeedback = retryFeedback.Length + 1;
+      }
+
+      // 8. Few-shot examples (always dynamic - order might change)
+      if (_config.IncludeFewShotExamples && workingMemory.FewShotExamples.Count > 0)
+      {
+        var fewShotText = workingMemory.GetFormattedFewShotExamples("Player", effectiveNpcName);
+        if (!string.IsNullOrEmpty(fewShotText))
+        {
+          suffixBuilder.Append(_config.FewShotHeader);
+          suffixBuilder.Append("\n");
+          suffixBuilder.Append(fewShotText);
+          breakdown.FewShotExamples = fewShotText.Length;
+          breakdown.Formatting += _config.FewShotHeader.Length + 1;
+        }
+      }
+
+      // 9. Dialogue history (always dynamic)
+      var dialogueText = workingMemory.GetFormattedDialogue();
+      if (!string.IsNullOrEmpty(dialogueText))
+      {
+        suffixBuilder.Append(_config.ConversationHeader);
+        suffixBuilder.Append("\n");
+        suffixBuilder.Append(dialogueText);
+        breakdown.DialogueHistory = dialogueText.Length;
+        breakdown.Formatting += _config.ConversationHeader.Length + 1;
+      }
+
+      // 10. Player input (always dynamic)
+      var playerSection = string.Format(_config.PlayerInputFormat, workingMemory.PlayerInput);
+      suffixBuilder.Append(playerSection);
+      breakdown.PlayerInput = playerSection.Length;
+
+      // 11. NPC response prompt (always dynamic)
+      var npcPrompt = string.Format(_config.NpcPromptFormat, effectiveNpcName);
+      suffixBuilder.Append(npcPrompt);
+      breakdown.Formatting += npcPrompt.Length;
+
+      var staticPrefix = prefixBuilder.ToString();
+      var dynamicSuffix = suffixBuilder.ToString();
+      var fullPrompt = staticPrefix + dynamicSuffix;
+
+      // Create the underlying AssembledPrompt for reference
+      var assembledPrompt = new AssembledPrompt
+      {
+        Text = fullPrompt,
+        CharacterCount = fullPrompt.Length,
+        EstimatedTokens = EstimateTokens(fullPrompt.Length),
+        WasTruncated = wasTruncated,
+        Breakdown = breakdown,
+        WorkingMemory = workingMemory
+      };
+
+      var result = new PromptWithCacheInfo(
+        staticPrefix,
+        dynamicSuffix,
+        effectiveConfig.Boundary,
+        _config.CharsPerToken,
+        wasTruncated,
+        assembledPrompt);
+
+      OnLog?.Invoke($"[PromptAssembler] Assembled with cache info: {result}");
+
+      return result;
     }
 
     /// <summary>
