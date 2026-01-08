@@ -331,6 +331,20 @@ namespace LlamaBrain.Tests.Performance
     }
 
     [Test]
+    public void DialogueInteraction_CacheEfficiency_CappedAtOneWhenCachedExceedsPrefix()
+    {
+      // Arrange: cached tokens exceed static prefix (e.g., dialogue history also cached)
+      var interaction = new DialogueInteraction
+      {
+        CachedTokenCount = 150,  // More tokens cached than static prefix
+        StaticPrefixTokens = 100
+      };
+
+      // Assert: should be capped at 1.0 (100%)
+      Assert.That(interaction.CacheEfficiency, Is.EqualTo(1.0).Within(0.01));
+    }
+
+    [Test]
     public void DialogueInteraction_KvCachingEnabled_CanBeSet()
     {
       // Act

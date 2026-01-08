@@ -1194,7 +1194,7 @@ namespace LlamaBrain.Tests.PlayMode
             // Assert: Later turns should still show some cache benefit
             // If n_keep is working, the static prefix should remain cached even after overflow
             // Note: We can't assert exact cached token counts as it depends on server behavior
-            Assert.That(lastThreeTurnsAvgPrefill, Is.LessThan(lastThreeTurnsAvgPrefill * 10),
+            Assert.That(lastThreeTurnsAvgPrefill, Is.LessThan(firstThreeTurnsAvgPrefill * 10),
                 "Later turns should not have catastrophically high prefill times");
         }
 

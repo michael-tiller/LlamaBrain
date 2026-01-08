@@ -1,4 +1,6 @@
+using System;
 using System.Threading;
+using LlamaBrain.Core;
 
 namespace LlamaBrain.Core.Metrics
 {
@@ -83,6 +85,7 @@ namespace LlamaBrain.Core.Metrics
     /// Static prefix cache efficiency: percentage of static prefix tokens that were cached.
     /// A value close to 100% indicates optimal cache utilization.
     /// Returns 0 if no static prefix tokens have been tracked.
+    /// Capped at 100% since cached tokens may include tokens beyond the static prefix.
     /// </summary>
     public double StaticPrefixCacheEfficiency
     {
@@ -90,7 +93,9 @@ namespace LlamaBrain.Core.Metrics
       {
         var total = _totalStaticPrefixTokens;
         if (total == 0) return 0.0;
-        return ((double)_totalCachedTokens / total) * 100.0;
+        // Cap at 100% since _totalCachedTokens may include tokens beyond the static prefix
+        var cachedStaticPrefixTokens = Math.Min(_totalCachedTokens, _totalStaticPrefixTokens);
+        return ((double)cachedStaticPrefixTokens / total) * 100.0;
       }
     }
 

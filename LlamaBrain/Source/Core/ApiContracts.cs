@@ -48,7 +48,10 @@ namespace LlamaBrain.Core
     /// Number of tokens to keep from the initial prompt during context shift.
     /// Protects the static prefix (system prompt, canonical facts) from being evicted
     /// when the context window fills up. Set to the token count of your static prefix.
-    /// -1 = keep all tokens (default), 0 = keep none, N = keep first N tokens.
+    /// -1 = keep all tokens, 0 = keep none, N = keep first N tokens.
+    /// null = omit from request (server default behavior). When null, the property is omitted
+    /// from the serialized payload due to NullValueHandling.Ignore and the server default applies.
+    /// This differs from explicitly sending -1, which instructs the server to keep all tokens.
     /// </summary>
     [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
     public int? n_keep { get; set; }
