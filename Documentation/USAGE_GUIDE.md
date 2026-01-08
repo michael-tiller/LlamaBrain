@@ -2,7 +2,7 @@
 
 This guide provides practical examples and best practices for using LlamaBrain's deterministic NPC dialogue system across different game engines.
 
-**Last Updated**: January 3, 2026
+**Last Updated**: January 7, 2026
 
 ---
 
@@ -29,6 +29,7 @@ This guide focuses on the **core library** (engine-agnostic .NET Standard 2.1), 
 11. [Migrating to Structured Input/Context](#migrating-to-structured-input)
 12. [Function Calling](#function-calling)
 13. [Debugging & Monitoring](#debugging--monitoring)
+    - [Bug Report Workflow (Feature 28)](#bug-report-workflow-feature-28)
 14. [Performance Optimization](#performance-optimization)
 15. [Save/Load Persistence](#save-load-persistence)
 
@@ -1683,6 +1684,214 @@ validationGate.OnValidationComplete += (result) =>
 mutationController.OnWorldIntentEmitted += (intent) =>
     Console.WriteLine($"Intent emitted: {intent.IntentType} from {intent.SourceNpcId}");
 ```
+
+### Bug Report Workflow (Feature 28)
+
+The "Black Box" Audit Recorder enables deterministic bug reproduction by recording interaction state. When a player reports a bug, you can export a debug package and replay the exact sequence of interactions.
+
+#### Recording Interactions (Automatic)
+
+In Unity, add the `AuditRecorderBridge` component to your scene. It automatically records interactions from all `LlamaBrainAgent` components:
+
+```csharp
+// AuditRecorderBridge automatically records interactions
+// Configuration is done via Inspector or code:
+
+var bridge = AuditRecorderBridge.Instance;
+bridge.bufferCapacity = 50;  // Keep last 50 interactions per NPC
+bridge.autoRecord = true;    // Record automatically
+
+// Manually trigger recording if needed
+bridge.RecordInteraction(agent, playerInput, result);
+```
+
+#### Exporting Bug Reports
+
+When a bug is reported, export the debug package:
+
+```csharp
+// Quick export to file
+var bridge = AuditRecorderBridge.Instance;
+bridge.SaveDebugPackage(
+    "bug_report_20260107.json",
+    notes: "Player reported: NPC revealed secret when asked nicely");
+
+// Or get the JSON directly
+string json = bridge.ExportDebugPackageJson(notes: "Bug description");
+
+// For smaller files, use compression (70-90% reduction)
+var package = bridge.ExportDebugPackage(notes: "Bug description");
+var exporter = new DebugPackageExporter();
+byte[] compressed = exporter.ToCompressedBytes(package, compressionLevel: 6);
+File.WriteAllBytes("bug_report.lbpk", compressed);
+```
+
+#### Bug Report Workflow
+
+1. **Player reports bug**: "NPC revealed a secret when I asked nicely"
+
+2. **Export debug package**:
+   ```csharp
+   // In-game bug report button
+   public void OnBugReportClicked()
+   {
+       var notes = bugDescriptionInput.text;
+       var path = Path.Combine(
+           Application.persistentDataPath,
+           $"bug_{DateTime.Now:yyyyMMdd_HHmmss}.json");
+
+       AuditRecorderBridge.Instance.SaveDebugPackage(path, notes);
+       ShowMessage($"Bug report saved to: {path}");
+   }
+   ```
+
+3. **Developer imports and replays**:
+   ```csharp
+   var controller = RedRoomReplayController.Instance;
+   var result = controller.ImportFromFile("bug_report.json");
+
+   if (result.Success)
+   {
+       // Check model compatibility
+       var validation = controller.ValidateModelFingerprint(
+           controller.GetCurrentModelFingerprint()!);
+
+       if (!validation.IsCompatible)
+       {
+           Debug.LogWarning($"Warning: {validation.MismatchDescription}");
+       }
+
+       // Replay and find the drift
+       var replayResult = await controller.ReplayAsync(ctx =>
+       {
+           // Your actual generation logic here
+           return GenerateResponse(ctx);
+       });
+
+       // Analyze results
+       Debug.Log(controller.GetReplaySummary());
+   }
+   ```
+
+4. **Step-through debugging** for detailed analysis:
+   ```csharp
+   controller.ResetStepPosition();
+
+   while (controller.CurrentStepIndex < controller.CurrentPackage.Records.Count)
+   {
+       var stepResult = controller.ReplayStep(GenerateResponse);
+
+       if (stepResult.DriftType != DriftType.None)
+       {
+           var record = controller.CurrentPackage.Records[controller.CurrentStepIndex - 1];
+           Debug.Log($"Drift at turn {controller.CurrentStepIndex}:");
+           Debug.Log($"  NPC: {record.NpcId}");
+           Debug.Log($"  Input: {record.PlayerInput}");
+           Debug.Log($"  Expected: {record.DialogueText}");
+           Debug.Log($"  Got: {stepResult.ReplayedRecord.DialogueText}");
+           break;
+       }
+   }
+   ```
+
+#### Core Library Usage
+
+For non-Unity environments:
+
+```csharp
+using LlamaBrain.Core.Audit;
+
+// 1. Create recorder
+var recorder = new AuditRecorder(capacity: 50);
+
+// 2. Record interactions manually
+recorder.Record(new AuditRecordBuilder()
+    .WithNpcId("guard_001")
+    .WithInteractionCount(interactionCount)
+    .WithSeed(interactionCount)
+    .WithPlayerInput(playerInput)
+    .WithOutput(rawOutput, dialogueText)
+    .WithStateHashes(memoryHash, promptHash, constraintsHash)
+    .WithValidationOutcome(gateResult.Passed, gateResult.Failures.Count, mutations)
+    .Build());
+
+// 3. Export
+var exporter = new DebugPackageExporter();
+var package = exporter.Export(recorder, new ExportOptions
+{
+    GameVersion = Application.version,
+    SceneName = currentScene,
+    CreatorNotes = bugDescription,
+    UseCompression = true
+});
+
+// Save as compressed
+File.WriteAllBytes("bug.lbpk", exporter.ToCompressedBytes(package));
+
+// 4. Import and replay
+var importer = new DebugPackageImporter();
+var importResult = importer.FromFile("bug.lbpk", validateIntegrity: true);
+
+if (importResult.WasCompressed)
+{
+    Console.WriteLine($"Decompressed: {importResult.CompressionRatio:F1}x ratio");
+}
+
+var replayEngine = new ReplayEngine();
+var replayResult = replayEngine.Replay(
+    importResult.Package!,
+    GenerateResponse,
+    currentModelFingerprint,
+    new ReplayOptions { StopOnFirstDrift = true });
+
+Console.WriteLine(replayEngine.GetDriftSummary(replayResult));
+```
+
+#### Understanding Drift Types
+
+| Drift Type | What It Means | Action |
+|------------|---------------|--------|
+| `None` | Exact match | Bug not reproduced - different conditions |
+| `Output` | LLM gave different response | Check model version, sampling params |
+| `Memory` | Memory state differs | Check memory mutation logic |
+| `Validation` | Validation result differs | Check rule changes |
+| `Failure` | Replay failed | Check for missing dependencies |
+
+#### Troubleshooting Replay Issues
+
+**"Model fingerprint mismatch" warning**
+- The model file has changed since the bug report was created
+- Replay may still work, but outputs might differ
+- For exact reproduction, use the same model file/version
+
+**"Package integrity validation failed"**
+- The debug package file may be corrupted
+- Re-export from source if possible
+- Check for transmission errors if file was transferred
+
+**All records show drift**
+- Model has changed significantly
+- Temperature/sampling parameters differ
+- Code changes affected prompt assembly
+
+**Replay succeeds but bug not reproduced**
+- Bug may be timing-dependent or race condition
+- Check if bug requires specific game state not captured
+- Review the `CreatorNotes` for additional context
+
+**Compressed package won't load**
+- Verify file has `.lbpk` extension or starts with `LBPK` header
+- Try importing as uncompressed JSON if compression failed
+- Check file isn't truncated
+
+**Step-through shows no drift, but full replay does**
+- Timing differences in async operations
+- Check for non-deterministic elements in generation
+
+**Performance issues during replay**
+- Reduce `StopOnFirstDrift` to false for batch analysis
+- Use mock generator for validation testing before real generation
+- Compress large packages to reduce I/O
 
 ---
 

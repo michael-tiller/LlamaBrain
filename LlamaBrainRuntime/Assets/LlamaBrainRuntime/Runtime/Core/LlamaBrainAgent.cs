@@ -15,6 +15,7 @@ using LlamaBrain.Runtime.Core.Inference;
 using LlamaBrain.Runtime.Core.Validation;
 using LlamaBrain.Core.Inference;
 using LlamaBrain.Core.Validation;
+using LlamaBrain.Runtime.RedRoom.Audit;
 using System.Linq;
 using System.Diagnostics;
 
@@ -863,6 +864,9 @@ namespace LlamaBrain.Runtime.Core
       {
         InteractionCount++;
       }
+
+      // Record audit record for bug reproduction (Feature 28)
+      RecordAuditInteraction(input, finalResult);
 
       UnityEngine.Debug.Log($"[LlamaBrainAgent] Inference complete: {finalResult}");
 
@@ -2095,6 +2099,33 @@ namespace LlamaBrain.Runtime.Core
           });
         }
         UnityEngine.Debug.Log($"[LlamaBrainAgent] Restored {conversationHistory.Count} conversation entries for '{personaId}'");
+      }
+    }
+
+    #endregion
+
+    #region Audit Recording (Feature 28)
+
+    /// <summary>
+    /// Records the interaction to the AuditRecorderBridge for bug reproduction.
+    /// Only records if the bridge is available and recording is enabled.
+    /// </summary>
+    /// <param name="playerInput">The player's input message.</param>
+    /// <param name="result">The inference result.</param>
+    private void RecordAuditInteraction(string playerInput, InferenceResultWithRetries result)
+    {
+      try
+      {
+        var bridge = AuditRecorderBridge.Instance;
+        if (bridge != null && bridge.IsRecording)
+        {
+          bridge.RecordInteraction(this, playerInput, result);
+        }
+      }
+      catch (System.Exception ex)
+      {
+        // Don't let audit recording failure break the main pipeline
+        UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Audit recording failed: {ex.Message}");
       }
     }
 
