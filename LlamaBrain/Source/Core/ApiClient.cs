@@ -153,9 +153,10 @@ namespace LlamaBrain.Core
     /// <param name="temperature">The temperature to use (overrides config if specified)</param>
     /// <param name="seed">Random seed for deterministic generation (-1 = random, 0+ = deterministic, null = server default)</param>
     /// <param name="cachePrompt">Whether to cache the prompt for KV cache reuse</param>
+    /// <param name="nKeep">Number of tokens to keep during context shift (protects static prefix). null = server default, -1 = keep all, N = keep first N tokens</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Detailed completion metrics</returns>
-    public async Task<CompletionMetrics> SendPromptWithMetricsAsync(string prompt, int? maxTokens = null, float? temperature = null, int? seed = null, bool cachePrompt = false, CancellationToken cancellationToken = default)
+    public async Task<CompletionMetrics> SendPromptWithMetricsAsync(string prompt, int? maxTokens = null, float? temperature = null, int? seed = null, bool cachePrompt = false, int? nKeep = null, CancellationToken cancellationToken = default)
     {
       // Check if disposed
       if (disposed)
@@ -198,7 +199,8 @@ namespace LlamaBrain.Core
           repeat_penalty = config.RepeatPenalty,
           stop = stopSequences.ToArray(),
           cache_prompt = cachePrompt,
-          seed = seed ?? config.Seed
+          seed = seed ?? config.Seed,
+          n_keep = nKeep
         };
 
         var content = new StringContent(JsonConvert.SerializeObject(req), Encoding.UTF8, "application/json");
@@ -492,6 +494,7 @@ namespace LlamaBrain.Core
     /// <param name="temperature">The temperature to use</param>
     /// <param name="seed">Random seed for deterministic generation (-1 = random, 0+ = deterministic, null = server default)</param>
     /// <param name="cachePrompt">Whether to cache the prompt for KV cache reuse</param>
+    /// <param name="nKeep">Number of tokens to keep during context shift (protects static prefix). null = server default</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The structured JSON response</returns>
     public async Task<string> SendStructuredPromptAsync(
@@ -502,10 +505,11 @@ namespace LlamaBrain.Core
       float? temperature = null,
       int? seed = null,
       bool cachePrompt = false,
+      int? nKeep = null,
       CancellationToken cancellationToken = default)
     {
       var metrics = await SendStructuredPromptWithMetricsAsync(
-        prompt, jsonSchema, format, maxTokens, temperature, seed, cachePrompt, cancellationToken);
+        prompt, jsonSchema, format, maxTokens, temperature, seed, cachePrompt, nKeep, cancellationToken);
       return metrics.Content;
     }
 
@@ -519,6 +523,7 @@ namespace LlamaBrain.Core
     /// <param name="temperature">The temperature to use</param>
     /// <param name="seed">Random seed for deterministic generation (-1 = random, 0+ = deterministic, null = server default)</param>
     /// <param name="cachePrompt">Whether to cache the prompt for KV cache reuse</param>
+    /// <param name="nKeep">Number of tokens to keep during context shift (protects static prefix). null = server default</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Detailed completion metrics including the structured response</returns>
     public async Task<CompletionMetrics> SendStructuredPromptWithMetricsAsync(
@@ -529,6 +534,7 @@ namespace LlamaBrain.Core
       float? temperature = null,
       int? seed = null,
       bool cachePrompt = false,
+      int? nKeep = null,
       CancellationToken cancellationToken = default)
     {
       // Check if disposed
@@ -570,7 +576,8 @@ namespace LlamaBrain.Core
           repeat_penalty = config.RepeatPenalty,
           stop = new string[] { "</s>" },
           cache_prompt = cachePrompt,
-          seed = seed ?? config.Seed
+          seed = seed ?? config.Seed,
+          n_keep = nKeep
         };
 
         // Apply structured output parameters based on format

@@ -37,7 +37,7 @@ namespace LlamaBrain.Tests.PlayMode
       // Create test settings for BrainServer
       settings = ScriptableObject.CreateInstance<BrainSettings>();
       settings!.ExecutablePath = "Backend/llama-server.exe";
-      settings!.ModelPath = "Backend/model/stablelm-zephyr-3b.Q4_0.gguf";
+      settings!.ModelPath = "Backend/model/qwen2.5-3b-instruct-abliterated-sft-q4_k_m.gguf";
       settings!.Port = 5000;
       settings!.ContextSize = 2048;
 

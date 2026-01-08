@@ -5,7 +5,56 @@ All notable changes to LlamaBrain will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.0-rc.2] (Unreleased)
+## [0.3.0-rc.3] (Unreleased)
+
+### Core Library
+
+#### Added
+- **Feature 27: Smart KV Cache Management - COMPLETE** ✅
+  - **Static Prefix Policy**
+    - Added `StaticPrefixBoundary` enum with configurable cache boundaries (`AfterSystemPrompt`, `AfterCanonicalFacts`, `AfterWorldState`)
+    - Added `KvCacheConfig` for cache configuration with presets (Default, Aggressive, Conservative, Disabled)
+    - Added `PrefixStabilityValidator` for runtime validation of static prefix stability (detects cache invalidation bugs)
+    - Static prefix enforcement ensures byte-stable content comes first for optimal KV cache utilization
+  - **Cache-Aware Prompt Assembly**
+    - Added `PromptWithCacheInfo` record for cache-aware prompt results with static/dynamic split
+    - Added `AssembleWithCacheInfo()` method to `PromptAssembler` for cache-optimized prompt building
+    - Added `GetFormattedCanonicalFacts()`, `GetFormattedWorldState()`, `GetFormattedContextAfterFacts()`, `GetFormattedContextAfterWorldState()` methods to `EphemeralWorkingMemory`
+  - **Cache Metrics & Tracking**
+    - Added `CacheEfficiencyMetrics` class with thread-safe hit/miss tracking via `Interlocked` operations
+    - Extended `StructuredPipelineMetrics` with `CacheHitCount`, `CacheMissCount`, `CacheHitRate`, `RecordCacheHit()`, `RecordCacheMiss()`, `RecordCacheResult()`
+    - Added `StaticPrefixTokens`, `CacheEfficiency`, `KvCachingEnabled` fields to `DialogueInteraction`
+  - **BrainAgent Integration**
+    - Added `EnableKvCaching` property to `BrainAgent` for runtime cache control
+    - Integrated cache-aware API calls leveraging static prefix optimization
+  - **Test Coverage**: 47 new tests
+    - `StaticPrefixTests.cs`: 22 tests for static prefix enforcement and boundary behavior
+    - `KvCacheTests.cs`: 20 tests for cache metrics tracking and efficiency calculations
+    - `KvCachePerformanceTests.cs` (Unity PlayMode): 5 tests for real-world latency verification with llama-server
+  - **Files Added**:
+    - `Source/Core/Inference/KvCacheConfig.cs`
+    - `Source/Core/Inference/PromptWithCacheInfo.cs`
+    - `Source/Core/Inference/PrefixStabilityValidator.cs`
+    - `Source/Core/Metrics/CacheEfficiencyMetrics.cs`
+    - `LlamaBrain.Tests/Inference/StaticPrefixTests.cs`
+    - `LlamaBrain.Tests/Performance/KvCacheTests.cs`
+    - `LlamaBrainRuntime/Tests/PlayMode/KvCachePerformanceTests.cs`
+  - **Files Modified**:
+    - `Source/Core/Inference/EphemeralWorkingMemory.cs` - Added formatted context retrieval methods
+    - `Source/Core/Inference/PromptAssembler.cs` - Added `KvCacheConfig` property and `AssembleWithCacheInfo()` method
+    - `Source/Core/Metrics/DialogueInteraction.cs` - Added cache tracking fields
+    - `Source/Core/StructuredOutput/StructuredPipelineMetrics.cs` - Added cache hit/miss tracking
+    - `Source/Core/BrainAgent.cs` - Added `EnableKvCaching` property and cache-aware API integration
+  - **Performance Impact**: Enables 200ms responses (cache hit) vs 1.5s responses (cache miss) for typical gameplay patterns
+  - **Documentation**:
+    - Added Feature 27 section to `ARCHITECTURE.md` with architecture diagram, component descriptions, and usage examples
+    - Added "KV Cache Optimization" section to `USAGE_GUIDE.md` with configuration guide, boundary options, best practices, and troubleshooting
+    - Added `KV_CACHE_BENCHMARKS.md` with comprehensive performance benchmarks, test descriptions, and metrics reference
+
+#### Fixed
+- Fixes an issue with the CI pipeline not firing properly.
+
+## [0.3.0-rc.2] 2026-01-07
 
 ### Unity Runtime
 
@@ -282,7 +331,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `Runtime/Persistence/SaveGameFreeSaveSystem.cs`
     - `Runtime/Persistence/LlamaBrainSaveManager.cs`
 
-## [0.3.0-rc.1] (Unreleased)
+## [0.3.0-rc.1] 2026-01-03
 
 ### Unity Runtime
 

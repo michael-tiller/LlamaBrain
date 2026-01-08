@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Brain Settings
   m_EditorClassIdentifier: 
   ExecutablePath: Backend/llama-server.exe
-  ModelPath: Backend/model/stablelm-zephyr-3b.Q4_0.gguf
+  ModelPath: Backend/model/qwen2.5-3b-instruct-abliterated-sft-q4_k_m.gguf
   Port: 5000
   ContextSize: 2048
   GpuLayers: 35

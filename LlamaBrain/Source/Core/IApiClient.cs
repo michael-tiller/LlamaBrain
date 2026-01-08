@@ -26,9 +26,10 @@ namespace LlamaBrain.Core
     /// <param name="temperature">The temperature to use (overrides config if specified)</param>
     /// <param name="seed">Random seed for deterministic generation (-1 = random, 0+ = deterministic, null = server default)</param>
     /// <param name="cachePrompt">Whether to cache the prompt for KV cache reuse</param>
+    /// <param name="nKeep">Number of tokens to keep during context shift (protects static prefix). null = server default, -1 = keep all, N = keep first N tokens</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Detailed completion metrics</returns>
-    Task<CompletionMetrics> SendPromptWithMetricsAsync(string prompt, int? maxTokens = null, float? temperature = null, int? seed = null, bool cachePrompt = false, CancellationToken cancellationToken = default);
+    Task<CompletionMetrics> SendPromptWithMetricsAsync(string prompt, int? maxTokens = null, float? temperature = null, int? seed = null, bool cachePrompt = false, int? nKeep = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Sends a prompt to the LLM and returns the response
@@ -52,6 +53,7 @@ namespace LlamaBrain.Core
     /// <param name="temperature">Optional temperature</param>
     /// <param name="seed">Random seed for deterministic generation (-1 = random, 0+ = deterministic, null = server default)</param>
     /// <param name="cachePrompt">Whether to cache the prompt for KV cache reuse</param>
+    /// <param name="nKeep">Number of tokens to keep during context shift (protects static prefix). null = server default, -1 = keep all, N = keep first N tokens</param>
     /// <param name="cancellationToken">Optional cancellation token</param>
     /// <returns>The structured JSON response from the LLM</returns>
     Task<string> SendStructuredPromptAsync(
@@ -62,6 +64,7 @@ namespace LlamaBrain.Core
       float? temperature = null,
       int? seed = null,
       bool cachePrompt = false,
+      int? nKeep = null,
       CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -75,6 +78,7 @@ namespace LlamaBrain.Core
     /// <param name="temperature">Optional temperature</param>
     /// <param name="seed">Random seed for deterministic generation (-1 = random, 0+ = deterministic, null = server default)</param>
     /// <param name="cachePrompt">Whether to cache the prompt for KV cache reuse</param>
+    /// <param name="nKeep">Number of tokens to keep during context shift (protects static prefix). null = server default, -1 = keep all, N = keep first N tokens</param>
     /// <param name="cancellationToken">Optional cancellation token</param>
     /// <returns>Detailed completion metrics including the structured response</returns>
     Task<CompletionMetrics> SendStructuredPromptWithMetricsAsync(
@@ -85,6 +89,7 @@ namespace LlamaBrain.Core
       float? temperature = null,
       int? seed = null,
       bool cachePrompt = false,
+      int? nKeep = null,
       CancellationToken cancellationToken = default);
   }
 }
