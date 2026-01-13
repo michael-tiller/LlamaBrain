@@ -159,6 +159,17 @@ Whisper Unity is a Unity wrapper for OpenAI's Whisper speech-to-text model. It p
 - Updated model path from `ggml-tiny.bin` to `ggml-tiny.en.bin` in tests and default configurations
 - Adapted for Unity 6 LTS compatibility
 
+**⚠️ Required Native Libraries (Not Included):**
+
+Users must supply the following native DLL files from the [Whisper 1.3.2 release](https://github.com/ggerganov/whisper.cpp/releases/tag/v1.3.2):
+- `cublasLt64_13.dll` - CUDA BLAS support library
+- `cublas64_12.dll` - CUDA BLAS library
+- `ggml-cuda.dll` - GGML CUDA backend
+
+These files are required for GPU-accelerated inference and should be placed in the appropriate Unity plugin directory (typically `Assets/Plugins/` or `Assets/ThirdParty/Plugins/WhisperUnity/Plugins/`). Without these libraries, Whisper will fall back to CPU-only inference.
+
+**Note:** These CUDA libraries are provided by NVIDIA/Whisper.cpp and are subject to their respective licenses. We cannot redistribute them.
+
 **Usage in LlamaBrain:**
 - Used in `NpcVoiceInput.cs` for real-time speech recognition
 - Converts player voice input to text for dialogue processing
@@ -300,6 +311,7 @@ Before using LlamaBrain Runtime, ensure you have:
 **Voice Integration (Feature 28):**
 - [x] Whisper Unity - **Already included** at `Assets/ThirdParty/Plugins/WhisperUnity/`
 - [x] uPiper - **Already included** at `Assets/ThirdParty/Plugins/uPiper/`
+- [ ] Whisper CUDA DLLs (from Whisper 1.3.2): `cublasLt64_13.dll`, `cublas64_12.dll`, `ggml-cuda.dll`
 - [ ] Whisper model file: `ggml-tiny.en.bin` in `Assets/StreamingAssets/Whisper/`
 - [ ] Piper voice models in `Resources/uPiper/Models/` or `StreamingAssets/uPiper/Models/`
 
