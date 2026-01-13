@@ -620,14 +620,14 @@ namespace LlamaBrain.Tests.PlayMode
         var port = settings!.Port;
         var url = $"http://127.0.0.1:{port}/";
 
-        // Poll HTTP endpoint until server responds (any response means server is ready)
+        // Poll HTTP endpoint until server responds with non-503 status (model loaded)
         while (Time.realtimeSinceStartup - startTime < maxWaitTime)
         {
-          // Probe HTTP endpoint to verify server is actually responding
-          // Any HTTP response (even 500) means server is responding (not necessarily healthy)
+          // Probe HTTP endpoint to verify server is actually ready to accept inference requests
+          // Server responds with 503 "Loading model" until model is loaded
           var httpTask = http.GetAsync(url);
           yield return new WaitUntil(() => httpTask.IsCompleted);
-          
+
           // Observe exceptions to prevent unobserved Task exceptions
           if (httpTask.IsFaulted)
           {
@@ -635,21 +635,31 @@ namespace LlamaBrain.Tests.PlayMode
             yield return new WaitForSeconds(0.5f);
             continue;
           }
-          
+
           if (httpTask.IsCanceled)
           {
             yield return new WaitForSeconds(0.5f);
             continue;
           }
-          
-          // Any HTTP response means server is ready (responding, not necessarily healthy)
+
+          // Check if server responded with a non-503 status (model loaded and ready)
           if (httpTask.IsCompletedSuccessfully && httpTask.Result != null)
           {
             using var resp = httpTask.Result; // Dispose response automatically
-            // HTTP endpoint responding - server is ready
-            yield break;
+
+            // Only consider server ready if status is not 503 (model loading)
+            // 503 ServiceUnavailable means server is responding but model is still loading
+            if (resp.StatusCode != HttpStatusCode.ServiceUnavailable)
+            {
+              // Server is ready to accept inference requests
+              yield break;
+            }
+
+            // Model still loading (503) - wait and retry
+            yield return new WaitForSeconds(0.5f);
+            continue;
           }
-          
+
           yield return new WaitForSeconds(0.5f);
         }
         

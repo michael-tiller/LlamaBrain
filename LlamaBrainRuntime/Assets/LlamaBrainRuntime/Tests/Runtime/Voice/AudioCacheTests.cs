@@ -167,7 +167,8 @@ namespace LlamaBrain.Runtime.Tests.Voice
     public void TryGet_UpdatesLRUOrder()
     {
       // Arrange
-      var smallArray = new float[50000]; // ~200 KB each
+      // 1 MB = 1,048,576 bytes. Need 5 entries to exceed this: 5 * 53000 * 4 = 1,060,000 > 1,048,576
+      var smallArray = new float[53000]; // ~212 KB each
       var key1 = "key1";
       var key2 = "key2";
       var key3 = "key3";

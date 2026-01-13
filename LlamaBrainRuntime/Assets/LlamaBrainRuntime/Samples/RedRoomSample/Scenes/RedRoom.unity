@@ -2405,11 +2405,8 @@ MonoBehaviour:
   language: en
   microphoneRecord: {fileID: 0}
   maxRecordingLength: 30
-  vadStop: 1
-  vadStopTime: 0.5
-  streamStepSec: 1.5
-  streamKeepSec: 0.15
-  streamLengthSec: 5
+  leadingAudioSeconds: 1
+  trailingAudioSeconds: 0.3
   minVolumeThreshold: 0.1
   minTranscriptionLength: 3
   OnTranscriptionComplete:
@@ -2428,6 +2425,9 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   OnEarlyTranscription:
+    m_PersistentCalls:
+      m_Calls: []
+  OnError:
     m_PersistentCalls:
       m_Calls: []
 --- !u!1001 &916654265597375431
@@ -3393,11 +3393,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6404772479163601859, guid: 87200b54d7b3da04a87717834e5d59f3, type: 3}
       propertyPath: strategy
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6404772479163601859, guid: 87200b54d7b3da04a87717834e5d59f3, type: 3}
       propertyPath: modelPath
       value: Whisper/ggml-base.en.bin
+      objectReference: {fileID: 0}
+    - target: {fileID: 6404772479163601859, guid: 87200b54d7b3da04a87717834e5d59f3, type: 3}
+      propertyPath: dropOldBuffer
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
