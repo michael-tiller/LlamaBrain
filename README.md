@@ -383,7 +383,7 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 **Completed**: Structured Output (Features 12, 13) - Enhanced with schema versioning and complex parameters, Deterministic Seed (Feature 14) - Documentation complete, Structured Input (Feature 23) - Enhanced with relationships and partial context, Smart KV Cache (Feature 27) - Cache-aware prompt assembly, **Audit Recorder (Feature 28)** - Bug reproduction with deterministic replay
 
-**Current Focus**: Hot Reload (Feature 29), Voice Integration (Features 31-32)
+**Current Focus**: Hot Reload (Feature 29)
 
 **See [STATUS.md](Documentation/STATUS.md) for milestone progress.**
 
@@ -422,12 +422,14 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
   - Hardware determinism limitations and guarantees
   - Cross-device reproducibility expectations
   - Backward compatibility guide
-- **Voice Integration**: Microphone input and speech output for NPCs (Features 31-32 - ~70% Complete)
-  - NpcVoiceController for centralized voice management (440 lines)
-  - Whisper.unity integration for speech-to-text with VAD (Feature 31 - 338 lines)
-  - Piper.unity integration for text-to-speech with phonemization (Feature 32 - 498 lines)
+- **Voice Integration** (Features 31-32 - ✅ Complete)
+  - **Speech-to-Text**: Whisper.unity with VAD-gated batch transcription
+    - Silero VAD for speech detection, stereo-to-mono conversion
+    - Artifact filtering, repetition deduplication, error events
+  - **Text-to-Speech**: uPiper with Unity Sentis inference
+    - ONNX voice models, LRU audio caching, spatial audio
+    - Per-NPC voice configuration via NpcSpeechConfig
   - Full async/await implementation with events and error handling
-  - Configurable via NpcSpeechConfig ScriptableObject
 - **Game State Management UI**: Complete save/load UI system (Feature 16 Extension - ✅ Complete)
   - Main menu with continue/new game/load game (26 lines)
   - Load game browser with delete confirmation (133 lines)

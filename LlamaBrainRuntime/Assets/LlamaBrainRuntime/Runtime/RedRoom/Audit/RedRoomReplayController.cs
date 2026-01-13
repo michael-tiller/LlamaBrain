@@ -330,18 +330,18 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
     /// </summary>
     /// <param name="generator">Function that generates a replay record from context.</param>
     /// <returns>Replay result.</returns>
-    public async UniTask<ReplayResult?> ReplayAsync(Func<ReplayContext, AuditRecord> generator)
+    public UniTask<ReplayResult?> ReplayAsync(Func<ReplayContext, AuditRecord> generator)
     {
       if (_currentPackage == null || _replayEngine == null)
       {
         OnReplayError?.Invoke("No package loaded or engine not initialized");
-        return null;
+        return UniTask.FromResult<ReplayResult?>(null);
       }
 
       if (_isReplaying)
       {
         OnReplayError?.Invoke("Replay already in progress");
-        return null;
+        return UniTask.FromResult<ReplayResult?>(null);
       }
 
       _isReplaying = true;
@@ -410,18 +410,18 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
           Debug.Log($"[RedRoomReplayController] Replay completed:\n{completedData.Summary}");
         }
 
-        return replayResult;
+        return UniTask.FromResult<ReplayResult?>(replayResult);
       }
       catch (OperationCanceledException)
       {
         Debug.Log("[RedRoomReplayController] Replay cancelled");
-        return null;
+        return UniTask.FromResult<ReplayResult?>(null);
       }
       catch (Exception ex)
       {
         Debug.LogError($"[RedRoomReplayController] Replay failed: {ex.Message}");
         OnReplayError?.Invoke(ex.Message);
-        return null;
+        return UniTask.FromResult<ReplayResult?>(null);
       }
       finally
       {
@@ -569,7 +569,12 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
     }
 
     [ContextMenu("Replay With Mock Generator (Editor)")]
-    private async void EditorReplayMock()
+    private void EditorReplayMock()
+    {
+      EditorReplayMockAsync().Forget();
+    }
+
+    private async UniTaskVoid EditorReplayMockAsync()
     {
       if (_currentPackage == null)
       {
@@ -577,7 +582,14 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
         return;
       }
 
-      await ReplayWithMockGeneratorAsync();
+      try
+      {
+        await ReplayWithMockGeneratorAsync();
+      }
+      catch (Exception ex)
+      {
+        Debug.LogError($"[RedRoomReplayController] Editor replay failed: {ex.Message}");
+      }
     }
 
     [ContextMenu("Log Package Summary")]

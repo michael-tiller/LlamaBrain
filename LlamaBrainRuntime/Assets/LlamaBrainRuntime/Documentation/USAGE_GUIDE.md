@@ -80,7 +80,12 @@ public class SimpleNPC : MonoBehaviour
         agent.InitializeCanonicalFact("world_rule", "Magic is real", "lore");
     }
     
-    public async void TalkToPlayer(string playerInput)
+    public void TalkToPlayer(string playerInput)
+    {
+        TalkToPlayerAsync(playerInput).Forget();
+    }
+
+    private async UniTaskVoid TalkToPlayerAsync(string playerInput)
     {
         // Components 1-9 all work together automatically:
         // 1. Interaction context created
@@ -2011,7 +2016,7 @@ public class VoiceNPC : MonoBehaviour
         voiceController.OnSpeechCompleted += () => Debug.Log("NPC finished speaking");
     }
     
-    private async void HandleTranscription(string transcribedText)
+    private void HandleTranscription(string transcribedText)
     {
         Debug.Log($"Player said: {transcribedText}");
         // Agent processes and responds automatically
@@ -2197,14 +2202,19 @@ The voice system integrates seamlessly with the existing LlamaBrain pipeline:
 
 ```csharp
 // In NpcVoiceController (simplified internal flow)
-private async void ProcessTranscription(string transcribedText)
+private void ProcessTranscription(string transcribedText)
+{
+    ProcessTranscriptionAsync(transcribedText).Forget();
+}
+
+private async UniTaskVoid ProcessTranscriptionAsync(string transcribedText)
 {
     // 1. Transcription received from Whisper
     OnTranscriptionReceived?.Invoke(transcribedText);
-    
+
     // 2. Send to LlamaBrainAgent (goes through full pipeline)
     var response = await agent.SendPlayerInputAsync(transcribedText);
-    
+
     // 3. Convert response to speech
     if (!string.IsNullOrEmpty(response))
     {
@@ -2358,7 +2368,12 @@ public class GameStateExample : MonoBehaviour
         }
     }
     
-    private async void QuickSave()
+    private void QuickSave()
+    {
+        QuickSaveAsync().Forget();
+    }
+
+    private async UniTaskVoid QuickSaveAsync()
     {
         var result = await saveManager.QuickSave();
         if (result.Success)
@@ -2366,8 +2381,13 @@ public class GameStateExample : MonoBehaviour
             Debug.Log("Quick save successful");
         }
     }
-    
-    private async void QuickLoad()
+
+    private void QuickLoad()
+    {
+        QuickLoadAsync().Forget();
+    }
+
+    private async UniTaskVoid QuickLoadAsync()
     {
         var result = await saveManager.QuickLoad();
         if (result.Success)
@@ -2375,9 +2395,13 @@ public class GameStateExample : MonoBehaviour
             Debug.Log("Quick load successful");
         }
     }
-    
-    // Named save slot
-    private async void SaveToSlot(string slotName)
+
+    private void SaveToSlot(string slotName)
+    {
+        SaveToSlotAsync(slotName).Forget();
+    }
+
+    private async UniTaskVoid SaveToSlotAsync(string slotName)
     {
         var result = await saveManager.SaveToSlot(slotName);
         if (result.Success)
@@ -2385,9 +2409,13 @@ public class GameStateExample : MonoBehaviour
             Debug.Log($"Saved to slot: {slotName}");
         }
     }
-    
-    // Load from slot
-    private async void LoadFromSlot(string slotName)
+
+    private void LoadFromSlot(string slotName)
+    {
+        LoadFromSlotAsync(slotName).Forget();
+    }
+
+    private async UniTaskVoid LoadFromSlotAsync(string slotName)
     {
         var result = await saveManager.LoadFromSlot(slotName);
         if (result.Success)
@@ -2448,7 +2476,12 @@ public class SmartNPC : MonoBehaviour
         // Initialize agent with memory store...
     }
 
-    public async void OnPlayerInteraction(string playerInput)
+    public void OnPlayerInteraction(string playerInput)
+    {
+        OnPlayerInteractionAsync(playerInput).Forget();
+    }
+
+    private async UniTaskVoid OnPlayerInteractionAsync(string playerInput)
     {
         // Create context
         var context = expectancyConfig.CreatePlayerUtteranceContext(playerInput);
@@ -2640,7 +2673,12 @@ public class GuardNPC : MonoBehaviour
         );
     }
     
-    public async void TalkToPlayer(string playerInput)
+    public void TalkToPlayer(string playerInput)
+    {
+        TalkToPlayerAsync(playerInput).Forget();
+    }
+
+    private async UniTaskVoid TalkToPlayerAsync(string playerInput)
     {
         var response = await agent.SendPlayerInputAsync(playerInput);
         Debug.Log($"Guard says: {response}");
@@ -2747,12 +2785,17 @@ using LlamaBrain.Runtime.Core;
 public class ValidationTester : MonoBehaviour
 {
     public LlamaBrainAgent agent;
-    
-    public async void TestValidation()
+
+    public void TestValidation()
+    {
+        TestValidationAsync().Forget();
+    }
+
+    private async UniTaskVoid TestValidationAsync()
     {
         // This should trigger validation failure if rule is working
         var response = await agent.SendPlayerInputAsync("Tell me a swear word");
-        
+
         // Check validation result
         var gateResult = agent.LastGateResult;
         if (gateResult != null && !gateResult.Passed)
@@ -3044,29 +3087,34 @@ using LlamaBrain.Runtime.Core;
 public class ValidationDebugger : MonoBehaviour
 {
     public LlamaBrainAgent agent;
-    
-    public async void TestWithDebugging()
+
+    public void TestWithDebugging()
+    {
+        TestWithDebuggingAsync().Forget();
+    }
+
+    private async UniTaskVoid TestWithDebuggingAsync()
     {
         var response = await agent.SendPlayerInputAsync("Hello!");
-        
+
         // Check validation result
         var gateResult = agent.LastGateResult;
         if (gateResult != null)
         {
             if (gateResult.Passed)
             {
-                Debug.Log("✅ Validation passed!");
+                Debug.Log("Validation passed!");
             }
             else
             {
-                Debug.LogError("❌ Validation failed!");
-                
+                Debug.LogError("Validation failed!");
+
                 // Print all failures
                 foreach (var failure in gateResult.Failures)
                 {
                     Debug.LogWarning($"Failure: [{failure.Severity}] {failure.Reason}");
                     Debug.LogWarning($"Description: {failure.Description}");
-                    
+
                     // Print violating text if available
                     if (!string.IsNullOrEmpty(failure.ViolatingText))
                     {

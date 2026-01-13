@@ -1777,3 +1777,90 @@ A lightweight ring-buffer recorder that captures the minimal state needed for de
 2. **Model Fingerprinting** (Addendum 28.3b): The debug package includes the model checksum/fingerprint. Replay validates that the current backend model matches the audit log's model signature, preventing useless replays (e.g., replaying a `Phi-3-mini` bug on `Qwen-2.5`).
 
 ---
+
+<a id="feature-31"></a>
+## Feature 31: Whisper Speech-to-Text Integration
+
+**Priority**: MEDIUM - Enhances player experience with voice input
+**Status**: ✅ Complete
+**Dependencies**: Unity Audio System, whisper.unity package
+
+### Overview
+
+Integrate [whisper.unity](https://github.com/Macoron/whisper.unity) for local speech-to-text (STT) conversion, enabling players to speak to NPCs instead of typing.
+
+**Architecture Alignment**:
+- Local execution aligns with LlamaBrain's local-first approach
+- Native Unity integration (C# package) - no external services required
+- Text output feeds into existing `SendPlayerInputAsync()` pipeline
+- Maintains deterministic validation boundary (STT output is validated like typed text)
+
+### What Was Built
+
+- **NpcVoiceInput.cs**: VAD-gated batch transcription component
+  - Silero VAD integration for speech detection
+  - Stereo-to-mono conversion (handles XLR/Focusrite, USB mics, etc.)
+  - Leading audio buffer captures speech onset
+  - Last-audible-sample tracking trims trailing silence
+  - Artifact filtering (removes [BLANK_AUDIO], hallucinations)
+  - Repetition deduplication (catches Whisper loops)
+  - OnError event for user-facing feedback
+- **WhisperManager prefab**: GPU-accelerated (Vulkan), ggml-base.en model
+- **Integration**: Transcribed text flows through existing dialogue pipeline
+
+### Success Criteria (All Met)
+
+- [x] Players can speak to NPCs using microphone input
+- [x] Transcribed text flows seamlessly into existing dialogue pipeline
+- [x] Transcription latency acceptable for real-time conversation
+- [x] Fallback to text input works when STT fails
+- [x] Error feedback shown to user (mic unavailable, transcription failed)
+
+**Note**: Polish items (multiplatform testing, documentation, unit tests) moved to [Feature 33](#feature-33).
+
+---
+
+<a id="feature-32"></a>
+## Feature 32: Piper Text-to-Speech Integration
+
+**Priority**: MEDIUM - Enhances NPC dialogue with voice output
+**Status**: ✅ Complete
+**Dependencies**: Unity Sentis, piper.unity (uPiper) package, .onnx voice models
+
+### Overview
+
+Integrate uPiper for local text-to-speech (TTS) conversion, enabling NPCs to speak their dialogue responses.
+
+**Architecture Alignment**:
+- Native Unity integration (C# package) - no external services required
+- Local execution aligns with LlamaBrain's local-first approach
+- Unity Sentis-based inference for high-performance TTS
+- Audio generation happens after text validation (maintains deterministic boundary)
+
+### What Was Built
+
+- **NpcVoiceOutput.cs**: Async TTS generation component
+  - Unity Sentis integration for ONNX model inference
+  - Japanese and English phonemization
+  - Audio caching (LRU cache by text + voice model hash)
+  - Spatial audio via AudioSource (3D positioning)
+  - Volume controls, fade-in/fade-out
+  - CancellationToken support for timeouts
+  - OnSpeakingFailed event for error handling
+- **NpcSpeechConfig.cs**: ScriptableObject for per-NPC voice configuration
+  - Voice model path, pitch, rate, volume
+  - Text length limits and behavior
+- **AudioCache.cs**: LRU cache for generated audio (30 unit tests)
+- **Integration**: TTS generation hooks into NpcVoiceController after LlamaBrainAgent response
+
+### Success Criteria (All Met)
+
+- [x] NPCs can speak their dialogue responses using TTS
+- [x] TTS generation happens after text validation (maintains deterministic boundary)
+- [x] Audio caching reduces redundant generation
+- [x] Unity Sentis inference failures gracefully fall back to text-only
+- [x] Basic documentation complete (USAGE_GUIDE.md TTS section)
+
+**Note**: Polish items (multi-voice per NPC, editor preview, benchmarking, unit tests) moved to [Feature 33](#feature-33).
+
+---

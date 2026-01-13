@@ -5,6 +5,8 @@ using LlamaBrain.Core.Audit;
 using LlamaBrain.Runtime.Core;
 using LlamaBrain.Core;
 using LlamaBrain.Core.Inference;
+using LlamaBrain.Utilities;
+using LlamaBrain.Persona;
 using Newtonsoft.Json;
 
 namespace LlamaBrain.Runtime.RedRoom.Audit
@@ -44,11 +46,28 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
     [Tooltip("Context length used by the model.")]
     [SerializeField] private int contextLength = 4096;
 
+    [Header("Persistence")]
+    [Tooltip("Enable persistent file storage of audit records. Records are saved to rolling JSON Lines files.")]
+    [SerializeField] private bool enablePersistence = false;
+
+    [Tooltip("Directory where audit log files will be stored. Uses Application.persistentDataPath/AuditLogs if empty.")]
+    [SerializeField] private string logDirectory = "";
+
+    [Tooltip("Maximum size per log file in bytes before rotation (default: 10 MB).")]
+    [SerializeField] private long maxFileSizeBytes = RollingFileOptions.DefaultMaxFileSizeBytes;
+
+    [Tooltip("Maximum number of log files to retain. Oldest files are deleted when exceeded (default: 10).")]
+    [SerializeField] private int maxFileCount = RollingFileOptions.DefaultMaxFileCount;
+
+    [Tooltip("Prefix for log file names (default: 'audit').")]
+    [SerializeField] private string filePrefix = RollingFileOptions.DefaultFilePrefix;
+
     [Header("Debug")]
     [Tooltip("Enable verbose logging of audit operations.")]
     [SerializeField] private bool verboseLogging = false;
 
     private IAuditRecorder? _recorder;
+    private IAuditPersistence? _persistence;
     private ModelFingerprint? _modelFingerprint;
     private string _gameVersion = "";
     private string _currentSceneName = "";
@@ -72,6 +91,11 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
     /// Gets the total number of records across all NPCs.
     /// </summary>
     public int TotalRecordCount => _recorder?.TotalRecordCount ?? 0;
+
+    /// <summary>
+    /// Gets the persistence layer if enabled, or null if persistence is disabled.
+    /// </summary>
+    public IAuditPersistence? Persistence => _persistence;
 
     private void Awake()
     {
@@ -118,12 +142,70 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
 
     private void InitializeRecorder()
     {
-      _recorder = new AuditRecorder(bufferCapacity);
+      // Initialize persistence if enabled
+      if (enablePersistence)
+      {
+        try
+        {
+          _persistence = CreatePersistence();
+          _recorder = new AuditRecorder(bufferCapacity, _persistence);
+
+          if (verboseLogging && _persistence is RollingFileAuditPersistence rollingPersistence)
+          {
+            Debug.Log($"[AuditRecorderBridge] Initialized with persistence enabled. Log directory: {rollingPersistence.LogDirectory}");
+          }
+        }
+        catch (Exception ex)
+        {
+          Debug.LogError($"[AuditRecorderBridge] Failed to initialize persistence: {ex.Message}\n{ex}");
+          // Fall back to memory-only recording
+          _persistence = null;
+          _recorder = new AuditRecorder(bufferCapacity);
+
+          if (verboseLogging)
+          {
+            Debug.LogWarning("[AuditRecorderBridge] Falling back to memory-only recording due to persistence initialization failure.");
+          }
+        }
+      }
+      else
+      {
+        _recorder = new AuditRecorder(bufferCapacity);
+      }
 
       if (verboseLogging)
       {
-        Debug.Log($"[AuditRecorderBridge] Initialized with buffer capacity: {bufferCapacity}");
+        Debug.Log($"[AuditRecorderBridge] Initialized with buffer capacity: {bufferCapacity}, persistence: {(enablePersistence ? "enabled" : "disabled")}");
       }
+    }
+
+    /// <summary>
+    /// Creates a RollingFileAuditPersistence instance with configured options.
+    /// </summary>
+    private RollingFileAuditPersistence CreatePersistence()
+    {
+      // Determine log directory
+      var logDir = string.IsNullOrWhiteSpace(logDirectory)
+        ? System.IO.Path.Combine(Application.persistentDataPath, "AuditLogs")
+        : logDirectory;
+
+      // Create file system and clock instances
+      var fileSystem = new FileSystem();
+      var clock = new SystemClock();
+
+      // Create and validate options
+      var options = new RollingFileOptions
+      {
+        MaxFileSizeBytes = maxFileSizeBytes,
+        MaxFileCount = maxFileCount,
+        FilePrefix = string.IsNullOrWhiteSpace(filePrefix) ? RollingFileOptions.DefaultFilePrefix : filePrefix
+      };
+
+      // Validate options (will throw if invalid)
+      options.Validate();
+
+      // Create persistence instance
+      return new RollingFileAuditPersistence(fileSystem, clock, logDir, options);
     }
 
     private void TryConfigureFromBrainServer()
@@ -267,7 +349,7 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
         .WithNpcId(npcId)
         .WithInteractionCount(agent.InteractionCount)
         .WithSeed(snapshot?.Context?.InteractionCount ?? agent.InteractionCount)
-        .WithSnapshotTimeUtcTicks(snapshot?.CaptureTimeUtcTicks ?? DateTimeOffset.UtcNow.UtcTicks)
+        .WithSnapshotTimeUtcTicks(snapshot?.SnapshotTimeUtcTicks ?? DateTimeOffset.UtcNow.UtcTicks)
         .WithPlayerInput(playerInput)
         .WithTriggerInfo(triggerReason, triggerId, _currentSceneName)
         .WithStateHashes(memoryHash, promptHash, constraintsHash)
@@ -276,7 +358,7 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
         .WithValidationOutcome(
           gateResult?.Passed ?? true,
           gateResult?.Failures.Count ?? 0,
-          mutationResult?.TotalSucceeded ?? 0
+          mutationResult?.SuccessCount ?? 0
         );
 
       // Add metrics if available
@@ -434,11 +516,26 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
     [ContextMenu("Log Recorder Status")]
     private void EditorLogStatus()
     {
+      string persistenceInfo;
+      if (enablePersistence && _persistence is RollingFileAuditPersistence rollingPersistence)
+      {
+        persistenceInfo = $"  Persistence: Enabled\n" +
+          $"    Log Directory: {rollingPersistence.LogDirectory}\n" +
+          $"    Current File: {rollingPersistence.CurrentFilePath ?? "None"}\n" +
+          $"    Total Size: {rollingPersistence.GetTotalSizeBytes()} bytes\n" +
+          $"    Log Files: {rollingPersistence.GetLogFiles().Count}";
+      }
+      else
+      {
+        persistenceInfo = "  Persistence: Disabled";
+      }
+
       Debug.Log($"[AuditRecorderBridge] Status:\n" +
         $"  Total Records: {TotalRecordCount}\n" +
         $"  Tracked NPCs: {string.Join(", ", GetTrackedNpcIds())}\n" +
         $"  Buffer Capacity: {bufferCapacity}\n" +
-        $"  Model Fingerprint: {_modelFingerprint?.FingerprintHash ?? "Not set"}");
+        $"  Model Fingerprint: {_modelFingerprint?.FingerprintHash ?? "Not set"}\n" +
+        persistenceInfo);
     }
 #endif
   }

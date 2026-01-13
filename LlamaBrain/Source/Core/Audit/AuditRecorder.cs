@@ -20,19 +20,22 @@ namespace LlamaBrain.Core.Audit
     private readonly Dictionary<string, RingBuffer<AuditRecord>> _buffers;
     private readonly Dictionary<string, int> _customCapacities;
     private readonly int _defaultCapacity;
+    private readonly IAuditPersistence? _persistence;
 
     /// <summary>
     /// Creates a new AuditRecorder with the specified default buffer capacity.
     /// </summary>
     /// <param name="defaultCapacity">Default buffer capacity per NPC. Default is 50.</param>
+    /// <param name="persistence">Optional persistence layer for durable storage. If null, records are memory-only.</param>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when capacity is less than 1.</exception>
-    public AuditRecorder(int defaultCapacity = 50)
+    public AuditRecorder(int defaultCapacity = 50, IAuditPersistence? persistence = null)
     {
       if (defaultCapacity < 1)
         throw new ArgumentOutOfRangeException(nameof(defaultCapacity), defaultCapacity,
           "Capacity must be at least 1.");
 
       _defaultCapacity = defaultCapacity;
+      _persistence = persistence;
       _buffers = new Dictionary<string, RingBuffer<AuditRecord>>(StringComparer.Ordinal);
       _customCapacities = new Dictionary<string, int>(StringComparer.Ordinal);
     }
@@ -64,6 +67,9 @@ namespace LlamaBrain.Core.Audit
       var npcId = record.NpcId ?? "";
       var buffer = GetOrCreateBuffer(npcId);
       buffer.Append(record);
+
+      // Persist to durable storage if configured
+      _persistence?.Persist(record);
     }
 
     /// <inheritdoc/>

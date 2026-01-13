@@ -28,10 +28,14 @@ This guide focuses on the **core library** (engine-agnostic .NET Standard 2.1), 
 10. [Structured Input/Context](#structured-input)
 11. [Migrating to Structured Input/Context](#migrating-to-structured-input)
 12. [Function Calling](#function-calling)
-13. [Debugging & Monitoring](#debugging--monitoring)
+13. [Text-to-Speech (TTS) Voice Output](#text-to-speech-tts-voice-output)
+    - [Voice Model Selection](#voice-model-selection)
+    - [Acquiring Voice Models from Hugging Face](#acquiring-voice-models-from-hugging-face)
+    - [Audio Caching](#audio-caching)
+14. [Debugging & Monitoring](#debugging--monitoring)
     - [Bug Report Workflow (Feature 28)](#bug-report-workflow-feature-28)
-14. [Performance Optimization](#performance-optimization)
-15. [Save/Load Persistence](#save-load-persistence)
+15. [Performance Optimization](#performance-optimization)
+16. [Save/Load Persistence](#save-load-persistence)
 
 ---
 
@@ -1611,6 +1615,251 @@ controller.RegisterFunction(
         ""npcId"": {""type"": ""string"", ""description"": ""NPC identifier""}
     }}"
 );
+```
+
+---
+
+<a id="text-to-speech-tts-voice-output"></a>
+## Text-to-Speech (TTS) Voice Output
+
+LlamaBrain integrates with [Piper TTS](https://github.com/rhasspy/piper) via the uPiper Unity package for high-quality, local text-to-speech synthesis. This enables NPCs to speak their dialogue aloud using neural voice models.
+
+> **Note**: TTS is a Unity Runtime feature. It requires Unity Sentis (formerly Barracuda) for ONNX model inference.
+
+### Prerequisites
+
+1. **Unity Sentis**: Install via Package Manager (com.unity.ai.inference)
+2. **uPiper Package**: Add via Git URL or manual installation
+3. **Voice Models**: Download ONNX models from Hugging Face (see below)
+
+### Basic Setup
+
+1. Add `NpcVoiceOutput` component to your NPC GameObject
+2. Create an `NpcSpeechConfig` ScriptableObject (Right-click → Create → LlamaBrain → NPC Speech Config)
+3. Assign the config to the `NpcVoiceOutput` component
+4. The `NpcVoiceController` component orchestrates TTS with the dialogue system
+
+```csharp
+// Speaking text programmatically
+var voiceOutput = GetComponent<NpcVoiceOutput>();
+await voiceOutput.SpeakAsync("Hello, traveler! Welcome to my shop.");
+
+// Check if speaking
+if (voiceOutput.IsSpeaking)
+{
+    voiceOutput.Stop(); // Interrupt current speech
+}
+```
+
+<a id="voice-model-selection"></a>
+### Voice Model Selection
+
+LlamaBrain provides preset voice models and supports custom models:
+
+#### Built-in Presets
+
+| Preset | Model Name | Language | Quality | Use Case |
+|--------|------------|----------|---------|----------|
+| `EnglishLessacHigh` | en_US-lessac-high | English | High | Clear, professional American English |
+| `EnglishLjspeechHigh` | en_US-ljspeech-high | English | High | Neutral American English female voice |
+| `JapaneseTestMedium` | ja_JP-test-medium | Japanese | Medium | Japanese voice (test quality) |
+| `Custom` | User-defined | Any | Varies | Custom model path |
+
+#### Configuring Voice in Inspector
+
+1. Create `NpcSpeechConfig` asset: Right-click → Create → LlamaBrain → NPC Speech Config
+2. Select `Voice Preset` from dropdown
+3. Adjust prosody settings:
+   - **Length Scale** (0.5-2.0): Speech speed. Lower = slower/clearer. Default: 1.0
+   - **Noise Scale** (0.0-2.0): Voice variation. Lower = more consistent. Default: 0.667
+   - **Noise W** (0.0-2.0): Additional randomness. Default: 0.8
+4. Configure audio settings:
+   - **Normalize Audio**: Prevent clipping. Default: true
+   - **Volume** (0.0-2.0): Output volume multiplier. Default: 1.0
+
+#### Using Custom Models
+
+```csharp
+// In NpcSpeechConfig Inspector:
+// 1. Set Voice Preset to "Custom"
+// 2. Enter model name in Custom Model Path (without .onnx extension)
+
+// Or programmatically:
+var config = ScriptableObject.CreateInstance<NpcSpeechConfig>();
+config.VoicePreset = NpcSpeechConfig.VoiceModelPreset.Custom;
+config.CustomModelPath = "en_GB-alan-medium"; // Your custom model
+```
+
+<a id="acquiring-voice-models-from-hugging-face"></a>
+### Acquiring Voice Models from Hugging Face
+
+Piper voice models are available on Hugging Face. Here's how to download and install them:
+
+#### Step 1: Browse Available Models
+
+Visit the Piper voices repository:
+**https://huggingface.co/rhasspy/piper-voices**
+
+Models are organized by language code:
+- `en_US` - American English
+- `en_GB` - British English
+- `de_DE` - German
+- `fr_FR` - French
+- `ja_JP` - Japanese
+- And many more...
+
+#### Step 2: Download Model Files
+
+Each voice requires two files:
+1. **Model file**: `{voice_name}.onnx` - The neural network weights
+2. **Config file**: `{voice_name}.onnx.json` - Phoneme mappings and settings
+
+Example download URLs for `en_US-lessac-high`:
+```
+https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/high/en_US-lessac-high.onnx
+https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/high/en_US-lessac-high.onnx.json
+```
+
+#### Step 3: Install in Unity Project
+
+Place both files in one of these locations:
+
+**Option A: Resources folder (Recommended)**
+```
+Assets/Resources/uPiper/Models/
+├── en_US-lessac-high.onnx
+├── en_US-lessac-high.onnx.json
+├── en_GB-alan-medium.onnx
+└── en_GB-alan-medium.onnx.json
+```
+
+**Option B: StreamingAssets folder**
+```
+Assets/StreamingAssets/uPiper/Models/
+├── en_US-lessac-high.onnx
+└── en_US-lessac-high.onnx.json
+```
+
+Unity Sentis will automatically convert `.onnx` files to model assets on import.
+
+#### Step 4: Verify Installation
+
+```csharp
+// Test voice model loading
+var voiceOutput = GetComponent<NpcVoiceOutput>();
+await voiceOutput.SpeakAsync("Voice model test. One, two, three.");
+// Check console for "[NpcVoiceOutput] Model loaded successfully: en_US-lessac-high"
+```
+
+#### Recommended Models by Use Case
+
+| Use Case | Recommended Model | Size | Notes |
+|----------|------------------|------|-------|
+| **General NPCs** | en_US-lessac-high | ~60 MB | Clear, professional quality |
+| **Female NPCs** | en_US-ljspeech-high | ~60 MB | Natural female voice |
+| **British NPCs** | en_GB-alan-medium | ~40 MB | British accent |
+| **German NPCs** | de_DE-thorsten-high | ~60 MB | High-quality German |
+| **Low memory** | en_US-lessac-medium | ~25 MB | Good quality, smaller size |
+
+#### Model Quality Tiers
+
+- **x_low**: Smallest, fastest, lower quality
+- **low**: Small, good for mobile
+- **medium**: Balanced quality/size
+- **high**: Best quality, larger size
+
+### Prosody Tips
+
+Fine-tune voice characteristics for different NPC personalities:
+
+```csharp
+// Slow, thoughtful wizard
+config.LengthScale = 1.3f;  // Slower speech
+config.NoiseScale = 0.4f;   // More consistent tone
+
+// Fast, nervous merchant
+config.LengthScale = 0.8f;  // Faster speech
+config.NoiseScale = 0.9f;   // More variation
+
+// Deep, authoritative guard
+config.LengthScale = 1.1f;  // Slightly slower
+config.Volume = 1.3f;       // Louder
+```
+
+<a id="audio-caching"></a>
+### Audio Caching
+
+LlamaBrain caches generated audio to avoid redundant TTS inference for repeated phrases.
+
+#### Configuration
+
+```csharp
+// In NpcSpeechConfig Inspector or code:
+config.EnableAudioCaching = true;    // Enable caching (default: true)
+config.AudioCacheMaxSizeMB = 50;     // Cache size limit (default: 50 MB)
+```
+
+#### How It Works
+
+1. **Cache Key**: SHA256 hash of `text + modelName + prosody settings`
+2. **Storage**: In-memory LRU (Least Recently Used) cache
+3. **Eviction**: Oldest entries removed when cache exceeds size limit
+4. **Capacity**: 50 MB ≈ 10 minutes of audio at 22kHz mono
+
+#### Monitoring Cache Performance
+
+```csharp
+var stats = voiceOutput.GetCacheStatistics();
+if (stats.HasValue)
+{
+    Debug.Log($"Cache entries: {stats.Value.EntryCount}");
+    Debug.Log($"Hit rate: {stats.Value.HitRate:P1}");
+    Debug.Log($"Memory used: {stats.Value.CurrentSizeBytes / 1024 / 1024:F1} MB");
+}
+
+// Clear cache if needed
+voiceOutput.ClearCache();
+```
+
+#### Cache Benefits
+
+| Scenario | Without Cache | With Cache |
+|----------|--------------|------------|
+| Same greeting repeated | 500-2000ms per generation | <1ms (cache hit) |
+| Common phrases | Full inference each time | Single inference, reused |
+| Memory usage | Lower (no storage) | Up to 50 MB (configurable) |
+
+### Troubleshooting TTS
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| "Model not found" error | Model files not in correct location | Check Resources/uPiper/Models/ path |
+| Silent audio | GPU inference failed | Check console for fallback to CPU |
+| Garbled audio | Wrong phoneme mapping | Ensure .onnx.json matches model |
+| Slow first generation | Model loading | Consider preloading in scene Start() |
+| High memory usage | Cache too large | Reduce `AudioCacheMaxSizeMB` |
+
+### Events
+
+Subscribe to TTS events for UI integration:
+
+```csharp
+var voiceOutput = GetComponent<NpcVoiceOutput>();
+
+voiceOutput.OnSpeakingStarted.AddListener(() => {
+    // Show speaking indicator
+    speakingIcon.SetActive(true);
+});
+
+voiceOutput.OnSpeakingFinished.AddListener(() => {
+    // Hide speaking indicator
+    speakingIcon.SetActive(false);
+});
+
+voiceOutput.OnSpeakingFailed.AddListener((error) => {
+    Debug.LogWarning($"TTS failed: {error}");
+    // Fall back to text-only display
+});
 ```
 
 ---

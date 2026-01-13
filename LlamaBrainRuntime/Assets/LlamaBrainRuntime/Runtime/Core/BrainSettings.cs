@@ -82,6 +82,12 @@ namespace LlamaBrain.Runtime.Core
     public bool UseContinuousBatching = false;
 
     /// <summary>
+    /// Whether to enable Flash Attention for faster inference
+    /// </summary>
+    [Tooltip("Enable Flash Attention. Reduces memory usage and improves speed on supported GPUs (CUDA/Metal). Default: on")]
+    public bool UseFlashAttention = true;
+
+    /// <summary>
     /// The maximum number of tokens to generate
     /// </summary>
     [Header("LLM Generation Settings")]
@@ -160,6 +166,8 @@ namespace LlamaBrain.Runtime.Core
       config.UseMlock = UseMlock;
       config.ParallelSlots = ParallelSlots;
       config.UseContinuousBatching = UseContinuousBatching;
+      // TODO: Uncomment after rebuilding LlamaBrain.dll with UseFlashAttention property
+      // config.UseFlashAttention = UseFlashAttention;
 
       // Create LLM configuration from settings
       config.LlmConfig = ToLlmConfig();

@@ -2,7 +2,9 @@
 
 This document lists all third-party packages and assets used in the LlamaBrain Unity Runtime, along with installation instructions and usage information.
 
-**Important:** Third-party assets are **not included** in this repository. "Free" does not mean "redistributable." You must install these packages separately. Only package manifest entries and attribution notices are committed to the repository.
+**Important:** Most third-party assets are **not included** in this repository. "Free" does not mean "redistributable." You must install these packages separately.
+
+**Exceptions:** Modified versions of **Whisper Unity** and **uPiper** (both MIT licensed) are **included in this repository** at `Assets/ThirdParty/Plugins/` due to required modifications for LlamaBrain integration.
 
 **Reproducibility:** We commit `Packages/manifest.json` and `Packages/packages-lock.json` for deterministic package resolution.
 
@@ -133,11 +135,101 @@ This asset is **not included** in the repository. You must download it separatel
 
 ---
 
+## 🎤 Voice Integration (Feature 28)
+
+These packages are required for voice input/output functionality and are **included in the repository** with modifications.
+
+### 4. Whisper Unity
+
+**Description:**
+Whisper Unity is a Unity wrapper for OpenAI's Whisper speech-to-text model. It provides real-time speech recognition capabilities for voice input in LlamaBrain NPCs.
+
+**Original Repository:**
+[https://github.com/Macoron/whisper.unity](https://github.com/Macoron/whisper.unity)
+
+**License:** MIT License
+
+**Status:** ✅ **Included in repository** (with modifications)
+
+**Location:** `Assets/ThirdParty/Plugins/WhisperUnity/`
+
+**Tested with:** Unity 6000.0.58f2 LTS
+
+**Modifications:**
+- Updated model path from `ggml-tiny.bin` to `ggml-tiny.en.bin` in tests and default configurations
+- Adapted for Unity 6 LTS compatibility
+
+**⚠️ Required Native Libraries (Not Included):**
+
+Users must supply the following native DLL files from the [Whisper 1.3.2 release](https://github.com/ggerganov/whisper.cpp/releases/tag/v1.3.2):
+- `cublasLt64_13.dll` - CUDA BLAS support library
+- `cublas64_12.dll` - CUDA BLAS library
+- `ggml-cuda.dll` - GGML CUDA backend
+
+These files are required for GPU-accelerated inference and should be placed in the appropriate Unity plugin directory (typically `Assets/Plugins/` or `Assets/ThirdParty/Plugins/WhisperUnity/Plugins/`). Without these libraries, Whisper will fall back to CPU-only inference.
+
+**Note:** These CUDA libraries are provided by NVIDIA/Whisper.cpp and are subject to their respective licenses. We cannot redistribute them.
+
+**Usage in LlamaBrain:**
+- Used in `NpcVoiceInput.cs` for real-time speech recognition
+- Converts player voice input to text for dialogue processing
+- Supports voice-activated NPC interactions
+
+**Key Features:**
+- Real-time speech-to-text
+- Multiple Whisper model sizes supported
+- Cross-platform audio input handling
+- Low-latency transcription
+
+---
+
+### 5. uPiper (Piper TTS for Unity)
+
+**Description:**
+uPiper is a Unity port of Piper TTS, providing high-quality neural text-to-speech synthesis. It enables NPCs to speak dialogue responses with natural-sounding voices.
+
+**Original Repository:**
+[https://github.com/ayutaz/uPiper-Unity](https://github.com/ayutaz/uPiper-Unity)
+
+**License:** MIT License
+
+**Status:** ✅ **Included in repository** (with modifications)
+
+**Location:** `Assets/ThirdParty/Plugins/uPiper/`
+
+**Tested with:** Unity 6000.0.58f2 LTS
+
+**Modifications:**
+- Integration with async audio generation pipeline (`AsyncAudioGenerator.cs`)
+- Custom phonemizer configurations for English and Japanese
+- Performance optimizations for Unity runtime
+- Cache integration for improved responsiveness
+
+**Usage in LlamaBrain:**
+- Used in `NpcVoiceOutput.cs` for text-to-speech synthesis
+- Converts NPC dialogue text to natural-sounding speech
+- Supports multiple voice models and languages
+- Integrates with `AudioCache` for performance optimization
+
+**Dependencies:**
+- Unity Inference Engine (Sentis) for ONNX model execution
+- Model files in `Resources/uPiper/Models/` or `StreamingAssets/uPiper/Models/`
+
+**Key Features:**
+- High-quality neural TTS
+- Multiple voice models and languages
+- Real-time audio generation
+- ONNX model support via Unity Inference Engine
+- Phonemizer support (Flite LTS, OpenJTalk for Japanese)
+- Streaming sentence-by-sentence playback
+
+---
+
 ## 💾 Persistence (Feature 16)
 
 This package is required for Feature 16 (Save/Load Game Integration) and Feature 14 (Deterministic Generation Seed).
 
-### 4. SaveGameFree (Required for Persistence)
+### 6. SaveGameFree (Required for Persistence)
 
 **Description:**  
 SaveGameFree is a free Unity asset for saving and loading game data. It provides a complete solution for game state persistence with support for multiple serialization formats (JSON, XML, Binary), encryption, cross-platform support, and cloud storage options.
@@ -196,10 +288,13 @@ SaveGameFree is a free Unity asset for saving and loading game data. It provides
 | UniTask | Tested | UPM/Git | ✅ Yes | May require namespace resolution troubleshooting |
 | TextMeshPro | (Editor version) | Unity Package | ✅ Yes | Bundled with Unity |
 | Starter Assets – Third Person | - | Asset Store | ⚠️ Samples Only | **URP version only** (requires URP, New Input System, Cinemachine) |
+| Whisper Unity | Modified | Included in repo | 🎤 Voice | **Included** at `Assets/ThirdParty/Plugins/WhisperUnity/` |
+| uPiper | Modified | Included in repo | 🎤 Voice | **Included** at `Assets/ThirdParty/Plugins/uPiper/` |
 | SaveGameFree | 2.5.0+ | UnityPackage (manual import) | ✅ Yes | Use GitHub version, not Asset Store |
 
 **Legend:**
 - ✅ **Core Runtime**: Required for core functionality
+- 🎤 **Voice**: Required for voice input/output (Feature 28) - **Included in repository**
 - ⚠️ **Samples Only**: Required only for sample scenes and demos
 
 ---
@@ -212,6 +307,13 @@ Before using LlamaBrain Runtime, ensure you have:
 - [ ] Unity 6000.0.58f2 LTS
 - [ ] TextMeshPro package installed via Package Manager
 - [ ] UniTask installed via Package Manager (Git URL)
+
+**Voice Integration (Feature 28):**
+- [x] Whisper Unity - **Already included** at `Assets/ThirdParty/Plugins/WhisperUnity/`
+- [x] uPiper - **Already included** at `Assets/ThirdParty/Plugins/uPiper/`
+- [ ] Whisper CUDA DLLs (from Whisper 1.3.2): `cublasLt64_13.dll`, `cublas64_12.dll`, `ggml-cuda.dll`
+- [ ] Whisper model file: `ggml-tiny.en.bin` in `Assets/StreamingAssets/Whisper/`
+- [ ] Piper voice models in `Resources/uPiper/Models/` or `StreamingAssets/uPiper/Models/`
 
 **Samples (if using sample scenes):**
 - [ ] Starter Assets – Third Person (URP version only) imported from Unity Asset Store
@@ -228,6 +330,10 @@ Before using LlamaBrain Runtime, ensure you have:
 
 - [UniTask Documentation](https://github.com/Cysharp/UniTask)
 - [TextMeshPro Documentation](https://docs.unity3d.com/Manual/com.unity.textmeshpro.html)
+- [Whisper Unity GitHub Repository](https://github.com/Macoron/whisper.unity)
+- [uPiper Unity GitHub Repository](https://github.com/ayutaz/uPiper-Unity)
+- [OpenAI Whisper Documentation](https://github.com/openai/whisper)
+- [Piper TTS Documentation](https://github.com/rhasspy/piper)
 - [SaveGameFree GitHub Repository](https://github.com/BayatGames/SaveGameFree)
 - [Starter Assets – Third Person (Asset Store)](https://assetstore.unity.com/packages/essentials/starter-assets-thirdperson-updates-in-new-charactercontroller-pa-196526)
 - [Unity Package Manager Documentation](https://docs.unity3d.com/Manual/Packages.html)
@@ -240,10 +346,16 @@ Please review the license terms for each third-party package:
 
 - **UniTask**: MIT License
 - **TextMeshPro**: Distributed by Unity as package `com.unity.textmeshpro` via Package Manager
+- **Whisper Unity**: MIT License - **Included in repository with modifications** (original: https://github.com/Macoron/whisper.unity)
+- **uPiper**: MIT License - **Included in repository with modifications** (original: https://github.com/ayutaz/uPiper-Unity)
 - **SaveGameFree**: MIT License (GitHub repo) - **Use GitHub version, not Asset Store version**
 - **Starter Assets – Third Person**: Non-standard Unity license (Standard Asset Store EULA) - **Not redistributed**
 
-**Redistribution Policy:**  
-This repository does **not** include third-party assets. Only package manifest entries (for UPM packages) and attribution notices are committed. You must install all third-party packages separately. "Free" does not mean "redistributable" - always check license terms before including assets in your repository.
+**Redistribution Policy:**
+This repository **includes** modified versions of Whisper Unity and uPiper (both MIT licensed) in `Assets/ThirdParty/Plugins/`. All other third-party assets are **not included** - only package manifest entries (for UPM packages) and attribution notices are committed. You must install those packages separately. "Free" does not mean "redistributable" - always check license terms before including assets in your repository.
+
+**Attribution:**
+- Whisper Unity: Modified version based on https://github.com/Macoron/whisper.unity (MIT License)
+- uPiper: Modified version based on https://github.com/ayutaz/uPiper-Unity (MIT License)
 
 Ensure compliance with all third-party package licenses when distributing your project.

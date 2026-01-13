@@ -280,6 +280,10 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
       currentNpc = null;
     }
 
+    [Header("Debug")]
+    [Tooltip("Disable parallel LLM generation to test if it causes freezes.")]
+    [SerializeField] private bool disableParallelGeneration = false;
+
     /// <summary>
     /// Triggers conversation generation. Uses the current NPC if none specified.
     /// This is called when the player presses E to interact.
@@ -299,8 +303,16 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
         // Increment prompt count before generating so the incremented count is available for the seed
         IncrementPromptCount();
 
-        // Start generating the next response in the background
-        GenerateConversationTextAsync(targetNpc).Forget();
+        // Start generating the next response in the background (unless disabled for debugging)
+        if (!disableParallelGeneration)
+        {
+          Debug.Log("[NpcDialogueTrigger] Starting parallel LLM generation...");
+          GenerateConversationTextAsync(targetNpc).Forget();
+        }
+        else
+        {
+          Debug.LogWarning("[NpcDialogueTrigger] Parallel LLM generation DISABLED for debugging.");
+        }
 
         // Speak the cached response if voice is enabled
         if (enableVoice && !string.IsNullOrEmpty(cachedResponse))
@@ -477,6 +489,7 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
       {
         Debug.Log("[NpcDialogueTrigger] Starting voice conversation to enable STT listening...");
         controller.StartConversation();
+        Debug.Log("[NpcDialogueTrigger] StartConversation returned.");
       }
 
       Debug.Log($"[NpcDialogueTrigger] Speaking response via NpcVoiceController...");
@@ -487,8 +500,10 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
 
       try
       {
+        Debug.Log("[NpcDialogueTrigger] About to await controller.SpeakAsync...");
         await controller.SpeakAsync(response, token);
-        Debug.Log("[NpcDialogueTrigger] Voice output completed.");
+        Debug.Log("[NpcDialogueTrigger] SpeakAsync returned successfully.");
+        Debug.Log("[NpcDialogueTrigger] Voice output completed - frame " + Time.frameCount);
       }
       catch (System.OperationCanceledException)
       {
@@ -498,6 +513,9 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
       {
         Debug.LogError($"[NpcDialogueTrigger] Error speaking response: {ex.Message}\n{ex.StackTrace}");
       }
+
+      Debug.Log("[NpcDialogueTrigger] SpeakResponseAsync exiting try-catch - frame " + Time.frameCount);
+      Debug.Log("[NpcDialogueTrigger] SpeakResponseAsync method complete, returning to caller.");
     }
   }
 }

@@ -251,14 +251,14 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
       UpdateDriftDisplay(data.DriftDetected, data.DriftType, data.CurrentResult);
 
       // Update timeline
-      UpdateTimelineIndicator(data.CurrentIndex, data.DriftDetected, data.CurrentResult?.Failed ?? false);
+      UpdateTimelineIndicator(data.CurrentIndex, data.DriftDetected, data.CurrentResult != null && !data.CurrentResult.Success);
     }
 
     private void UpdateDriftDisplay(bool driftDetected, DriftType driftType, RecordReplayResult? result)
     {
       if (driftIndicator != null)
       {
-        if (result?.Failed ?? false)
+        if (result != null && !result.Success)
         {
           driftIndicator.color = failureColor;
         }
@@ -274,7 +274,7 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
 
       if (driftStatusText != null)
       {
-        if (result?.Failed ?? false)
+        if (result != null && !result.Success)
         {
           driftStatusText.text = $"FAILURE: {result.ErrorMessage}";
         }

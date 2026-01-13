@@ -1,9 +1,11 @@
 using System;
+using System.Diagnostics;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Events;
 using Whisper;
+using Debug = UnityEngine.Debug;
 
 namespace LlamaBrain.Runtime.Core.Voice
 {
@@ -44,6 +46,24 @@ namespace LlamaBrain.Runtime.Core.Voice
     [SerializeField]
     [Tooltip("When true, text input can also be used as fallback.")]
     private bool enableTextFallback = true;
+
+    [SerializeField]
+    [Tooltip("When true, pauses listening while NPC speaks (prevents feedback but disables interruption).")]
+    private bool pauseListeningDuringSpeech = true;
+
+    [SerializeField]
+    [Tooltip("When true, player can interrupt NPC by speaking.")]
+    private bool allowInterruption = false;
+
+    [SerializeField]
+    [Tooltip("Minimum words required to trigger interruption (helps filter echo).")]
+    [Range(1, 5)]
+    private int minInterruptionWords = 2;
+
+    [SerializeField]
+    [Tooltip("Seconds to wait after TTS finishes before resuming listening (prevents mic picking up NPC speech).")]
+    [Range(0f, 2f)]
+    private float postSpeechDelay = 0.5f;
 
     [Header("Timing")]
     [SerializeField]
@@ -101,6 +121,14 @@ namespace LlamaBrain.Runtime.Core.Voice
     private bool _isProcessing;
     private float _lastActivityTime;
     private CancellationTokenSource _conversationCts;
+    private Stopwatch _sttStopwatch = new Stopwatch();
+    private bool _earlyTranscriptionProcessed; // Track if we already routed early transcription to LLM
+    private CancellationTokenSource _interruptionCts; // For cancelling TTS on player interruption
+    private bool _wasInterrupted; // Track if last speech was interrupted
+    private string _lastNpcResponse = ""; // Track what the NPC last said (for echo detection)
+    private float _lastNpcSpeechTime; // When NPC last spoke (for echo detection timeout)
+    private const float EchoDetectionWindowSeconds = 5f; // How long to check for echo after NPC speaks
+    private const float EchoSimilarityThreshold = 0.3f; // 30% word overlap = probably echo
 
     /// <summary>
     /// Whether the controller is currently in a conversation.
@@ -126,6 +154,15 @@ namespace LlamaBrain.Runtime.Core.Voice
     /// Whether text input is enabled as fallback.
     /// </summary>
     public bool EnableTextFallback => enableTextFallback;
+
+    /// <summary>
+    /// Whether player can interrupt NPC speech.
+    /// </summary>
+    public bool AllowInterruption
+    {
+      get => allowInterruption;
+      set => allowInterruption = value;
+    }
 
     /// <summary>
     /// The LlamaBrainAgent being used.
@@ -161,9 +198,12 @@ namespace LlamaBrain.Runtime.Core.Voice
 
       // Wire up events
       _voiceInput.OnTranscriptionComplete.AddListener(OnTranscriptionCompleteHandler);
+      _voiceInput.OnEarlyTranscription.AddListener(OnEarlyTranscriptionHandler);
       _voiceInput.OnListeningStarted.AddListener(() =>
       {
         _isListening = true;
+        _earlyTranscriptionProcessed = false; // Reset early processing flag
+        _sttStopwatch.Restart();
         ResetSilenceTimer();
         OnListeningStarted?.Invoke();
       });
@@ -180,40 +220,71 @@ namespace LlamaBrain.Runtime.Core.Voice
       });
       _voiceOutput.OnSpeakingFinished.AddListener(() =>
       {
+        Debug.Log("[NpcVoiceController] OnSpeakingFinished received from VoiceOutput");
         _isSpeaking = false;
         ResetSilenceTimer();
+        Debug.Log("[NpcVoiceController] Invoking OnSpeakingFinished event...");
         OnSpeakingFinished?.Invoke();
+        Debug.Log("[NpcVoiceController] OnSpeakingFinished complete");
       });
     }
 
-    private async void Start()
+    private void Start()
     {
-      // Set whisper manager reference
-      if (whisperManager == null)
+      InitializeWithErrorHandlingAsync().Forget();
+    }
+
+    private async UniTaskVoid InitializeWithErrorHandlingAsync()
+    {
+      try
       {
-        whisperManager = FindAnyObjectByType<WhisperManager>();
+        // Set whisper manager reference
+        if (whisperManager == null)
+        {
+          whisperManager = FindAnyObjectByType<WhisperManager>();
+        }
+
+        // Initialize components
+        await _voiceInput.InitializeAsync();
+        await _voiceOutput.InitializeAsync();
+
+        Debug.Log("[NpcVoiceController] Voice controller initialized");
+
+        // Auto-start listening if always-on mode is enabled
+        if (alwaysListening && agent != null)
+        {
+          Debug.Log("[NpcVoiceController] Auto-starting conversation (always listening mode)...");
+          StartConversation();
+        }
+        else if (alwaysListening && agent == null)
+        {
+          Debug.LogWarning("[NpcVoiceController] alwaysListening=true but no agent assigned. Cannot auto-start.");
+        }
       }
-
-      // Initialize components
-      await _voiceInput.InitializeAsync();
-      await _voiceOutput.InitializeAsync();
-
-      Debug.Log("[NpcVoiceController] Voice controller initialized");
-
-      // Auto-start listening if always-on mode is enabled
-      if (alwaysListening && agent != null)
+      catch (Exception ex)
       {
-        Debug.Log("[NpcVoiceController] Auto-starting conversation (always listening mode)...");
-        StartConversation();
-      }
-      else if (alwaysListening && agent == null)
-      {
-        Debug.LogWarning("[NpcVoiceController] alwaysListening=true but no agent assigned. Cannot auto-start.");
+        Debug.LogError($"[NpcVoiceController] Initialization failed: {ex.Message}\n{ex.StackTrace}");
       }
     }
 
+    [Header("Debug")]
+    [Tooltip("Log heartbeat every N frames to diagnose freezes. 0 = disabled.")]
+    [SerializeField] private int heartbeatEveryNFrames = 0;
+    private int _heartbeatCounter = 0;
+
     private void Update()
     {
+      // Heartbeat debug logging
+      if (heartbeatEveryNFrames > 0)
+      {
+        _heartbeatCounter++;
+        if (_heartbeatCounter >= heartbeatEveryNFrames)
+        {
+          //Debug.Log($"[NpcVoiceController] Heartbeat frame={Time.frameCount} time={Time.time:F2} state: conv={_isInConversation} speak={_isSpeaking} listen={_isListening} proc={_isProcessing}");
+          _heartbeatCounter = 0;
+        }
+      }
+
       // Check silence timeout when in conversation
       if (_isInConversation && !_isSpeaking && !_isListening && !_isProcessing)
       {
@@ -332,6 +403,7 @@ namespace LlamaBrain.Runtime.Core.Voice
 
     /// <summary>
     /// Speak the given text using TTS.
+    /// Uses sentence-level streaming for faster time-to-first-audio.
     /// </summary>
     /// <param name="text">The text to speak.</param>
     /// <param name="ct">Cancellation token to cancel the speaking operation.</param>
@@ -341,10 +413,79 @@ namespace LlamaBrain.Runtime.Core.Voice
       if (string.IsNullOrWhiteSpace(text))
         return;
 
-      using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
-          ct, _conversationCts?.Token ?? CancellationToken.None);
+      _wasInterrupted = false;
 
-      await _voiceOutput.SpeakAsync(text, linkedCts.Token);
+      // Determine listening behavior during speech
+      var shouldPauseListening = pauseListeningDuringSpeech && !allowInterruption;
+      var shouldRestartListening = alwaysListening && _isInConversation;
+
+      if (_isListening && shouldPauseListening)
+      {
+        Debug.Log("[NpcVoiceController] Pausing listening during speech...");
+        _voiceInput.StopListening();
+      }
+      else if (allowInterruption && !_isListening && alwaysListening)
+      {
+        // Start listening for potential interruption
+        Debug.Log("[NpcVoiceController] Keeping mic open for potential interruption...");
+        _voiceInput.StartListening();
+      }
+
+      // Create interruption cancellation token
+      _interruptionCts?.Dispose();
+      _interruptionCts = new CancellationTokenSource();
+
+      try
+      {
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+            ct,
+            _conversationCts?.Token ?? CancellationToken.None,
+            _interruptionCts.Token);
+
+        // Use streaming TTS for faster time-to-first-audio
+        // This generates and plays the first sentence immediately,
+        // while remaining sentences are generated in the background
+        await _voiceOutput.SpeakStreamingAsync(text, linkedCts.Token);
+
+        // Wait after TTS ends before resuming listening (only if not interrupted)
+        // This prevents the microphone from picking up residual NPC speech
+        if (!_wasInterrupted && postSpeechDelay > 0 && shouldRestartListening && shouldPauseListening)
+        {
+          Debug.Log($"[NpcVoiceController] Waiting {postSpeechDelay}s before resuming listening...");
+          await UniTask.Delay(TimeSpan.FromSeconds(postSpeechDelay), cancellationToken: linkedCts.Token);
+        }
+      }
+      catch (OperationCanceledException) when (_wasInterrupted)
+      {
+        Debug.Log("[NpcVoiceController] Speech interrupted by player");
+        // Don't rethrow - interruption is expected behavior
+      }
+      finally
+      {
+        _interruptionCts?.Dispose();
+        _interruptionCts = null;
+
+        // Resume listening after speaking if in always-listening mode (and we paused it)
+        if (shouldRestartListening && _isInConversation && shouldPauseListening && !_wasInterrupted)
+        {
+          Debug.Log("[NpcVoiceController] Resuming listening after speech...");
+          _voiceInput.StartListening();
+        }
+      }
+    }
+
+    /// <summary>
+    /// Interrupt the current NPC speech (for player interruption).
+    /// </summary>
+    public void InterruptSpeech()
+    {
+      if (!_isSpeaking)
+        return;
+
+      Debug.Log("[NpcVoiceController] Interrupting NPC speech...");
+      _wasInterrupted = true;
+      _interruptionCts?.Cancel();
+      _voiceOutput.Stop();
     }
 
     /// <summary>
@@ -395,14 +536,19 @@ namespace LlamaBrain.Runtime.Core.Voice
       _isProcessing = true;
       ResetSilenceTimer();
 
+      var totalStopwatch = Stopwatch.StartNew();
+      var stageStopwatch = new Stopwatch();
+
       try
       {
         // Notify that player input was recognized
         OnPlayerSpeechRecognized?.Invoke(playerInput);
         Debug.Log($"[NpcVoiceController] Player said: \"{playerInput}\"");
 
-        // Get response from agent
+        // === LLM Stage ===
+        stageStopwatch.Restart();
         var response = await agent.SendPlayerInputAsync(playerInput);
+        var llmTimeMs = stageStopwatch.ElapsedMilliseconds;
 
         if (string.IsNullOrWhiteSpace(response))
         {
@@ -413,15 +559,23 @@ namespace LlamaBrain.Runtime.Core.Voice
         // Notify that response was generated
         OnNpcResponseGenerated?.Invoke(response);
         Debug.Log($"[NpcVoiceController] NPC response: \"{response}\"");
+        Debug.Log($"[PERF] LLM completed in {llmTimeMs}ms");
 
-        // Speak the response
+        // Store NPC response for echo detection before speaking
+        _lastNpcResponse = response;
+        _lastNpcSpeechTime = Time.time;
+
+        // === TTS Stage ===
+        stageStopwatch.Restart();
         await SpeakAsync(response, _conversationCts?.Token ?? CancellationToken.None);
+        var ttsTimeMs = stageStopwatch.ElapsedMilliseconds;
 
-        // Restart listening if always-on and still in conversation
-        if (alwaysListening && _isInConversation)
-        {
-          _voiceInput.StartListening();
-        }
+        totalStopwatch.Stop();
+        Debug.Log($"[PERF] TTS completed in {ttsTimeMs}ms");
+        Debug.Log($"[PERF] Total pipeline (LLM+TTS): {totalStopwatch.ElapsedMilliseconds}ms");
+
+        // Note: Listening is restarted in SpeakAsync's finally block with postSpeechDelay
+        // to prevent microphone from picking up residual NPC speech
 
         return response;
       }
@@ -441,18 +595,196 @@ namespace LlamaBrain.Runtime.Core.Voice
       }
     }
 
-    private void OnTranscriptionCompleteHandler(string transcription)
+    private void OnEarlyTranscriptionHandler(string transcription)
     {
+      // Early transcription fires when a valid segment is detected before stream formally ends
+      // This allows us to start LLM processing immediately without waiting for silence timeout
+
       if (string.IsNullOrWhiteSpace(transcription))
         return;
+      // Handle interruption: player spoke while NPC was speaking
+      if (_isSpeaking && allowInterruption)
+      {
+        // Filter potential echo by requiring minimum word count
+        var wordCount = CountWords(transcription);
+        if (wordCount < minInterruptionWords)
+        {
+          Debug.Log($"[NpcVoiceController] Ignoring potential echo ({wordCount} words < {minInterruptionWords} required): \"{transcription}\"");
+          return;
+        }
 
-      // Process the transcription
+        // Check if this is echo of what NPC just said (Whisper misheard NPC's speech)
+        if (IsLikelyEcho(transcription))
+        {
+          Debug.Log($"[NpcVoiceController] Ignoring echo of NPC speech: \"{transcription}\"");
+          return;
+        }
+
+        Debug.Log($"[NpcVoiceController] Player interruption detected ({wordCount} words): \"{transcription}\"");
+
+        // Stop the NPC immediately
+        InterruptSpeech();
+
+        // Small delay to let audio stop before processing new input
+        HandleInterruptionAsync(transcription).Forget();
+        return;
+      }
+
+      // Also check for echo in non-interruption case (mic picked up residual NPC speech)
+      if (IsLikelyEcho(transcription))
+      {
+        Debug.Log($"[NpcVoiceController] Ignoring residual echo: \"{transcription}\"");
+        return;
+      }
+
+      // Skip if already processing or speaking (and interruption not allowed)
+      if (_earlyTranscriptionProcessed || _isProcessing || _isSpeaking)
+      {
+        Debug.Log($"[NpcVoiceController] Ignoring early transcription (already processed or busy)");
+        return;
+      }
+
+      var sttTimeMs = _sttStopwatch.ElapsedMilliseconds;
+      Debug.Log($"[NpcVoiceController] Early transcription received: \"{transcription}\"");
+      Debug.Log($"[PERF] STT (early) completed in {sttTimeMs}ms");
+
+      _earlyTranscriptionProcessed = true;
+
+      // Stop listening immediately to prevent further Whisper processing
+      // This avoids the ~3s delay from final [BLANK_AUDIO] inference
+      _voiceInput.StopListening();
+
+      // Route to LLM immediately
+      Debug.Log($"[NpcVoiceController] Routing early transcription to LlamaBrain: \"{transcription}\"");
+      ProcessInputAsync(transcription).Forget();
+    }
+
+    private async UniTaskVoid HandleInterruptionAsync(string transcription)
+    {
+      // Brief delay to ensure TTS has stopped
+      await UniTask.Delay(100);
+
+      // Reset state for new input
+      _earlyTranscriptionProcessed = true;
+      _isProcessing = false; // Clear any stale processing state
+
+      // Stop listening to prevent picking up residual audio
+      _voiceInput.StopListening();
+
+      // Route the interruption to LLM
+      Debug.Log($"[NpcVoiceController] Processing interruption: \"{transcription}\"");
+      await ProcessInputAsync(transcription);
+    }
+
+    private void OnTranscriptionCompleteHandler(string transcription)
+    {
+      var sttTimeMs = _sttStopwatch.ElapsedMilliseconds;
+      _sttStopwatch.Stop();
+
+      Debug.Log($"[NpcVoiceController] OnTranscriptionCompleteHandler received: \"{transcription}\" (length={transcription?.Length ?? 0})");
+
+      // Skip if we already processed early transcription
+      if (_earlyTranscriptionProcessed)
+      {
+        Debug.Log("[NpcVoiceController] Skipping - already processed via early transcription");
+        return;
+      }
+
+      if (string.IsNullOrWhiteSpace(transcription))
+      {
+        // Stream finished with empty result (mic stopped without speech)
+        // Restart listening if we're still in always-listening mode
+        if (alwaysListening && _isInConversation && !_isSpeaking && !_isProcessing)
+        {
+          Debug.Log("[NpcVoiceController] Empty transcription, restarting listening...");
+          ResetSilenceTimer();
+          _voiceInput.StartListening();
+        }
+        return;
+      }
+
+      // Log STT performance
+      Debug.Log($"[PERF] STT completed in {sttTimeMs}ms");
+
+      // Process the transcription - route to LlamaBrain
+      Debug.Log($"[NpcVoiceController] Routing transcription to LlamaBrain: \"{transcription}\"");
       ProcessInputAsync(transcription).Forget();
     }
 
     private void ResetSilenceTimer()
     {
       _lastActivityTime = Time.time;
+    }
+
+    /// <summary>
+    /// Counts words in a string (simple whitespace split).
+    /// </summary>
+    private static int CountWords(string text)
+    {
+      if (string.IsNullOrWhiteSpace(text))
+        return 0;
+
+      return text.Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries).Length;
+    }
+
+    /// <summary>
+    /// Checks if transcription is likely echo of what NPC just said.
+    /// Uses word overlap to detect when Whisper transcribed NPC's own speech.
+    /// </summary>
+    private bool IsLikelyEcho(string transcription)
+    {
+      // No echo detection if NPC hasn't spoken recently
+      if (string.IsNullOrWhiteSpace(_lastNpcResponse))
+        return false;
+
+      // Timeout: don't check for echo after detection window expires
+      if (Time.time - _lastNpcSpeechTime > EchoDetectionWindowSeconds)
+      {
+        _lastNpcResponse = ""; // Clear stale response
+        return false;
+      }
+
+      // Normalize both strings for comparison
+      var transcriptionWords = NormalizeForComparison(transcription);
+      var npcWords = NormalizeForComparison(_lastNpcResponse);
+
+      if (transcriptionWords.Length == 0 || npcWords.Length == 0)
+        return false;
+
+      // Count matching words
+      var matchCount = 0;
+      var npcWordSet = new System.Collections.Generic.HashSet<string>(npcWords);
+      foreach (var word in transcriptionWords)
+      {
+        if (npcWordSet.Contains(word))
+          matchCount++;
+      }
+
+      // Calculate overlap ratio (based on transcription length)
+      var overlapRatio = (float)matchCount / transcriptionWords.Length;
+
+      if (overlapRatio >= EchoSimilarityThreshold)
+      {
+        Debug.Log($"[NpcVoiceController] Echo detected: {overlapRatio:P0} word overlap ({matchCount}/{transcriptionWords.Length} words)");
+        return true;
+      }
+
+      return false;
+    }
+
+    /// <summary>
+    /// Normalizes text for echo comparison: lowercase, remove punctuation, split into words.
+    /// </summary>
+    private static string[] NormalizeForComparison(string text)
+    {
+      if (string.IsNullOrWhiteSpace(text))
+        return Array.Empty<string>();
+
+      // Lowercase and remove common punctuation
+      var normalized = text.ToLowerInvariant();
+      normalized = System.Text.RegularExpressions.Regex.Replace(normalized, @"[^\w\s]", " ");
+
+      return normalized.Split(new[] { ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
     }
 
     /// <summary>

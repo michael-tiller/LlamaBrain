@@ -61,28 +61,38 @@ public class SimpleNPC : MonoBehaviour
 {
     [SerializeField] private BrainSettings brainSettings;
     [SerializeField] private PersonaConfig personaConfig;
-    
+
     private LlamaBrainAgent brainAgent;
     private BrainServer brainServer;
-    
-    async void Start()
+
+    void Start()
+    {
+        InitializeAsync().Forget();
+    }
+
+    private async UniTaskVoid InitializeAsync()
     {
         // Set up server
         var serverObj = new GameObject("BrainServer");
         brainServer = serverObj.AddComponent<BrainServer>();
         brainServer.Settings = brainSettings;
-        
+
         // Set up agent
         brainAgent = GetComponent<LlamaBrainAgent>();
         brainAgent.PersonaConfig = personaConfig;
-        
+
         // Initialize
         var client = brainServer.CreateClient();
         var memory = new PersonaMemoryFileStore();
         brainAgent.Initialize(client, memory);
     }
-    
-    public async void TalkToPlayer(string message)
+
+    public void TalkToPlayer(string message)
+    {
+        TalkToPlayerAsync(message).Forget();
+    }
+
+    private async UniTaskVoid TalkToPlayerAsync(string message)
     {
         string response = await brainAgent.SendPlayerInputAsync(message);
         Debug.Log($"NPC: {response}");
