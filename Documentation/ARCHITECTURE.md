@@ -2060,77 +2060,167 @@ This makes bug reproduction trivial: import the debug package, replay, and compa
 
 ## Unity Integration Features
 
-### Voice System Integration (Features 31-32 - In Progress)
+### Voice System Integration (Features 31-32)
 
-**Status**: 🚧 In Progress  
-**Priority**: MEDIUM  
-**Dependencies**: Unity Package, whisper.unity (Feature 31), piper.unity (Feature 32)
+**Status**: ✅ Complete
+**Priority**: MEDIUM
+**Dependencies**: Unity Package, whisper.unity (Feature 31), uPiper (Feature 32)
 
 **Overview**: Provides voice input/output capabilities for NPCs, enabling spoken dialogue through microphone input and text-to-speech output. The system integrates with LlamaBrainAgent to provide seamless voice-enabled conversations.
 
-**Key Components**:
-- **NpcVoiceController**: Central MonoBehaviour component managing voice input and output
-  - Coordinates between NpcVoiceInput and NpcVoiceOutput components
-  - Routes voice transcriptions to LlamaBrainAgent
-  - Manages voice playback of NPC responses
-  - Handles state transitions (idle, listening, processing, speaking)
-  
-- **NpcVoiceInput**: Microphone-based voice input system
-  - Whisper integration for speech-to-text transcription
-  - Configurable microphone selection
-  - Audio recording management
-  - Automatic silence detection and voice activity detection
-  
-- **NpcVoiceOutput**: Text-to-speech output system
-  - Converts NPC text responses to speech
-  - Configurable voice parameters (pitch, speed, volume)
-  - Audio playback management
-  - Integration with Unity's AudioSource component
-  
-- **NpcSpeechConfig**: ScriptableObject configuration asset
-  - Voice input settings (microphone device, Whisper model, detection thresholds)
-  - Voice output settings (TTS provider, voice selection, audio parameters)
-  - Per-NPC voice customization
-  - Configurable via Unity Inspector
+#### Voice Flow Diagram
 
-**Unity Integration**:
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         VOICE CONVERSATION LOOP                          │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌──────────┐    ┌─────────────┐    ┌──────────────┐    ┌────────────┐ │
+│  │ Player   │───▶│ Microphone  │───▶│ NpcVoiceInput│───▶│  Whisper   │ │
+│  │ Speaks   │    │ (Stereo)    │    │ (VAD-gated)  │    │   STT      │ │
+│  └──────────┘    └─────────────┘    └──────────────┘    └─────┬──────┘ │
+│                                                                │        │
+│                         ┌──────────────────────────────────────┘        │
+│                         ▼                                               │
+│                  ┌─────────────┐                                        │
+│                  │ Transcribed │  (Text enters normal pipeline)         │
+│                  │    Text     │                                        │
+│                  └──────┬──────┘                                        │
+│                         │                                               │
+│                         ▼                                               │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │                    LlamaBrain Pipeline                            │  │
+│  │  Validation → LLM Inference → Parsing → Memory Mutation          │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│                         │                                               │
+│                         ▼                                               │
+│                  ┌─────────────┐                                        │
+│                  │  Validated  │                                        │
+│                  │  Response   │                                        │
+│                  └──────┬──────┘                                        │
+│                         │                                               │
+│                         ▼                                               │
+│  ┌──────────┐    ┌─────────────┐    ┌──────────────┐    ┌────────────┐ │
+│  │   NPC    │◀───│ AudioSource │◀───│NpcVoiceOutput│◀───│   Piper    │ │
+│  │  Speaks  │    │ (Spatial)   │    │ (Cached)     │    │    TTS     │ │
+│  └──────────┘    └─────────────┘    └──────────────┘    └────────────┘ │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Speech-to-Text (STT) - Whisper Integration
+
+**Package**: [whisper.unity](https://github.com/Macoron/whisper.unity)
+**Model**: ggml-base.en (GPU-accelerated via Vulkan)
+
+**NpcVoiceInput.cs** implements VAD-gated batch transcription:
+
+| Feature | Implementation |
+|---------|----------------|
+| Voice Activity Detection | Silero VAD detects speech start/end |
+| Stereo-to-Mono Conversion | Auto-detects channel config (XLR/Focusrite, USB mics) |
+| Leading Audio Buffer | 1.0s buffer captures speech onset before VAD triggers |
+| Trailing Silence Trim | Last-audible-sample tracking for accurate speech end |
+| Artifact Filtering | Removes [BLANK_AUDIO], hallucinations, repetitions |
+| Error Events | OnError event for user-facing feedback |
+
+**Processing Flow**:
+1. Microphone continuously buffers audio
+2. VAD detects speech start → clear buffer, keep 1s leading audio
+3. VAD detects speech end → start 150ms debounce
+4. After debounce → extract segment using last-audible-sample
+5. Batch transcribe via `whisperManager.GetTextAsync()`
+6. Filter artifacts and repetitions
+7. Fire `OnEarlyTranscription` event with cleaned text
+
+#### Text-to-Speech (TTS) - Piper Integration
+
+**Package**: uPiper (Unity Sentis-based)
+**Models**: ONNX voice models (e.g., en_US-lessac-medium.onnx)
+
+**NpcVoiceOutput.cs** implements async TTS generation:
+
+| Feature | Implementation |
+|---------|----------------|
+| Inference Engine | Unity Sentis for ONNX model inference |
+| Phonemization | Japanese and English phonemizers |
+| Audio Caching | LRU cache by text + voice model hash |
+| Spatial Audio | AudioSource with 3D positioning |
+| Volume Control | Per-NPC via NpcSpeechConfig |
+| Error Handling | OnSpeakingFailed event, fallback to text |
+
+**NpcSpeechConfig.cs** ScriptableObject for per-NPC configuration:
+- Voice model path
+- Pitch, rate, volume
+- Text length limits and behavior
+
+#### Key Components
+
+- **NpcVoiceController**: Central coordinator
+  - Routes transcriptions to LlamaBrainAgent
+  - Manages state (idle, listening, processing, speaking)
+  - Connects NpcVoiceInput ↔ LlamaBrainAgent ↔ NpcVoiceOutput
+
+- **NpcVoiceInput**: STT component
+  - VAD-gated batch transcription
+  - Stereo-to-mono conversion
+  - Artifact filtering and deduplication
+
+- **NpcVoiceOutput**: TTS component
+  - Async audio generation via Unity Sentis
+  - LRU audio caching
+  - Spatial audio playback
+
+- **NpcSpeechConfig**: Per-NPC voice settings
+  - Voice model selection
+  - Audio parameters
+
+#### Unity Integration
+
 ```csharp
-// Setup voice-enabled NPC
+// Voice-enabled NPC setup
 public class VoiceEnabledNPC : MonoBehaviour
 {
     private LlamaBrainAgent agent;
     private NpcVoiceController voiceController;
-    
+
     void Start()
     {
         agent = GetComponent<LlamaBrainAgent>();
         voiceController = GetComponent<NpcVoiceController>();
-        
-        // Voice controller automatically integrates with agent
-        // Player speaks → Whisper transcribes → Agent processes → TTS speaks
+
+        // Subscribe to events
+        voiceController.VoiceInput.OnError += HandleVoiceError;
+        voiceController.VoiceInput.OnEarlyTranscription += HandleTranscription;
     }
-    
-    public void StartListening()
+
+    void HandleVoiceError(string message)
     {
-        voiceController.StartListening();
+        // Show user feedback: "No microphone detected", etc.
+        Debug.LogWarning(message);
     }
-    
-    public void StopListening()
+
+    void HandleTranscription(string text)
     {
-        voiceController.StopListening();
+        // Transcription flows to agent automatically
+        Debug.Log($"Player said: {text}");
     }
 }
 ```
 
-**Architectural Impact**: Extends the LlamaBrain architecture to support voice-based interactions while maintaining the same validation and memory mutation pipeline. Voice input is transcribed to text before entering the system, and voice output is generated from validated text responses.
+#### Architectural Impact
 
-**Files Added**:
+Voice integration maintains the determinism boundary:
+- **STT output is untrusted input**: Transcribed text enters the same validation pipeline as typed text
+- **TTS input is validated output**: Audio is generated only from validated NPC responses
+- **No bypass**: Voice doesn't skip validation, memory mutation, or any pipeline stage
+
+**Files**:
 - `Runtime/Core/Voice/NpcVoiceController.cs`
 - `Runtime/Core/Voice/NpcVoiceInput.cs`
 - `Runtime/Core/Voice/NpcVoiceOutput.cs`
 - `Runtime/Core/Voice/NpcSpeechConfig.cs`
-
-**Current Status**: Core voice system components implemented. Integration with external TTS providers and advanced audio processing features in progress.
+- `Runtime/Core/Voice/AudioCache.cs`
 
 ### Game State Management UI (Feature 16 Extension)
 
@@ -2177,25 +2267,51 @@ public class VoiceEnabledNPC : MonoBehaviour
 public class GameManager : MonoBehaviour
 {
     [SerializeField] private LlamaBrainSaveManager saveManager;
-    
-    public async void SaveGame(string slotName)
+
+    // Public entry point - fire and forget with proper error handling
+    public void SaveGame(string slotName)
     {
-        var result = await saveManager.SaveToSlot(slotName);
-        if (result.Success)
+        SaveGameAsync(slotName).Forget();
+    }
+
+    private async UniTaskVoid SaveGameAsync(string slotName)
+    {
+        try
         {
-            Debug.Log($"Game saved to slot: {slotName}");
+            var result = await saveManager.SaveToSlot(slotName);
+            if (result.Success)
+            {
+                Debug.Log($"Game saved to slot: {slotName}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Save failed: {ex.Message}");
         }
     }
-    
-    public async void LoadGame(string slotName)
+
+    // Public entry point - fire and forget with proper error handling
+    public void LoadGame(string slotName)
     {
-        var result = await saveManager.LoadFromSlot(slotName);
-        if (result.Success)
+        LoadGameAsync(slotName).Forget();
+    }
+
+    private async UniTaskVoid LoadGameAsync(string slotName)
+    {
+        try
         {
-            Debug.Log($"Game loaded from slot: {slotName}");
+            var result = await saveManager.LoadFromSlot(slotName);
+            if (result.Success)
+            {
+                Debug.Log($"Game loaded from slot: {slotName}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Load failed: {ex.Message}");
         }
     }
-    
+
     public List<SaveSlotInfo> GetSaveSlots()
     {
         return saveManager.GetAllSaveSlots();

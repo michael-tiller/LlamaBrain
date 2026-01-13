@@ -46,8 +46,9 @@
 | [Feature 28: "Black Box" Audit Recorder](DEVELOPMENT_LOG.md#feature-28) | ✅ Complete | CRITICAL |
 | [Feature 29: Prompt A/B Testing & Hot Reload](ROADMAP.md#feature-29) | 📋 Planned | MEDIUM |
 | [Feature 30: Unity Repackaging & Distribution](ROADMAP.md#feature-30) | 📋 Planned | MEDIUM |
-| [Feature 31: Whisper Speech-to-Text Integration](ROADMAP.md#feature-31) | 🚧 In Progress (~70%) | MEDIUM |
-| [Feature 32: Piper Text-to-Speech Integration](ROADMAP.md#feature-32) | 🚧 In Progress (~65%) | MEDIUM |
+| [Feature 31: Whisper Speech-to-Text Integration](DEVELOPMENT_LOG.md#feature-31) | ✅ Complete | MEDIUM |
+| [Feature 32: Piper Text-to-Speech Integration](DEVELOPMENT_LOG.md#feature-32) | 🚧 In Progress (~65%) | MEDIUM |
+| [Feature 33: Voice Polish](ROADMAP.md#feature-33) | 📋 Planned | LOW |
 
 **Note**: Completed feature logs are in [DEVELOPMENT_LOG.md](./DEVELOPMENT_LOG.md). Planned and in-progress feature details are in [ROADMAP.md](./ROADMAP.md). This document focuses on high-level status and progress tracking.
 
@@ -112,7 +113,7 @@
 ### Milestone 4: v0.2.0 - The Foundation Update (Features 1-10)
 **Status**: Complete
 
-### Milestone 5: v0.3.0 - The Production Update (Features 12, 13, 23, 14, 16, 27, 28, 29, 10 completion) 🚧
+### Milestone 5: v0.3.0 - The Production Update (Features 12, 13, 23, 14, 16, 27, 28, 31, 32, 29, 10 completion) 🚧
 **Status**: 🚧 In Progress (0.3.0-rc.3)
 **Prerequisite**: **Milestone 4 (v0.2.0) must be released** before starting Milestone 5 features.
 
@@ -124,9 +125,11 @@
 - ✅ Feature 16 (Save/Load Game Integration)
 - ✅ Feature 27 (KV Cache)
 - ✅ Feature 28 (Audit Recorder)
+- ✅ Feature 31 (Whisper STT)
+- ✅ Feature 32 (Piper TTS)
 
 **Remaining:**
-3. Feature 29 (Hot Reload) - MEDIUM
+- Feature 29 (Hot Reload) - MEDIUM
 
 **Target**: Complete remaining features for v0.3.0 release
 - Feature 29 (hot reload) - Developer experience
@@ -167,16 +170,18 @@
 - NPC-to-NPC interaction capabilities (Feature 15)
 - Performance optimization and scalability improvements
 
-### Milestone 8: (0.4.0) The Sidecar Update (21, 22, 30) 📋
-**Status**: Planned  
+### Milestone 8: (0.4.0) The Sidecar Update (21, 22, 30, 33) 📋
+**Status**: Planned
 - Feature 21: Sidecar Host - 📋 Planned (MEDIUM priority)
 - Feature 22: Unreal Engine Support - 📋 Planned (MEDIUM priority)
 - Feature 30: Unity Repackaging & Distribution - 📋 Planned (MEDIUM priority)
+- Feature 33: Voice Polish - 📋 Planned (LOW priority)
 
 **Target**: Add platform expansion capabilities and improve distribution
 - Sidecar host implementation for external integrations (Feature 21)
 - Unreal Engine support and integration (Feature 22)
 - Unity package repackaging with automated build, validation, and Git UPM support (Feature 30)
+- Voice polish: multiplatform testing, performance benchmarks, unit tests (Feature 33)
 ---
 
 ## Further Reading

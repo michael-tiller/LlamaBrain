@@ -6,6 +6,7 @@ Unity integration for the LlamaBrain core library, enabling AI-powered NPCs with
 
 LlamaBrain for Unity provides:
 - **AI-Powered NPCs**: Intelligent characters with persistent personalities and memory
+- **Voice Integration**: Speech-to-text (Whisper) and text-to-speech (Piper) for natural conversations
 - **ScriptableObject Configuration**: Designer-friendly setup via BrainSettings, PersonaConfig, ExpectancyRuleAsset
 - **Validation Pipeline**: Constraint-based validation with retry logic and fallback
 - **Local AI Processing**: llama.cpp server integration for privacy and performance
@@ -16,6 +17,10 @@ LlamaBrain for Unity provides:
 - **UniTask**: `https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask`
 - **TextMeshPro** (via Package Manager)
 - llama.cpp server executable + GGUF model
+
+### Voice System (Optional)
+- **whisper.unity**: Speech-to-text + Whisper model (ggml-base.en recommended)
+- **uPiper**: Text-to-speech + Unity Sentis + ONNX voice model
 
 See [THIRD_PARTY_PACKAGES.md](Documentation/THIRD_PARTY_PACKAGES.md) for detailed setup.
 
@@ -46,7 +51,12 @@ public class MyNPC : MonoBehaviour
     private LlamaBrainAgent brainAgent;
     private BrainServer brainServer;
 
-    async void Start()
+    void Start()
+    {
+        InitializeAsync().Forget();
+    }
+
+    private async UniTaskVoid InitializeAsync()
     {
         // Set up server
         brainServer = FindObjectOfType<BrainServer>();
@@ -63,7 +73,12 @@ public class MyNPC : MonoBehaviour
         brainAgent.Initialize(brainServer.CreateClient(), new PersonaMemoryFileStore());
     }
 
-    public async void TalkTo(string message)
+    public void TalkTo(string message)
+    {
+        TalkToAsync(message).Forget();
+    }
+
+    private async UniTaskVoid TalkToAsync(string message)
     {
         string response = await brainAgent.SendPlayerInputAsync(message);
         Debug.Log($"NPC: {response}");
@@ -83,6 +98,10 @@ public class MyNPC : MonoBehaviour
 | **ExpectancyRuleAsset** | Designer-created behavior constraints |
 | **ValidationPipeline** | Complete validation pipeline component |
 | **WorldIntentDispatcher** | Routes world intents to game systems |
+| **NpcVoiceController** | Coordinates voice input/output |
+| **NpcVoiceInput** | Whisper STT with VAD |
+| **NpcVoiceOutput** | Piper TTS with caching |
+| **NpcSpeechConfig** | Per-NPC voice settings |
 
 ## Configuration
 
@@ -106,6 +125,28 @@ public class MyNPC : MonoBehaviour
 | Trait Assignments | Personality traits |
 | System Prompt | AI behavior instructions |
 
+## Voice System
+
+LlamaBrain includes local voice integration for natural NPC conversations:
+
+### Speech-to-Text (Whisper)
+- **Package**: whisper.unity with Silero VAD
+- **Features**: VAD-gated batch transcription, stereo-to-mono conversion, artifact filtering
+- **Model**: ggml-base.en (GPU-accelerated via Vulkan)
+
+### Text-to-Speech (Piper)
+- **Package**: uPiper with Unity Sentis
+- **Features**: Async generation, LRU audio caching, spatial audio, per-NPC voices
+- **Models**: ONNX voice models (e.g., en_US-lessac-medium)
+
+### Setup
+1. Add `NpcVoiceController` to your NPC GameObject
+2. Create `NpcSpeechConfig` asset (Create → LlamaBrain → NpcSpeechConfig)
+3. Assign voice model and configure settings
+4. Voice integrates automatically with `LlamaBrainAgent`
+
+See [USAGE_GUIDE.md](Documentation/USAGE_GUIDE.md) for detailed voice setup.
+
 ## Project Structure
 
 ```
@@ -113,6 +154,7 @@ LlamaBrainForUnity/
 ├── Runtime/
 │   ├── LlamaBrain.dll          # Core library
 │   ├── Core/                   # BrainServer, LlamaBrainAgent, etc.
+│   │   └── Voice/              # NpcVoiceController, NpcVoiceInput, NpcVoiceOutput
 │   └── Demo/                   # Example UI components
 ├── Editor/                     # Custom inspectors
 ├── Samples/                    # Example scenes and assets

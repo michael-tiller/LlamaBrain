@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 
 namespace LlamaBrain.Runtime.Core
 {
@@ -30,7 +31,7 @@ namespace LlamaBrain.Runtime.Core
     private ClientManager? clientManager;
     private CancellationTokenSource? _cancellationTokenSource;
     /// <summary>
-    /// The startup task for observing exceptions (prevents unobserved Task exceptions from async void Start)
+    /// The startup task for observing exceptions.
     /// </summary>
     private Task? _startupTask;
     /// <summary>
@@ -577,9 +578,21 @@ namespace LlamaBrain.Runtime.Core
     /// <summary>
     /// Manually check server health and update status
     /// </summary>
-    public async void CheckServerHealth()
+    public void CheckServerHealth()
     {
-      await IsServerRunningAsync();
+      CheckServerHealthAsync().Forget();
+    }
+
+    private async UniTaskVoid CheckServerHealthAsync()
+    {
+      try
+      {
+        await IsServerRunningAsync();
+      }
+      catch (Exception ex)
+      {
+        UnityEngine.Debug.LogError($"[LLM] Health check failed: {ex.Message}");
+      }
     }
 
     /// <summary>
@@ -722,7 +735,12 @@ namespace LlamaBrain.Runtime.Core
     /// <summary>
     /// Force a server restart
     /// </summary>
-    public async void RestartServer()
+    public void RestartServer()
+    {
+      RestartServerAsync().Forget();
+    }
+
+    private async UniTaskVoid RestartServerAsync()
     {
       if (!_isInitialized || serverManager == null)
       {

@@ -55,6 +55,11 @@ namespace LlamaBrain.Core
     /// </summary>
     public bool UseContinuousBatching { get; set; } = false;
     /// <summary>
+    /// Whether to enable Flash Attention (faster attention on supported GPUs)
+    /// Requires cuBLAS or Metal backend. Reduces memory usage and improves speed.
+    /// </summary>
+    public bool UseFlashAttention { get; set; } = true;
+    /// <summary>
     /// The LLM configuration for generation parameters
     /// </summary>
     public LlmConfig LlmConfig { get; set; } = new LlmConfig();

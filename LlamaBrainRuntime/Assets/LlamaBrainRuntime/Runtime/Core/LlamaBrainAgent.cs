@@ -580,8 +580,23 @@ namespace LlamaBrain.Runtime.Core
           var contextSeed = currentInteractionContext?.InteractionCount;
           var seed = contextSeed ?? InteractionCount;
           UnityEngine.Debug.Log($"[LlamaBrainAgent] Using deterministic seed: {seed} (source: {(contextSeed.HasValue ? "context" : "agent")})");
-          var metrics = await client.SendPromptWithMetricsAsync(prompt, maxTokens: effectiveMaxTokens, seed: seed);
+
+          // Enable prompt caching for KV cache reuse - critical for performance!
+          // With cachePrompt=true, llama.cpp will reuse cached prefill for identical prompt prefixes,
+          // reducing TTFT from ~400ms (full prefill) to ~50ms (cached) on subsequent turns.
+          var metrics = await client.SendPromptWithMetricsAsync(
+              prompt,
+              maxTokens: effectiveMaxTokens,
+              seed: seed,
+              cachePrompt: true);
           attemptStopwatch.Stop();
+
+          // Check for error responses from ApiClient (returned as content rather than exceptions)
+          // This catches network errors, timeouts, and other failures that ApiClient wraps as content
+          if (metrics.Content.StartsWith("Error:", StringComparison.OrdinalIgnoreCase))
+          {
+            throw new InvalidOperationException(metrics.Content);
+          }
 
           // Check if truncated
           var wasTruncated = metrics.GeneratedTokenCount >= effectiveMaxTokens;

@@ -560,6 +560,7 @@ MonoBehaviour:
   onConversationTextGenerated:
     m_PersistentCalls:
       m_Calls: []
+  disableParallelGeneration: 0
 --- !u!1 &791578011
 GameObject:
   m_ObjectHideFlags: 0
@@ -668,6 +669,7 @@ MonoBehaviour:
   onConversationTextGenerated:
     m_PersistentCalls:
       m_Calls: []
+  disableParallelGeneration: 0
 --- !u!1 &874605735
 GameObject:
   m_ObjectHideFlags: 0
@@ -1216,6 +1218,63 @@ MonoBehaviour:
   m_MinRegionArea: 2
   m_NavMeshData: {fileID: 23800000, guid: bc8bb007fb77b3347a740b6c02db973a, type: 2}
   m_BuildHeightMesh: 0
+--- !u!1001 &1164034931
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 2292151978740379762, guid: f7ccc9f33688f724cb3aedbc9fc8b1e1, type: 3}
+      propertyPath: m_Name
+      value: DialogueMetricsCollector
+      objectReference: {fileID: 0}
+    - target: {fileID: 6585506476898514085, guid: f7ccc9f33688f724cb3aedbc9fc8b1e1, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 960
+      objectReference: {fileID: 0}
+    - target: {fileID: 6585506476898514085, guid: f7ccc9f33688f724cb3aedbc9fc8b1e1, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 540
+      objectReference: {fileID: 0}
+    - target: {fileID: 6585506476898514085, guid: f7ccc9f33688f724cb3aedbc9fc8b1e1, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6585506476898514085, guid: f7ccc9f33688f724cb3aedbc9fc8b1e1, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6585506476898514085, guid: f7ccc9f33688f724cb3aedbc9fc8b1e1, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6585506476898514085, guid: f7ccc9f33688f724cb3aedbc9fc8b1e1, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6585506476898514085, guid: f7ccc9f33688f724cb3aedbc9fc8b1e1, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6585506476898514085, guid: f7ccc9f33688f724cb3aedbc9fc8b1e1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6585506476898514085, guid: f7ccc9f33688f724cb3aedbc9fc8b1e1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6585506476898514085, guid: f7ccc9f33688f724cb3aedbc9fc8b1e1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: f7ccc9f33688f724cb3aedbc9fc8b1e1, type: 3}
 --- !u!1001 &1221041499
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1722,7 +1781,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d9370225a2ca94276b870d5f87b0db55, type: 3}
+  m_Script: {fileID: 11500000, guid: b51e862952e07f346a809525ae1da981, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1 &1783839837
@@ -1923,6 +1982,7 @@ MonoBehaviour:
   onConversationTextGenerated:
     m_PersistentCalls:
       m_Calls: []
+  disableParallelGeneration: 0
 --- !u!114 &1951797292 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 4505444332429759449, guid: 65337913c4f5a19418e0847cb2de6544, type: 3}
@@ -2302,6 +2362,10 @@ MonoBehaviour:
   whisperLanguage: en
   alwaysListening: 1
   enableTextFallback: 1
+  pauseListeningDuringSpeech: 1
+  allowInterruption: 1
+  minInterruptionWords: 2
+  postSpeechDelay: 0.5
   silenceTimeoutSeconds: 6
   OnPlayerSpeechRecognized:
     m_PersistentCalls:
@@ -2324,6 +2388,7 @@ MonoBehaviour:
   OnSilenceTimeout:
     m_PersistentCalls:
       m_Calls: []
+  heartbeatEveryNFrames: 60
 --- !u!114 &287544259887257099
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2341,7 +2406,12 @@ MonoBehaviour:
   microphoneRecord: {fileID: 0}
   maxRecordingLength: 30
   vadStop: 1
-  vadStopTime: 2
+  vadStopTime: 0.5
+  streamStepSec: 1.5
+  streamKeepSec: 0.15
+  streamLengthSec: 5
+  minVolumeThreshold: 0.1
+  minTranscriptionLength: 3
   OnTranscriptionComplete:
     m_PersistentCalls:
       m_Calls: []
@@ -2355,6 +2425,9 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   OnVoiceActivityChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  OnEarlyTranscription:
     m_PersistentCalls:
       m_Calls: []
 --- !u!1001 &916654265597375431
@@ -3205,6 +3278,67 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: d8b72872a1487ff499ccd1dd208bc98c, type: 3}
+--- !u!1001 &4330058557287798875
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 2564462940138594718, guid: 6497cd661c4b983428f641f3ddeb485f, type: 3}
+      propertyPath: m_Name
+      value: AuditRecorderBridge
+      objectReference: {fileID: 0}
+    - target: {fileID: 2811929052544630396, guid: 6497cd661c4b983428f641f3ddeb485f, type: 3}
+      propertyPath: enablePersistence
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 9018236599991626967, guid: 6497cd661c4b983428f641f3ddeb485f, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9018236599991626967, guid: 6497cd661c4b983428f641f3ddeb485f, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9018236599991626967, guid: 6497cd661c4b983428f641f3ddeb485f, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9018236599991626967, guid: 6497cd661c4b983428f641f3ddeb485f, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 9018236599991626967, guid: 6497cd661c4b983428f641f3ddeb485f, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9018236599991626967, guid: 6497cd661c4b983428f641f3ddeb485f, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9018236599991626967, guid: 6497cd661c4b983428f641f3ddeb485f, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9018236599991626967, guid: 6497cd661c4b983428f641f3ddeb485f, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9018236599991626967, guid: 6497cd661c4b983428f641f3ddeb485f, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9018236599991626967, guid: 6497cd661c4b983428f641f3ddeb485f, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 6497cd661c4b983428f641f3ddeb485f, type: 3}
 --- !u!1001 &7367967165250436003
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3258,8 +3392,12 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6404772479163601859, guid: 87200b54d7b3da04a87717834e5d59f3, type: 3}
+      propertyPath: strategy
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6404772479163601859, guid: 87200b54d7b3da04a87717834e5d59f3, type: 3}
       propertyPath: modelPath
-      value: Whisper/ggml-small.en.bin
+      value: Whisper/ggml-base.en.bin
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -3552,6 +3690,8 @@ SceneRoots:
   - {fileID: 8877124438123288251}
   - {fileID: 1959462311978496851}
   - {fileID: 2312970627735804272}
+  - {fileID: 1164034931}
+  - {fileID: 4330058557287798875}
   - {fileID: 7367967165250436003}
   - {fileID: 916654265597375431}
   - {fileID: 1979352518}
