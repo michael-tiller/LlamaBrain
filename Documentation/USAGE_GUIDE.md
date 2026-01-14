@@ -36,6 +36,11 @@ This guide focuses on the **core library** (engine-agnostic .NET Standard 2.1), 
     - [Bug Report Workflow (Feature 28)](#bug-report-workflow-feature-28)
 15. [Performance Optimization](#performance-optimization)
 16. [Save/Load Persistence](#save-load-persistence)
+17. [Hot Reload & A/B Testing](#hot-reload-ab-testing)
+    - [Hot Reload Overview](#hot-reload-overview)
+    - [Unity Hot Reload](#unity-hot-reload)
+    - [A/B Testing System](#ab-testing-system)
+    - [Metrics Tracking](#metrics-tracking)
 
 ---
 
@@ -2506,6 +2511,297 @@ The persistence system preserves all determinism-critical fields:
 3. **Handle failures gracefully**: Always check `SaveResult.Success` before confirming to player
 4. **Test round-trips**: Verify that save → load produces identical behavior
 5. **Version your saves**: Use `SaveData.Version` for migration support
+
+---
+
+<a id="hot-reload-ab-testing"></a>
+## Hot Reload & A/B Testing
+
+LlamaBrain supports hot reload for configuration changes and A/B testing for prompt variants. This enables rapid iteration on NPC personality and behavior without restarting your game.
+
+<a id="hot-reload-overview"></a>
+### Hot Reload Overview
+
+Hot reload allows you to modify NPC configurations and LLM parameters while the game is running. Changes are applied immediately to the next interaction, preserving runtime state (memory, dialogue history, interaction count).
+
+**What Can Be Hot Reloaded**:
+- PersonaConfig: SystemPrompt, personality traits, metadata
+- BrainSettings (LLM params): Temperature, MaxTokens, TopP, TopK, RepeatPenalty
+- Prompt variants for A/B testing
+
+**What Requires Restart**:
+- BrainSettings (server params): Model path, GPU layers, context size, batch size
+
+<a id="unity-hot-reload"></a>
+### Unity Hot Reload
+
+#### Enabling Hot Reload
+
+Hot reload is enabled by default in the Unity Editor. It uses Unity's AssetDatabase to monitor ScriptableObject changes.
+
+```csharp
+// In LlamaBrainAgent Inspector:
+// - Auto Reload Config: Enabled (default)
+//
+// Or programmatically:
+agent.EnableAutoReload = true;
+```
+
+#### Hot Reloading PersonaConfig
+
+1. Open your PersonaConfig ScriptableObject in the Inspector
+2. Modify the SystemPrompt or other fields
+3. Save the asset (Ctrl+S)
+4. Changes apply automatically to the next interaction
+
+```csharp
+// Example: Modify PersonaConfig in play mode
+// 1. Edit SystemPrompt in Inspector
+// 2. Save asset
+// 3. Next interaction uses new prompt
+
+// Subscribe to reload events
+agent.OnPersonaConfigReloaded += (agent, oldProfile, newProfile) =>
+{
+    Debug.Log($"Config reloaded: {oldProfile.SystemPrompt} -> {newProfile.SystemPrompt}");
+};
+```
+
+#### Hot Reloading BrainSettings
+
+Modify LLM parameters in BrainSettings and save. Changes apply to all agents immediately.
+
+```csharp
+// Example: Adjust temperature in play mode
+// 1. Open BrainSettings ScriptableObject
+// 2. Change Temperature from 0.7 to 0.5
+// 3. Save asset
+// 4. Next generation uses new temperature
+
+// BrainServer logs when settings change:
+// [HotReload] BrainSettings reloaded: Temp=0.5, MaxTokens=64
+```
+
+**Server-Level Changes Warning**:
+If you change server-level settings (model path, GPU layers, etc.), you'll see a warning:
+```
+[HotReload] Server-level settings changed. Restart required.
+```
+
+#### Disabling Hot Reload
+
+For production builds, disable hot reload:
+
+```csharp
+#if !UNITY_EDITOR
+agent.EnableAutoReload = false;
+#endif
+```
+
+<a id="ab-testing-system"></a>
+### A/B Testing System
+
+LlamaBrain's A/B testing framework enables deterministic prompt variant testing with traffic splitting and metrics tracking.
+
+#### Setting Up Variants
+
+Create prompt variants in PersonaConfig:
+
+```csharp
+// In PersonaConfig Inspector:
+// 1. Expand "System Prompt Variants" section
+// 2. Add variant:
+//    - Name: "Friendly"
+//    - System Prompt: "You are a friendly shopkeeper..."
+//    - Traffic Percentage: 50%
+//    - Is Active: true
+// 3. Add another variant:
+//    - Name: "Grumpy"
+//    - System Prompt: "You are a grumpy shopkeeper..."
+//    - Traffic Percentage: 50%
+//    - Is Active: true
+```
+
+**Traffic Percentages**:
+- Must sum to 100% for active variants
+- Inactive variants are skipped
+- Example splits: 50/50, 10/90, 25/75
+
+#### Deterministic Variant Selection
+
+Variants are selected deterministically based on InteractionCount:
+
+```csharp
+// Same InteractionCount + PersonaId = Same variant
+// This ensures reproducibility and stable A/B testing
+
+// Variant selection is based on:
+// hash = HashCode.Combine(InteractionCount, PersonaId)
+// bucket = hash % 100
+// Select variant based on cumulative traffic percentage
+```
+
+**Why Deterministic**:
+- Reproducible results across sessions
+- Players always get same variant for same interaction
+- Enables fair comparison between variants
+- Facilitates bug reports (interaction N always uses variant X)
+
+#### Using Variants in Code
+
+```csharp
+// Variants are selected automatically during dialogue generation
+var response = await agent.SendPlayerInputAsync("Hello!");
+
+// Check which variant was used
+var variantName = agent.LastVariantName;
+Debug.Log($"Used variant: {variantName}");
+
+// Manually test specific variant
+var variants = agent.PersonaConfig.ToPromptVariants();
+var variantManager = new PromptVariantManager(variants);
+var selectedVariant = variantManager.SelectVariant(
+    seed: agent.InteractionCount,
+    personaId: agent.Profile.PersonaId
+);
+```
+
+#### Gradual Rollout Example
+
+Test a new prompt variant gradually:
+
+```csharp
+// Week 1: 10% new variant, 90% control
+Variants:
+- Name: "Control", SystemPrompt: "Original prompt...", Traffic: 90%
+- Name: "Experimental", SystemPrompt: "New prompt...", Traffic: 10%
+
+// Week 2: If metrics look good, increase to 50/50
+// Week 3: Roll out to 100%
+```
+
+<a id="metrics-tracking"></a>
+### Metrics Tracking
+
+Track metrics per variant to evaluate performance:
+
+```csharp
+// Get metrics from variant manager
+var metrics = agent.GetVariantMetrics();
+
+foreach (var kvp in metrics)
+{
+    var variantName = kvp.Key;
+    var variantMetrics = kvp.Value;
+
+    Debug.Log($"Variant: {variantName}");
+    Debug.Log($"  Selections: {variantMetrics.SelectionCount}");
+    Debug.Log($"  Success: {variantMetrics.SuccessCount}");
+    Debug.Log($"  Failures: {variantMetrics.ValidationFailureCount}");
+    Debug.Log($"  Avg Latency: {variantMetrics.AvgLatencyMs:F1}ms");
+    Debug.Log($"  Avg Tokens: {variantMetrics.AvgTokensGenerated:F1}");
+}
+```
+
+#### Generating A/B Test Reports
+
+Export metrics for analysis:
+
+```csharp
+// Generate report from BrainServer
+var report = BrainServer.Instance.GenerateABTestReport("MyABTest");
+
+// Export to JSON
+var json = report.ExportToJson();
+File.WriteAllText("ab_test_results.json", json);
+
+// Export to CSV
+var csv = report.ExportToCsv();
+File.WriteAllText("ab_test_results.csv", csv);
+
+// Get summary
+var summary = report.GetSummary();
+Debug.Log(summary);
+```
+
+**Report Contents**:
+- Test name and timestamp
+- Total interactions
+- Per-variant metrics:
+  - Selection count
+  - Success rate
+  - Validation failure rate
+  - Fallback rate
+  - Average latency
+  - Average tokens generated
+
+#### Example A/B Test Workflow
+
+```csharp
+// 1. Define hypothesis
+// "A more friendly prompt will reduce validation failures"
+
+// 2. Create variants in PersonaConfig
+// Variant A (Control): Original prompt, 50% traffic
+// Variant B (Experimental): Friendly prompt, 50% traffic
+
+// 3. Run for N interactions (e.g., 1000)
+// Let players interact with NPCs normally
+
+// 4. Export metrics
+var report = BrainServer.Instance.GenerateABTestReport("FriendlyPromptTest");
+var csv = report.ExportToCsv();
+File.WriteAllText("friendly_prompt_test.csv", csv);
+
+// 5. Analyze results
+// Compare validation failure rates:
+// - Variant A: 15% validation failures
+// - Variant B: 8% validation failures
+// Conclusion: Friendly prompt reduces failures by ~47%
+
+// 6. Roll out winner
+// Update PersonaConfig to use Variant B for 100% traffic
+```
+
+#### Best Practices
+
+| Practice | Description |
+|----------|-------------|
+| **Define hypothesis** | Clearly state what you're testing before starting |
+| **Sufficient sample size** | Run for at least 100 interactions per variant |
+| **Single variable** | Change only one thing at a time (e.g., only SystemPrompt) |
+| **Control group** | Always include original prompt as control |
+| **Measure multiple metrics** | Track success rate, latency, user feedback |
+| **Statistical significance** | Use proper statistical tests before declaring winner |
+
+#### Disabling Variants
+
+To stop A/B testing and use a single prompt:
+
+```csharp
+// Option 1: Clear variants in Inspector
+// - Remove all variants from SystemPromptVariants list
+// - NPC will use base SystemPrompt field
+
+// Option 2: Set single variant to 100%
+// - Set one variant to 100% traffic
+// - Mark all others as inactive
+
+// Option 3: Programmatically
+agent.PersonaConfig.SystemPromptVariants.Clear();
+```
+
+### Troubleshooting Hot Reload
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| Changes not applied | Auto reload disabled | Check `EnableAutoReload` in Inspector |
+| Validation errors | Invalid config | Check console for validation errors |
+| Server restart warning | Changed GPU/model settings | Restart Unity play mode |
+| Variants not working | Traffic doesn't sum to 100% | Adjust traffic percentages |
+| Same variant every time | Deterministic selection | This is expected behavior |
+
+For more details, see [CONFIG_HOT_RELOAD.md](CONFIG_HOT_RELOAD.md).
 
 ---
 

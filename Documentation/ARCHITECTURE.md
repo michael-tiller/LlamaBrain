@@ -830,6 +830,111 @@ var fallbackSystem = new FallbackSystem(fallbackConfig);
 // Integrated automatically in LlamaBrainAgent
 ```
 
+### Component 10: Configuration Hot Reload & A/B Testing
+
+**Purpose**: Enable runtime modification of PersonaConfig and BrainSettings without restarting, and support deterministic A/B testing of prompt variants.
+
+**Implementation**:
+- `ConfigHotReloadManager` in `LlamaBrainRuntime.Editor.Config` (Unity Editor)
+- `UnityEditorConfigWatcher` - monitors ScriptableObject changes via `AssetDatabase`
+- `PromptVariantManager` in `LlamaBrain.Config` - deterministic variant selection
+- `ABTestReport` in `LlamaBrain.Config` - metrics aggregation and export
+
+**Hot Reload Capabilities**:
+
+1. **PersonaConfig Hot Reload**:
+   - System Prompt changes apply immediately
+   - Preserves state: InteractionCount, memory, dialogue history
+   - Validates before applying (rollback on failure)
+   - Fires `OnPersonaConfigReloaded` event
+
+2. **BrainSettings Hot Reload**:
+   - LLM parameters (Temperature, MaxTokens, TopP, TopK, RepeatPenalty) apply immediately
+   - Server parameters (GPU layers, model path, context size) require restart (warning logged)
+   - Broadcasts updates to all registered agents
+   - Fires `OnBrainSettingsReloaded` event
+
+**A/B Testing Framework**:
+
+1. **Deterministic Variant Selection**:
+   - Uses `HashCode.Combine(InteractionCount, PersonaId)` for stable assignments
+   - Traffic splitting (e.g., 50/50, 10/90) with percentage-based distribution
+   - Active/inactive variant support for gradual rollouts
+
+2. **Metrics Tracking**:
+   - Selection counts per variant
+   - Success/failure rates
+   - Average latency and token generation
+   - Validation failure tracking
+
+3. **Export Capabilities**:
+   - JSON export (structured data)
+   - CSV export (spreadsheet-compatible)
+   - Human-readable summary
+
+**Example - PersonaConfig Hot Reload**:
+```csharp
+// In Unity Editor, modify PersonaConfig asset
+// Changes are automatically detected and applied
+
+// LlamaBrainAgent receives update automatically
+agent.OnPersonaConfigReloaded += (agent, oldProfile, newProfile) =>
+{
+    Debug.Log($"PersonaConfig reloaded: {oldProfile.Name} → {newProfile.Name}");
+    // State preserved: InteractionCount, memory, dialogue history
+};
+```
+
+**Example - A/B Testing**:
+```csharp
+// In PersonaConfig Unity Inspector, add variants:
+// Variant A: "You are a friendly wizard." (50% traffic)
+// Variant B: "You are a grumpy wizard." (50% traffic)
+
+// Deterministic selection based on InteractionCount
+var systemPrompt = agent.SelectSystemPromptVariant();
+// Same InteractionCount → same variant
+// Different InteractionCount → may select different variant
+
+// Generate report
+var report = brainServer.GenerateABTestReport("WizardPersonalityTest");
+report.Finalize();
+
+// Export results
+var json = report.ExportToJson(); // For analysis tools
+var csv = report.ExportToCsv();   // For spreadsheets
+var summary = report.GetSummary(); // Human-readable
+```
+
+**Performance Characteristics**:
+- Config validation: < 10ms
+- Variant selection: < 1ms per interaction
+- Metrics recording: < 0.01ms overhead
+- JSON/CSV export: < 50ms
+
+**Thread Safety**:
+- All metrics recording operations are thread-safe (using locks)
+- Variant selection is thread-safe
+- Config validation is stateless (naturally thread-safe)
+
+**Integration**:
+```csharp
+// Hot reload is automatic in Unity Editor
+// Enable/disable via menu: LlamaBrain/Hot Reload/Enable|Disable
+
+// Check statistics
+// Menu: LlamaBrain/Hot Reload/Show Statistics
+// Output: Total Reloads, Successful, Failed, Success Rate
+
+// In code, manually trigger reload
+bool success = agent.ReloadPersonaConfig();
+bool success = brainServer.ReloadBrainSettings();
+```
+
+**See**: `CONFIG_HOT_RELOAD.md` for comprehensive hot reload documentation.
+
+---
+
 ## Complete Flow Example
 
 Here's how all components work together in a complete interaction:
@@ -2437,6 +2542,7 @@ Guard: My duty never ends, but I can spare a moment for a citizen." // Guides to
 - [MEMORY.md](MEMORY.md) - Comprehensive memory system documentation (Component 3)
 - [PIPELINE_CONTRACT.md](PIPELINE_CONTRACT.md) - Formal pipeline contract specification
 - [VALIDATION_GATING.md](VALIDATION_GATING.md) - Validation gating system documentation (Component 7)
+- [CONFIG_HOT_RELOAD.md](CONFIG_HOT_RELOAD.md) - Configuration hot reload and A/B testing (Component 10)
 - [USAGE_GUIDE.md](USAGE_GUIDE.md) - Practical examples and best practices
 - [ROADMAP.md](ROADMAP.md) - Implementation progress and status
 - [STATUS.md](STATUS.md) - Current implementation status
@@ -2444,5 +2550,5 @@ Guard: My duty never ends, but I can spare a moment for a citizen." // Guides to
 
 ---
 
-**Last Updated**: January 7, 2026
-**Architecture Version**: 0.3.0-rc.3
+**Last Updated**: January 13, 2026
+**Architecture Version**: 0.3.0

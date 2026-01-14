@@ -2,11 +2,13 @@
 using UnityEngine;
 using LlamaBrain.Core;
 using LlamaBrain.Persona;
+using LlamaBrain.Config;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
 using Cysharp.Threading.Tasks;
 
 namespace LlamaBrain.Runtime.Core
@@ -38,11 +40,21 @@ namespace LlamaBrain.Runtime.Core
     /// Whether the LlamaBrain server is initialized.
     /// </summary>
     private bool _isInitialized;
+    /// <summary>
+    /// The current ProcessConfig used for detecting server-level config changes.
+    /// </summary>
+    private ProcessConfig? _currentProcessConfig;
 
     /// <summary>
     /// Whether the LlamaBrain server is initialized.
     /// </summary>
     public bool IsInitialized => _isInitialized;
+
+    /// <summary>
+    /// Event fired when BrainSettings are successfully reloaded.
+    /// Passes the new LlmConfig to subscribers.
+    /// </summary>
+    public event Action<LlmConfig>? OnBrainSettingsReloaded;
 
     /// <summary>
     /// Whether the server is currently running and ready
@@ -104,6 +116,9 @@ namespace LlamaBrain.Runtime.Core
           UnityEngine.Debug.LogError("[LLM] LlamaBrainServer.Settings.ToProcessConfig() returned null. Server initialization will be skipped.");
           return;
         }
+
+        // Store current config for hot reload comparison
+        _currentProcessConfig = config;
 
         // Validate paths
         var exePath = Path.GetFullPath(config.ExecutablePath);
@@ -770,6 +785,169 @@ namespace LlamaBrain.Runtime.Core
         ConnectionStatus = "Restart Failed";
         UnityEngine.Debug.LogError($"[LLM] Server restart failed: {ex.Message}");
       }
+    }
+
+    /// <summary>
+    /// Hot reload BrainSettings by updating LlmConfig for all registered agents.
+    /// Server-level config changes (GPU layers, model path, etc.) will log a warning.
+    /// Returns true if reload succeeded, false if validation failed.
+    /// </summary>
+    public bool ReloadBrainSettings()
+    {
+      if (Settings == null)
+      {
+        UnityEngine.Debug.LogError("[HotReload] Cannot reload BrainSettings: Settings is null");
+        return false;
+      }
+
+      try
+      {
+        // Convert to ProcessConfig and LlmConfig
+        var newProcessConfig = Settings.ToProcessConfig();
+        if (newProcessConfig == null)
+        {
+          UnityEngine.Debug.LogError("[HotReload] BrainSettings.ToProcessConfig() returned null");
+          return false;
+        }
+
+        var newLlmConfig = Settings.ToLlmConfig();
+        if (newLlmConfig == null)
+        {
+          UnityEngine.Debug.LogError("[HotReload] BrainSettings.ToLlmConfig() returned null");
+          return false;
+        }
+
+        // Validate LlmConfig
+        var errors = newLlmConfig.Validate();
+        if (errors != null && errors.Length > 0)
+        {
+          UnityEngine.Debug.LogError($"[HotReload] BrainSettings validation failed: {string.Join(", ", errors)}");
+          return false;
+        }
+
+        // Check if server-level config changed (requires restart)
+        if (_currentProcessConfig != null && HasServerConfigChanged(_currentProcessConfig, newProcessConfig))
+        {
+          UnityEngine.Debug.LogWarning("[HotReload] Server-level settings changed (GPU layers, model path, context size, or batch size). Full restart required to apply these changes.");
+          UnityEngine.Debug.LogWarning("[HotReload] LLM generation parameters (Temperature, MaxTokens, etc.) will be applied immediately.");
+        }
+
+        // Broadcast LlmConfig to all registered agents
+        foreach (var agent in registeredAgents)
+        {
+          if (agent != null)
+          {
+            agent.UpdateLlmConfig(newLlmConfig);
+          }
+        }
+
+        // Update current config
+        _currentProcessConfig = newProcessConfig;
+
+        // Fire event
+        OnBrainSettingsReloaded?.Invoke(newLlmConfig);
+
+        UnityEngine.Debug.Log($"[HotReload] BrainSettings reloaded successfully: Temperature={newLlmConfig.Temperature}, MaxTokens={newLlmConfig.MaxTokens}");
+        return true;
+      }
+      catch (Exception ex)
+      {
+        UnityEngine.Debug.LogError($"[HotReload] Failed to reload BrainSettings: {ex.Message}");
+        return false;
+      }
+    }
+
+    /// <summary>
+    /// Checks if server-level configuration has changed between two ProcessConfig instances.
+    /// Server-level config includes: GPU layers, model path, context size, batch size.
+    /// Changes to these parameters require a full server restart.
+    /// </summary>
+    /// <param name="oldConfig">The previous ProcessConfig</param>
+    /// <param name="newConfig">The new ProcessConfig</param>
+    /// <returns>True if server-level config changed, false otherwise</returns>
+    public bool HasServerConfigChanged(ProcessConfig oldConfig, ProcessConfig newConfig)
+    {
+      if (oldConfig == null || newConfig == null)
+      {
+        return false;
+      }
+
+      // Compare server-level parameters that require restart
+      return oldConfig.GpuLayers != newConfig.GpuLayers
+          || oldConfig.Model != newConfig.Model
+          || oldConfig.ContextSize != newConfig.ContextSize
+          || oldConfig.BatchSize != newConfig.BatchSize;
+    }
+
+    /// <summary>
+    /// Generates an A/B test report by aggregating metrics from all registered agents.
+    /// Only includes agents that have prompt variants configured.
+    /// </summary>
+    /// <param name="testName">The name for this A/B test report</param>
+    /// <returns>ABTestReport with aggregated metrics from all agents</returns>
+    public ABTestReport GenerateABTestReport(string testName)
+    {
+      var report = new ABTestReport(testName);
+
+      // Aggregate metrics from all registered agents
+      foreach (var agent in registeredAgents)
+      {
+        if (agent == null || agent.PersonaConfig == null)
+        {
+          continue;
+        }
+
+        // Only include agents with variant testing enabled
+        if (agent.PersonaConfig.SystemPromptVariants == null ||
+            agent.PersonaConfig.SystemPromptVariants.Count == 0)
+        {
+          continue;
+        }
+
+        // Get metrics from agent's variant manager
+        var agentMetrics = agent.GetVariantMetrics();
+        if (agentMetrics != null)
+        {
+          foreach (var kvp in agentMetrics)
+          {
+            // Aggregate metrics by variant name across all agents
+            var variantName = kvp.Key;
+            var metrics = kvp.Value;
+
+            // If we already have metrics for this variant, merge them
+            if (report.HasVariant(variantName))
+            {
+              var existing = report.GetVariantMetrics(variantName);
+              if (existing != null)
+              {
+                // Merge metrics (sum counts, average averages)
+                var merged = new VariantMetrics
+                {
+                  SelectionCount = existing.SelectionCount + metrics.SelectionCount,
+                  SuccessCount = existing.SuccessCount + metrics.SuccessCount,
+                  ValidationFailureCount = existing.ValidationFailureCount + metrics.ValidationFailureCount,
+                  FallbackCount = existing.FallbackCount + metrics.FallbackCount,
+                  // Weighted average for latency and tokens
+                  AvgLatencyMs = (existing.AvgLatencyMs * existing.SelectionCount +
+                                 metrics.AvgLatencyMs * metrics.SelectionCount) /
+                                 (existing.SelectionCount + metrics.SelectionCount),
+                  AvgTokensGenerated = (existing.AvgTokensGenerated * existing.SelectionCount +
+                                       metrics.AvgTokensGenerated * metrics.SelectionCount) /
+                                       (existing.SelectionCount + metrics.SelectionCount)
+                };
+                report.AddVariantMetrics(variantName, merged);
+              }
+            }
+            else
+            {
+              // First time seeing this variant, add it
+              report.AddVariantMetrics(variantName, metrics);
+            }
+          }
+        }
+      }
+
+      return report;
     }
   }
 }
