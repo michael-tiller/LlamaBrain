@@ -68,7 +68,7 @@ namespace LlamaBrain.Runtime.Core
     /// </summary>
     [Header("A/B Testing (Optional)")]
     [Tooltip("Prompt variants for A/B testing. If empty, uses default SystemPrompt.")]
-    public List<PromptVariantConfig>? SystemPromptVariants = new List<PromptVariantConfig>();
+    public List<PromptVariantConfig> SystemPromptVariants = new List<PromptVariantConfig>();
 
     /// <summary>
     /// Automatically generates a GUID for PersonaId if it's empty

@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
+using LlamaBrain.Config;
 using LlamaBrain.Core;
 using LlamaBrain.Core.Expectancy;
 using LlamaBrain.Core.Metrics;

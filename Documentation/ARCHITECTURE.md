@@ -898,7 +898,7 @@ var systemPrompt = agent.SelectSystemPromptVariant();
 
 // Generate report
 var report = brainServer.GenerateABTestReport("WizardPersonalityTest");
-report.Finalize();
+report.Complete();
 
 // Export results
 var json = report.ExportToJson(); // For analysis tools

@@ -278,7 +278,7 @@ namespace LlamaBrain.Tests.Config
         });
       }
 
-      report.Finalize();
+      report.Complete();
 
       // Act: Generate all export formats
       var json = report.ExportToJson();

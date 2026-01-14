@@ -93,18 +93,9 @@ namespace LlamaBrain.Config
     /// Completes the report by setting the end time.
     /// Call this when the A/B test is complete.
     /// </summary>
-    public void Finalize()
-    {
-      EndTime = DateTime.UtcNow;
-    }
-
-    /// <summary>
-    /// Completes the report by setting the end time.
-    /// Alias for Finalize() to avoid naming conflicts.
-    /// </summary>
     public void Complete()
     {
-      Finalize();
+      EndTime = DateTime.UtcNow;
     }
 
     /// <summary>

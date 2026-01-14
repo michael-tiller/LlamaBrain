@@ -303,7 +303,7 @@ foreach (var kvp in metrics)
 ```csharp
 // BrainServer aggregates metrics from all agents
 var report = brainServer.GenerateABTestReport("WizardPersonalityTest");
-report.Finalize();
+report.Complete();
 
 Debug.Log($"Total Interactions: {report.GetTotalInteractions()}");
 foreach (var variantName in report.GetAllVariantNames())
@@ -318,7 +318,7 @@ foreach (var variantName in report.GetAllVariantNames())
 **JSON Export** (for analysis tools):
 ```csharp
 var report = brainServer.GenerateABTestReport("MyTest");
-report.Finalize();
+report.Complete();
 
 var json = report.ExportToJson();
 File.WriteAllText("abtest_results.json", json);
@@ -518,7 +518,7 @@ Debug.Assert(variant1 == variant2, "Selection should be deterministic");
 **Symptom**: Export throws exception or produces empty output
 
 **Solutions:**
-1. Call `report.Finalize()` before exporting
+1. Call `report.Complete()` before exporting
 2. Ensure at least one variant has selections
 3. Check file write permissions
 
@@ -527,7 +527,7 @@ Debug.Assert(variant1 == variant2, "Selection should be deterministic");
 try
 {
     var report = brainServer.GenerateABTestReport("Test");
-    report.Finalize();
+    report.Complete();
 
     if (report.GetTotalInteractions() == 0)
     {

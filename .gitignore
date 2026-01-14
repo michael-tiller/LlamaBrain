@@ -70,3 +70,7 @@ claude.md
 # Unity package samples
 /LlamaBrainRuntime/Assets/Samples/
 /LlamaBrainRuntime/Assets/Samples.meta
+LlamaBrainRuntime/Assets/LlamaBrainRuntime/LlamaBrain.pdb
+LlamaBrainRuntime/Assets/LlamaBrainRuntime/LlamaBrain.pdb.meta
+LlamaBrainRuntime/Assets/LlamaBrainRuntime/LlamaBrain.xml
+LlamaBrainRuntime/Assets/LlamaBrainRuntime/LlamaBrain.xml.meta

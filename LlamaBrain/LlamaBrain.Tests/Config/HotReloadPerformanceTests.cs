@@ -173,7 +173,7 @@ namespace LlamaBrain.Tests.Config
           AvgTokensGenerated = 24.0 + i * 0.5
         });
       }
-      report.Finalize();
+      report.Complete();
 
       // Act: Measure JSON export time
       var stopwatch = Stopwatch.StartNew();
@@ -202,7 +202,7 @@ namespace LlamaBrain.Tests.Config
           AvgTokensGenerated = 24.0 + i * 0.5
         });
       }
-      report.Finalize();
+      report.Complete();
 
       // Act: Measure CSV export time
       var stopwatch = Stopwatch.StartNew();

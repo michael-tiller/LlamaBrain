@@ -58,7 +58,7 @@ namespace LlamaBrain.Tests.Config
       Assert.IsTrue(report.HasVariant("VariantA"));
       var retrieved = report.GetVariantMetrics("VariantA");
       Assert.IsNotNull(retrieved);
-      Assert.AreEqual(100, retrieved.SelectionCount);
+      Assert.AreEqual(100, retrieved!.SelectionCount);
       Assert.AreEqual(95, retrieved.SuccessCount);
       Assert.AreEqual(5, retrieved.ValidationFailureCount);
       Assert.AreEqual(120.5, retrieved.AvgLatencyMs);
@@ -100,20 +100,20 @@ namespace LlamaBrain.Tests.Config
     }
 
     [Test]
-    public void Finalize_SetsEndTime()
+    public void Complete_SetsEndTime()
     {
       // Arrange
       var report = new ABTestReport("Test");
-      var beforeFinalize = DateTime.UtcNow;
+      var beforeComplete = DateTime.UtcNow;
 
       // Act
-      report.Finalize();
-      var afterFinalize = DateTime.UtcNow;
+      report.Complete();
+      var afterComplete = DateTime.UtcNow;
 
       // Assert
       Assert.IsNotNull(report.EndTime);
-      Assert.That(report.EndTime.Value, Is.GreaterThanOrEqualTo(beforeFinalize));
-      Assert.That(report.EndTime.Value, Is.LessThanOrEqualTo(afterFinalize));
+      Assert.That(report.EndTime!.Value, Is.GreaterThanOrEqualTo(beforeComplete));
+      Assert.That(report.EndTime.Value, Is.LessThanOrEqualTo(afterComplete));
     }
 
     [Test]
@@ -137,7 +137,7 @@ namespace LlamaBrain.Tests.Config
       System.Threading.Thread.Sleep(100); // Wait 100ms
 
       // Act
-      report.Finalize();
+      report.Complete();
       var duration = report.GetDurationSeconds();
 
       // Assert
@@ -166,7 +166,7 @@ namespace LlamaBrain.Tests.Config
         AvgLatencyMs = 130.2,
         AvgTokensGenerated = 25.1
       });
-      report.Finalize();
+      report.Complete();
 
       // Act
       var json = report.ExportToJson();
@@ -186,7 +186,7 @@ namespace LlamaBrain.Tests.Config
       // Arrange
       var report = new ABTestReport("RoundTripTest");
       report.AddVariantMetrics("VariantA", new VariantMetrics { SelectionCount = 100 });
-      report.Finalize();
+      report.Complete();
 
       // Act: Export to JSON and deserialize back
       var json = report.ExportToJson();
@@ -221,7 +221,7 @@ namespace LlamaBrain.Tests.Config
         AvgLatencyMs = 130.2,
         AvgTokensGenerated = 25.1
       });
-      report.Finalize();
+      report.Complete();
 
       // Act
       var csv = report.ExportToCsv();
@@ -312,7 +312,7 @@ namespace LlamaBrain.Tests.Config
         SuccessCount = 490,
         AvgLatencyMs = 130.2
       });
-      report.Finalize();
+      report.Complete();
 
       // Act
       var summary = report.GetSummary();

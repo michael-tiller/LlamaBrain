@@ -55,4 +55,15 @@
     <None Include="..\LlamaBrainRuntime\Assets\LlamaBrainRuntime\README.md" Pack="true" PackagePath="README.md" />
   </ItemGroup>
 
+  <!-- Copy DLL to Unity Runtime folder after build -->
+  <Target Name="CopyToUnityRuntime" AfterTargets="Build">
+    <PropertyGroup>
+      <UnityRuntimePath>$(ProjectDir)..\LlamaBrainRuntime\Assets\LlamaBrainRuntime\</UnityRuntimePath>
+    </PropertyGroup>
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(UnityRuntimePath)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(UnityRuntimePath)" SkipUnchangedFiles="true" Condition="Exists('$(TargetDir)$(TargetName).pdb')" />
+    <Copy SourceFiles="$(TargetDir)$(TargetName).xml" DestinationFolder="$(UnityRuntimePath)" SkipUnchangedFiles="true" Condition="Exists('$(TargetDir)$(TargetName).xml')" />
+    <Message Importance="high" Text="Copied $(TargetFileName) to Unity Runtime folder" />
+  </Target>
+
 </Project>
