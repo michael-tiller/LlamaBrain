@@ -71,6 +71,8 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
     private ModelFingerprint? _modelFingerprint;
     private string _gameVersion = "";
     private string _currentSceneName = "";
+    private string _sessionId = "";
+    private DateTime _sessionStartTime;
 
     /// <summary>
     /// Gets the underlying audit recorder.
@@ -97,6 +99,11 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
     /// </summary>
     public IAuditPersistence? Persistence => _persistence;
 
+    /// <summary>
+    /// Gets the current session ID for tracking game start/stop events.
+    /// </summary>
+    public string SessionId => _sessionId;
+
     private void Awake()
     {
       if (Instance != null && Instance != this)
@@ -109,6 +116,7 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
       try
       {
         InitializeRecorder();
+        StartNewSession();
         Instance = this;
       }
       catch (Exception ex)
@@ -124,8 +132,14 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
     {
       if (Instance == this)
       {
+        LogSessionEnd();
         Instance = null;
       }
+    }
+
+    private void OnApplicationQuit()
+    {
+      LogSessionEnd();
     }
 
     private void Start()
@@ -138,6 +152,28 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
 
       // Try to auto-configure model fingerprint from BrainServer
       TryConfigureFromBrainServer();
+    }
+
+    /// <summary>
+    /// Starts a new audit session with a unique session ID.
+    /// </summary>
+    private void StartNewSession()
+    {
+      _sessionId = Guid.NewGuid().ToString();
+      _sessionStartTime = DateTime.UtcNow;
+      Debug.Log($"[AuditRecorderBridge] Started new audit session: {_sessionId} at {_sessionStartTime:yyyy-MM-dd HH:mm:ss} UTC");
+    }
+
+    /// <summary>
+    /// Logs the end of the current audit session.
+    /// </summary>
+    private void LogSessionEnd()
+    {
+      if (!string.IsNullOrEmpty(_sessionId))
+      {
+        var sessionDuration = DateTime.UtcNow - _sessionStartTime;
+        Debug.Log($"[AuditRecorderBridge] Ended audit session: {_sessionId} (Duration: {sessionDuration.TotalMinutes:F2} minutes)");
+      }
     }
 
     private void InitializeRecorder()
@@ -345,13 +381,18 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
         triggerId = snapshot.Context.TriggerId ?? "";
       }
 
+      // Build trigger info with session ID appended to scene name for tracking
+      var sceneNameWithSession = string.IsNullOrEmpty(_sessionId) 
+        ? _currentSceneName 
+        : $"{_currentSceneName} [Session:{_sessionId}]";
+
       var builder = new AuditRecordBuilder()
         .WithNpcId(npcId)
         .WithInteractionCount(agent.InteractionCount)
         .WithSeed(snapshot?.Context?.InteractionCount ?? agent.InteractionCount)
         .WithSnapshotTimeUtcTicks(snapshot?.SnapshotTimeUtcTicks ?? DateTimeOffset.UtcNow.UtcTicks)
         .WithPlayerInput(playerInput)
-        .WithTriggerInfo(triggerReason, triggerId, _currentSceneName)
+        .WithTriggerInfo(triggerReason, triggerId, sceneNameWithSession)
         .WithStateHashes(memoryHash, promptHash, constraintsHash)
         .WithConstraints(constraintsSerialized)
         .WithOutput(finalResult.Response, finalResult.Response)
