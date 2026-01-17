@@ -335,6 +335,73 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
     }
 
     /// <summary>
+    /// Records a simple instruction-based interaction without full agent state.
+    /// This is a simplified method for instruction-based calls that don't require
+    /// the full audit context (memory snapshots, triggers, etc.).
+    /// </summary>
+    /// <param name="agentId">The identifier of the agent/persona.</param>
+    /// <param name="input">The input instruction or prompt.</param>
+    /// <param name="output">The output response.</param>
+    /// <param name="metrics">The completion metrics from the LLM response.</param>
+    public void RecordSimpleInteraction(
+      string agentId,
+      string input,
+      string output,
+      CompletionMetrics metrics)
+    {
+      if (_recorder == null || !autoRecord)
+        return;
+
+      if (string.IsNullOrEmpty(agentId))
+      {
+        Debug.LogWarning("[AuditRecorderBridge] Cannot record: agentId is null or empty");
+        return;
+      }
+
+      try
+      {
+        // Get the current interaction count for this agent (will be 0 if no previous records)
+        var currentCount = _recorder.GetRecordCount(agentId);
+        var interactionCount = currentCount;
+
+        // Build a simple audit record with minimal required fields
+        var builder = new AuditRecordBuilder()
+          .WithNpcId(agentId)
+          .WithInteractionCount(interactionCount)
+          .WithSeed(interactionCount) // Use interaction count as seed for determinism
+          .WithSnapshotTimeUtcTicks(DateTimeOffset.UtcNow.UtcTicks)
+          .WithPlayerInput(input ?? "")
+          .WithTriggerInfo(0, "", _currentSceneName) // No trigger info for instruction-based calls
+          .WithStateHashes("", "", "") // No state hashes for simple calls
+          .WithOutput(output ?? "", output ?? "")
+          .WithValidationOutcome(true, 0, 0); // Assume validation passed for simple calls
+
+        // Add metrics if provided
+        if (metrics != null)
+        {
+          builder.WithMetrics(
+            (long)metrics.TtftMs,
+            (long)metrics.TotalTimeMs,
+            metrics.PromptTokenCount,
+            metrics.GeneratedTokenCount
+          );
+        }
+
+        var record = builder.Build();
+        _recorder.Record(record);
+
+        if (verboseLogging)
+        {
+          Debug.Log($"[AuditRecorderBridge] Recorded simple interaction for {agentId}, count: {_recorder.GetRecordCount(agentId)}");
+        }
+      }
+      catch (Exception ex)
+      {
+        Debug.LogError($"[AuditRecorderBridge] Failed to record simple interaction: {ex.Message}");
+      }
+    }
+
+    /// <summary>
     /// Builds an audit record from agent state and inference result.
     /// </summary>
     private AuditRecord BuildAuditRecord(
@@ -382,8 +449,8 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
       }
 
       // Build trigger info with session ID appended to scene name for tracking
-      var sceneNameWithSession = string.IsNullOrEmpty(_sessionId) 
-        ? _currentSceneName 
+      var sceneNameWithSession = string.IsNullOrEmpty(_sessionId)
+        ? _currentSceneName
         : $"{_currentSceneName} [Session:{_sessionId}]";
 
       var builder = new AuditRecordBuilder()
