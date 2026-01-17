@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.IO.Compression;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
 using uPiper.Core.Logging;
@@ -24,7 +25,7 @@ namespace uPiper.Core.Platform
         /// <summary>
         /// アプリ起動時に非同期で辞書展開を開始
         /// </summary>
-        public static async void PreloadDictionaryAsync()
+        public static async UniTaskVoid PreloadDictionaryAsync()
         {
 #if UNITY_ANDROID && !UNITY_EDITOR
             // メインスレッドで実行（UnityWebRequestを使用するため）
