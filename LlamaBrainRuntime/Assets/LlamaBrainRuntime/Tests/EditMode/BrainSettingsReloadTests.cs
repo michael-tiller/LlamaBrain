@@ -2,6 +2,7 @@
 #if UNITY_EDITOR
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 using LlamaBrain.Runtime.Core;
 using LlamaBrain.Core;
 
@@ -82,6 +83,9 @@ namespace LlamaBrain.Tests.EditMode
       // Since LlmConfig auto-clamps, we can't make it truly invalid
       // But we can test null settings
       _server!.Settings = null;
+
+      // Expect the warning log
+      LogAssert.Expect(LogType.Warning, "[HotReload] Cannot reload BrainSettings: Settings is null");
 
       // Act
       bool success = _server.ReloadBrainSettings();

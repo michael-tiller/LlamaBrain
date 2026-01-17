@@ -45,5 +45,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   globalRules:
-  - {fileID: 11400000, guid: a1b2c3d4e5f6789012345678901234a1, type: 2}
+  - {fileID: 11400000, guid: a1b2c3d4e5f6789012345678901234a2, type: 2}
+  - {fileID: 11400000, guid: c24c644df0c48fd48be60115a0cf48f6, type: 2}
   debugLogging: 0

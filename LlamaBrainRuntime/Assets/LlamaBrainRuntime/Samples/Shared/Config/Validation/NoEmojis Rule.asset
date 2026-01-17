@@ -16,23 +16,9 @@ MonoBehaviour:
   description: Prohibits emojis and emoticons in responses.
   ruleType: 0
   severity: 0
-  pattern: "[\U0001F600-\U0001F64F]"
+  pattern: ":\\)|:\\(|:D|;\\)|:P|XD|:3|\\^_\\^|o_o|T_T|<3"
   caseInsensitive: 0
-  additionalPatterns:
-  - "[\U0001F300-\U0001F5FF]"
-  - "[\U0001F680-\U0001F6FF]"
-  - "[\U0001F900-\U0001F9FF]"
-  - ":)"
-  - ":("
-  - ":D"
-  - ";)"
-  - ":P"
-  - "XD"
-  - ":3"
-  - "^_^"
-  - "o_o"
-  - "T_T"
-  - "<3"
+  additionalPatterns: []
   sceneFilter: []
   npcIdFilter: []
   triggerReasonFilter: []

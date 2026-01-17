@@ -129,13 +129,13 @@ namespace LlamaBrain.Runtime.Core
     [SerializeField] private bool storeConversationHistory = true;
 
     /// <summary>
-    /// Maximum tokens for NPC responses (default: 24 for normal replies)
-    /// Target ranges: barks 8-12, normal replies 20-24, dialogue 30-48
-    /// Note: At 170 tps (GPU), 24 tokens ≈ 140ms decode time.
+    /// Maximum tokens for NPC responses (default: 128)
+    /// Target ranges: barks 8-12, normal replies 20-24, dialogue 30-48, JSON/structured 64-128
+    /// Note: At 170 tps (GPU), 128 tokens ≈ 750ms decode time.
     /// </summary>
     [Header("Performance Settings")]
-    [Tooltip("Maximum tokens for NPC responses. Normal replies: 20-24 tokens. At 170 tps: 24 tokens ≈ 140ms")]
-    [SerializeField] private int maxResponseTokens = 24;
+    [Tooltip("Maximum tokens for responses. Normal replies: 20-24 tokens, JSON: 64-128. At 170 tps: 128 tokens ≈ 750ms")]
+    [SerializeField] private int maxResponseTokens = 128;
 
     /// <summary>
     /// Runtime LlmConfig from BrainSettings hot reload.
@@ -952,6 +952,20 @@ namespace LlamaBrain.Runtime.Core
 
             var failureCount = gateResult.Failures.Count + constraintResult.Violations.Count;
             UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Inference failed validation on attempt {attempts.Count}: {failureCount} total failures (gate: {gateResult.Failures.Count}, constraints: {constraintResult.Violations.Count})");
+
+            // Log detailed gate failures
+            foreach (var failure in gateResult.Failures)
+            {
+              UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Gate failure: [{failure.Severity}] {failure.Reason} - {failure.Description}" +
+                (string.IsNullOrEmpty(failure.ViolatingText) ? "" : $" | Text: \"{failure.ViolatingText}\"") +
+                (string.IsNullOrEmpty(failure.ViolatedRule) ? "" : $" | Rule: {failure.ViolatedRule}"));
+            }
+
+            // Log detailed constraint violations
+            foreach (var violation in constraintResult.Violations)
+            {
+              UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Constraint violation: {violation}");
+            }
 
             // Check if we should use fallback (critical failure) or retry
             if (gateResult.HasCriticalFailure)

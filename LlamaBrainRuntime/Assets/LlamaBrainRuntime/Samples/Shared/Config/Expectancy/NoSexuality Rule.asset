@@ -1,0 +1,60 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 70b0b7382e61244469cd4d9d12d2f633, type: 3}
+  m_Name: NoSexuality Rule
+  m_EditorClassIdentifier:
+  ruleId: no-sexuality
+  ruleName: No Sexual Content
+  description: Prevents NPCs from generating sexual, romantic, or suggestive content.
+  isEnabled: 1
+  priority: 300
+  conditionMode: 0
+  conditions: []
+  constraints:
+  - Type: 0
+    Severity: 2
+    Description: Cannot generate sexual or suggestive content
+    PromptInjection: You must never generate sexual, romantic, or suggestive content.
+      Do not flirt, make innuendos, or describe physical attraction. Keep all
+      interactions appropriate for all ages.
+    ValidationPatterns:
+    - \bsexy\b
+    - \bseductive\b
+    - \baroused\b
+    - \barousing\b
+    - \bsensual\b
+    - \berotic\b
+    - \blustful\b
+    - \bpassionate kiss\b
+    - \bintimate\b
+    - \bcaress\b
+    - \bcaressing\b
+    - \bundress\b
+    - \bundressing\b
+    - \bnaked\b
+    - \bnude\b
+    - \bbedroom eyes\b
+    - \bcome to bed\b
+    - \bmake love\b
+    - \bsleep with you\b
+    - \bdesires you\b
+    - \bwants you\b
+    - \bturned on\b
+    - \bhot for\b
+    - \bflirtatious\b
+    - \bseduce\b
+    - \bseducing\b
+    - \bstrip\b
+    - \bstripping\b
+    - \bmoan\b
+    - \bmoaning\b
+    UseRegex: 1

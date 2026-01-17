@@ -9,6 +9,7 @@ using System.Collections;
 using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Net;
 using System.Net.Http;
@@ -604,6 +605,130 @@ namespace LlamaBrain.Tests.PlayMode
                 $"Request 2: {json2}");
 
             TestContext.Out.WriteLine("Structured output reproducibility check passed");
+        }
+
+        /// <summary>
+        /// Rigorous determinism test: Same seed + same prompt must produce identical output
+        /// across 100 consecutive requests.
+        ///
+        /// This test proves that llama.cpp's seeded sampling is truly deterministic when:
+        /// - Same seed is passed each time
+        /// - Same prompt is used
+        /// - Same server session (no restart)
+        ///
+        /// If this test fails, it indicates a fundamental issue with seed handling in
+        /// either the API client, llama-server, or llama.cpp sampling.
+        /// </summary>
+        [UnityTest]
+        [Category("ExternalIntegration")]
+        public IEnumerator PlayMode_SameSeed_100ConsecutiveRequests_AllIdentical()
+        {
+            RequireExternal();
+            SetUpExternalServer();
+            yield return WaitForServerReady();
+
+            const int seed = 42;
+            const int iterations = 100;
+            const string prompt = "Generate a fantasy tavern name:";
+
+            var results = new List<string>();
+            var failures = new List<(int iteration, string output)>();
+
+            // Get first result as baseline
+            string baseline;
+            {
+                var client = server!.CreateClient();
+                Assert.That(client, Is.Not.Null, "Failed to create client for baseline");
+                disposables.Add(client!);
+
+                CompletionMetrics? result = null;
+                yield return UniTask.ToCoroutine(async () =>
+                {
+                    result = await client!.SendPromptWithMetricsAsync(
+                        prompt,
+                        maxTokens: 30,
+                        temperature: 0.7f,
+                        seed: seed,
+                        cancellationToken: CancellationToken.None);
+                });
+
+                Assert.That(result, Is.Not.Null, "Baseline request should return a result");
+                Assert.That(result!.Content, Does.Not.StartWith("Error:"),
+                    $"Baseline request returned an error: {result.Content}");
+
+                baseline = result.Content;
+                results.Add(baseline);
+                TestContext.Out.WriteLine($"Baseline output: {baseline}");
+            }
+
+            // Run 99 more iterations
+            for (int i = 1; i < iterations; i++)
+            {
+                var client = server!.CreateClient();
+                Assert.That(client, Is.Not.Null, $"Failed to create client for iteration {i}");
+                disposables.Add(client!);
+
+                CompletionMetrics? result = null;
+                yield return UniTask.ToCoroutine(async () =>
+                {
+                    result = await client!.SendPromptWithMetricsAsync(
+                        prompt,
+                        maxTokens: 30,
+                        temperature: 0.7f,
+                        seed: seed,
+                        cancellationToken: CancellationToken.None);
+                });
+
+                Assert.That(result, Is.Not.Null, $"Iteration {i} should return a result");
+                Assert.That(result!.Content, Does.Not.StartWith("Error:"),
+                    $"Iteration {i} returned an error: {result.Content}");
+
+                results.Add(result.Content);
+
+                if (result.Content != baseline)
+                {
+                    failures.Add((i, result.Content));
+                    TestContext.Out.WriteLine($"MISMATCH at iteration {i}: {result.Content}");
+                }
+
+                // Progress indicator every 10 iterations
+                if ((i + 1) % 10 == 0)
+                {
+                    TestContext.Out.WriteLine($"Completed {i + 1}/{iterations} iterations...");
+                }
+            }
+
+            // Report results
+            var uniqueOutputs = results.Distinct().ToList();
+            TestContext.Out.WriteLine($"\nResults summary:");
+            TestContext.Out.WriteLine($"  Total iterations: {iterations}");
+            TestContext.Out.WriteLine($"  Unique outputs: {uniqueOutputs.Count}");
+            TestContext.Out.WriteLine($"  Failures: {failures.Count}");
+
+            if (failures.Count > 0)
+            {
+                TestContext.Out.WriteLine($"\nFailure details:");
+                foreach (var (iteration, output) in failures.Take(10))
+                {
+                    TestContext.Out.WriteLine($"  Iteration {iteration}: {output}");
+                }
+                if (failures.Count > 10)
+                {
+                    TestContext.Out.WriteLine($"  ... and {failures.Count - 10} more failures");
+                }
+            }
+
+            // Assert 100% determinism
+            Assert.That(failures.Count, Is.EqualTo(0),
+                $"Seed determinism failed!\n" +
+                $"Seed: {seed}\n" +
+                $"Prompt: {prompt}\n" +
+                $"Baseline: {baseline}\n" +
+                $"Failures: {failures.Count}/{iterations}\n" +
+                $"Unique outputs: {uniqueOutputs.Count}\n" +
+                $"This indicates a fundamental issue with llama.cpp seed handling.");
+
+            TestContext.Out.WriteLine($"\nSUCCESS: {iterations} consecutive requests with seed={seed} all produced identical output.");
         }
 
         #endregion

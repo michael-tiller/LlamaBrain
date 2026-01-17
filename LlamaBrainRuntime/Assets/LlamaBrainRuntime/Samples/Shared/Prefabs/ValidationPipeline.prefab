@@ -54,5 +54,6 @@ MonoBehaviour:
     checkKnowledgeBoundaries: 1
     validateMutations: 1
     verboseLogging: 0
-  globalRuleSets: []
+  globalRuleSets:
+  - {fileID: 11400000, guid: 7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d, type: 2}
   forbiddenKnowledge: []

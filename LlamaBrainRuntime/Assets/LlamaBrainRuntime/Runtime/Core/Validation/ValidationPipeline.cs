@@ -365,5 +365,132 @@ namespace LlamaBrain.Runtime.Core.Validation
     /// Gets current settings (for debugging).
     /// </summary>
     public ValidationPipelineSettings Settings => settings;
+
+    /// <summary>
+    /// Processes structured/JSON output without dialogue parsing.
+    /// Validates JSON structure and applies content rules to specified fields.
+    /// </summary>
+    /// <param name="jsonOutput">The raw JSON output from LLM</param>
+    /// <param name="contentFieldsToValidate">JSON field names whose values should be validated (e.g., "message", "description")</param>
+    /// <param name="context">Optional validation context</param>
+    /// <returns>The gate result with validation outcome</returns>
+    public GateResult ProcessStructured(string jsonOutput, IEnumerable<string>? contentFieldsToValidate = null, ValidationContext? context = null)
+    {
+      if (gate == null) Initialize();
+
+      // Step 1: Validate JSON structure
+      if (string.IsNullOrWhiteSpace(jsonOutput))
+      {
+        var emptyResult = GateResult.Fail(new ValidationFailure
+        {
+          Reason = ValidationFailureReason.InvalidFormat,
+          Description = "Empty JSON output"
+        });
+        LastGateResult = emptyResult;
+        OnValidationFailed?.Invoke(emptyResult);
+        return emptyResult;
+      }
+
+      // Try to parse as JSON
+      string cleanJson = jsonOutput.Trim();
+      if (!cleanJson.StartsWith("{") && !cleanJson.StartsWith("["))
+      {
+        // Try to extract JSON from markdown code block
+        var match = System.Text.RegularExpressions.Regex.Match(jsonOutput, @"```(?:json)?\s*(\{[\s\S]*?\}|\[[\s\S]*?\])\s*```");
+        if (match.Success)
+        {
+          cleanJson = match.Groups[1].Value.Trim();
+        }
+        else
+        {
+          // Try raw JSON extraction
+          var jsonMatch = System.Text.RegularExpressions.Regex.Match(jsonOutput, @"(\{[^{}]*\}|\[[^\[\]]*\])");
+          if (jsonMatch.Success)
+          {
+            cleanJson = jsonMatch.Value;
+          }
+          else
+          {
+            var noJsonResult = GateResult.Fail(new ValidationFailure
+            {
+              Reason = ValidationFailureReason.InvalidFormat,
+              Description = "Could not extract valid JSON from output",
+              ViolatingText = jsonOutput.Length > 100 ? jsonOutput.Substring(0, 100) + "..." : jsonOutput
+            });
+            LastGateResult = noJsonResult;
+            OnValidationFailed?.Invoke(noJsonResult);
+            return noJsonResult;
+          }
+        }
+      }
+
+      // Step 2: Extract content fields to validate
+      var contentToValidate = new List<string>();
+      if (contentFieldsToValidate != null)
+      {
+        foreach (var field in contentFieldsToValidate)
+        {
+          // Simple regex extraction for string values
+          var fieldMatch = System.Text.RegularExpressions.Regex.Match(
+            cleanJson,
+            $@"""{field}""\s*:\s*""([^""\\]*(?:\\.[^""\\]*)*)""",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+          if (fieldMatch.Success)
+          {
+            contentToValidate.Add(fieldMatch.Groups[1].Value);
+          }
+        }
+      }
+
+      // If no specific fields, validate the entire JSON as content
+      if (contentToValidate.Count == 0)
+      {
+        contentToValidate.Add(cleanJson);
+      }
+
+      // Step 3: Create a pseudo-ParsedOutput for validation
+      // Combine all content fields for rule checking
+      var combinedContent = string.Join(" ", contentToValidate);
+      var pseudoParsed = new ParsedOutput
+      {
+        Success = true,
+        DialogueText = combinedContent,
+        RawOutput = jsonOutput
+      };
+      LastParsedOutput = pseudoParsed;
+
+      // Step 4: Build context with forbidden knowledge
+      context ??= new ValidationContext();
+      if (forbiddenKnowledge.Count > 0 && context.ForbiddenKnowledge == null)
+      {
+        context.ForbiddenKnowledge = new List<string>(forbiddenKnowledge);
+      }
+
+      // Step 5: Validate through gate (applies rules to content)
+      var result = gate!.Validate(pseudoParsed, context);
+      LastGateResult = result;
+
+      if (result.Passed)
+      {
+        OnValidationPassed?.Invoke(result);
+      }
+      else
+      {
+        OnValidationFailed?.Invoke(result);
+      }
+
+      return result;
+    }
+
+    /// <summary>
+    /// Processes structured/JSON output, validating all string fields.
+    /// </summary>
+    /// <param name="jsonOutput">The raw JSON output from LLM</param>
+    /// <param name="context">Optional validation context</param>
+    /// <returns>The gate result with validation outcome</returns>
+    public GateResult ProcessStructured(string jsonOutput, ValidationContext? context)
+    {
+      return ProcessStructured(jsonOutput, null, context);
+    }
   }
 }

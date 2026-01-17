@@ -796,7 +796,7 @@ namespace LlamaBrain.Runtime.Core
     {
       if (Settings == null)
       {
-        UnityEngine.Debug.LogError("[HotReload] Cannot reload BrainSettings: Settings is null");
+        UnityEngine.Debug.LogWarning("[HotReload] Cannot reload BrainSettings: Settings is null");
         return false;
       }
 

@@ -91,8 +91,8 @@ namespace LlamaBrain.Runtime.Core
     /// The maximum number of tokens to generate
     /// </summary>
     [Header("LLM Generation Settings")]
-    [Tooltip("Maximum number of tokens to generate")]
-    public int MaxTokens = 64;
+    [Tooltip("Maximum number of tokens to generate (128 default, increase for JSON/structured output)")]
+    public int MaxTokens = 128;
 
     /// <summary>
     /// The temperature to use for the llama.cpp server

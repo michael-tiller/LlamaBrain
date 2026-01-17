@@ -449,8 +449,8 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
       }
 
       // Build trigger info with session ID appended to scene name for tracking
-      var sceneNameWithSession = string.IsNullOrEmpty(_sessionId)
-        ? _currentSceneName
+      var sceneNameWithSession = string.IsNullOrEmpty(_sessionId) 
+        ? _currentSceneName 
         : $"{_currentSceneName} [Session:{_sessionId}]";
 
       var builder = new AuditRecordBuilder()

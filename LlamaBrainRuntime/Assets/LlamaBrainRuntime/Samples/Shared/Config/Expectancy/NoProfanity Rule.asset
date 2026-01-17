@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier:
   ruleId: no-profanity
   ruleName: No Profanity
-  description: Prevents NPCs from using profanity or inappropriate language.
+  description: Prevents NPCs from using profanity, slurs, or vulgar language.
   isEnabled: 1
   priority: 200
   conditionMode: 0
@@ -23,11 +23,46 @@ MonoBehaviour:
   - Type: 0
     Severity: 1
     Description: Cannot use profanity or swear words
-    PromptInjection: You must never use profanity, swear words, or vulgar language.
-      Keep all responses family-friendly.
+    PromptInjection: You must never use profanity, swear words, slurs, or vulgar
+      language. Keep all responses family-friendly and appropriate for all ages.
     ValidationPatterns:
-    - damn
-    - hell
-    - crap
-    - bastard
-    UseRegex: 0
+    - \bfuck\b
+    - \bfucking\b
+    - \bfucker\b
+    - \bfucked\b
+    - \bshit\b
+    - \bshitty\b
+    - \bbullshit\b
+    - \bass\b
+    - \basshole\b
+    - \bbitch\b
+    - \bbitches\b
+    - \bbastard\b
+    - \bdamn\b
+    - \bdamned\b
+    - \bdammit\b
+    - \bcrap\b
+    - \bcrappy\b
+    - \bpiss\b
+    - \bpissed\b
+    - \bcock\b
+    - \bdick\b
+    - \bdicks\b
+    - \bpussy\b
+    - \bwhore\b
+    - \bslut\b
+    - \bretard\b
+    - \bretarded\b
+    - \bdumbass\b
+    - \bjackass\b
+    - \bscrew you\b
+    - \bshut up\b
+    - \bsucks\b
+    - \bsucker\b
+    - \bbloody hell\b
+    - \bbugger\b
+    - \bwanker\b
+    - \btosser\b
+    - \bsod off\b
+    - \bbollocks\b
+    UseRegex: 1
