@@ -580,29 +580,26 @@ namespace LlamaBrain.Core
           n_keep = nKeep
         };
 
-        // Apply structured output parameters based on format
-        switch (format)
+        // Always use json_schema for structured output (singular enforced path)
+        if (!string.IsNullOrWhiteSpace(jsonSchema))
         {
-          case StructuredOutputFormat.JsonSchema:
-            req.json_schema = jsonSchema;
-            break;
-
-          case StructuredOutputFormat.Grammar:
-            var parameters = provider.BuildParameters(jsonSchema, format);
-            req.grammar = parameters.Grammar;
-            break;
-
-          case StructuredOutputFormat.ResponseFormat:
-            req.response_format = ResponseFormat.JsonObject;
-            break;
-
-          case StructuredOutputFormat.None:
-          default:
-            // No structured output enforcement - will rely on prompt instructions
-            break;
+          req.json_schema = JsonConvert.DeserializeObject(jsonSchema);
         }
 
-        var content = new StringContent(JsonConvert.SerializeObject(req), Encoding.UTF8, "application/json");
+        var serializedRequest = JsonConvert.SerializeObject(req, Formatting.None);
+
+        // Debug: Log the full request being sent - write to file for reliable capture
+        try
+        {
+          var debugPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "llamabrain_structured_request.log");
+          System.IO.File.WriteAllText(debugPath, $"{DateTime.UtcNow:O}\njson_schema set: {req.json_schema != null}\nRequest:\n{serializedRequest}");
+        }
+        catch
+        {
+          // Ignore file write errors
+        }
+
+        var content = new StringContent(serializedRequest, Encoding.UTF8, "application/json");
 
         // Add request to history for rate limiting
         requestHistory.Enqueue(DateTime.UtcNow);
@@ -630,10 +627,10 @@ namespace LlamaBrain.Core
         if (response?.content == null)
           return new CompletionMetrics { Content = "Error: Invalid response format from server", TotalTimeMs = totalWallTimeMs };
 
-        // Build metrics
+        // Build metrics - trim content since grammar output can include trailing whitespace
         var metrics = new CompletionMetrics
         {
-          Content = response.content,
+          Content = response.content.Trim(),
           CachedTokenCount = response.tokens_cached,
           TotalTimeMs = totalWallTimeMs
         };

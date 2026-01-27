@@ -121,6 +121,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Added "KV Cache Optimization" section to `USAGE_GUIDE.md` with configuration guide, boundary options, best practices, and troubleshooting
     - Added `KV_CACHE_BENCHMARKS.md` with comprehensive performance benchmarks, test descriptions, and metrics reference
 
+#### Changed
+- **Structured output: single json_schema path** (**BREAKING**)
+  - **Breaking:** `ChatCompletionRequest.json_schema` in `ApiContracts` is now `object?` (parsed JSON) instead of `string?` — callers or serializers that pass/expect a string must parse to an object (e.g. `JsonConvert.DeserializeObject(schemaJson)`).
+  - **Breaking:** Grammar and `response_format` code paths are removed; `StructuredOutputFormat.Grammar` and `StructuredOutputFormat.ResponseFormat` are effectively ignored — all structured output uses `json_schema` when a schema is provided.
+  - `ApiClient.SendStructuredPromptWithMetricsAsync` always sends `json_schema` when provided; optional format fields use `NullValueHandling.Ignore`.
+  - Completion content is trimmed when building metrics; structured request body is serialized with `Formatting.None` for consistency.
+  - Tests updated: `SendStructuredPromptWithMetricsAsync_GrammarFormat_*` and `*_ResponseFormatMode_*` now assert `json_schema` in the request (format parameter ignored).
+
 ### Unity Runtime
 
 #### Added
