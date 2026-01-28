@@ -72,6 +72,7 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
     private string _gameVersion = "";
     private string _currentSceneName = "";
     private string _sessionId = "";
+    private string _sessionTimestamp = "";
     private DateTime _sessionStartTime;
 
     /// <summary>
@@ -115,8 +116,8 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
 
       try
       {
-        InitializeRecorder();
-        StartNewSession();
+        StartNewSession();    // Must come first - generates timestamp used by persistence
+        InitializeRecorder(); // Creates persistence with session-specific file prefix
         Instance = this;
       }
       catch (Exception ex)
@@ -155,11 +156,13 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
     }
 
     /// <summary>
-    /// Starts a new audit session with a unique session ID.
+    /// Starts a new audit session with a unique session ID and timestamp.
+    /// Must be called before InitializeRecorder() so the timestamp is available for file naming.
     /// </summary>
     private void StartNewSession()
     {
       _sessionId = Guid.NewGuid().ToString();
+      _sessionTimestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
       _sessionStartTime = DateTime.UtcNow;
       Debug.Log($"[AuditRecorderBridge] Started new audit session: {_sessionId} at {_sessionStartTime:yyyy-MM-dd HH:mm:ss} UTC");
     }
@@ -234,7 +237,7 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
       {
         MaxFileSizeBytes = maxFileSizeBytes,
         MaxFileCount = maxFileCount,
-        FilePrefix = string.IsNullOrWhiteSpace(filePrefix) ? RollingFileOptions.DefaultFilePrefix : filePrefix
+        FilePrefix = BuildSessionFilePrefix()
       };
 
       // Validate options (will throw if invalid)
@@ -242,6 +245,22 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
 
       // Create persistence instance
       return new RollingFileAuditPersistence(fileSystem, clock, logDir, options);
+    }
+
+    /// <summary>
+    /// Builds a file prefix that includes the session timestamp for unique files per session.
+    /// </summary>
+    /// <returns>File prefix like "audit_20260128_143052".</returns>
+    private string BuildSessionFilePrefix()
+    {
+      var basePrefix = string.IsNullOrWhiteSpace(filePrefix)
+        ? RollingFileOptions.DefaultFilePrefix
+        : filePrefix;
+
+      // Include session timestamp to create unique file per application session
+      return string.IsNullOrEmpty(_sessionTimestamp)
+        ? basePrefix
+        : $"{basePrefix}_{_sessionTimestamp}";
     }
 
     private void TryConfigureFromBrainServer()

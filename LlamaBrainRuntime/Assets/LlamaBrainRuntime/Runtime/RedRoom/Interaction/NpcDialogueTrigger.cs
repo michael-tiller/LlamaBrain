@@ -318,7 +318,7 @@ namespace LlamaBrain.Runtime.RedRoom.Interaction
         if (enableVoice && !string.IsNullOrEmpty(cachedResponse))
         {
           Debug.Log($"[NpcDialogueTrigger] Speaking cached response now...");
-          SpeakResponseAsync(cachedResponse, targetNpc).Forget();
+          SpeakResponseAsync(cachedResponse!, targetNpc).Forget();
         }
         else if (enableVoice && string.IsNullOrEmpty(cachedResponse))
         {

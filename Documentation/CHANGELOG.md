@@ -172,9 +172,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Audit Recorder Enhancements**:
   - Added `ReplayResult.IsExactMatch` convenience property for checking exact replay matches
   - Improved `DebugPackage` integrity hash computation to order records consistently for deterministic hashing
+- **NpcDialogueTrigger**: Nullable annotation for cached response when calling `SpeakResponseAsync` (fixes nullable reference warning).
 
 #### Changed
 - Added session ID to audit log.
+- **AuditRecorderBridge**: Session-timestamped audit file prefix; `StartNewSession()` now runs before `InitializeRecorder()` so each application session gets unique rolling log files (e.g. `audit_20260128_143052_*.jsonl`).
 
 ## [0.3.0-rc.2] 2026-01-07
 
