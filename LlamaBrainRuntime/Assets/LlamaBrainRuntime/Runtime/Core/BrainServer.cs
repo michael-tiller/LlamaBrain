@@ -19,6 +19,11 @@ namespace LlamaBrain.Runtime.Core
   public class BrainServer : MonoBehaviour
   {
     /// <summary>
+    /// Singleton instance of the BrainServer.
+    /// </summary>
+    public static BrainServer? Instance { get; private set; }
+
+    /// <summary>
     /// The settings for the LlamaBrain server.
     /// </summary>
     public BrainSettings? Settings;
@@ -148,6 +153,14 @@ namespace LlamaBrain.Runtime.Core
     }
 
     /// <summary>
+    /// Sets singleton instance.
+    /// </summary>
+    private void Awake()
+    {
+      Instance = this;
+    }
+
+    /// <summary>
     /// Starts the LlamaBrain server.
     /// Stores the startup Task to observe exceptions and prevent unobserved Task exceptions.
     /// </summary>
@@ -272,6 +285,10 @@ namespace LlamaBrain.Runtime.Core
     /// </summary>
     private void OnDestroy()
     {
+      // Clear singleton
+      if (Instance == this)
+        Instance = null;
+
       // If StopServer() was already called, cleanup is already done - skip to avoid double-dispose
       if (!_isInitialized)
       {

@@ -12,6 +12,7 @@ namespace LlamaBrain.Editor.Config
   /// Manages hot reload of PersonaConfig and BrainSettings in Unity Editor.
   /// Automatically wires UnityEditorConfigWatcher to LlamaBrainAgents.
   /// Uses [InitializeOnLoad] to start watching when editor loads.
+  /// Includes Play Mode polling for dirty config detection.
   /// </summary>
   [InitializeOnLoadAttribute]
   public static class ConfigHotReloadManager
@@ -29,15 +30,175 @@ namespace LlamaBrain.Editor.Config
     public static int FailedReloads { get; private set; } = 0;
 
     /// <summary>
+    /// Cached snapshots of config values for dirty detection.
+    /// </summary>
+    private static Dictionary<PersonaConfig, PersonaConfigSnapshot> _personaSnapshots = new();
+    private static Dictionary<BrainSettings, BrainSettingsSnapshot> _brainSnapshots = new();
+
+    /// <summary>
+    /// Polling interval in seconds.
+    /// </summary>
+    private const float PollIntervalSeconds = 0.25f;
+    private static double _lastPollTime = 0;
+
+    /// <summary>
+    /// Snapshot of PersonaConfig values for change detection.
+    /// </summary>
+    private struct PersonaConfigSnapshot
+    {
+      public string PersonaId;
+      public string Name;
+      public string Description;
+      public string SystemPrompt;
+      public string Background;
+      public bool UseMemory;
+
+      public static PersonaConfigSnapshot From(PersonaConfig config) => new()
+      {
+        PersonaId = config.PersonaId,
+        Name = config.Name,
+        Description = config.Description,
+        SystemPrompt = config.SystemPrompt,
+        Background = config.Background,
+        UseMemory = config.UseMemory
+      };
+
+      public bool Equals(PersonaConfigSnapshot other) =>
+        PersonaId == other.PersonaId &&
+        Name == other.Name &&
+        Description == other.Description &&
+        SystemPrompt == other.SystemPrompt &&
+        Background == other.Background &&
+        UseMemory == other.UseMemory;
+    }
+
+    /// <summary>
+    /// Snapshot of BrainSettings values for change detection.
+    /// </summary>
+    private struct BrainSettingsSnapshot
+    {
+      public int Port;
+      public int ContextSize;
+      public int GpuLayers;
+      public int MaxTokens;
+      public float Temperature;
+      public float TopP;
+      public int TopK;
+      public float RepeatPenalty;
+
+      public static BrainSettingsSnapshot From(BrainSettings settings) => new()
+      {
+        Port = settings.Port,
+        ContextSize = settings.ContextSize,
+        GpuLayers = settings.GpuLayers,
+        MaxTokens = settings.MaxTokens,
+        Temperature = settings.Temperature,
+        TopP = settings.TopP,
+        TopK = settings.TopK,
+        RepeatPenalty = settings.RepeatPenalty
+      };
+
+      public bool Equals(BrainSettingsSnapshot other) =>
+        Port == other.Port &&
+        ContextSize == other.ContextSize &&
+        GpuLayers == other.GpuLayers &&
+        MaxTokens == other.MaxTokens &&
+        Mathf.Approximately(Temperature, other.Temperature) &&
+        Mathf.Approximately(TopP, other.TopP) &&
+        TopK == other.TopK &&
+        Mathf.Approximately(RepeatPenalty, other.RepeatPenalty);
+    }
+
+    /// <summary>
     /// Static constructor - called when Unity Editor loads.
     /// </summary>
     static ConfigHotReloadManager()
     {
-      // Subscribe to config watcher events
+      // Subscribe to config watcher events (for file-based changes)
       UnityEditorConfigWatcher.Instance.OnConfigChanged += HandleConfigChanged;
       UnityEditorConfigWatcher.Instance.StartWatching();
 
+      // Subscribe to Play Mode polling for in-memory changes
+      EditorApplication.update += PollForDirtyConfigs;
+      EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+
       Debug.Log("[ConfigHotReloadManager] Initialized - watching for PersonaConfig and BrainSettings changes");
+    }
+
+    /// <summary>
+    /// Clears snapshots when entering/exiting Play Mode.
+    /// </summary>
+    private static void OnPlayModeStateChanged(PlayModeStateChange state)
+    {
+      if (state == PlayModeStateChange.EnteredPlayMode || state == PlayModeStateChange.ExitingPlayMode)
+      {
+        _personaSnapshots.Clear();
+        _brainSnapshots.Clear();
+        _lastPollTime = 0;
+      }
+    }
+
+    /// <summary>
+    /// Polls for dirty configs during Play Mode.
+    /// </summary>
+    private static void PollForDirtyConfigs()
+    {
+      if (!IsEnabled || !Application.isPlaying)
+        return;
+
+      // Throttle polling
+      if (EditorApplication.timeSinceStartup - _lastPollTime < PollIntervalSeconds)
+        return;
+
+      _lastPollTime = EditorApplication.timeSinceStartup;
+
+      // Check PersonaConfigs in use by agents (same pattern as LairdGame)
+      var agents = Object.FindObjectsOfType<LlamaBrainAgent>();
+      foreach (var agent in agents)
+      {
+        if (agent.PersonaConfig == null)
+          continue;
+
+        var config = agent.PersonaConfig;
+        var currentSnapshot = PersonaConfigSnapshot.From(config);
+
+        if (_personaSnapshots.TryGetValue(config, out var previousSnapshot))
+        {
+          if (!currentSnapshot.Equals(previousSnapshot))
+          {
+            Debug.Log($"[ConfigHotReloadManager] Detected in-memory change to PersonaConfig: {config.Name}");
+            HandlePersonaConfigChanged(config, AssetDatabase.GetAssetPath(config));
+            _personaSnapshots[config] = currentSnapshot;
+          }
+        }
+        else
+        {
+          // First time seeing this config, store snapshot
+          _personaSnapshots[config] = currentSnapshot;
+        }
+      }
+
+      // Check BrainSettings via singleton (same pattern as LairdGame)
+      var brainServer = BrainServer.Instance;
+      if (brainServer != null && brainServer.Settings != null)
+      {
+        var settings = brainServer.Settings;
+        var currentSnapshot = BrainSettingsSnapshot.From(settings);
+
+        if (_brainSnapshots.TryGetValue(settings, out var previousSnapshot))
+        {
+          if (!currentSnapshot.Equals(previousSnapshot))
+          {
+            Debug.Log($"[ConfigHotReloadManager] Detected in-memory change to BrainSettings: {settings.name}");
+            HandleBrainSettingsChanged(settings, AssetDatabase.GetAssetPath(settings));
+            _brainSnapshots[settings] = currentSnapshot;
+          }
+        }
+        else
+        {
+          _brainSnapshots[settings] = currentSnapshot;
+        }
+      }
     }
 
     /// <summary>
@@ -108,6 +269,13 @@ namespace LlamaBrain.Editor.Config
     {
       Debug.Log($"[ConfigHotReloadManager] PersonaConfig changed: {config.Name} ({assetPath})");
 
+      // Log current values for verification
+      Debug.Log($"[ConfigHotReloadManager] PersonaConfig values detected:");
+      Debug.Log($"  PersonaId: '{config.PersonaId}' | Name: '{config.Name}'");
+      Debug.Log($"  Description: '{(config.Description?.Length > 50 ? config.Description.Substring(0, 50) + "..." : config.Description)}'");
+      Debug.Log($"  SystemPrompt: '{(config.SystemPrompt?.Length > 60 ? config.SystemPrompt.Substring(0, 60) + "..." : config.SystemPrompt)}'");
+      Debug.Log($"  UseMemory: {config.UseMemory}");
+
       // Find all LlamaBrainAgents in the scene using this config
       var agents = FindAgentsUsingConfig(config);
 
@@ -151,6 +319,12 @@ namespace LlamaBrain.Editor.Config
     private static void HandleBrainSettingsChanged(BrainSettings settings, string assetPath)
     {
       Debug.Log($"[ConfigHotReloadManager] BrainSettings changed: {assetPath}");
+
+      // Log current values for verification
+      Debug.Log($"[ConfigHotReloadManager] BrainSettings values detected:");
+      Debug.Log($"  Port: {settings.Port} | ContextSize: {settings.ContextSize} | GpuLayers: {settings.GpuLayers}");
+      Debug.Log($"  MaxTokens: {settings.MaxTokens} | Temperature: {settings.Temperature:F2} | TopP: {settings.TopP:F2} | TopK: {settings.TopK}");
+      Debug.Log($"  BatchSize: {settings.BatchSize} | UBatchSize: {settings.UBatchSize} | RepeatPenalty: {settings.RepeatPenalty:F2}");
 
       // Find BrainServer in scene
       var brainServer = Object.FindObjectOfType<BrainServer>();
@@ -245,6 +419,45 @@ namespace LlamaBrain.Editor.Config
     {
       ResetStats();
       Debug.Log("[ConfigHotReloadManager] Statistics reset");
+    }
+
+    /// <summary>
+    /// Menu item to force reload all configs (useful during Play Mode when Ctrl+S is locked).
+    /// </summary>
+    [MenuItem("LlamaBrain/Hot Reload/Force Reload All %&r")]
+    private static void MenuForceReloadAll()
+    {
+      if (!Application.isPlaying)
+      {
+        Debug.Log("[ConfigHotReloadManager] Force reload only works during Play Mode");
+        return;
+      }
+
+      Debug.Log("[ConfigHotReloadManager] Force reloading all LlamaBrain configs...");
+
+      // Find and reload all PersonaConfigs in use
+      var agents = Object.FindObjectsOfType<LlamaBrainAgent>();
+      var processedConfigs = new HashSet<PersonaConfig>();
+      int agentReloads = 0;
+
+      foreach (var agent in agents)
+      {
+        if (agent.PersonaConfig != null && !processedConfigs.Contains(agent.PersonaConfig))
+        {
+          processedConfigs.Add(agent.PersonaConfig);
+          HandlePersonaConfigChanged(agent.PersonaConfig, AssetDatabase.GetAssetPath(agent.PersonaConfig));
+          agentReloads++;
+        }
+      }
+
+      // Find and reload BrainSettings
+      var brainServer = Object.FindObjectOfType<BrainServer>();
+      if (brainServer != null && brainServer.Settings != null)
+      {
+        HandleBrainSettingsChanged(brainServer.Settings, AssetDatabase.GetAssetPath(brainServer.Settings));
+      }
+
+      Debug.Log($"[ConfigHotReloadManager] Force reload complete: {processedConfigs.Count} PersonaConfig(s), {(brainServer != null ? 1 : 0)} BrainSettings");
     }
   }
 }
