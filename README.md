@@ -57,7 +57,7 @@ Any **GGUF** model that can be run by llama.cpp and can produce text that confor
 - CPU: AMD Ryzen 7 7800X3D
 - RAM: 64 GB
 - GPU: NVIDIA RTX 4070 Ti SUPER
-- NVIDIA driver: 32.0.15.8129 (581.29)
+- NVIDIA driver: 32.0.15.9186 (591.86)
 - llama.cpp: b7574, win-cuda-13.1-x64
 - CUDA: cudart-llama, win-cuda-13.1-x64
 - Model: Qwen3.5-9B-abliterated-Q4_K_M.gguf
