@@ -157,6 +157,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `Runtime/RedRoom/Audit/ReplayProgressUI.cs`
   - **Files Modified**:
     - `Runtime/Core/LlamaBrainAgent.cs` - Added audit recording integration
+- **ProcessJobManager** - Windows Job Objects for llama-server crash cleanup
+  - Added `ProcessJobManager` static class using `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` to ensure llama-server child processes are terminated when Unity exits or crashes
+  - `BrainServer` initializes job object on startup and assigns llama-server process via `AssignServerProcessToJob()`
+  - Prevents orphaned llama-server processes after Editor/Player crash
+- **Config Hot Reload Improvements**
+  - Added `ConfigSaveProcessor` (AssetModificationProcessor) to detect config asset saves before `OnPostprocessAllAssets` fires
+  - Added `UnityEditorConfigWatcher.NotifyPotentialChange()` for pre-save change notification
+  - Added `UnityEditorConfigWatcher.ForceProcessPendingChanges()` and `PendingChangeCount` for testing
+  - Added `ConfigHotReloadManager.CaptureInitialSnapshots()` for test setup (ensures baseline before config modifications)
+  - Fixed snapshot update timing: snapshots now updated inside `HandlePersonaConfigChanged`/`HandleBrainSettingsChanged` to prevent double-triggering from polling
+- **ConfigHotReloadIntegrationTests** - PlayMode integration tests for config hot reload during Editor Play Mode
 
 #### Fixed
 - Fixes an issue with the CI pipeline not firing properly.
@@ -173,10 +184,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added `ReplayResult.IsExactMatch` convenience property for checking exact replay matches
   - Improved `DebugPackage` integrity hash computation to order records consistently for deterministic hashing
 - **NpcDialogueTrigger**: Nullable annotation for cached response when calling `SpeakResponseAsync` (fixes nullable reference warning).
+- **LlamaBrainAgent**: Decode speed validation downgraded from `LogError` to `LogWarning` when below 50 tps (still functional, but degraded).
 
 #### Changed
 - Added session ID to audit log.
 - **AuditRecorderBridge**: Session-timestamped audit file prefix; `StartNewSession()` now runs before `InitializeRecorder()` so each application session gets unique rolling log files (e.g. `audit_20260128_143052_*.jsonl`).
+- **Documentation**: Unity version 6000.0.58f2 → 6000.3.10f1 LTS; model reference Qwen2.5-3B → Qwen3.5-9B in QUICK_START and THIRD_PARTY_PACKAGES.
+- **STRUCTURED_OUTPUT.md**: Removed "Pit of Success API Design" section.
 
 ## [0.3.0-rc.2] 2026-01-07
 

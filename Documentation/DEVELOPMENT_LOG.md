@@ -1715,7 +1715,7 @@ A lightweight ring-buffer recorder that captures the minimal state needed for de
   "version": "1.0",
   "npcName": "TestNPC",
   "gameVersion": "0.3.0",
-  "modelFingerprint": "qwen-2.5-7b-instruct-fp16-v1.2.3",
+  "modelFingerprint": "qwen3.5-9b-abliterated-q4_k_m",
   "modelChecksum": "sha256:abc123...",
   "timestampRange": { "start": "...", "end": "..." },
   "turns": [
@@ -1774,7 +1774,7 @@ A lightweight ring-buffer recorder that captures the minimal state needed for de
 
 **Drift Detectors**: The system includes two critical safeguards to prevent silent replay drift:
 1. **Output Hash Verification** (Addendum 28.2b): Each turn stores `SHA256(ResponseText)`. During replay, if the generated output hash doesn't match the stored hash, RedRoom immediately flags a "Divergence Warning" - indicating non-deterministic hardware/drivers rather than logic issues.
-2. **Model Fingerprinting** (Addendum 28.3b): The debug package includes the model checksum/fingerprint. Replay validates that the current backend model matches the audit log's model signature, preventing useless replays (e.g., replaying a `Phi-3-mini` bug on `Qwen-2.5`).
+2. **Model Fingerprinting** (Addendum 28.3b): The debug package includes the model checksum/fingerprint. Replay validates that the current backend model matches the audit log's model signature, preventing useless replays (e.g., replaying a `Phi-3-mini` bug on `Qwen3.5-9B`).
 
 ---
 

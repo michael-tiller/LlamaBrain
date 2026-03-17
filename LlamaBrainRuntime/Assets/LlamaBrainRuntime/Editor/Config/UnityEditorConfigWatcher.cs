@@ -10,6 +10,28 @@ using LlamaBrain.Runtime.Core;
 namespace LlamaBrain.Editor.Config
 {
   /// <summary>
+  /// Detects when config assets are saved (before OnPostprocessAllAssets fires).
+  /// This catches saves that don't trigger a full reimport.
+  /// </summary>
+  public class ConfigSaveProcessor : AssetModificationProcessor
+  {
+    static string[] OnWillSaveAssets(string[] paths)
+    {
+      if (UnityEditorConfigWatcher.Instance == null || !UnityEditorConfigWatcher.Instance.IsWatching)
+        return paths;
+
+      foreach (var path in paths)
+      {
+        if (path.EndsWith(".asset"))
+        {
+          UnityEditorConfigWatcher.NotifyPotentialChange(path);
+        }
+      }
+      return paths;
+    }
+  }
+
+  /// <summary>
   /// Watches for PersonaConfig and BrainSettings ScriptableObject changes in Unity Editor.
   /// Uses AssetDatabase callbacks to detect when config assets are modified.
   /// Implements debouncing to avoid firing multiple events for rapid changes.
@@ -25,6 +47,12 @@ namespace LlamaBrain.Editor.Config
     /// Gets whether the watcher is currently active.
     /// </summary>
     public bool IsWatching { get; private set; }
+
+    /// <summary>
+    /// Gets the number of pending changes awaiting processing.
+    /// Used for testing/debugging.
+    /// </summary>
+    public int PendingChangeCount => _pendingChanges.Count;
 
     /// <summary>
     /// Singleton instance (AssetPostprocessor methods are static, so we need a static instance)
@@ -88,6 +116,22 @@ namespace LlamaBrain.Editor.Config
     }
 
     /// <summary>
+    /// Called by ConfigSaveProcessor when an asset is about to be saved.
+    /// Checks if it's a config asset and queues it for processing.
+    /// </summary>
+    public static void NotifyPotentialChange(string assetPath)
+    {
+      if (_instance == null || !_instance.IsWatching)
+        return;
+
+      if (IsConfigAsset(assetPath))
+      {
+        _pendingChanges.Add(assetPath);
+        _lastChangeTime = EditorApplication.timeSinceStartup;
+      }
+    }
+
+    /// <summary>
     /// Called by Unity after assets are imported.
     /// This is a static callback from Unity's AssetPostprocessor.
     /// </summary>
@@ -123,6 +167,31 @@ namespace LlamaBrain.Editor.Config
 
       // Check if it's PersonaConfig or BrainSettings
       return asset is PersonaConfig || asset is BrainSettings;
+    }
+
+    /// <summary>
+    /// Forces immediate processing of pending changes, bypassing debounce.
+    /// Used for testing purposes only.
+    /// </summary>
+    public void ForceProcessPendingChanges()
+    {
+      if (_pendingChanges.Count == 0)
+        return;
+
+      // Fire events for all pending changes
+      foreach (var assetPath in _pendingChanges)
+      {
+        try
+        {
+          OnConfigChanged?.Invoke(assetPath);
+        }
+        catch (Exception ex)
+        {
+          Debug.LogError($"[UnityEditorConfigWatcher] Error processing config change for {assetPath}: {ex.Message}");
+        }
+      }
+
+      _pendingChanges.Clear();
     }
 
     /// <summary>

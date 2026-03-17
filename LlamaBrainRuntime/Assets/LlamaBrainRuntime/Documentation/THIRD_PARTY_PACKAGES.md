@@ -24,7 +24,7 @@ UniTask is a high-performance async/await library for Unity that provides zero-a
 
 **License:** MIT License
 
-**Tested with:** Unity 6000.0.58f2 LTS
+**Tested with:** Unity 6000.3.10f1 LTS
 
 **Installation:**
 
@@ -64,7 +64,7 @@ TextMeshPro (TMP) is Unity's advanced text rendering system that provides high-q
 
 **License:** Distributed by Unity as package `com.unity.textmeshpro` via Package Manager; install separately via Unity.
 
-**Tested with:** Unity 6000.0.58f2 LTS
+**Tested with:** Unity 6000.3.10f1 LTS
 
 **Installation:**
 
@@ -108,7 +108,7 @@ Unity's Starter Assets – Third Person character controller used in LlamaBrain 
 
 **License:** Non-standard Unity license (Standard Asset Store EULA). **Not redistributed** in this repository.
 
-**Tested with:** Unity 6000.0.58f2 LTS (URP version only)
+**Tested with:** Unity 6000.3.10f1 LTS (URP version only)
 
 **Required Dependencies:**
 - **URP Project**: Your Unity project must use the Universal Render Pipeline (URP)
@@ -123,7 +123,7 @@ Unity's Starter Assets – Third Person character controller used in LlamaBrain 
 4. Ensure your project is configured for URP (not built-in render pipeline or HDRP)
 5. Enable the New Input System in Project Settings → Player → Active Input Handling
 6. Install Cinemachine via Package Manager if not already installed
-7. Ensure compatibility with Unity 6000.0.58f2 LTS or higher
+7. Ensure compatibility with Unity 6000.3.10f1 LTS or higher
 
 **Usage in LlamaBrain:**
 - Used in sample scenes for NPC movement and interaction
@@ -153,7 +153,7 @@ Whisper Unity is a Unity wrapper for OpenAI's Whisper speech-to-text model. It p
 
 **Location:** `Assets/ThirdParty/Plugins/WhisperUnity/`
 
-**Tested with:** Unity 6000.0.58f2 LTS
+**Tested with:** Unity 6000.3.10f1 LTS
 
 **Modifications:**
 - Updated model path from `ggml-tiny.bin` to `ggml-tiny.en.bin` in tests and default configurations
@@ -197,7 +197,7 @@ uPiper is a Unity port of Piper TTS, providing high-quality neural text-to-speec
 
 **Location:** `Assets/ThirdParty/Plugins/uPiper/`
 
-**Tested with:** Unity 6000.0.58f2 LTS
+**Tested with:** Unity 6000.3.10f1 LTS
 
 **Modifications:**
 - Integration with async audio generation pipeline (`AsyncAudioGenerator.cs`)
@@ -242,7 +242,7 @@ SaveGameFree is a free Unity asset for saving and loading game data. It provides
 **Latest GitHub Release:**  
 [Version 2.5.0](https://github.com/BayatGames/SaveGameFree/releases/tag/2.5.0) (Apr 1, 2022)
 
-**Tested with:** Unity 6000.0.58f2 LTS
+**Tested with:** Unity 6000.3.10f1 LTS
 
 **Note:** SaveGameFree is required for Feature 16 (Save/Load Game Integration) to persist game state and InteractionCount across sessions.
 
@@ -304,7 +304,7 @@ SaveGameFree is a free Unity asset for saving and loading game data. It provides
 Before using LlamaBrain Runtime, ensure you have:
 
 **Core Runtime:**
-- [ ] Unity 6000.0.58f2 LTS
+- [ ] Unity 6000.3.10f1 LTS
 - [ ] TextMeshPro package installed via Package Manager
 - [ ] UniTask installed via Package Manager (Git URL)
 

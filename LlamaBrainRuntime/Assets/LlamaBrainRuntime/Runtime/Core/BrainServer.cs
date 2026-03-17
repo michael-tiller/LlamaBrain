@@ -109,6 +109,10 @@ namespace LlamaBrain.Runtime.Core
 
       try
       {
+        // Initialize the process job manager early to ensure child processes
+        // are killed if the parent crashes
+        ProcessJobManager.Initialize();
+
         if (Settings == null)
         {
           UnityEngine.Debug.LogWarning("[LLM] LlamaBrainServer.Settings is null. Server initialization will be skipped.");
@@ -214,6 +218,10 @@ namespace LlamaBrain.Runtime.Core
         // Log the startup arguments to Unity console (DLL Logger doesn't reach Unity)
         UnityEngine.Debug.Log($"[LLM] Server started with arguments: {serverManager.LastStartupArguments}");
 
+        // Assign the server process to the job object for crash cleanup
+        // Do this early before any awaits to ensure it's assigned even if startup fails
+        AssignServerProcessToJob();
+
         // Give the server a moment to start up
         await Task.Delay(2000, token);
         
@@ -272,6 +280,9 @@ namespace LlamaBrain.Runtime.Core
 
         // Log the startup arguments to Unity console
         UnityEngine.Debug.Log($"[LLM] Server started with arguments: {serverManager.LastStartupArguments}");
+
+        // Assign the server process to the job object for crash cleanup
+        AssignServerProcessToJob();
       }
       catch (Exception ex)
       {
@@ -366,6 +377,42 @@ namespace LlamaBrain.Runtime.Core
 
       // Mark as uninitialized to avoid re-entry weirdness
       _isInitialized = false;
+    }
+
+    /// <summary>
+    /// Gets the process name from the executable path (without extension).
+    /// </summary>
+    private string? GetServerProcessName()
+    {
+      if (Settings == null || string.IsNullOrEmpty(Settings.ExecutablePath))
+      {
+        return null;
+      }
+
+      try
+      {
+        // Extract filename without extension from path
+        // e.g., "Backend/llama-server.exe" -> "llama-server"
+        var fileName = Path.GetFileNameWithoutExtension(Settings.ExecutablePath);
+        return string.IsNullOrEmpty(fileName) ? null : fileName;
+      }
+      catch
+      {
+        return null;
+      }
+    }
+
+    /// <summary>
+    /// Assigns the llama-server process to the job object for crash cleanup.
+    /// </summary>
+    private void AssignServerProcessToJob()
+    {
+      var processName = GetServerProcessName();
+      if (!string.IsNullOrEmpty(processName))
+      {
+        // Small delay to ensure process is fully started
+        ProcessJobManager.AssignProcessByName(processName, matchNewest: true);
+      }
     }
 
     /// <summary>
@@ -791,6 +838,10 @@ namespace LlamaBrain.Runtime.Core
 
         // Start server again
         serverManager.StartServer();
+
+        // Assign the server process to the job object for crash cleanup
+        AssignServerProcessToJob();
+
         await Task.Delay(2000); // Give it time to start
 
         // Wait for it to be ready

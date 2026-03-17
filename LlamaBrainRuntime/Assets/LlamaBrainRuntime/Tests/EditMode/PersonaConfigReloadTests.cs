@@ -2,9 +2,11 @@
 #if UNITY_EDITOR
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 using LlamaBrain.Runtime.Core;
 using LlamaBrain.Persona;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace LlamaBrain.Tests.EditMode
 {
@@ -76,6 +78,9 @@ namespace LlamaBrain.Tests.EditMode
       _agent!.ConvertConfigToProfile();
       var originalName = _agent.RuntimeProfile?.Name;
 
+      // Expect the validation error log
+      LogAssert.Expect(LogType.Error, new Regex(@"\[HotReload\] PersonaConfig validation failed.*"));
+
       // Act: Set invalid config (empty name) and attempt reload
       _config!.Name = ""; // Invalid
       bool success = _agent.ReloadPersonaConfig();
@@ -90,7 +95,7 @@ namespace LlamaBrain.Tests.EditMode
     {
       // Arrange: Initialize agent with interaction count
       _agent!.ConvertConfigToProfile();
-      _agent.InteractionCount = 10;
+      _agent.TestSetInteractionCount(10);
 
       // Act: Reload config
       _config!.Description = "Modified description";

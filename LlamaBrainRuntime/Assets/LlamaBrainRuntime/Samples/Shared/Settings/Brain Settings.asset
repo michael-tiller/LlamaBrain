@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: Brain Settings
   m_EditorClassIdentifier: 
   ExecutablePath: Backend/llama-server.exe
-  ModelPath: Backend/model/qwen2.5-7b-instruct-abliterated-v2-q5_k_m.gguf
+  ModelPath: Backend/model/Qwen3.5-9B-abliterated-Q4_K_M.gguf
   Port: 5000
-  ContextSize: 2048
+  ContextSize: 4096
   GpuLayers: 35
   Threads: 0
   BatchSize: 512
@@ -24,13 +24,15 @@ MonoBehaviour:
   ParallelSlots: 1
   UseContinuousBatching: 0
   UseFlashAttention: 1
-  MaxTokens: 64
+  MaxTokens: 128
   Temperature: 0
   TopP: 0.9
   TopK: 40
-  RepeatPenalty: 1.378
+  RepeatPenalty: 1.1
   StopSequences:
   - </s>
+  - <|im_end|>
+  - <|im_start|>
   - 'Human:'
   - 'Assistant:'
   - 'Player:'

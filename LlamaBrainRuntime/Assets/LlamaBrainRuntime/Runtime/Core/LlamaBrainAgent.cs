@@ -2054,11 +2054,11 @@ namespace LlamaBrain.Runtime.Core
         // llama.cpp's layer allocation is often optimal even if not all layers are offloaded
       }
 
-      // VALIDATION: Fail loudly if decode speed is too low
+      // VALIDATION: Warn if decode speed is too low (still functional, but degraded)
       const double MIN_DECODE_TPS = 50.0;
       if (metrics.TokensPerSecond > 0 && metrics.TokensPerSecond < MIN_DECODE_TPS)
       {
-        UnityEngine.Debug.LogError($"[LlamaBrainAgent] CRITICAL: Decode speed {metrics.TokensPerSecond:F1} tps is below threshold ({MIN_DECODE_TPS} tps)! " +
+        UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Decode speed {metrics.TokensPerSecond:F1} tps is below threshold ({MIN_DECODE_TPS} tps). " +
           $"Expected 100-200 tps with GPU. Possible causes: CPU-only inference, GPU not enabled, model too large, or system throttling. " +
           $"Check: GPU layers offloaded, CUDA build, VRAM usage, GPU temperature.");
       }

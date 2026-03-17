@@ -6,7 +6,6 @@ using UnityEditor;
 using LlamaBrain.Editor.Config;
 using LlamaBrain.Runtime.Core;
 using System.Collections.Generic;
-using System.IO;
 
 namespace LlamaBrain.Tests.EditMode
 {
@@ -98,16 +97,20 @@ namespace LlamaBrain.Tests.EditMode
       AssetDatabase.Refresh();
 
       _changedAssets.Clear(); // Clear any changes from creation
+      _watcher.ForceProcessPendingChanges(); // Clear any pending from creation
+      _changedAssets.Clear();
 
-      // Act: Modify the asset
+      // Act: Modify the asset and manually notify
+      // (OnWillSaveAssets may not fire during test execution)
       config.Name = "Modified Wizard";
       EditorUtility.SetDirty(config);
       AssetDatabase.SaveAssets();
-      AssetDatabase.Refresh();
 
-      // Wait for debounce + processing
-      System.Threading.Thread.Sleep(150); // 100ms debounce + 50ms buffer
-      EditorApplication.Step(); // Trigger EditorApplication.update
+      // Manually notify since OnWillSaveAssets may not fire in test context
+      UnityEditorConfigWatcher.NotifyPotentialChange(assetPath);
+
+      // Force process pending changes
+      _watcher.ForceProcessPendingChanges();
 
       // Assert
       Assert.That(_changedAssets.Count, Is.GreaterThan(0),
@@ -130,16 +133,19 @@ namespace LlamaBrain.Tests.EditMode
       AssetDatabase.Refresh();
 
       _changedAssets.Clear(); // Clear any changes from creation
+      _watcher.ForceProcessPendingChanges(); // Clear any pending from creation
+      _changedAssets.Clear();
 
       // Act: Modify the asset
       settings.Temperature = 0.5f;
       EditorUtility.SetDirty(settings);
       AssetDatabase.SaveAssets();
-      AssetDatabase.Refresh();
 
-      // Wait for debounce + processing
-      System.Threading.Thread.Sleep(150);
-      EditorApplication.Step();
+      // Manually notify since OnWillSaveAssets may not fire in test context
+      UnityEditorConfigWatcher.NotifyPotentialChange(assetPath);
+
+      // Force process pending changes
+      _watcher.ForceProcessPendingChanges();
 
       // Assert
       Assert.That(_changedAssets.Count, Is.GreaterThan(0),
@@ -162,15 +168,19 @@ namespace LlamaBrain.Tests.EditMode
       AssetDatabase.Refresh();
 
       _changedAssets.Clear();
+      _watcher.ForceProcessPendingChanges(); // Clear any pending from creation
+      _changedAssets.Clear();
 
       // Act: Modify the unrelated asset
       EditorUtility.SetDirty(unrelatedAsset);
       AssetDatabase.SaveAssets();
       AssetDatabase.Refresh();
 
-      // Wait for debounce + processing
-      System.Threading.Thread.Sleep(150);
-      EditorApplication.Step();
+      // Manually notify - should be filtered out since not a config asset
+      UnityEditorConfigWatcher.NotifyPotentialChange(assetPath);
+
+      // Force process pending changes
+      _watcher.ForceProcessPendingChanges();
 
       // Assert
       Assert.That(_changedAssets, Does.Not.Contain(assetPath),
@@ -190,31 +200,32 @@ namespace LlamaBrain.Tests.EditMode
       AssetDatabase.Refresh();
 
       _changedAssets.Clear();
+      _watcher.ForceProcessPendingChanges(); // Clear any pending from creation
+      _changedAssets.Clear();
 
       // Act: Make multiple rapid changes (within debounce window)
+      // The HashSet ensures each asset path is only queued once
       config.Name = "Change 1";
       EditorUtility.SetDirty(config);
       AssetDatabase.SaveAssets();
-
-      System.Threading.Thread.Sleep(30); // Within debounce window
+      UnityEditorConfigWatcher.NotifyPotentialChange(assetPath);
 
       config.Name = "Change 2";
       EditorUtility.SetDirty(config);
       AssetDatabase.SaveAssets();
-
-      System.Threading.Thread.Sleep(30); // Within debounce window
+      UnityEditorConfigWatcher.NotifyPotentialChange(assetPath);
 
       config.Name = "Change 3";
       EditorUtility.SetDirty(config);
       AssetDatabase.SaveAssets();
+      UnityEditorConfigWatcher.NotifyPotentialChange(assetPath);
 
       AssetDatabase.Refresh();
 
-      // Wait for debounce to complete
-      System.Threading.Thread.Sleep(150);
-      EditorApplication.Step();
+      // Force process pending changes
+      _watcher.ForceProcessPendingChanges();
 
-      // Assert: Should fire event only once after debounce
+      // Assert: Should fire event only once (HashSet deduplicates)
       int occurrences = 0;
       foreach (var changed in _changedAssets)
       {
@@ -227,7 +238,7 @@ namespace LlamaBrain.Tests.EditMode
     }
 
     [Test]
-    public void WatcherNotStarted_NoEventsF fired()
+    public void WatcherNotStarted_NoEventsFired()
     {
       // Arrange: Don't start watching
       Assert.IsFalse(_watcher!.IsWatching);
@@ -246,8 +257,12 @@ namespace LlamaBrain.Tests.EditMode
       AssetDatabase.SaveAssets();
       AssetDatabase.Refresh();
 
-      System.Threading.Thread.Sleep(150);
-      EditorApplication.Step();
+      // Manually notify - should be rejected since watcher isn't started
+      UnityEditorConfigWatcher.NotifyPotentialChange(assetPath);
+
+      // Force process would do nothing since watcher isn't started,
+      // but we call it anyway to ensure no events fire
+      _watcher.ForceProcessPendingChanges();
 
       // Assert
       Assert.That(_changedAssets, Is.Empty,

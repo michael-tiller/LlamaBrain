@@ -168,7 +168,7 @@ namespace LlamaBrain.Editor.Config
           {
             Debug.Log($"[ConfigHotReloadManager] Detected in-memory change to PersonaConfig: {config.Name}");
             HandlePersonaConfigChanged(config, AssetDatabase.GetAssetPath(config));
-            _personaSnapshots[config] = currentSnapshot;
+            // Snapshot is now updated inside HandlePersonaConfigChanged
           }
         }
         else
@@ -191,7 +191,7 @@ namespace LlamaBrain.Editor.Config
           {
             Debug.Log($"[ConfigHotReloadManager] Detected in-memory change to BrainSettings: {settings.name}");
             HandleBrainSettingsChanged(settings, AssetDatabase.GetAssetPath(settings));
-            _brainSnapshots[settings] = currentSnapshot;
+            // Snapshot is now updated inside HandleBrainSettingsChanged
           }
         }
         else
@@ -227,6 +227,30 @@ namespace LlamaBrain.Editor.Config
       TotalReloads = 0;
       SuccessfulReloads = 0;
       FailedReloads = 0;
+    }
+
+    /// <summary>
+    /// Captures initial snapshots for all configs currently in use by agents.
+    /// Call this after Enable() to ensure baseline snapshots exist before tests modify configs.
+    /// </summary>
+    public static void CaptureInitialSnapshots()
+    {
+      // Capture PersonaConfig snapshots
+      var agents = Object.FindObjectsOfType<LlamaBrainAgent>();
+      foreach (var agent in agents)
+      {
+        if (agent.PersonaConfig != null && !_personaSnapshots.ContainsKey(agent.PersonaConfig))
+        {
+          _personaSnapshots[agent.PersonaConfig] = PersonaConfigSnapshot.From(agent.PersonaConfig);
+        }
+      }
+
+      // Capture BrainSettings snapshot
+      var brainServer = BrainServer.Instance;
+      if (brainServer != null && brainServer.Settings != null && !_brainSnapshots.ContainsKey(brainServer.Settings))
+      {
+        _brainSnapshots[brainServer.Settings] = BrainSettingsSnapshot.From(brainServer.Settings);
+      }
     }
 
     /// <summary>
@@ -267,6 +291,10 @@ namespace LlamaBrain.Editor.Config
     /// </summary>
     private static void HandlePersonaConfigChanged(PersonaConfig config, string assetPath)
     {
+      // Update snapshot immediately to prevent double-triggering from polling
+      var currentSnapshot = PersonaConfigSnapshot.From(config);
+      _personaSnapshots[config] = currentSnapshot;
+
       Debug.Log($"[ConfigHotReloadManager] PersonaConfig changed: {config.Name} ({assetPath})");
 
       // Log current values for verification
@@ -318,6 +346,10 @@ namespace LlamaBrain.Editor.Config
     /// </summary>
     private static void HandleBrainSettingsChanged(BrainSettings settings, string assetPath)
     {
+      // Update snapshot immediately to prevent double-triggering from polling
+      var currentSnapshot = BrainSettingsSnapshot.From(settings);
+      _brainSnapshots[settings] = currentSnapshot;
+
       Debug.Log($"[ConfigHotReloadManager] BrainSettings changed: {assetPath}");
 
       // Log current values for verification
