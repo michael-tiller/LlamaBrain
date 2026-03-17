@@ -2,11 +2,14 @@
 using UnityEngine;
 using LlamaBrain.Core;
 using LlamaBrain.Persona;
+using LlamaBrain.Config;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
+using Cysharp.Threading.Tasks;
 
 namespace LlamaBrain.Runtime.Core
 {
@@ -15,6 +18,11 @@ namespace LlamaBrain.Runtime.Core
   /// </summary>
   public class BrainServer : MonoBehaviour
   {
+    /// <summary>
+    /// Singleton instance of the BrainServer.
+    /// </summary>
+    public static BrainServer? Instance { get; private set; }
+
     /// <summary>
     /// The settings for the LlamaBrain server.
     /// </summary>
@@ -30,18 +38,28 @@ namespace LlamaBrain.Runtime.Core
     private ClientManager? clientManager;
     private CancellationTokenSource? _cancellationTokenSource;
     /// <summary>
-    /// The startup task for observing exceptions (prevents unobserved Task exceptions from async void Start)
+    /// The startup task for observing exceptions.
     /// </summary>
     private Task? _startupTask;
     /// <summary>
     /// Whether the LlamaBrain server is initialized.
     /// </summary>
     private bool _isInitialized;
+    /// <summary>
+    /// The current ProcessConfig used for detecting server-level config changes.
+    /// </summary>
+    private ProcessConfig? _currentProcessConfig;
 
     /// <summary>
     /// Whether the LlamaBrain server is initialized.
     /// </summary>
     public bool IsInitialized => _isInitialized;
+
+    /// <summary>
+    /// Event fired when BrainSettings are successfully reloaded.
+    /// Passes the new LlmConfig to subscribers.
+    /// </summary>
+    public event Action<LlmConfig>? OnBrainSettingsReloaded;
 
     /// <summary>
     /// Whether the server is currently running and ready
@@ -91,6 +109,10 @@ namespace LlamaBrain.Runtime.Core
 
       try
       {
+        // Initialize the process job manager early to ensure child processes
+        // are killed if the parent crashes
+        ProcessJobManager.Initialize();
+
         if (Settings == null)
         {
           UnityEngine.Debug.LogWarning("[LLM] LlamaBrainServer.Settings is null. Server initialization will be skipped.");
@@ -103,6 +125,9 @@ namespace LlamaBrain.Runtime.Core
           UnityEngine.Debug.LogError("[LLM] LlamaBrainServer.Settings.ToProcessConfig() returned null. Server initialization will be skipped.");
           return;
         }
+
+        // Store current config for hot reload comparison
+        _currentProcessConfig = config;
 
         // Validate paths
         var exePath = Path.GetFullPath(config.ExecutablePath);
@@ -129,6 +154,14 @@ namespace LlamaBrain.Runtime.Core
       {
         UnityEngine.Debug.LogError($"[LLM] LlamaBrainServer.Initialize() failed: {ex.Message}\nStackTrace: {ex.StackTrace}");
       }
+    }
+
+    /// <summary>
+    /// Sets singleton instance.
+    /// </summary>
+    private void Awake()
+    {
+      Instance = this;
     }
 
     /// <summary>
@@ -184,6 +217,10 @@ namespace LlamaBrain.Runtime.Core
 
         // Log the startup arguments to Unity console (DLL Logger doesn't reach Unity)
         UnityEngine.Debug.Log($"[LLM] Server started with arguments: {serverManager.LastStartupArguments}");
+
+        // Assign the server process to the job object for crash cleanup
+        // Do this early before any awaits to ensure it's assigned even if startup fails
+        AssignServerProcessToJob();
 
         // Give the server a moment to start up
         await Task.Delay(2000, token);
@@ -243,6 +280,9 @@ namespace LlamaBrain.Runtime.Core
 
         // Log the startup arguments to Unity console
         UnityEngine.Debug.Log($"[LLM] Server started with arguments: {serverManager.LastStartupArguments}");
+
+        // Assign the server process to the job object for crash cleanup
+        AssignServerProcessToJob();
       }
       catch (Exception ex)
       {
@@ -256,6 +296,10 @@ namespace LlamaBrain.Runtime.Core
     /// </summary>
     private void OnDestroy()
     {
+      // Clear singleton
+      if (Instance == this)
+        Instance = null;
+
       // If StopServer() was already called, cleanup is already done - skip to avoid double-dispose
       if (!_isInitialized)
       {
@@ -333,6 +377,42 @@ namespace LlamaBrain.Runtime.Core
 
       // Mark as uninitialized to avoid re-entry weirdness
       _isInitialized = false;
+    }
+
+    /// <summary>
+    /// Gets the process name from the executable path (without extension).
+    /// </summary>
+    private string? GetServerProcessName()
+    {
+      if (Settings == null || string.IsNullOrEmpty(Settings.ExecutablePath))
+      {
+        return null;
+      }
+
+      try
+      {
+        // Extract filename without extension from path
+        // e.g., "Backend/llama-server.exe" -> "llama-server"
+        var fileName = Path.GetFileNameWithoutExtension(Settings.ExecutablePath);
+        return string.IsNullOrEmpty(fileName) ? null : fileName;
+      }
+      catch
+      {
+        return null;
+      }
+    }
+
+    /// <summary>
+    /// Assigns the llama-server process to the job object for crash cleanup.
+    /// </summary>
+    private void AssignServerProcessToJob()
+    {
+      var processName = GetServerProcessName();
+      if (!string.IsNullOrEmpty(processName))
+      {
+        // Small delay to ensure process is fully started
+        ProcessJobManager.AssignProcessByName(processName, matchNewest: true);
+      }
     }
 
     /// <summary>
@@ -577,9 +657,21 @@ namespace LlamaBrain.Runtime.Core
     /// <summary>
     /// Manually check server health and update status
     /// </summary>
-    public async void CheckServerHealth()
+    public void CheckServerHealth()
     {
-      await IsServerRunningAsync();
+      CheckServerHealthAsync().Forget();
+    }
+
+    private async UniTaskVoid CheckServerHealthAsync()
+    {
+      try
+      {
+        await IsServerRunningAsync();
+      }
+      catch (Exception ex)
+      {
+        UnityEngine.Debug.LogError($"[LLM] Health check failed: {ex.Message}");
+      }
     }
 
     /// <summary>
@@ -722,7 +814,12 @@ namespace LlamaBrain.Runtime.Core
     /// <summary>
     /// Force a server restart
     /// </summary>
-    public async void RestartServer()
+    public void RestartServer()
+    {
+      RestartServerAsync().Forget();
+    }
+
+    private async UniTaskVoid RestartServerAsync()
     {
       if (!_isInitialized || serverManager == null)
       {
@@ -741,6 +838,10 @@ namespace LlamaBrain.Runtime.Core
 
         // Start server again
         serverManager.StartServer();
+
+        // Assign the server process to the job object for crash cleanup
+        AssignServerProcessToJob();
+
         await Task.Delay(2000); // Give it time to start
 
         // Wait for it to be ready
@@ -752,6 +853,169 @@ namespace LlamaBrain.Runtime.Core
         ConnectionStatus = "Restart Failed";
         UnityEngine.Debug.LogError($"[LLM] Server restart failed: {ex.Message}");
       }
+    }
+
+    /// <summary>
+    /// Hot reload BrainSettings by updating LlmConfig for all registered agents.
+    /// Server-level config changes (GPU layers, model path, etc.) will log a warning.
+    /// Returns true if reload succeeded, false if validation failed.
+    /// </summary>
+    public bool ReloadBrainSettings()
+    {
+      if (Settings == null)
+      {
+        UnityEngine.Debug.LogWarning("[HotReload] Cannot reload BrainSettings: Settings is null");
+        return false;
+      }
+
+      try
+      {
+        // Convert to ProcessConfig and LlmConfig
+        var newProcessConfig = Settings.ToProcessConfig();
+        if (newProcessConfig == null)
+        {
+          UnityEngine.Debug.LogError("[HotReload] BrainSettings.ToProcessConfig() returned null");
+          return false;
+        }
+
+        var newLlmConfig = Settings.ToLlmConfig();
+        if (newLlmConfig == null)
+        {
+          UnityEngine.Debug.LogError("[HotReload] BrainSettings.ToLlmConfig() returned null");
+          return false;
+        }
+
+        // Validate LlmConfig
+        var errors = newLlmConfig.Validate();
+        if (errors != null && errors.Length > 0)
+        {
+          UnityEngine.Debug.LogError($"[HotReload] BrainSettings validation failed: {string.Join(", ", errors)}");
+          return false;
+        }
+
+        // Check if server-level config changed (requires restart)
+        if (_currentProcessConfig != null && HasServerConfigChanged(_currentProcessConfig, newProcessConfig))
+        {
+          UnityEngine.Debug.LogWarning("[HotReload] Server-level settings changed (GPU layers, model path, context size, or batch size). Full restart required to apply these changes.");
+          UnityEngine.Debug.LogWarning("[HotReload] LLM generation parameters (Temperature, MaxTokens, etc.) will be applied immediately.");
+        }
+
+        // Broadcast LlmConfig to all registered agents
+        foreach (var agent in registeredAgents)
+        {
+          if (agent != null)
+          {
+            agent.UpdateLlmConfig(newLlmConfig);
+          }
+        }
+
+        // Update current config
+        _currentProcessConfig = newProcessConfig;
+
+        // Fire event
+        OnBrainSettingsReloaded?.Invoke(newLlmConfig);
+
+        UnityEngine.Debug.Log($"[HotReload] BrainSettings reloaded successfully: Temperature={newLlmConfig.Temperature}, MaxTokens={newLlmConfig.MaxTokens}");
+        return true;
+      }
+      catch (Exception ex)
+      {
+        UnityEngine.Debug.LogError($"[HotReload] Failed to reload BrainSettings: {ex.Message}");
+        return false;
+      }
+    }
+
+    /// <summary>
+    /// Checks if server-level configuration has changed between two ProcessConfig instances.
+    /// Server-level config includes: GPU layers, model path, context size, batch size.
+    /// Changes to these parameters require a full server restart.
+    /// </summary>
+    /// <param name="oldConfig">The previous ProcessConfig</param>
+    /// <param name="newConfig">The new ProcessConfig</param>
+    /// <returns>True if server-level config changed, false otherwise</returns>
+    public bool HasServerConfigChanged(ProcessConfig oldConfig, ProcessConfig newConfig)
+    {
+      if (oldConfig == null || newConfig == null)
+      {
+        return false;
+      }
+
+      // Compare server-level parameters that require restart
+      return oldConfig.GpuLayers != newConfig.GpuLayers
+          || oldConfig.Model != newConfig.Model
+          || oldConfig.ContextSize != newConfig.ContextSize
+          || oldConfig.BatchSize != newConfig.BatchSize;
+    }
+
+    /// <summary>
+    /// Generates an A/B test report by aggregating metrics from all registered agents.
+    /// Only includes agents that have prompt variants configured.
+    /// </summary>
+    /// <param name="testName">The name for this A/B test report</param>
+    /// <returns>ABTestReport with aggregated metrics from all agents</returns>
+    public ABTestReport GenerateABTestReport(string testName)
+    {
+      var report = new ABTestReport(testName);
+
+      // Aggregate metrics from all registered agents
+      foreach (var agent in registeredAgents)
+      {
+        if (agent == null || agent.PersonaConfig == null)
+        {
+          continue;
+        }
+
+        // Only include agents with variant testing enabled
+        if (agent.PersonaConfig.SystemPromptVariants == null ||
+            agent.PersonaConfig.SystemPromptVariants.Count == 0)
+        {
+          continue;
+        }
+
+        // Get metrics from agent's variant manager
+        var agentMetrics = agent.GetVariantMetrics();
+        if (agentMetrics != null)
+        {
+          foreach (var kvp in agentMetrics)
+          {
+            // Aggregate metrics by variant name across all agents
+            var variantName = kvp.Key;
+            var metrics = kvp.Value;
+
+            // If we already have metrics for this variant, merge them
+            if (report.HasVariant(variantName))
+            {
+              var existing = report.GetVariantMetrics(variantName);
+              if (existing != null)
+              {
+                // Merge metrics (sum counts, average averages)
+                var merged = new VariantMetrics
+                {
+                  SelectionCount = existing.SelectionCount + metrics.SelectionCount,
+                  SuccessCount = existing.SuccessCount + metrics.SuccessCount,
+                  ValidationFailureCount = existing.ValidationFailureCount + metrics.ValidationFailureCount,
+                  FallbackCount = existing.FallbackCount + metrics.FallbackCount,
+                  // Weighted average for latency and tokens
+                  AvgLatencyMs = (existing.AvgLatencyMs * existing.SelectionCount +
+                                 metrics.AvgLatencyMs * metrics.SelectionCount) /
+                                 (existing.SelectionCount + metrics.SelectionCount),
+                  AvgTokensGenerated = (existing.AvgTokensGenerated * existing.SelectionCount +
+                                       metrics.AvgTokensGenerated * metrics.SelectionCount) /
+                                       (existing.SelectionCount + metrics.SelectionCount)
+                };
+                report.AddVariantMetrics(variantName, merged);
+              }
+            }
+            else
+            {
+              // First time seeing this variant, add it
+              report.AddVariantMetrics(variantName, metrics);
+            }
+          }
+        }
+      }
+
+      return report;
     }
   }
 }

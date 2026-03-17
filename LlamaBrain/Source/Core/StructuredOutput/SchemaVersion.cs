@@ -135,28 +135,46 @@ namespace LlamaBrain.Core.StructuredOutput
             return IsBackwardCompatibleWith(other) && !Equals(other);
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Returns a string representation of the schema version.
+        /// </summary>
+        /// <returns>A version string in the format "major.minor.patch".</returns>
         public override string ToString() => $"{Major}.{Minor}.{Patch}";
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Determines whether this instance equals another SchemaVersion.
+        /// </summary>
+        /// <param name="other">The SchemaVersion to compare with this instance.</param>
+        /// <returns>True if the versions are equal; otherwise, false.</returns>
         public bool Equals(SchemaVersion other)
         {
             return Major == other.Major && Minor == other.Minor && Patch == other.Patch;
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Determines whether this instance equals the specified object.
+        /// </summary>
+        /// <param name="obj">The object to compare with this instance.</param>
+        /// <returns>True if obj is a SchemaVersion and equal to this instance; otherwise, false.</returns>
         public override bool Equals(object? obj)
         {
             return obj is SchemaVersion other && Equals(other);
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Returns the hash code for this instance.
+        /// </summary>
+        /// <returns>A hash code for the current SchemaVersion.</returns>
         public override int GetHashCode()
         {
             return HashCode.Combine(Major, Minor, Patch);
         }
 
-        /// <inheritdoc/>
+        /// <summary>
+        /// Compares this instance with another SchemaVersion.
+        /// </summary>
+        /// <param name="other">The SchemaVersion to compare with this instance.</param>
+        /// <returns>A value indicating the relative order of the versions being compared.</returns>
         public int CompareTo(SchemaVersion other)
         {
             var majorCompare = Major.CompareTo(other.Major);
@@ -171,31 +189,49 @@ namespace LlamaBrain.Core.StructuredOutput
         /// <summary>
         /// Equality operator.
         /// </summary>
+        /// <param name="left">The first SchemaVersion to compare.</param>
+        /// <param name="right">The second SchemaVersion to compare.</param>
+        /// <returns>True if the versions are equal; otherwise, false.</returns>
         public static bool operator ==(SchemaVersion left, SchemaVersion right) => left.Equals(right);
 
         /// <summary>
         /// Inequality operator.
         /// </summary>
+        /// <param name="left">The first SchemaVersion to compare.</param>
+        /// <param name="right">The second SchemaVersion to compare.</param>
+        /// <returns>True if the versions are not equal; otherwise, false.</returns>
         public static bool operator !=(SchemaVersion left, SchemaVersion right) => !left.Equals(right);
 
         /// <summary>
         /// Less than operator.
         /// </summary>
+        /// <param name="left">The first SchemaVersion to compare.</param>
+        /// <param name="right">The second SchemaVersion to compare.</param>
+        /// <returns>True if left is less than right; otherwise, false.</returns>
         public static bool operator <(SchemaVersion left, SchemaVersion right) => left.CompareTo(right) < 0;
 
         /// <summary>
         /// Greater than operator.
         /// </summary>
+        /// <param name="left">The first SchemaVersion to compare.</param>
+        /// <param name="right">The second SchemaVersion to compare.</param>
+        /// <returns>True if left is greater than right; otherwise, false.</returns>
         public static bool operator >(SchemaVersion left, SchemaVersion right) => left.CompareTo(right) > 0;
 
         /// <summary>
         /// Less than or equal operator.
         /// </summary>
+        /// <param name="left">The first SchemaVersion to compare.</param>
+        /// <param name="right">The second SchemaVersion to compare.</param>
+        /// <returns>True if left is less than or equal to right; otherwise, false.</returns>
         public static bool operator <=(SchemaVersion left, SchemaVersion right) => left.CompareTo(right) <= 0;
 
         /// <summary>
         /// Greater than or equal operator.
         /// </summary>
+        /// <param name="left">The first SchemaVersion to compare.</param>
+        /// <param name="right">The second SchemaVersion to compare.</param>
+        /// <returns>True if left is greater than or equal to right; otherwise, false.</returns>
         public static bool operator >=(SchemaVersion left, SchemaVersion right) => left.CompareTo(right) >= 0;
     }
 

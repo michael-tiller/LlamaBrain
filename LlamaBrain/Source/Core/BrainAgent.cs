@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using LlamaBrain.Core.Inference;
 using LlamaBrain.Core.StructuredOutput;
 using LlamaBrain.Core.Validation;
 using LlamaBrain.Persona;
@@ -46,6 +47,46 @@ namespace LlamaBrain.Core
     /// Whether the agent has been disposed
     /// </summary>
     private bool _disposed = false;
+
+    /// <summary>
+    /// KV cache configuration for prompt optimization.
+    /// When caching is enabled, prompts are split into static prefix (cacheable)
+    /// and dynamic suffix (per-request), and n_keep is calculated dynamically.
+    /// </summary>
+    private KvCacheConfig _kvCacheConfig = KvCacheConfig.Disabled();
+
+    /// <summary>
+    /// Average characters per token for n_keep estimation.
+    /// Default: 4 (typical for English text with llama tokenizers).
+    /// </summary>
+    private const float CharsPerToken = 4.0f;
+
+    /// <summary>
+    /// Gets or sets the KV cache configuration.
+    /// Use KvCacheConfig.Default() or KvCacheConfig.Disabled() for common configurations.
+    /// </summary>
+    public KvCacheConfig KvCacheConfig
+    {
+      get => _kvCacheConfig;
+      set => _kvCacheConfig = value ?? KvCacheConfig.Disabled();
+    }
+
+    /// <summary>
+    /// Whether KV caching is enabled for LLM requests.
+    /// When true, prompts will be sent with cachePrompt=true to leverage KV cache.
+    /// This is a convenience accessor for KvCacheConfig.EnableCaching.
+    /// </summary>
+    public bool EnableKvCaching
+    {
+      get => _kvCacheConfig.EnableCaching;
+      set
+      {
+        if (value && !_kvCacheConfig.EnableCaching)
+          _kvCacheConfig = KvCacheConfig.Default();
+        else if (!value)
+          _kvCacheConfig = KvCacheConfig.Disabled();
+      }
+    }
 
     /// <summary>
     /// Gets the persona profile
@@ -97,11 +138,32 @@ namespace LlamaBrain.Core
         // Add the user message to the dialogue session
         _dialogueSession.AppendPlayer(message);
 
-        // Compose the prompt using the persona profile and dialogue history
-        var prompt = _promptComposer.ComposePrompt(_profile, _dialogueSession, message);
+        // Send the prompt to the LLM (with KV caching if enabled)
+        string response;
+        if (EnableKvCaching)
+        {
+          // Use prefix-based prompt composition for KV cache optimization
+          var (staticPrefix, dynamicSuffix) = _promptComposer.ComposePromptWithPrefix(_profile, _dialogueSession, message);
+          var fullPrompt = staticPrefix + dynamicSuffix;
 
-        // Send the prompt to the LLM
-        var response = await _apiClient.SendPromptAsync(prompt, seed: seed, cancellationToken: cancellationToken);
+          // Calculate n_keep from static prefix (protects prefix during context shifts)
+          // Use configured value if set, otherwise estimate from prefix length
+          int? nKeep = _kvCacheConfig.NKeepTokens ?? EstimateTokenCount(staticPrefix.Length);
+
+          var metrics = await _apiClient.SendPromptWithMetricsAsync(
+            fullPrompt,
+            seed: seed,
+            cachePrompt: true,
+            nKeep: nKeep,
+            cancellationToken: cancellationToken);
+          response = metrics.Content;
+        }
+        else
+        {
+          // Standard prompt composition without caching
+          var prompt = _promptComposer.ComposePrompt(_profile, _dialogueSession, message);
+          response = await _apiClient.SendPromptAsync(prompt, seed: seed, cancellationToken: cancellationToken);
+        }
 
         // Add the response to the dialogue session
         _dialogueSession.AppendNpc(response);
@@ -671,6 +733,18 @@ namespace LlamaBrain.Core
         throw new InvalidOperationException($"Invalid JSON response: {cleanedResponse}");
 
       return cleanedResponse;
+    }
+
+    /// <summary>
+    /// Estimates the token count for a given character count.
+    /// Uses a simple chars-per-token ratio (default: 4 chars/token).
+    /// </summary>
+    /// <param name="charCount">The character count to estimate</param>
+    /// <returns>The estimated token count</returns>
+    private static int EstimateTokenCount(int charCount)
+    {
+      if (charCount <= 0) return 0;
+      return (int)Math.Ceiling(charCount / CharsPerToken);
     }
 
     /// <summary>

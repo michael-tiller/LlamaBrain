@@ -35,6 +35,13 @@ namespace LlamaBrain.Utilities
     void WriteAllText(string path, string contents);
 
     /// <summary>
+    /// Appends text to a file, creating the file if it doesn't exist
+    /// </summary>
+    /// <param name="path">The path of the file to append to</param>
+    /// <param name="contents">The text content to append</param>
+    void AppendAllText(string path, string contents);
+
+    /// <summary>
     /// Deletes a file
     /// </summary>
     /// <param name="path">The path of the file to delete</param>

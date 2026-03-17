@@ -43,6 +43,7 @@ namespace LlamaBrain.Tests.Core
           Arg.Any<float?>(),
           Arg.Any<int?>(),
           Arg.Any<bool>(),
+          Arg.Any<int?>(),
           Arg.Any<CancellationToken>())
         .Returns(Task.FromResult("{\"dialogue\":\"Hello\",\"mutations\":[],\"intents\":[]}"));
 
@@ -269,6 +270,7 @@ namespace LlamaBrain.Tests.Core
         Arg.Any<float?>(),
         333, // seed should be 333
         Arg.Any<bool>(),
+        Arg.Any<int?>(),
         Arg.Any<CancellationToken>());
     }
 
@@ -290,6 +292,7 @@ namespace LlamaBrain.Tests.Core
         Arg.Any<float?>(),
         null, // default seed should be null
         Arg.Any<bool>(),
+        Arg.Any<int?>(),
         Arg.Any<CancellationToken>());
     }
 
@@ -315,6 +318,7 @@ namespace LlamaBrain.Tests.Core
         Arg.Any<float?>(),
         444, // seed should be 444
         Arg.Any<bool>(),
+        Arg.Any<int?>(),
         Arg.Any<CancellationToken>());
     }
 
@@ -336,6 +340,7 @@ namespace LlamaBrain.Tests.Core
         Arg.Any<float?>(),
         555, // seed should be 555
         Arg.Any<bool>(),
+        Arg.Any<int?>(),
         Arg.Any<CancellationToken>());
     }
 
@@ -358,6 +363,7 @@ namespace LlamaBrain.Tests.Core
         Arg.Any<float?>(),
         666, // seed should be 666
         Arg.Any<bool>(),
+        Arg.Any<int?>(),
         Arg.Any<CancellationToken>());
     }
 

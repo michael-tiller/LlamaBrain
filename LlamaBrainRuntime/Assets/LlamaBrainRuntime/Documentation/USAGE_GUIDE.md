@@ -80,7 +80,12 @@ public class SimpleNPC : MonoBehaviour
         agent.InitializeCanonicalFact("world_rule", "Magic is real", "lore");
     }
     
-    public async void TalkToPlayer(string playerInput)
+    public void TalkToPlayer(string playerInput)
+    {
+        TalkToPlayerAsync(playerInput).Forget();
+    }
+
+    private async UniTaskVoid TalkToPlayerAsync(string playerInput)
     {
         // Components 1-9 all work together automatically:
         // 1. Interaction context created
@@ -1238,6 +1243,164 @@ For exact reproducibility in QA, use the same hardware configuration.
 
 **See**: `Documentation/DETERMINISM_CONTRACT.md` for detailed determinism guarantees.
 
+### KV Cache Optimization (Feature 27)
+
+LlamaBrain supports KV (Key-Value) cache optimization to dramatically reduce response latency. When enabled, the inference engine caches the first N tokens of your prompt (the "static prefix") and reuses them across requests.
+
+**Performance Impact**:
+- **Cache hit**: ~200ms response time (static prefix reused)
+- **Cache miss**: ~1.5s response time (full 2k+ token prefill)
+- **Target hit rate**: >80% for typical NPC conversations
+
+#### How KV Cache Works
+
+The prompt is split into two parts:
+
+```
+┌─────────────────────────────────────┐
+│         STATIC PREFIX               │  ← Cached (same across requests)
+│  • System prompt                    │
+│  • Canonical facts                  │
+├─────────────────────────────────────┤
+│         DYNAMIC SUFFIX              │  ← Per-request (changes)
+│  • World state                      │
+│  • Episodic memories                │
+│  • Dialogue history                 │
+│  • Player input                     │
+└─────────────────────────────────────┘
+```
+
+When consecutive requests share the same static prefix, llama.cpp reuses the cached KV states for those tokens, skipping the expensive prefill computation.
+
+#### Enabling KV Cache (LlamaBrainAgent)
+
+The simplest way to enable KV caching:
+
+```csharp
+// Enable caching on the agent
+agent.EnableKvCaching = true;
+
+// All subsequent requests will use cachePrompt=true
+var response = await agent.SendPlayerInputWithContextAsync(input, context);
+```
+
+#### Configuring Cache Boundaries
+
+Control where the static/dynamic split occurs using `KvCacheConfig`:
+
+```csharp
+using LlamaBrain.Core.Inference;
+
+// Default: Cache system prompt + canonical facts (recommended)
+var config = KvCacheConfig.Default();
+
+// Aggressive: Also cache world state (use when world state is stable)
+var config = KvCacheConfig.Aggressive();
+
+// Conservative: Only cache system prompt
+var config = new KvCacheConfig
+{
+    EnableCaching = true,
+    Boundary = StaticPrefixBoundary.AfterSystemPrompt
+};
+
+// Disabled
+var config = KvCacheConfig.Disabled();
+```
+
+**Boundary Options**:
+| Boundary | What's Cached | Best For |
+|----------|---------------|----------|
+| `AfterSystemPrompt` | System prompt only | Dynamic NPCs |
+| `AfterCanonicalFacts` | + Canonical facts | Most NPCs (default) |
+| `AfterWorldState` | + World state | Stable game state |
+| `AfterConstraints` | + Constraints | Maximum caching |
+
+#### Cache-Aware Prompt Assembly
+
+For advanced control, use `AssembleWithCacheInfo()`:
+
+```csharp
+var assemblerConfig = new PromptAssemblerConfig
+{
+    KvCacheConfig = KvCacheConfig.Default()
+};
+
+var assembler = new PromptAssembler(assemblerConfig);
+
+// Get cache-aware prompt with static/dynamic split
+var cacheInfo = assembler.AssembleWithCacheInfo(workingMemory, npcName: "Gareth");
+
+Debug.Log($"Static prefix: {cacheInfo.EstimatedStaticTokens} tokens");
+Debug.Log($"Dynamic suffix: {cacheInfo.EstimatedDynamicTokens} tokens");
+Debug.Log($"Full prompt: {cacheInfo.EstimatedTotalTokens} tokens");
+
+// Send with caching enabled
+var response = await apiClient.SendPromptWithMetricsAsync(
+    cacheInfo.FullPrompt,
+    cachePrompt: true);
+
+// Check prefill time (low = cache hit)
+Debug.Log($"Prefill time: {response.PrefillTimeMs}ms");
+```
+
+#### Tracking Cache Efficiency
+
+Monitor cache performance with `CacheEfficiencyMetrics`:
+
+```csharp
+using LlamaBrain.Core.Metrics;
+
+var metrics = new CacheEfficiencyMetrics();
+
+// Record results after each request
+if (prefillTimeMs < 100) // Heuristic: fast prefill = cache hit
+{
+    metrics.RecordCacheHit(
+        promptTokens: 500,
+        cachedTokens: 400,
+        staticPrefixTokens: 400);
+}
+else
+{
+    metrics.RecordCacheMiss(
+        promptTokens: 500,
+        cachedTokens: 0,
+        staticPrefixTokens: 400);
+}
+
+// Check metrics
+Debug.Log($"Cache hit rate: {metrics.CacheHitRate:F1}%");
+Debug.Log($"Token efficiency: {metrics.TokenCacheEfficiency:F1}%");
+Debug.Log($"Total requests: {metrics.TotalRequests}");
+```
+
+#### Best Practices for Cache Efficiency
+
+1. **Keep static content stable**: Don't shuffle canonical facts or modify system prompts mid-session
+
+2. **Use AfterCanonicalFacts boundary**: This is the sweet spot for most NPCs - system prompt and world lore are cached
+
+3. **Avoid timestamps in static prefix**: Any dynamic content before the boundary invalidates the cache
+
+4. **Monitor prefill times**: Low prefill (< 100ms) indicates cache hit; high prefill (> 500ms) indicates miss
+
+5. **Same NPC, same cache**: Switching between NPCs invalidates cache (different static prefix)
+
+#### Troubleshooting Cache Issues
+
+**Cache not improving latency**:
+- Verify `cachePrompt: true` is being passed to API
+- Check that static prefix content is identical between requests
+- Ensure llama.cpp server supports KV cache (most versions do)
+
+**Cache hit rate too low**:
+- Review what content is in the static prefix
+- Check for unintended dynamic content (timestamps, random ordering)
+- Consider using a more conservative boundary
+
+**See**: `Documentation/ARCHITECTURE.md#feature-27-smart-kv-cache-management` for detailed architecture.
+
 ---
 
 ## Component 7: Output Parsing & Validation
@@ -1853,7 +2016,7 @@ public class VoiceNPC : MonoBehaviour
         voiceController.OnSpeechCompleted += () => Debug.Log("NPC finished speaking");
     }
     
-    private async void HandleTranscription(string transcribedText)
+    private void HandleTranscription(string transcribedText)
     {
         Debug.Log($"Player said: {transcribedText}");
         // Agent processes and responds automatically
@@ -2039,14 +2202,19 @@ The voice system integrates seamlessly with the existing LlamaBrain pipeline:
 
 ```csharp
 // In NpcVoiceController (simplified internal flow)
-private async void ProcessTranscription(string transcribedText)
+private void ProcessTranscription(string transcribedText)
+{
+    ProcessTranscriptionAsync(transcribedText).Forget();
+}
+
+private async UniTaskVoid ProcessTranscriptionAsync(string transcribedText)
 {
     // 1. Transcription received from Whisper
     OnTranscriptionReceived?.Invoke(transcribedText);
-    
+
     // 2. Send to LlamaBrainAgent (goes through full pipeline)
     var response = await agent.SendPlayerInputAsync(transcribedText);
-    
+
     // 3. Convert response to speech
     if (!string.IsNullOrEmpty(response))
     {
@@ -2200,7 +2368,12 @@ public class GameStateExample : MonoBehaviour
         }
     }
     
-    private async void QuickSave()
+    private void QuickSave()
+    {
+        QuickSaveAsync().Forget();
+    }
+
+    private async UniTaskVoid QuickSaveAsync()
     {
         var result = await saveManager.QuickSave();
         if (result.Success)
@@ -2208,8 +2381,13 @@ public class GameStateExample : MonoBehaviour
             Debug.Log("Quick save successful");
         }
     }
-    
-    private async void QuickLoad()
+
+    private void QuickLoad()
+    {
+        QuickLoadAsync().Forget();
+    }
+
+    private async UniTaskVoid QuickLoadAsync()
     {
         var result = await saveManager.QuickLoad();
         if (result.Success)
@@ -2217,9 +2395,13 @@ public class GameStateExample : MonoBehaviour
             Debug.Log("Quick load successful");
         }
     }
-    
-    // Named save slot
-    private async void SaveToSlot(string slotName)
+
+    private void SaveToSlot(string slotName)
+    {
+        SaveToSlotAsync(slotName).Forget();
+    }
+
+    private async UniTaskVoid SaveToSlotAsync(string slotName)
     {
         var result = await saveManager.SaveToSlot(slotName);
         if (result.Success)
@@ -2227,9 +2409,13 @@ public class GameStateExample : MonoBehaviour
             Debug.Log($"Saved to slot: {slotName}");
         }
     }
-    
-    // Load from slot
-    private async void LoadFromSlot(string slotName)
+
+    private void LoadFromSlot(string slotName)
+    {
+        LoadFromSlotAsync(slotName).Forget();
+    }
+
+    private async UniTaskVoid LoadFromSlotAsync(string slotName)
     {
         var result = await saveManager.LoadFromSlot(slotName);
         if (result.Success)
@@ -2290,7 +2476,12 @@ public class SmartNPC : MonoBehaviour
         // Initialize agent with memory store...
     }
 
-    public async void OnPlayerInteraction(string playerInput)
+    public void OnPlayerInteraction(string playerInput)
+    {
+        OnPlayerInteractionAsync(playerInput).Forget();
+    }
+
+    private async UniTaskVoid OnPlayerInteractionAsync(string playerInput)
     {
         // Create context
         var context = expectancyConfig.CreatePlayerUtteranceContext(playerInput);
@@ -2482,7 +2673,12 @@ public class GuardNPC : MonoBehaviour
         );
     }
     
-    public async void TalkToPlayer(string playerInput)
+    public void TalkToPlayer(string playerInput)
+    {
+        TalkToPlayerAsync(playerInput).Forget();
+    }
+
+    private async UniTaskVoid TalkToPlayerAsync(string playerInput)
     {
         var response = await agent.SendPlayerInputAsync(playerInput);
         Debug.Log($"Guard says: {response}");
@@ -2589,12 +2785,17 @@ using LlamaBrain.Runtime.Core;
 public class ValidationTester : MonoBehaviour
 {
     public LlamaBrainAgent agent;
-    
-    public async void TestValidation()
+
+    public void TestValidation()
+    {
+        TestValidationAsync().Forget();
+    }
+
+    private async UniTaskVoid TestValidationAsync()
     {
         // This should trigger validation failure if rule is working
         var response = await agent.SendPlayerInputAsync("Tell me a swear word");
-        
+
         // Check validation result
         var gateResult = agent.LastGateResult;
         if (gateResult != null && !gateResult.Passed)
@@ -2886,29 +3087,34 @@ using LlamaBrain.Runtime.Core;
 public class ValidationDebugger : MonoBehaviour
 {
     public LlamaBrainAgent agent;
-    
-    public async void TestWithDebugging()
+
+    public void TestWithDebugging()
+    {
+        TestWithDebuggingAsync().Forget();
+    }
+
+    private async UniTaskVoid TestWithDebuggingAsync()
     {
         var response = await agent.SendPlayerInputAsync("Hello!");
-        
+
         // Check validation result
         var gateResult = agent.LastGateResult;
         if (gateResult != null)
         {
             if (gateResult.Passed)
             {
-                Debug.Log("✅ Validation passed!");
+                Debug.Log("Validation passed!");
             }
             else
             {
-                Debug.LogError("❌ Validation failed!");
-                
+                Debug.LogError("Validation failed!");
+
                 // Print all failures
                 foreach (var failure in gateResult.Failures)
                 {
                     Debug.LogWarning($"Failure: [{failure.Severity}] {failure.Reason}");
                     Debug.LogWarning($"Description: {failure.Description}");
-                    
+
                     // Print violating text if available
                     if (!string.IsNullOrEmpty(failure.ViolatingText))
                     {

@@ -47,6 +47,16 @@ namespace LlamaBrain.Utilities
     }
 
     /// <summary>
+    /// Appends text to a file, creating the file if it doesn't exist
+    /// </summary>
+    /// <param name="path">The path of the file to append to</param>
+    /// <param name="contents">The text content to append</param>
+    public void AppendAllText(string path, string contents)
+    {
+      File.AppendAllText(path, contents);
+    }
+
+    /// <summary>
     /// Deletes a file
     /// </summary>
     /// <param name="path">The path of the file to delete</param>

@@ -830,6 +830,111 @@ var fallbackSystem = new FallbackSystem(fallbackConfig);
 // Integrated automatically in LlamaBrainAgent
 ```
 
+### Component 10: Configuration Hot Reload & A/B Testing
+
+**Purpose**: Enable runtime modification of PersonaConfig and BrainSettings without restarting, and support deterministic A/B testing of prompt variants.
+
+**Implementation**:
+- `ConfigHotReloadManager` in `LlamaBrainRuntime.Editor.Config` (Unity Editor)
+- `UnityEditorConfigWatcher` - monitors ScriptableObject changes via `AssetDatabase`
+- `PromptVariantManager` in `LlamaBrain.Config` - deterministic variant selection
+- `ABTestReport` in `LlamaBrain.Config` - metrics aggregation and export
+
+**Hot Reload Capabilities**:
+
+1. **PersonaConfig Hot Reload**:
+   - System Prompt changes apply immediately
+   - Preserves state: InteractionCount, memory, dialogue history
+   - Validates before applying (rollback on failure)
+   - Fires `OnPersonaConfigReloaded` event
+
+2. **BrainSettings Hot Reload**:
+   - LLM parameters (Temperature, MaxTokens, TopP, TopK, RepeatPenalty) apply immediately
+   - Server parameters (GPU layers, model path, context size) require restart (warning logged)
+   - Broadcasts updates to all registered agents
+   - Fires `OnBrainSettingsReloaded` event
+
+**A/B Testing Framework**:
+
+1. **Deterministic Variant Selection**:
+   - Uses `HashCode.Combine(InteractionCount, PersonaId)` for stable assignments
+   - Traffic splitting (e.g., 50/50, 10/90) with percentage-based distribution
+   - Active/inactive variant support for gradual rollouts
+
+2. **Metrics Tracking**:
+   - Selection counts per variant
+   - Success/failure rates
+   - Average latency and token generation
+   - Validation failure tracking
+
+3. **Export Capabilities**:
+   - JSON export (structured data)
+   - CSV export (spreadsheet-compatible)
+   - Human-readable summary
+
+**Example - PersonaConfig Hot Reload**:
+```csharp
+// In Unity Editor, modify PersonaConfig asset
+// Changes are automatically detected and applied
+
+// LlamaBrainAgent receives update automatically
+agent.OnPersonaConfigReloaded += (agent, oldProfile, newProfile) =>
+{
+    Debug.Log($"PersonaConfig reloaded: {oldProfile.Name} → {newProfile.Name}");
+    // State preserved: InteractionCount, memory, dialogue history
+};
+```
+
+**Example - A/B Testing**:
+```csharp
+// In PersonaConfig Unity Inspector, add variants:
+// Variant A: "You are a friendly wizard." (50% traffic)
+// Variant B: "You are a grumpy wizard." (50% traffic)
+
+// Deterministic selection based on InteractionCount
+var systemPrompt = agent.SelectSystemPromptVariant();
+// Same InteractionCount → same variant
+// Different InteractionCount → may select different variant
+
+// Generate report
+var report = brainServer.GenerateABTestReport("WizardPersonalityTest");
+report.Complete();
+
+// Export results
+var json = report.ExportToJson(); // For analysis tools
+var csv = report.ExportToCsv();   // For spreadsheets
+var summary = report.GetSummary(); // Human-readable
+```
+
+**Performance Characteristics**:
+- Config validation: < 10ms
+- Variant selection: < 1ms per interaction
+- Metrics recording: < 0.01ms overhead
+- JSON/CSV export: < 50ms
+
+**Thread Safety**:
+- All metrics recording operations are thread-safe (using locks)
+- Variant selection is thread-safe
+- Config validation is stateless (naturally thread-safe)
+
+**Integration**:
+```csharp
+// Hot reload is automatic in Unity Editor
+// Enable/disable via menu: LlamaBrain/Hot Reload/Enable|Disable
+
+// Check statistics
+// Menu: LlamaBrain/Hot Reload/Show Statistics
+// Output: Total Reloads, Successful, Failed, Success Rate
+
+// In code, manually trigger reload
+bool success = agent.ReloadPersonaConfig();
+bool success = brainServer.ReloadBrainSettings();
+```
+
+**See**: `CONFIG_HOT_RELOAD.md` for comprehensive hot reload documentation.
+
+---
+
 ## Complete Flow Example
 
 Here's how all components work together in a complete interaction:
@@ -1691,79 +1796,536 @@ dotnet test --filter "Category=RequiresLlamaServer"
 - [USAGE_GUIDE.md](../LlamaBrainRuntime/Assets/LlamaBrainRuntime/Documentation/USAGE_GUIDE.md#seed-based-determinism-feature-14) for configuration examples
 - [DEVELOPMENT_LOG.md](DEVELOPMENT_LOG.md#feature-14) for implementation details
 
-## Unity Integration Features
+### Feature 27: Smart KV Cache Management
 
-### Voice System Integration (Features 31-32 - In Progress)
+**Status**: ✅ Complete
+**Priority**: CRITICAL - Latency critical for production performance
+**Dependencies**: Feature 3 (State Snapshot & Context Retrieval), Feature 23 (Structured Input/Context)
 
-**Status**: 🚧 In Progress  
-**Priority**: MEDIUM  
-**Dependencies**: Unity Package, whisper.unity (Feature 31), piper.unity (Feature 32)
+**Overview**: Effective KV (Key-Value) cache utilization in LLM inference requires architectural discipline. If the `PromptAssembler` inserts dynamic timestamps or shuffles memory blocks *before* static content (like System Prompts or Canonical Facts), the inference engine must re-evaluate the first N tokens for every request. This feature implements a **Static Prefix Policy** that ensures byte-stable static content comes first, enabling the inference engine to cache the first N tokens across requests.
 
-**Overview**: Provides voice input/output capabilities for NPCs, enabling spoken dialogue through microphone input and text-to-speech output. The system integrates with LlamaBrainAgent to provide seamless voice-enabled conversations.
+**Performance Targets**:
+- Cache hit: < 200ms response time (prefill time near zero)
+- Cache miss: < 1.5s response time (full prefill for 2k+ token context)
+- Target cache hit rate: > 80% for typical gameplay patterns
 
 **Key Components**:
-- **NpcVoiceController**: Central MonoBehaviour component managing voice input and output
-  - Coordinates between NpcVoiceInput and NpcVoiceOutput components
-  - Routes voice transcriptions to LlamaBrainAgent
-  - Manages voice playback of NPC responses
-  - Handles state transitions (idle, listening, processing, speaking)
-  
-- **NpcVoiceInput**: Microphone-based voice input system
-  - Whisper integration for speech-to-text transcription
-  - Configurable microphone selection
-  - Audio recording management
-  - Automatic silence detection and voice activity detection
-  
-- **NpcVoiceOutput**: Text-to-speech output system
-  - Converts NPC text responses to speech
-  - Configurable voice parameters (pitch, speed, volume)
-  - Audio playback management
-  - Integration with Unity's AudioSource component
-  
-- **NpcSpeechConfig**: ScriptableObject configuration asset
-  - Voice input settings (microphone device, Whisper model, detection thresholds)
-  - Voice output settings (TTS provider, voice selection, audio parameters)
-  - Per-NPC voice customization
-  - Configurable via Unity Inspector
 
-**Unity Integration**:
+1. **StaticPrefixBoundary Enum**: Defines where the static prefix ends
+   - `AfterSystemPrompt`: Only system prompt is cached (most conservative)
+   - `AfterCanonicalFacts`: System prompt + canonical facts cached (recommended)
+   - `AfterWorldState`: Includes world state (more aggressive)
+   - `AfterConstraints`: Everything except dialogue/input (most aggressive)
+
+2. **KvCacheConfig**: Configuration for cache optimization
+   - `EnableCaching`: Toggle KV caching on/off
+   - `Boundary`: Where to split static/dynamic content
+   - `TrackMetrics`: Enable cache efficiency tracking
+   - `ValidatePrefixStability`: Warn if dynamic content in static prefix
+   - Presets: `Default()`, `Aggressive()`, `Disabled()`
+
+3. **PromptWithCacheInfo**: Cache-aware prompt result
+   - `StaticPrefix`: Byte-stable content (cacheable)
+   - `DynamicSuffix`: Per-request content (dialogue, input)
+   - `FullPrompt`: Complete assembled prompt
+   - Estimated token counts for static/dynamic/total
+
+4. **AssembleWithCacheInfo()**: New PromptAssembler method
+   - Splits prompt at configured boundary
+   - Returns `PromptWithCacheInfo` with static/dynamic separation
+   - Maintains deterministic ordering
+
+5. **CacheEfficiencyMetrics**: Thread-safe metrics tracking
+   - Cache hit/miss counts and rates
+   - Total prompt tokens and cached tokens
+   - Token cache efficiency percentage
+
+**Architectural Impact**:
+
+The static prefix policy leverages the existing deterministic prompt assembly to enable performance optimization. Because canonical facts and system prompts are already byte-stable (proven in Feature 10), they are ideal candidates for KV cache reuse.
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    STATIC PREFIX                        │
+│  (Cacheable - same across requests to same NPC)         │
+├─────────────────────────────────────────────────────────┤
+│  System Prompt                                          │
+│  "You are Gareth, a gruff blacksmith..."                │
+├─────────────────────────────────────────────────────────┤
+│  Canonical Facts                                        │
+│  - The village of Thornwood sits at the edge of...      │
+│  - The local tavern is called The Rusted Nail...        │
+├─────────────────────────────────────────────────────────┤
+│                    DYNAMIC SUFFIX                       │
+│  (Per-request - changes with each interaction)          │
+├─────────────────────────────────────────────────────────┤
+│  World State (may change)                               │
+│  Episodic Memories (varies by recency)                  │
+│  Dialogue History (grows with conversation)             │
+│  Player Input (unique per request)                      │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Usage**:
+
 ```csharp
-// Setup voice-enabled NPC
-public class VoiceEnabledNPC : MonoBehaviour
+// Configure cache-aware prompt assembly
+var config = new PromptAssemblerConfig
 {
-    private LlamaBrainAgent agent;
-    private NpcVoiceController voiceController;
-    
-    void Start()
+    KvCacheConfig = KvCacheConfig.Default() // AfterCanonicalFacts boundary
+};
+
+var assembler = new PromptAssembler(config);
+
+// Assemble with cache info
+var cacheInfo = assembler.AssembleWithCacheInfo(
+    workingMemory,
+    npcName: "Gareth");
+
+// Static prefix is byte-stable across requests
+Console.WriteLine($"Static: {cacheInfo.EstimatedStaticTokens} tokens");
+Console.WriteLine($"Dynamic: {cacheInfo.EstimatedDynamicTokens} tokens");
+
+// Send with cache enabled
+var response = await apiClient.SendPromptWithMetricsAsync(
+    cacheInfo.FullPrompt,
+    cachePrompt: true);
+
+// Prefill time should be low on cache hit
+Console.WriteLine($"Prefill: {response.PrefillTimeMs}ms");
+```
+
+**BrainAgent Integration**:
+
+```csharp
+// Enable KV caching on BrainAgent
+brainAgent.EnableKvCaching = true;
+
+// All subsequent requests will use cachePrompt=true
+var response = await brainAgent.SendPromptAsync(prompt);
+```
+
+**Metrics Tracking**:
+
+```csharp
+// Track cache efficiency
+var metrics = new CacheEfficiencyMetrics();
+
+// Record cache results
+metrics.RecordCacheHit(promptTokens: 500, cachedTokens: 400, staticPrefixTokens: 400);
+metrics.RecordCacheMiss(promptTokens: 500, cachedTokens: 0, staticPrefixTokens: 400);
+
+// Check efficiency
+Console.WriteLine($"Hit Rate: {metrics.CacheHitRate:F1}%");
+Console.WriteLine($"Token Efficiency: {metrics.TokenCacheEfficiency:F1}%");
+```
+
+**Test Coverage**: 47 tests
+- `StaticPrefixTests.cs`: 22 tests for static prefix enforcement and boundary behavior
+- `KvCacheTests.cs`: 20 tests for cache metrics tracking and efficiency calculations
+- `KvCachePerformanceTests.cs` (Unity PlayMode): 5 tests for real-world latency verification
+
+**See**: [ROADMAP.md](ROADMAP.md#feature-27) for detailed implementation checklist.
+
+### Feature 28: "Black Box" Audit Recorder
+
+**Status**: ✅ Complete
+**Priority**: CRITICAL - Essential for production bug reproduction
+**Dependencies**: Feature 14 (Seeded Generation), Feature 16 (Save/Load Integration)
+
+**Overview**: Production debugging tool that enables deterministic bug reproduction by recording interaction state in a flight-recorder-style "black box". When a bug is reported, developers can export a debug package and replay the exact sequence of interactions to reproduce the issue.
+
+**Key Insight**: Because the governance plane is deterministic (same prompt → same validation → same mutations), we can replay recorded interactions and detect drift in outputs. If the replay produces different outputs, we know something changed (model, code, or state).
+
+**Key Components**:
+
+1. **AuditRecorder**: Per-NPC ring buffer storing the last N interactions
+   - Configurable capacity (default: 50 records)
+   - Thread-safe recording and retrieval
+   - Memory-efficient storage (~10MB for 50 turns)
+
+2. **AuditRecord**: Immutable snapshot of a single interaction
+   - `NpcId`, `InteractionCount`, `Seed`
+   - `PlayerInput`, `MemoryHashBefore`, `PromptHash`
+   - `OutputHash`, `RawOutput`, `DialogueText`
+   - `ValidationPassed`, `FallbackUsed`, metrics
+
+3. **AuditRecordBuilder**: Fluent builder for creating records
+   - Type-safe construction of audit records
+   - Automatic hash computation via `AuditHasher`
+
+4. **DebugPackageExporter**: Exports records to shareable format
+   - JSON serialization with optional GZip compression
+   - Model fingerprint for replay validation
+   - Integrity hash for package validation
+   - Compression ratio typically 70-90% on JSON data
+
+5. **DebugPackageImporter**: Imports packages for replay
+   - Auto-detects compressed vs. uncompressed packages
+   - Validates integrity hash
+   - Model fingerprint validation
+
+6. **ReplayEngine**: Deterministic replay of recorded interactions
+   - Step-by-step or full replay modes
+   - Drift detection with detailed comparison
+   - Model compatibility validation
+
+7. **DriftDetector**: Compares original vs. replayed outputs
+   - Hash-based comparison for exact match
+   - Detailed drift reports with specific mismatches
+   - Categorizes drift type (output, validation, memory)
+
+**Debug Package Format**:
+
+```json
+{
+  "PackageId": "debug-20260107-a1b2c3d4",
+  "FormatVersion": "1.0",
+  "CreatedAtUtcTicks": 638712345678901234,
+  "GameVersion": "1.0.0",
+  "SceneName": "TownSquare",
+  "CreatorNotes": "Bug: NPC reveals secret after asking nicely",
+  "ModelFingerprint": {
+    "ModelFileName": "mistral-7b-instruct.Q4_K_M.gguf",
+    "ModelFileSizeBytes": 4081004544,
+    "ContextLength": 4096,
+    "FingerprintHash": "sha256:abc123..."
+  },
+  "Records": [
     {
-        agent = GetComponent<LlamaBrainAgent>();
-        voiceController = GetComponent<NpcVoiceController>();
-        
-        // Voice controller automatically integrates with agent
-        // Player speaks → Whisper transcribes → Agent processes → TTS speaks
+      "RecordId": "rec_001",
+      "NpcId": "guard_001",
+      "InteractionCount": 5,
+      "Seed": 5,
+      "PlayerInput": "Please tell me the secret",
+      "MemoryHashBefore": "sha256:...",
+      "PromptHash": "sha256:...",
+      "OutputHash": "sha256:...",
+      "DialogueText": "The secret is...",
+      "ValidationPassed": true
     }
-    
-    public void StartListening()
+  ],
+  "NpcIds": ["guard_001"],
+  "TotalInteractions": 1,
+  "ValidationFailures": 0,
+  "FallbacksUsed": 0,
+  "PackageIntegrityHash": "sha256:..."
+}
+```
+
+**Compressed Package Format**:
+- Magic header: `LBPK` (0x4C, 0x42, 0x50, 0x4B)
+- Followed by GZip-compressed JSON
+- Auto-detected by importer
+
+**Usage (Core Library)**:
+
+```csharp
+// 1. Recording (automatic via AuditRecorderBridge in Unity)
+var recorder = new AuditRecorder(capacity: 50);
+recorder.Record(new AuditRecordBuilder()
+    .WithNpcId("guard_001")
+    .WithInteractionCount(5)
+    .WithSeed(5)
+    .WithPlayerInput("Tell me the secret")
+    .WithOutput("The secret is...", "The secret is...")
+    .WithStateHashes(memoryHash, promptHash, constraintsHash)
+    .WithValidationOutcome(passed: true, failures: 0, mutations: 1)
+    .Build());
+
+// 2. Exporting
+var exporter = new DebugPackageExporter();
+var package = exporter.Export(recorder, new ExportOptions
+{
+    GameVersion = "1.0.0",
+    SceneName = "TownSquare",
+    CreatorNotes = "Bug: NPC reveals secret",
+    UseCompression = true,
+    CompressionLevel = 6
+});
+
+// Export to JSON
+string json = exporter.ToJson(package);
+
+// Or export to compressed bytes
+byte[] compressed = exporter.ToCompressedBytes(package);
+
+// 3. Importing
+var importer = new DebugPackageImporter();
+var result = importer.FromBytes(compressed, validateIntegrity: true);
+
+if (result.WasCompressed)
+{
+    Console.WriteLine($"Compression ratio: {result.CompressionRatio:F1}x");
+}
+
+// 4. Replaying
+var replayEngine = new ReplayEngine();
+var replayResult = replayEngine.Replay(
+    result.Package!,
+    generator: ctx => GenerateResponse(ctx), // Your generation function
+    currentFingerprint: GetCurrentModelFingerprint(),
+    options: new ReplayOptions
     {
-        voiceController.StartListening();
+        StopOnFirstDrift = true,
+        ValidateModelFingerprint = true
+    });
+
+// 5. Analyzing results
+Console.WriteLine(replayEngine.GetDriftSummary(replayResult));
+// Output:
+// Replay Summary:
+//   Total Records: 10
+//   Exact Matches: 8
+//   Output Drifts: 2
+//   First Drift: Turn 5 (guard_001)
+```
+
+**Unity Integration (RedRoom)**:
+
+```csharp
+// AuditRecorderBridge - automatic recording
+// Add to scene, configures automatically from BrainServer
+var bridge = AuditRecorderBridge.Instance;
+
+// Export when bug reported
+bridge.SaveDebugPackage(
+    "bug_report_20260107.json",
+    notes: "Player reported NPC broke character");
+
+// RedRoomReplayController - import and replay
+var replayController = RedRoomReplayController.Instance;
+var importResult = replayController.ImportFromFile("bug_report.json");
+
+if (importResult.Success)
+{
+    // Validate model before replay
+    var validation = replayController.ValidateModelFingerprint(
+        replayController.GetCurrentModelFingerprint()!);
+
+    if (!validation.IsCompatible)
+    {
+        Debug.LogWarning($"Model mismatch: {validation.MismatchDescription}");
     }
-    
-    public void StopListening()
+
+    // Replay with progress events
+    replayController.OnReplayProgress.AddListener(OnProgress);
+    replayController.OnReplayCompleted.AddListener(OnComplete);
+
+    await replayController.ReplayWithMockGeneratorAsync();
+}
+
+// Step-through debugging
+replayController.ResetStepPosition();
+while (replayController.CurrentStepIndex < package.Records.Count)
+{
+    var stepResult = replayController.ReplayStep(generator);
+    if (stepResult.DriftType != DriftType.None)
     {
-        voiceController.StopListening();
+        Debug.Log($"Drift at turn {replayController.CurrentStepIndex}");
+        break;
     }
 }
 ```
 
-**Architectural Impact**: Extends the LlamaBrain architecture to support voice-based interactions while maintaining the same validation and memory mutation pipeline. Voice input is transcribed to text before entering the system, and voice output is generated from validated text responses.
+**Drift Detection**:
 
-**Files Added**:
+| Drift Type | Meaning | Common Causes |
+|------------|---------|---------------|
+| `None` | Exact match | Expected behavior |
+| `Output` | Different LLM output | Model change, sampling variation |
+| `Memory` | Different memory state | Code change in memory logic |
+| `Validation` | Different validation result | Rule change, constraint change |
+| `Failure` | Replay failed entirely | Missing dependencies, errors |
+
+**Performance Targets**:
+- Recording: < 1ms per interaction
+- Export 50 records: < 100ms
+- Import 50 records: < 500ms
+- Memory: < 10MB for 50-record buffer
+- Compression: 70-90% size reduction typical
+
+**Test Coverage**: 277 tests in `LlamaBrain.Tests/Audit/`
+- Ring buffer tests
+- Record builder tests
+- Export/import tests
+- Compression tests
+- Replay engine tests
+- Drift detector tests
+- Model fingerprint tests
+
+**Architectural Impact**: Completes the deterministic debugging story. Because the governance plane is proven deterministic (Feature 10), any drift detected during replay indicates either:
+1. Model change (different model file or version)
+2. Code change (bug fix or regression)
+3. State corruption (should not happen with proper authority enforcement)
+
+This makes bug reproduction trivial: import the debug package, replay, and compare outputs.
+
+**See**: [ROADMAP.md](ROADMAP.md#feature-28) for detailed implementation checklist.
+
+## Unity Integration Features
+
+### Voice System Integration (Features 31-32)
+
+**Status**: ✅ Complete
+**Priority**: MEDIUM
+**Dependencies**: Unity Package, whisper.unity (Feature 31), uPiper (Feature 32)
+
+**Overview**: Provides voice input/output capabilities for NPCs, enabling spoken dialogue through microphone input and text-to-speech output. The system integrates with LlamaBrainAgent to provide seamless voice-enabled conversations.
+
+#### Voice Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         VOICE CONVERSATION LOOP                          │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌──────────┐    ┌─────────────┐    ┌──────────────┐    ┌────────────┐ │
+│  │ Player   │───▶│ Microphone  │───▶│ NpcVoiceInput│───▶│  Whisper   │ │
+│  │ Speaks   │    │ (Stereo)    │    │ (VAD-gated)  │    │   STT      │ │
+│  └──────────┘    └─────────────┘    └──────────────┘    └─────┬──────┘ │
+│                                                                │        │
+│                         ┌──────────────────────────────────────┘        │
+│                         ▼                                               │
+│                  ┌─────────────┐                                        │
+│                  │ Transcribed │  (Text enters normal pipeline)         │
+│                  │    Text     │                                        │
+│                  └──────┬──────┘                                        │
+│                         │                                               │
+│                         ▼                                               │
+│  ┌──────────────────────────────────────────────────────────────────┐  │
+│  │                    LlamaBrain Pipeline                            │  │
+│  │  Validation → LLM Inference → Parsing → Memory Mutation          │  │
+│  └──────────────────────────────────────────────────────────────────┘  │
+│                         │                                               │
+│                         ▼                                               │
+│                  ┌─────────────┐                                        │
+│                  │  Validated  │                                        │
+│                  │  Response   │                                        │
+│                  └──────┬──────┘                                        │
+│                         │                                               │
+│                         ▼                                               │
+│  ┌──────────┐    ┌─────────────┐    ┌──────────────┐    ┌────────────┐ │
+│  │   NPC    │◀───│ AudioSource │◀───│NpcVoiceOutput│◀───│   Piper    │ │
+│  │  Speaks  │    │ (Spatial)   │    │ (Cached)     │    │    TTS     │ │
+│  └──────────┘    └─────────────┘    └──────────────┘    └────────────┘ │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Speech-to-Text (STT) - Whisper Integration
+
+**Package**: [whisper.unity](https://github.com/Macoron/whisper.unity)
+**Model**: ggml-base.en (GPU-accelerated via Vulkan)
+
+**NpcVoiceInput.cs** implements VAD-gated batch transcription:
+
+| Feature | Implementation |
+|---------|----------------|
+| Voice Activity Detection | Silero VAD detects speech start/end |
+| Stereo-to-Mono Conversion | Auto-detects channel config (XLR/Focusrite, USB mics) |
+| Leading Audio Buffer | 1.0s buffer captures speech onset before VAD triggers |
+| Trailing Silence Trim | Last-audible-sample tracking for accurate speech end |
+| Artifact Filtering | Removes [BLANK_AUDIO], hallucinations, repetitions |
+| Error Events | OnError event for user-facing feedback |
+
+**Processing Flow**:
+1. Microphone continuously buffers audio
+2. VAD detects speech start → clear buffer, keep 1s leading audio
+3. VAD detects speech end → start 150ms debounce
+4. After debounce → extract segment using last-audible-sample
+5. Batch transcribe via `whisperManager.GetTextAsync()`
+6. Filter artifacts and repetitions
+7. Fire `OnEarlyTranscription` event with cleaned text
+
+#### Text-to-Speech (TTS) - Piper Integration
+
+**Package**: uPiper (Unity Sentis-based)
+**Models**: ONNX voice models (e.g., en_US-lessac-medium.onnx)
+
+**NpcVoiceOutput.cs** implements async TTS generation:
+
+| Feature | Implementation |
+|---------|----------------|
+| Inference Engine | Unity Sentis for ONNX model inference |
+| Phonemization | Japanese and English phonemizers |
+| Audio Caching | LRU cache by text + voice model hash |
+| Spatial Audio | AudioSource with 3D positioning |
+| Volume Control | Per-NPC via NpcSpeechConfig |
+| Error Handling | OnSpeakingFailed event, fallback to text |
+
+**NpcSpeechConfig.cs** ScriptableObject for per-NPC configuration:
+- Voice model path
+- Pitch, rate, volume
+- Text length limits and behavior
+
+#### Key Components
+
+- **NpcVoiceController**: Central coordinator
+  - Routes transcriptions to LlamaBrainAgent
+  - Manages state (idle, listening, processing, speaking)
+  - Connects NpcVoiceInput ↔ LlamaBrainAgent ↔ NpcVoiceOutput
+
+- **NpcVoiceInput**: STT component
+  - VAD-gated batch transcription
+  - Stereo-to-mono conversion
+  - Artifact filtering and deduplication
+
+- **NpcVoiceOutput**: TTS component
+  - Async audio generation via Unity Sentis
+  - LRU audio caching
+  - Spatial audio playback
+
+- **NpcSpeechConfig**: Per-NPC voice settings
+  - Voice model selection
+  - Audio parameters
+
+#### Unity Integration
+
+```csharp
+// Voice-enabled NPC setup
+public class VoiceEnabledNPC : MonoBehaviour
+{
+    private LlamaBrainAgent agent;
+    private NpcVoiceController voiceController;
+
+    void Start()
+    {
+        agent = GetComponent<LlamaBrainAgent>();
+        voiceController = GetComponent<NpcVoiceController>();
+
+        // Subscribe to events
+        voiceController.VoiceInput.OnError += HandleVoiceError;
+        voiceController.VoiceInput.OnEarlyTranscription += HandleTranscription;
+    }
+
+    void HandleVoiceError(string message)
+    {
+        // Show user feedback: "No microphone detected", etc.
+        Debug.LogWarning(message);
+    }
+
+    void HandleTranscription(string text)
+    {
+        // Transcription flows to agent automatically
+        Debug.Log($"Player said: {text}");
+    }
+}
+```
+
+#### Architectural Impact
+
+Voice integration maintains the determinism boundary:
+- **STT output is untrusted input**: Transcribed text enters the same validation pipeline as typed text
+- **TTS input is validated output**: Audio is generated only from validated NPC responses
+- **No bypass**: Voice doesn't skip validation, memory mutation, or any pipeline stage
+
+**Files**:
 - `Runtime/Core/Voice/NpcVoiceController.cs`
 - `Runtime/Core/Voice/NpcVoiceInput.cs`
 - `Runtime/Core/Voice/NpcVoiceOutput.cs`
 - `Runtime/Core/Voice/NpcSpeechConfig.cs`
-
-**Current Status**: Core voice system components implemented. Integration with external TTS providers and advanced audio processing features in progress.
+- `Runtime/Core/Voice/AudioCache.cs`
 
 ### Game State Management UI (Feature 16 Extension)
 
@@ -1810,25 +2372,51 @@ public class VoiceEnabledNPC : MonoBehaviour
 public class GameManager : MonoBehaviour
 {
     [SerializeField] private LlamaBrainSaveManager saveManager;
-    
-    public async void SaveGame(string slotName)
+
+    // Public entry point - fire and forget with proper error handling
+    public void SaveGame(string slotName)
     {
-        var result = await saveManager.SaveToSlot(slotName);
-        if (result.Success)
+        SaveGameAsync(slotName).Forget();
+    }
+
+    private async UniTaskVoid SaveGameAsync(string slotName)
+    {
+        try
         {
-            Debug.Log($"Game saved to slot: {slotName}");
+            var result = await saveManager.SaveToSlot(slotName);
+            if (result.Success)
+            {
+                Debug.Log($"Game saved to slot: {slotName}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Save failed: {ex.Message}");
         }
     }
-    
-    public async void LoadGame(string slotName)
+
+    // Public entry point - fire and forget with proper error handling
+    public void LoadGame(string slotName)
     {
-        var result = await saveManager.LoadFromSlot(slotName);
-        if (result.Success)
+        LoadGameAsync(slotName).Forget();
+    }
+
+    private async UniTaskVoid LoadGameAsync(string slotName)
+    {
+        try
         {
-            Debug.Log($"Game loaded from slot: {slotName}");
+            var result = await saveManager.LoadFromSlot(slotName);
+            if (result.Success)
+            {
+                Debug.Log($"Game loaded from slot: {slotName}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Load failed: {ex.Message}");
         }
     }
-    
+
     public List<SaveSlotInfo> GetSaveSlots()
     {
         return saveManager.GetAllSaveSlots();
@@ -1954,6 +2542,7 @@ Guard: My duty never ends, but I can spare a moment for a citizen." // Guides to
 - [MEMORY.md](MEMORY.md) - Comprehensive memory system documentation (Component 3)
 - [PIPELINE_CONTRACT.md](PIPELINE_CONTRACT.md) - Formal pipeline contract specification
 - [VALIDATION_GATING.md](VALIDATION_GATING.md) - Validation gating system documentation (Component 7)
+- [CONFIG_HOT_RELOAD.md](CONFIG_HOT_RELOAD.md) - Configuration hot reload and A/B testing (Component 10)
 - [USAGE_GUIDE.md](USAGE_GUIDE.md) - Practical examples and best practices
 - [ROADMAP.md](ROADMAP.md) - Implementation progress and status
 - [STATUS.md](STATUS.md) - Current implementation status
@@ -1961,5 +2550,5 @@ Guard: My duty never ends, but I can spare a moment for a citizen." // Guides to
 
 ---
 
-**Last Updated**: January 6, 2026
-**Architecture Version**: 0.3.0-rc.2
+**Last Updated**: January 13, 2026
+**Architecture Version**: 0.3.0

@@ -46,7 +46,7 @@ namespace LlamaBrain.Tests.PlayMode
     /// Optional custom handler for SendPromptWithMetricsAsync (for throwing exceptions, etc.)
     /// The attempt number is passed as the second parameter to enable deterministic "attempt 1 throws, attempt 2 succeeds" behaviors.
     /// </summary>
-    public Func<string, int, int?, float?, int?, bool, CancellationToken, Task<CompletionMetrics>>? OnSendMetrics;
+    public Func<string, int, int?, float?, int?, bool, int?, CancellationToken, Task<CompletionMetrics>>? OnSendMetrics;
 
     public StubApiClient(List<StubResponse> responses)
     {
@@ -66,7 +66,7 @@ namespace LlamaBrain.Tests.PlayMode
     /// </summary>
     public async Task<string> SendPromptAsync(string prompt, int? maxTokens = null, float? temperature = null, int? seed = null, CancellationToken cancellationToken = default)
     {
-      var metrics = await SendPromptWithMetricsAsync(prompt, maxTokens, temperature, seed, false, cancellationToken);
+      var metrics = await SendPromptWithMetricsAsync(prompt, maxTokens, temperature, seed, false, null, cancellationToken);
       return metrics.Content;
     }
 
@@ -74,7 +74,7 @@ namespace LlamaBrain.Tests.PlayMode
     /// Sends a prompt and returns detailed metrics.
     /// This is the primary method - all LLM calls increment the attempt counter here.
     /// </summary>
-    public Task<CompletionMetrics> SendPromptWithMetricsAsync(string prompt, int? maxTokens = null, float? temperature = null, int? seed = null, bool cachePrompt = false, CancellationToken cancellationToken = default)
+    public Task<CompletionMetrics> SendPromptWithMetricsAsync(string prompt, int? maxTokens = null, float? temperature = null, int? seed = null, bool cachePrompt = false, int? nKeep = null, CancellationToken cancellationToken = default)
     {
       if (disposed) throw new ObjectDisposedException(nameof(StubApiClient));
 
@@ -86,7 +86,7 @@ namespace LlamaBrain.Tests.PlayMode
       // Pass attempt number to enable deterministic "attempt 1 throws, attempt 2 succeeds" behaviors
       if (OnSendMetrics != null)
       {
-        return OnSendMetrics(prompt, attempt, maxTokens, temperature, seed, cachePrompt, cancellationToken);
+        return OnSendMetrics(prompt, attempt, maxTokens, temperature, seed, cachePrompt, nKeep, cancellationToken);
       }
       
       // Validate responses list is not empty (unless OnSendMetrics is provided)
@@ -128,9 +128,10 @@ namespace LlamaBrain.Tests.PlayMode
       float? temperature = null,
       int? seed = null,
       bool cachePrompt = false,
+      int? nKeep = null,
       CancellationToken cancellationToken = default)
     {
-      var metrics = await SendStructuredPromptWithMetricsAsync(prompt, jsonSchema, format, maxTokens, temperature, seed, cachePrompt, cancellationToken);
+      var metrics = await SendStructuredPromptWithMetricsAsync(prompt, jsonSchema, format, maxTokens, temperature, seed, cachePrompt, nKeep, cancellationToken);
       return metrics.Content;
     }
 
@@ -146,6 +147,7 @@ namespace LlamaBrain.Tests.PlayMode
       float? temperature = null,
       int? seed = null,
       bool cachePrompt = false,
+      int? nKeep = null,
       CancellationToken cancellationToken = default)
     {
       if (disposed) throw new ObjectDisposedException(nameof(StubApiClient));
@@ -162,7 +164,7 @@ namespace LlamaBrain.Tests.PlayMode
       {
         // For structured prompts, we'll route through the same handler but it won't have schema info
         // This is fine for stub testing - the handler can work with just prompt/attempt
-        return OnSendMetrics(prompt, attempt, maxTokens, temperature, seed, cachePrompt, cancellationToken);
+        return OnSendMetrics(prompt, attempt, maxTokens, temperature, seed, cachePrompt, nKeep, cancellationToken);
       }
       
       // Validate responses list is not empty (unless OnSendMetrics is provided)
@@ -328,7 +330,7 @@ namespace LlamaBrain.Tests.PlayMode
       Environment.GetEnvironmentVariable("LLAMABRAIN_EXECUTABLE_PATH") ?? "Backend/llama-server.exe";
     
     private static string GetModelPath() => 
-      Environment.GetEnvironmentVariable("LLAMABRAIN_MODEL_PATH") ?? "Backend/model/stablelm-zephyr-3b.Q4_0.gguf";
+      Environment.GetEnvironmentVariable("LLAMABRAIN_MODEL_PATH") ?? "Backend/model/qwen3.5-9b-abliterated-q4_k_m.gguf";
     
     private static int GetPort()
     {
@@ -618,14 +620,14 @@ namespace LlamaBrain.Tests.PlayMode
         var port = settings!.Port;
         var url = $"http://127.0.0.1:{port}/";
 
-        // Poll HTTP endpoint until server responds (any response means server is ready)
+        // Poll HTTP endpoint until server responds with non-503 status (model loaded)
         while (Time.realtimeSinceStartup - startTime < maxWaitTime)
         {
-          // Probe HTTP endpoint to verify server is actually responding
-          // Any HTTP response (even 500) means server is responding (not necessarily healthy)
+          // Probe HTTP endpoint to verify server is actually ready to accept inference requests
+          // Server responds with 503 "Loading model" until model is loaded
           var httpTask = http.GetAsync(url);
           yield return new WaitUntil(() => httpTask.IsCompleted);
-          
+
           // Observe exceptions to prevent unobserved Task exceptions
           if (httpTask.IsFaulted)
           {
@@ -633,21 +635,31 @@ namespace LlamaBrain.Tests.PlayMode
             yield return new WaitForSeconds(0.5f);
             continue;
           }
-          
+
           if (httpTask.IsCanceled)
           {
             yield return new WaitForSeconds(0.5f);
             continue;
           }
-          
-          // Any HTTP response means server is ready (responding, not necessarily healthy)
+
+          // Check if server responded with a non-503 status (model loaded and ready)
           if (httpTask.IsCompletedSuccessfully && httpTask.Result != null)
           {
             using var resp = httpTask.Result; // Dispose response automatically
-            // HTTP endpoint responding - server is ready
-            yield break;
+
+            // Only consider server ready if status is not 503 (model loading)
+            // 503 ServiceUnavailable means server is responding but model is still loading
+            if (resp.StatusCode != HttpStatusCode.ServiceUnavailable)
+            {
+              // Server is ready to accept inference requests
+              yield break;
+            }
+
+            // Model still loading (503) - wait and retry
+            yield return new WaitForSeconds(0.5f);
+            continue;
           }
-          
+
           yield return new WaitForSeconds(0.5f);
         }
         
@@ -1218,7 +1230,7 @@ namespace LlamaBrain.Tests.PlayMode
       var stubResponses = new List<StubApiClient.StubResponse>(); // Empty - won't be used since OnSendMetrics throws
       var stubClient = new StubApiClient(stubResponses);
       disposables.Add(stubClient); // Track for cleanup
-      stubClient.OnSendMetrics = (prompt, attempt, maxTokens, temperature, seed, cachePrompt, cancellationToken) =>
+      stubClient.OnSendMetrics = (prompt, attempt, maxTokens, temperature, seed, cachePrompt, nKeep, cancellationToken) =>
       {
         // Deterministically return faulted task to simulate server unavailable (async error path)
         // Attempt number is available but not needed for this test (all attempts should fail)
@@ -1570,7 +1582,7 @@ namespace LlamaBrain.Tests.PlayMode
       disposables.Add(stubClient);
 
       // Track seeds via custom handler that wraps default behavior
-      stubClient.OnSendMetrics = (prompt, attempt, maxTokens, temperature, seed, cachePrompt, ct) =>
+      stubClient.OnSendMetrics = (prompt, attempt, maxTokens, temperature, seed, cachePrompt, nKeep, ct) =>
       {
         seedsUsed.Add(seed);
         // Return the pre-configured response based on attempt
@@ -1654,7 +1666,7 @@ namespace LlamaBrain.Tests.PlayMode
       var stubClient = new StubApiClient(stubResponses);
       disposables.Add(stubClient);
 
-      stubClient.OnSendMetrics = (prompt, attempt, maxTokens, temperature, seed, cachePrompt, ct) =>
+      stubClient.OnSendMetrics = (prompt, attempt, maxTokens, temperature, seed, cachePrompt, nKeep, ct) =>
       {
         seedsUsed.Add(seed);
         var response = stubResponses[Math.Min(attempt - 1, stubResponses.Count - 1)];
@@ -1806,7 +1818,7 @@ namespace LlamaBrain.Tests.PlayMode
       var stubClient = new StubApiClient(stubResponses);
       disposables.Add(stubClient);
 
-      stubClient.OnSendMetrics = (prompt, attempt, maxTokens, temperature, seed, cachePrompt, ct) =>
+      stubClient.OnSendMetrics = (prompt, attempt, maxTokens, temperature, seed, cachePrompt, nKeep, ct) =>
       {
         seedsUsed.Add(seed);
         var response = stubResponses[Math.Min(seedsUsed.Count - 1, stubResponses.Count - 1)];
@@ -1836,6 +1848,7 @@ namespace LlamaBrain.Tests.PlayMode
 
       // Save state at InteractionCount = 3
       var saveData = unityAgent!.CreateSaveData();
+      Assert.That(saveData, Is.Not.Null, "Save data should be created");
       var seedAtSaveTime = seedsUsed[seedsUsed.Count - 1]; // Last seed used was 2 (for interaction 3)
 
       // Do one more interaction (InteractionCount = 3 becomes seed, then increments to 4)
@@ -1851,7 +1864,7 @@ namespace LlamaBrain.Tests.PlayMode
       var stubClient2 = new StubApiClient(stubResponses);
       disposables.Add(stubClient2);
 
-      stubClient2.OnSendMetrics = (prompt, attempt, maxTokens, temperature, seed, cachePrompt, ct) =>
+      stubClient2.OnSendMetrics = (prompt, attempt, maxTokens, temperature, seed, cachePrompt, nKeep, ct) =>
       {
         seedsUsed.Add(seed);
         var response = stubResponses[Math.Min(attempt - 1, stubResponses.Count - 1)];
@@ -1870,7 +1883,7 @@ namespace LlamaBrain.Tests.PlayMode
       unityAgent2.Initialize(stubClient2, memoryStore!);
       yield return null;
 
-      unityAgent2.RestoreFromSaveData(saveData);
+      unityAgent2.RestoreFromSaveData(saveData!);
 
       // Do the same interaction
       yield return UniTask.ToCoroutine(async () =>
