@@ -71,6 +71,9 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
     private ModelFingerprint? _modelFingerprint;
     private string _gameVersion = "";
     private string _currentSceneName = "";
+    private string _sessionId = "";
+    private string _sessionTimestamp = "";
+    private DateTime _sessionStartTime;
 
     /// <summary>
     /// Gets the underlying audit recorder.
@@ -97,6 +100,11 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
     /// </summary>
     public IAuditPersistence? Persistence => _persistence;
 
+    /// <summary>
+    /// Gets the current session ID for tracking game start/stop events.
+    /// </summary>
+    public string SessionId => _sessionId;
+
     private void Awake()
     {
       if (Instance != null && Instance != this)
@@ -108,7 +116,8 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
 
       try
       {
-        InitializeRecorder();
+        StartNewSession();    // Must come first - generates timestamp used by persistence
+        InitializeRecorder(); // Creates persistence with session-specific file prefix
         Instance = this;
       }
       catch (Exception ex)
@@ -124,8 +133,14 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
     {
       if (Instance == this)
       {
+        LogSessionEnd();
         Instance = null;
       }
+    }
+
+    private void OnApplicationQuit()
+    {
+      LogSessionEnd();
     }
 
     private void Start()
@@ -138,6 +153,30 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
 
       // Try to auto-configure model fingerprint from BrainServer
       TryConfigureFromBrainServer();
+    }
+
+    /// <summary>
+    /// Starts a new audit session with a unique session ID and timestamp.
+    /// Must be called before InitializeRecorder() so the timestamp is available for file naming.
+    /// </summary>
+    private void StartNewSession()
+    {
+      _sessionId = Guid.NewGuid().ToString();
+      _sessionTimestamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
+      _sessionStartTime = DateTime.UtcNow;
+      Debug.Log($"[AuditRecorderBridge] Started new audit session: {_sessionId} at {_sessionStartTime:yyyy-MM-dd HH:mm:ss} UTC");
+    }
+
+    /// <summary>
+    /// Logs the end of the current audit session.
+    /// </summary>
+    private void LogSessionEnd()
+    {
+      if (!string.IsNullOrEmpty(_sessionId))
+      {
+        var sessionDuration = DateTime.UtcNow - _sessionStartTime;
+        Debug.Log($"[AuditRecorderBridge] Ended audit session: {_sessionId} (Duration: {sessionDuration.TotalMinutes:F2} minutes)");
+      }
     }
 
     private void InitializeRecorder()
@@ -198,7 +237,7 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
       {
         MaxFileSizeBytes = maxFileSizeBytes,
         MaxFileCount = maxFileCount,
-        FilePrefix = string.IsNullOrWhiteSpace(filePrefix) ? RollingFileOptions.DefaultFilePrefix : filePrefix
+        FilePrefix = BuildSessionFilePrefix()
       };
 
       // Validate options (will throw if invalid)
@@ -206,6 +245,22 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
 
       // Create persistence instance
       return new RollingFileAuditPersistence(fileSystem, clock, logDir, options);
+    }
+
+    /// <summary>
+    /// Builds a file prefix that includes the session timestamp for unique files per session.
+    /// </summary>
+    /// <returns>File prefix like "audit_20260128_143052".</returns>
+    private string BuildSessionFilePrefix()
+    {
+      var basePrefix = string.IsNullOrWhiteSpace(filePrefix)
+        ? RollingFileOptions.DefaultFilePrefix
+        : filePrefix;
+
+      // Include session timestamp to create unique file per application session
+      return string.IsNullOrEmpty(_sessionTimestamp)
+        ? basePrefix
+        : $"{basePrefix}_{_sessionTimestamp}";
     }
 
     private void TryConfigureFromBrainServer()
@@ -299,6 +354,73 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
     }
 
     /// <summary>
+    /// Records a simple instruction-based interaction without full agent state.
+    /// This is a simplified method for instruction-based calls that don't require
+    /// the full audit context (memory snapshots, triggers, etc.).
+    /// </summary>
+    /// <param name="agentId">The identifier of the agent/persona.</param>
+    /// <param name="input">The input instruction or prompt.</param>
+    /// <param name="output">The output response.</param>
+    /// <param name="metrics">The completion metrics from the LLM response.</param>
+    public void RecordSimpleInteraction(
+      string agentId,
+      string input,
+      string output,
+      CompletionMetrics metrics)
+    {
+      if (_recorder == null || !autoRecord)
+        return;
+
+      if (string.IsNullOrEmpty(agentId))
+      {
+        Debug.LogWarning("[AuditRecorderBridge] Cannot record: agentId is null or empty");
+        return;
+      }
+
+      try
+      {
+        // Get the current interaction count for this agent (will be 0 if no previous records)
+        var currentCount = _recorder.GetRecordCount(agentId);
+        var interactionCount = currentCount;
+
+        // Build a simple audit record with minimal required fields
+        var builder = new AuditRecordBuilder()
+          .WithNpcId(agentId)
+          .WithInteractionCount(interactionCount)
+          .WithSeed(interactionCount) // Use interaction count as seed for determinism
+          .WithSnapshotTimeUtcTicks(DateTimeOffset.UtcNow.UtcTicks)
+          .WithPlayerInput(input ?? "")
+          .WithTriggerInfo(0, "", _currentSceneName) // No trigger info for instruction-based calls
+          .WithStateHashes("", "", "") // No state hashes for simple calls
+          .WithOutput(output ?? "", output ?? "")
+          .WithValidationOutcome(true, 0, 0); // Assume validation passed for simple calls
+
+        // Add metrics if provided
+        if (metrics != null)
+        {
+          builder.WithMetrics(
+            (long)metrics.TtftMs,
+            (long)metrics.TotalTimeMs,
+            metrics.PromptTokenCount,
+            metrics.GeneratedTokenCount
+          );
+        }
+
+        var record = builder.Build();
+        _recorder.Record(record);
+
+        if (verboseLogging)
+        {
+          Debug.Log($"[AuditRecorderBridge] Recorded simple interaction for {agentId}, count: {_recorder.GetRecordCount(agentId)}");
+        }
+      }
+      catch (Exception ex)
+      {
+        Debug.LogError($"[AuditRecorderBridge] Failed to record simple interaction: {ex.Message}");
+      }
+    }
+
+    /// <summary>
     /// Builds an audit record from agent state and inference result.
     /// </summary>
     private AuditRecord BuildAuditRecord(
@@ -345,13 +467,18 @@ namespace LlamaBrain.Runtime.RedRoom.Audit
         triggerId = snapshot.Context.TriggerId ?? "";
       }
 
+      // Build trigger info with session ID appended to scene name for tracking
+      var sceneNameWithSession = string.IsNullOrEmpty(_sessionId)
+        ? _currentSceneName
+        : $"{_currentSceneName} [Session:{_sessionId}]";
+
       var builder = new AuditRecordBuilder()
         .WithNpcId(npcId)
         .WithInteractionCount(agent.InteractionCount)
         .WithSeed(snapshot?.Context?.InteractionCount ?? agent.InteractionCount)
         .WithSnapshotTimeUtcTicks(snapshot?.SnapshotTimeUtcTicks ?? DateTimeOffset.UtcNow.UtcTicks)
         .WithPlayerInput(playerInput)
-        .WithTriggerInfo(triggerReason, triggerId, _currentSceneName)
+        .WithTriggerInfo(triggerReason, triggerId, sceneNameWithSession)
         .WithStateHashes(memoryHash, promptHash, constraintsHash)
         .WithConstraints(constraintsSerialized)
         .WithOutput(finalResult.Response, finalResult.Response)

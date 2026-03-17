@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
+using LlamaBrain.Config;
 using LlamaBrain.Core;
 using LlamaBrain.Core.Expectancy;
 using LlamaBrain.Core.Metrics;
@@ -128,13 +129,19 @@ namespace LlamaBrain.Runtime.Core
     [SerializeField] private bool storeConversationHistory = true;
 
     /// <summary>
-    /// Maximum tokens for NPC responses (default: 24 for normal replies)
-    /// Target ranges: barks 8-12, normal replies 20-24, dialogue 30-48
-    /// Note: At 170 tps (GPU), 24 tokens ≈ 140ms decode time.
+    /// Maximum tokens for NPC responses (default: 128)
+    /// Target ranges: barks 8-12, normal replies 20-24, dialogue 30-48, JSON/structured 64-128
+    /// Note: At 170 tps (GPU), 128 tokens ≈ 750ms decode time.
     /// </summary>
     [Header("Performance Settings")]
-    [Tooltip("Maximum tokens for NPC responses. Normal replies: 20-24 tokens. At 170 tps: 24 tokens ≈ 140ms")]
-    [SerializeField] private int maxResponseTokens = 24;
+    [Tooltip("Maximum tokens for responses. Normal replies: 20-24 tokens, JSON: 64-128. At 170 tps: 128 tokens ≈ 750ms")]
+    [SerializeField] private int maxResponseTokens = 128;
+
+    /// <summary>
+    /// Runtime LlmConfig from BrainSettings hot reload.
+    /// When set, overrides serialized maxResponseTokens and other generation parameters.
+    /// </summary>
+    private LlmConfig? _runtimeLlmConfig;
 
     /// <summary>
     /// Enable automatic memory decay (episodic memories fade over time)
@@ -172,6 +179,11 @@ namespace LlamaBrain.Runtime.Core
     private ValidationGate? validationGate;
 
     /// <summary>
+    /// The prompt variant manager for A/B testing (null if no variants configured).
+    /// </summary>
+    private PromptVariantManager? _promptVariantManager;
+
+    /// <summary>
     /// The last assembled prompt (for debugging/metrics).
     /// </summary>
     public AssembledPrompt? LastAssembledPrompt { get; private set; }
@@ -180,6 +192,12 @@ namespace LlamaBrain.Runtime.Core
     /// The last parsed output (for debugging/metrics).
     /// </summary>
     public ParsedOutput? LastParsedOutput { get; private set; }
+
+    /// <summary>
+    /// The name of the last selected variant (for A/B testing metrics).
+    /// Null if no variants configured or no variant selected yet.
+    /// </summary>
+    public string? LastVariantName { get; private set; }
 
     /// <summary>
     /// The last gate result (for debugging/metrics).
@@ -397,6 +415,25 @@ namespace LlamaBrain.Runtime.Core
       if (PersonaConfig != null)
       {
         runtimeProfile = PersonaConfig.ToProfile();
+
+        // Initialize PromptVariantManager if variants are configured
+        if (PersonaConfig.SystemPromptVariants != null && PersonaConfig.SystemPromptVariants.Count > 0)
+        {
+          var variants = PersonaConfig.ToPromptVariants();
+          if (variants.Count > 0)
+          {
+            _promptVariantManager = new PromptVariantManager(variants);
+            UnityEngine.Debug.Log($"[ABTest] PromptVariantManager initialized with {variants.Count} variants for {PersonaConfig.Name}");
+          }
+          else
+          {
+            _promptVariantManager = null;
+          }
+        }
+        else
+        {
+          _promptVariantManager = null;
+        }
       }
     }
 
@@ -410,6 +447,169 @@ namespace LlamaBrain.Runtime.Core
         PersonaConfig.FromProfile(runtimeProfile);
       }
     }
+
+    /// <summary>
+    /// Event fired when PersonaConfig is successfully hot-reloaded.
+    /// Parameters: (agent, oldProfile, newProfile)
+    /// </summary>
+    public event System.Action<LlamaBrainAgent, PersonaProfile, PersonaProfile>? OnPersonaConfigReloaded;
+
+    /// <summary>
+    /// Hot-reloads the PersonaConfig by validating and applying changes to the runtime profile.
+    /// Preserves runtime state: memory, dialogue history, and InteractionCount.
+    /// This enables rapid iteration on NPC personality without restarting the game.
+    /// </summary>
+    /// <returns>True if reload succeeded, false if validation failed or agent not initialized</returns>
+    public bool ReloadPersonaConfig()
+    {
+      // Validate preconditions
+      if (PersonaConfig == null)
+      {
+        UnityEngine.Debug.LogWarning("[LlamaBrainAgent] ReloadPersonaConfig failed: PersonaConfig is null");
+        return false;
+      }
+
+      if (runtimeProfile == null)
+      {
+        UnityEngine.Debug.LogWarning("[LlamaBrainAgent] ReloadPersonaConfig failed: Runtime profile is null (agent not initialized)");
+        return false;
+      }
+
+      try
+      {
+        // Convert config to new profile
+        var newProfile = PersonaConfig.ToProfile();
+
+        // Validate new profile using ConfigValidator
+        var errors = LlamaBrain.Config.ConfigValidator.ValidatePersonaProfile(newProfile);
+        if (errors.Length > 0)
+        {
+          UnityEngine.Debug.LogError($"[HotReload] PersonaConfig validation failed: {string.Join(", ", errors)}");
+          return false; // Rollback: keep current profile
+        }
+
+        // Store old profile for event and potential rollback
+        var oldProfile = new PersonaProfile
+        {
+          PersonaId = runtimeProfile.PersonaId,
+          Name = runtimeProfile.Name,
+          Description = runtimeProfile.Description,
+          SystemPrompt = runtimeProfile.SystemPrompt,
+          Background = runtimeProfile.Background,
+          UseMemory = runtimeProfile.UseMemory,
+          Traits = new Dictionary<string, string>(runtimeProfile.Traits),
+          Metadata = new Dictionary<string, string>(runtimeProfile.Metadata)
+        };
+
+        // Apply changes to runtime profile (preserves memory and dialogue session)
+        // CRITICAL: Only update profile properties, do NOT reinitialize memory or session
+        runtimeProfile.Name = newProfile.Name;
+        runtimeProfile.Description = newProfile.Description;
+        runtimeProfile.SystemPrompt = newProfile.SystemPrompt;
+        runtimeProfile.Background = newProfile.Background;
+        runtimeProfile.UseMemory = newProfile.UseMemory;
+
+        // Update traits (clear and rebuild)
+        runtimeProfile.Traits.Clear();
+        foreach (var trait in newProfile.Traits)
+        {
+          runtimeProfile.Traits[trait.Key] = trait.Value;
+        }
+
+        // Update metadata (clear and rebuild)
+        runtimeProfile.Metadata.Clear();
+        foreach (var meta in newProfile.Metadata)
+        {
+          runtimeProfile.Metadata[meta.Key] = meta.Value;
+        }
+
+        // Fire event notification
+        try
+        {
+          OnPersonaConfigReloaded?.Invoke(this, oldProfile, newProfile);
+        }
+        catch (System.Exception ex)
+        {
+          // Event handler exceptions should not fail the reload
+          UnityEngine.Debug.LogError($"[HotReload] Exception in OnPersonaConfigReloaded event handler: {ex.Message}");
+        }
+
+        UnityEngine.Debug.Log($"[HotReload] PersonaConfig reloaded for {newProfile.Name}");
+        return true;
+      }
+      catch (System.Exception ex)
+      {
+        // Unexpected exception - profile remains unchanged
+        UnityEngine.Debug.LogError($"[HotReload] PersonaConfig reload failed with exception: {ex.Message}\nStackTrace: {ex.StackTrace}");
+        return false;
+      }
+    }
+
+    /// <summary>
+    /// Updates the LlmConfig used for the next interaction.
+    /// Called by BrainServer when BrainSettings are hot-reloaded.
+    /// The new config will be used for all subsequent interactions.
+    /// </summary>
+    /// <param name="config">The new LlmConfig from BrainSettings</param>
+    public void UpdateLlmConfig(LlmConfig config)
+    {
+      if (config == null)
+      {
+        UnityEngine.Debug.LogWarning($"[HotReload] UpdateLlmConfig called with null config for {gameObject.name}");
+        return;
+      }
+
+      _runtimeLlmConfig = config;
+      UnityEngine.Debug.Log($"[HotReload] LlmConfig updated for {gameObject.name}: MaxTokens={config.MaxTokens}, Temperature={config.Temperature}");
+    }
+
+    /// <summary>
+    /// Selects a system prompt variant for A/B testing based on InteractionCount.
+    /// Uses deterministic hash (InteractionCount + PersonaId) for stable variant assignment.
+    /// Returns the default SystemPrompt if no variants are configured.
+    /// </summary>
+    /// <returns>The selected system prompt (variant or default)</returns>
+    public string SelectSystemPromptVariant()
+    {
+      // If no variant manager, return default system prompt
+      if (_promptVariantManager == null || runtimeProfile == null)
+      {
+        return runtimeProfile?.SystemPrompt ?? "";
+      }
+
+      // Select variant using InteractionCount as seed
+      var selectedVariant = _promptVariantManager.SelectVariant(
+        seed: InteractionCount,
+        personaId: runtimeProfile.PersonaId
+      );
+
+      // Track which variant was selected
+      LastVariantName = selectedVariant.Name;
+
+      return selectedVariant.SystemPrompt;
+    }
+
+    /// <summary>
+    /// Gets the variant metrics from the PromptVariantManager.
+    /// Returns null if no variant manager is configured.
+    /// </summary>
+    /// <returns>Dictionary of variant metrics, or null</returns>
+    public System.Collections.Generic.Dictionary<string, VariantMetrics>? GetVariantMetrics()
+    {
+      return _promptVariantManager?.GetMetrics();
+    }
+
+#if UNITY_EDITOR || UNITY_INCLUDE_TESTS
+    /// <summary>
+    /// Test helper to set InteractionCount for A/B testing verification.
+    /// Only available in Unity Editor and tests.
+    /// </summary>
+    /// <param name="count">The interaction count to set</param>
+    public void TestSetInteractionCount(int count)
+    {
+      InteractionCount = count;
+    }
+#endif
 
     /// <summary>
     /// Sends a player input to the LlamaBrain server using the player name from settings.
@@ -571,9 +771,10 @@ namespace LlamaBrain.Runtime.Core
 
           UnityEngine.Debug.Log($"[LlamaBrainAgent] {assembledPrompt}");
 
-          // Determine max tokens
+          // Determine max tokens (prefer runtime LlmConfig from hot reload, fallback to serialized field)
+          var baseMaxTokens = _runtimeLlmConfig?.MaxTokens ?? maxResponseTokens;
           var isSingleLine = (runtimeProfile?.SystemPrompt ?? "").Contains("one line");
-          var effectiveMaxTokens = isSingleLine ? System.Math.Min(maxResponseTokens, 24) : maxResponseTokens;
+          var effectiveMaxTokens = isSingleLine ? System.Math.Min(baseMaxTokens, 24) : baseMaxTokens;
 
           // Send to LLM with deterministic seed (Double-Lock Pattern: Lock 2 - Entropy Locking)
           // Use context's InteractionCount if provided, otherwise use agent's tracked count
@@ -752,6 +953,20 @@ namespace LlamaBrain.Runtime.Core
             var failureCount = gateResult.Failures.Count + constraintResult.Violations.Count;
             UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Inference failed validation on attempt {attempts.Count}: {failureCount} total failures (gate: {gateResult.Failures.Count}, constraints: {constraintResult.Violations.Count})");
 
+            // Log detailed gate failures
+            foreach (var failure in gateResult.Failures)
+            {
+              UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Gate failure: [{failure.Severity}] {failure.Reason} - {failure.Description}" +
+                (string.IsNullOrEmpty(failure.ViolatingText) ? "" : $" | Text: \"{failure.ViolatingText}\"") +
+                (string.IsNullOrEmpty(failure.ViolatedRule) ? "" : $" | Rule: {failure.ViolatedRule}"));
+            }
+
+            // Log detailed constraint violations
+            foreach (var violation in constraintResult.Violations)
+            {
+              UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Constraint violation: {violation}");
+            }
+
             // Check if we should use fallback (critical failure) or retry
             if (gateResult.HasCriticalFailure)
             {
@@ -911,11 +1126,14 @@ namespace LlamaBrain.Runtime.Core
         var evaluatedConstraints = ExpectancyConfig.Evaluate(interactionContext, currentTriggerRules);
         LastConstraints = evaluatedConstraints; // Store constraints for debugging/metrics
 
+        // Select system prompt variant for A/B testing
+        var systemPrompt = SelectSystemPromptVariant();
+
         var snapshot = UnityStateSnapshotBuilder.BuildForNpcDialogue(
           npcConfig: ExpectancyConfig,
           memorySystem: memorySystem,
           playerInput: playerInput,
-          systemPrompt: runtimeProfile.SystemPrompt ?? "",
+          systemPrompt: systemPrompt,
           dialogueHistory: dialogueHistory
         );
         return snapshot;
@@ -938,10 +1156,13 @@ namespace LlamaBrain.Runtime.Core
         LastConstraints = constraints;
       }
 
+      // Select system prompt variant for A/B testing (fallback path)
+      var selectedSystemPrompt = SelectSystemPromptVariant();
+
       var builder = new StateSnapshotBuilder()
         .WithContext(context)
         .WithConstraints(constraints)
-        .WithSystemPrompt(runtimeProfile?.SystemPrompt ?? "")
+        .WithSystemPrompt(selectedSystemPrompt)
         .WithPlayerInput(playerInput)
         .WithDialogueHistory(dialogueHistory)
         .WithMaxAttempts(retryPolicy?.MaxAttempts ?? 3)
@@ -1833,11 +2054,11 @@ namespace LlamaBrain.Runtime.Core
         // llama.cpp's layer allocation is often optimal even if not all layers are offloaded
       }
 
-      // VALIDATION: Fail loudly if decode speed is too low
+      // VALIDATION: Warn if decode speed is too low (still functional, but degraded)
       const double MIN_DECODE_TPS = 50.0;
       if (metrics.TokensPerSecond > 0 && metrics.TokensPerSecond < MIN_DECODE_TPS)
       {
-        UnityEngine.Debug.LogError($"[LlamaBrainAgent] CRITICAL: Decode speed {metrics.TokensPerSecond:F1} tps is below threshold ({MIN_DECODE_TPS} tps)! " +
+        UnityEngine.Debug.LogWarning($"[LlamaBrainAgent] Decode speed {metrics.TokensPerSecond:F1} tps is below threshold ({MIN_DECODE_TPS} tps). " +
           $"Expected 100-200 tps with GPU. Possible causes: CPU-only inference, GPU not enabled, model too large, or system throttling. " +
           $"Check: GPU layers offloaded, CUDA build, VRAM usage, GPU temperature.");
       }

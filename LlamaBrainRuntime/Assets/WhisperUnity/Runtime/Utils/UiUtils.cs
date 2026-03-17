@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,7 +10,7 @@ namespace Whisper.Utils
         /// <summary>
         /// Scroll <see cref="ScrollRect"/> down to the bottom.
         /// </summary>
-        public static async void ScrollDown(ScrollRect scroll)
+        public static async UniTaskVoid ScrollDown(ScrollRect scroll)
         {
             await Task.Yield();
             Canvas.ForceUpdateCanvases ();

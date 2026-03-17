@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using TMPro;
 using Unity.InferenceEngine;
@@ -213,7 +214,7 @@ namespace uPiper.Demo
 #if UNITY_ANDROID
             DebugAndroidSetup();
             // Preload dictionary asynchronously for better performance
-            uPiper.Core.Platform.OptimizedAndroidPathResolver.PreloadDictionaryAsync();
+            uPiper.Core.Platform.OptimizedAndroidPathResolver.PreloadDictionaryAsync().Forget();
 #endif
 
             // Additional iOS debugging
@@ -246,7 +247,7 @@ namespace uPiper.Demo
 
 
             // Initialize English phonemizer (Flite LTS) - use Unity's main thread
-            InitializeEnglishPhonemizerAsync();
+            InitializeEnglishPhonemizerAsync().Forget();
 #endif
 
             SetupUI();
@@ -1217,7 +1218,7 @@ namespace uPiper.Demo
         }
 
 #if !UNITY_WEBGL
-        private async void InitializeEnglishPhonemizerAsync()
+        private async UniTaskVoid InitializeEnglishPhonemizerAsync()
         {
             try
             {

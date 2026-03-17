@@ -49,7 +49,7 @@ LlamaBrain uses a local llama.cpp backend and is **model-agnostic**.
 Any **GGUF** model that can be run by llama.cpp and can produce text that conforms to LlamaBrain’s structured-output envelope.
 
 ### Recommended baseline (tested)
-- qwen2.5-3b-instruct-abliterated-sft-q4_k_m.gguf
+- Qwen3.5-9B-abliterated-Q4_K_M.gguf
 - Rationale: fast on consumer GPUs and sufficient for structured intent emission.
 
 ### Test Environment
@@ -60,7 +60,7 @@ Any **GGUF** model that can be run by llama.cpp and can produce text that confor
 - NVIDIA driver: 32.0.15.8129 (581.29)
 - llama.cpp: b7574, win-cuda-13.1-x64
 - CUDA: cudart-llama, win-cuda-13.1-x64
-- Model: qwen2.5-3b-instruct-abliterated-sft-q4_k_m.gguf
+- Model: Qwen3.5-9B-abliterated-Q4_K_M.gguf
 
 ### User-configurable parameters (affect quality, speed, and schema-pass rate):
 - ctx

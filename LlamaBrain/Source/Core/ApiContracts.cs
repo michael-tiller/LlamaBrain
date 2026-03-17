@@ -70,14 +70,17 @@ namespace LlamaBrain.Core
     /// JSON schema to enforce structured output.
     /// When set, the LLM output will be constrained to match this schema.
     /// Maps to llama.cpp json_schema parameter.
+    /// Must be a parsed JSON object, not a string.
     /// </summary>
-    public string? json_schema { get; set; }
+    [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+    public object? json_schema { get; set; }
 
     /// <summary>
     /// GBNF grammar to constrain output format.
     /// More flexible than json_schema, can enforce non-JSON formats.
     /// Maps to llama.cpp grammar parameter.
     /// </summary>
+    [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
     public string? grammar { get; set; }
 
     /// <summary>
@@ -85,6 +88,7 @@ namespace LlamaBrain.Core
     /// When set to json_object type, forces valid JSON output.
     /// Maps to llama.cpp response_format parameter.
     /// </summary>
+    [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
     public ResponseFormat? response_format { get; set; }
   }
 

@@ -169,7 +169,7 @@ PlayMode tests require a real llama.cpp server. They are marked with `Category=E
 #### Prerequisites
 
 1. **llama-server executable**: `Backend/llama-server.exe`
-2. **Model file**: `Backend/model/qwen2.5-3b-instruct-abliterated-sft-q4_k_m.gguf`
+2. **Model file**: `Backend/model/Qwen3.5-9B-abliterated-Q4_K_M.gguf`
 
 #### Environment Variables
 

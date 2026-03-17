@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Serialization;
 using Whisper.Native;
@@ -143,12 +144,17 @@ namespace Whisper
         /// </summary>
         public bool IsLoading { get; private set; }
 
-        private async void Awake()
+        private void Awake()
         {
             LogUtils.Level = logLevel;
             
             if (!initOnAwake)
                 return;
+            InitializeModelAsync().Forget();
+        }
+
+        private async UniTaskVoid InitializeModelAsync()
+        {
             await InitModel();
         }
 
