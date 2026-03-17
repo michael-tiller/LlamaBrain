@@ -1,6 +1,6 @@
 # LlamaBrain Implementation Status
 
-**Last Updated**: January 6, 2026 (Structured I/O Enhancements Complete - 0.3.0-rc.2)
+**Last Updated**: January 7, 2026 (Feature 28 Audit Recorder Complete - 0.3.0-rc.3)
 
 ## Current Status
 
@@ -42,12 +42,13 @@
 | [Feature 24: "I've seen this" Recognition](ROADMAP.md#feature-24) | 📋 Planned | MEDIUM |
 | [Feature 25: NLP Belief Contradiction Detection](ROADMAP.md#feature-25) | 📋 Planned | MEDIUM |
 | [Feature 26: Narrative Consolidation](ROADMAP.md#feature-26) | 📋 Planned | MEDIUM |
-| [Feature 27: Smart KV Cache Management](ROADMAP.md#feature-27) | 📋 Planned | CRITICAL |
-| [Feature 28: "Black Box" Audit Recorder](ROADMAP.md#feature-28) | 📋 Planned | CRITICAL |
+| [Feature 27: Smart KV Cache Management](DEVELOPMENT_LOG.md#feature-27) | ✅ Complete | 100% |
+| [Feature 28: "Black Box" Audit Recorder](DEVELOPMENT_LOG.md#feature-28) | ✅ Complete | CRITICAL |
 | [Feature 29: Prompt A/B Testing & Hot Reload](ROADMAP.md#feature-29) | 📋 Planned | MEDIUM |
 | [Feature 30: Unity Repackaging & Distribution](ROADMAP.md#feature-30) | 📋 Planned | MEDIUM |
-| [Feature 31: Whisper Speech-to-Text Integration](ROADMAP.md#feature-31) | 🚧 In Progress (~70%) | MEDIUM |
-| [Feature 32: Piper Text-to-Speech Integration](ROADMAP.md#feature-32) | 🚧 In Progress (~65%) | MEDIUM |
+| [Feature 31: Whisper Speech-to-Text Integration](DEVELOPMENT_LOG.md#feature-31) | ✅ Complete | MEDIUM |
+| [Feature 32: Piper Text-to-Speech Integration](DEVELOPMENT_LOG.md#feature-32) | 🚧 In Progress (~65%) | MEDIUM |
+| [Feature 33: Voice Polish](ROADMAP.md#feature-33) | 📋 Planned | LOW |
 
 **Note**: Completed feature logs are in [DEVELOPMENT_LOG.md](./DEVELOPMENT_LOG.md). Planned and in-progress feature details are in [ROADMAP.md](./ROADMAP.md). This document focuses on high-level status and progress tracking.
 
@@ -57,22 +58,22 @@
 
 **Remaining for v0.3.0:**
 
-1. **Feature 27: Smart KV Cache Management** - CRITICAL - **DO NEXT**
-   - Performance optimization for production latency (1-2 weeks)
-   - Enables 200ms responses vs 1.5s (cache hit vs miss)
+1. **Feature 29: Prompt A/B Testing & Hot Reload** - MEDIUM
+   - Developer experience enhancement
 
-2. **Feature 28: "Black Box" Audit Recorder** - CRITICAL
-   - Production support tool for bug reproduction (1-2 weeks)
-   - Leverages determinism for instant bug replay
+2. **Feature 31: Whisper Speech-to-Text Integration** - MEDIUM (~70%)
+   - Core implementation complete, needs testing/docs
 
-3. **Feature 29: Prompt A/B Testing & Hot Reload** - MEDIUM
-   - Developer experience enhancement (1-2 weeks)
+3. **Feature 32: Piper Text-to-Speech Integration** - MEDIUM (~65%)
+   - Core implementation complete, needs testing/docs
 
 **In Progress:**
 - 🚧 Feature 31: Whisper Speech-to-Text Integration (~70% - core implementation complete, needs testing/docs)
 - 🚧 Feature 32: Piper Text-to-Speech Integration (~65% - core implementation complete, needs testing/docs)
 
 **Recently Completed:**
+- ✅ Feature 28: "Black Box" Audit Recorder - **COMPLETE** (Ring buffer, export/import, compression, replay engine, Unity integration, 277 tests)
+- ✅ Feature 27: Smart KV Cache Management - **COMPLETE** (Cache-aware prompt assembly, thread-safe metrics, 42 tests)
 - ✅ Feature 12 & 13: Structured Output - **ENHANCED** (Schema versioning, complex intent parameters, relationship authority validation)
 - ✅ Feature 23: Structured Input/Context - **ENHANCED** (Relationship entries, partial context builder, validation requirements, authority boundaries, dialogue metadata)
 - ✅ Feature 14: Deterministic Generation Seed - **DOCUMENTATION COMPLETE** (Comprehensive determinism contract with hardware limitations, seed flow, retry behavior)
@@ -112,8 +113,8 @@
 ### Milestone 4: v0.2.0 - The Foundation Update (Features 1-10)
 **Status**: Complete
 
-### Milestone 5: v0.3.0 - The Production Update (Features 12, 13, 23, 14, 16, 27, 28, 29, 10 completion) 🚧
-**Status**: 🚧 In Progress (0.3.0-rc.2)
+### Milestone 5: v0.3.0 - The Production Update (Features 12, 13, 23, 14, 16, 27, 28, 31, 32, 29, 10 completion) 🚧
+**Status**: 🚧 In Progress (0.3.0-rc.3)
 **Prerequisite**: **Milestone 4 (v0.2.0) must be released** before starting Milestone 5 features.
 
 **Completed:**
@@ -122,15 +123,15 @@
 - ✅ Feature 23 (Structured Input/Context)
 - ✅ Feature 14 (Deterministic Seed)
 - ✅ Feature 16 (Save/Load Game Integration)
+- ✅ Feature 27 (KV Cache)
+- ✅ Feature 28 (Audit Recorder)
+- ✅ Feature 31 (Whisper STT)
+- ✅ Feature 32 (Piper TTS)
 
 **Remaining:**
-1. Feature 27 (KV Cache) - CRITICAL - **DO NEXT**
-2. Feature 28 (Audit Recorder) - CRITICAL
-3. Feature 29 (Hot Reload) - MEDIUM
+- Feature 29 (Hot Reload) - MEDIUM
 
 **Target**: Complete remaining features for v0.3.0 release
-- Feature 27 (KV cache optimization) - CRITICAL for latency - **DO NEXT**
-- Feature 28 (audit recorder) - CRITICAL for ops
 - Feature 29 (hot reload) - Developer experience
 - Recover line test coverage to 90%+
 - Performance benchmarks: 200ms cache hit latency target
@@ -169,16 +170,18 @@
 - NPC-to-NPC interaction capabilities (Feature 15)
 - Performance optimization and scalability improvements
 
-### Milestone 8: (0.4.0) The Sidecar Update (21, 22, 30) 📋
-**Status**: Planned  
+### Milestone 8: (0.4.0) The Sidecar Update (21, 22, 30, 33) 📋
+**Status**: Planned
 - Feature 21: Sidecar Host - 📋 Planned (MEDIUM priority)
 - Feature 22: Unreal Engine Support - 📋 Planned (MEDIUM priority)
 - Feature 30: Unity Repackaging & Distribution - 📋 Planned (MEDIUM priority)
+- Feature 33: Voice Polish - 📋 Planned (LOW priority)
 
 **Target**: Add platform expansion capabilities and improve distribution
 - Sidecar host implementation for external integrations (Feature 21)
 - Unreal Engine support and integration (Feature 22)
 - Unity package repackaging with automated build, validation, and Git UPM support (Feature 30)
+- Voice polish: multiplatform testing, performance benchmarks, unit tests (Feature 33)
 ---
 
 ## Further Reading

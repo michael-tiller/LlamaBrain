@@ -5,7 +5,194 @@ All notable changes to LlamaBrain will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.0-rc.2] (Unreleased)
+## [0.3.0-rc.3] (Unreleased)
+
+### Core Library
+
+#### Added
+- **Feature 28: "Black Box" Audit Recorder - COMPLETE** ✅
+  - **Ring Buffer Recording System**
+    - Added `AuditRecorder` class with per-NPC ring buffer storage (default: 50 records per NPC)
+    - Added `RingBuffer<T>` generic ring buffer implementation with configurable capacity
+    - Thread-safe recording and retrieval with per-NPC buffer isolation
+    - Memory-efficient storage (~10MB for 50 turns per NPC)
+    - Added `IAuditRecorder` interface for dependency injection and testing
+  - **Audit Record System**
+    - Added `AuditRecord` immutable snapshot class capturing:
+      - `NpcId`, `InteractionCount`, `Seed` for deterministic replay
+      - `PlayerInput`, `MemoryHashBefore`, `PromptHash` for state tracking
+      - `OutputHash`, `RawOutput`, `DialogueText` for output verification
+      - `ValidationPassed`, `FallbackUsed`, metrics for debugging
+    - Added `AuditRecordBuilder` fluent builder for type-safe record construction
+    - Added `AuditCaptureContext` for capturing interaction state at recording time
+    - Added `AuditHasher` for deterministic hash computation of prompts, memory, and outputs
+  - **Debug Package Export/Import**
+    - Added `DebugPackage` container class with model fingerprint, integrity hash, and record collection
+    - Added `DebugPackageExporter` for JSON serialization with optional GZip compression (70-90% size reduction)
+    - Added `DebugPackageImporter` for package import with auto-detection of compressed/uncompressed formats
+    - Added `ExportOptions` for configurable export behavior (compression, format)
+    - Added `ImportResult` for import validation and error reporting
+    - Added `ModelFingerprint` for model compatibility validation (model name, size, quantization)
+  - **Replay Engine & Drift Detection**
+    - Added `ReplayEngine` for deterministic replay of recorded interactions
+    - Step-by-step and full replay modes with detailed progress tracking
+    - Added `DriftDetector` for comparing original vs. replayed outputs
+    - Hash-based comparison for exact match detection
+    - Detailed drift reports with specific mismatches and divergence points
+    - Added `ReplayResult` for replay outcome reporting with drift analysis
+  - **Integration with AuthoritativeMemorySystem**
+    - Extended `AuthoritativeMemorySystem` with memory hash computation for state tracking
+    - Memory hash captures complete state snapshot for drift detection
+  - **Test Coverage**: 277 tests across 13 test files
+    - `AuditRecorderTests.cs`: Ring buffer recording, retrieval, capacity management
+    - `AuditRecordTests.cs`: Record construction, serialization, validation
+    - `AuditRecordBuilderTests.cs`: Builder pattern, type safety, hash computation
+    - `RingBufferTests.cs`: Ring buffer behavior, overflow, indexing
+    - `AuditHasherTests.cs`: Hash computation, determinism, collision resistance
+    - `DebugPackageTests.cs`: Package structure, serialization, validation
+    - `DebugPackageExporterTests.cs`: Export functionality, compression, format options
+    - `DebugPackageImporterTests.cs`: Import functionality, validation, error handling
+    - `ReplayEngineTests.cs`: Replay execution, step-through, drift detection
+    - `ReplayResultTests.cs`: Result reporting, drift analysis
+    - `DriftDetectorTests.cs`: Output comparison, hash matching, drift reporting
+    - `ModelFingerprintTests.cs`: Fingerprint generation, validation, compatibility
+    - `CompressionTests.cs`: GZip compression, size reduction, round-trip integrity
+  - **Files Added**:
+    - `Source/Core/Audit/AuditRecorder.cs`
+    - `Source/Core/Audit/IAuditRecorder.cs`
+    - `Source/Core/Audit/AuditRecord.cs`
+    - `Source/Core/Audit/AuditRecordBuilder.cs`
+    - `Source/Core/Audit/AuditCaptureContext.cs`
+    - `Source/Core/Audit/AuditHasher.cs`
+    - `Source/Core/Audit/RingBuffer.cs`
+    - `Source/Core/Audit/DebugPackage.cs`
+    - `Source/Core/Audit/DebugPackageExporter.cs`
+    - `Source/Core/Audit/DebugPackageImporter.cs`
+    - `Source/Core/Audit/ExportOptions.cs`
+    - `Source/Core/Audit/ImportResult.cs`
+    - `Source/Core/Audit/ModelFingerprint.cs`
+    - `Source/Core/Audit/ReplayEngine.cs`
+    - `Source/Core/Audit/ReplayResult.cs`
+    - `Source/Core/Audit/DriftDetector.cs`
+  - **Files Modified**:
+    - `Source/Persona/AuthoritativeMemorySystem.cs` - Added memory hash computation for state tracking
+  - **Documentation**:
+    - Added Feature 28 section to `ARCHITECTURE.md` with component descriptions, usage examples, and replay workflow
+    - Added "Bug Report Workflow" section to `USAGE_GUIDE.md` with recording, export, and replay instructions
+    - Updated `STATUS.md` and `ROADMAP.md` marking Feature 28 as complete
+- **Feature 27: Smart KV Cache Management - COMPLETE** ✅
+  - **Static Prefix Policy**
+    - Added `StaticPrefixBoundary` enum with configurable cache boundaries (`AfterSystemPrompt`, `AfterCanonicalFacts`, `AfterWorldState`)
+    - Added `KvCacheConfig` for cache configuration with presets (Default, Aggressive, Conservative, Disabled)
+    - Added `PrefixStabilityValidator` for runtime validation of static prefix stability (detects cache invalidation bugs)
+    - Static prefix enforcement ensures byte-stable content comes first for optimal KV cache utilization
+  - **Cache-Aware Prompt Assembly**
+    - Added `PromptWithCacheInfo` record for cache-aware prompt results with static/dynamic split
+    - Added `AssembleWithCacheInfo()` method to `PromptAssembler` for cache-optimized prompt building
+    - Added `GetFormattedCanonicalFacts()`, `GetFormattedWorldState()`, `GetFormattedContextAfterFacts()`, `GetFormattedContextAfterWorldState()` methods to `EphemeralWorkingMemory`
+  - **Cache Metrics & Tracking**
+    - Added `CacheEfficiencyMetrics` class with thread-safe hit/miss tracking via `Interlocked` operations
+    - Extended `StructuredPipelineMetrics` with `CacheHitCount`, `CacheMissCount`, `CacheHitRate`, `RecordCacheHit()`, `RecordCacheMiss()`, `RecordCacheResult()`
+    - Added `StaticPrefixTokens`, `CacheEfficiency`, `KvCachingEnabled` fields to `DialogueInteraction`
+  - **BrainAgent Integration**
+    - Added `EnableKvCaching` property to `BrainAgent` for runtime cache control
+    - Integrated cache-aware API calls leveraging static prefix optimization
+  - **Test Coverage**: 47 new tests
+    - `StaticPrefixTests.cs`: 22 tests for static prefix enforcement and boundary behavior
+    - `KvCacheTests.cs`: 20 tests for cache metrics tracking and efficiency calculations
+    - `KvCachePerformanceTests.cs` (Unity PlayMode): 5 tests for real-world latency verification with llama-server
+  - **Files Added**:
+    - `Source/Core/Inference/KvCacheConfig.cs`
+    - `Source/Core/Inference/PromptWithCacheInfo.cs`
+    - `Source/Core/Inference/PrefixStabilityValidator.cs`
+    - `Source/Core/Metrics/CacheEfficiencyMetrics.cs`
+    - `LlamaBrain.Tests/Inference/StaticPrefixTests.cs`
+    - `LlamaBrain.Tests/Performance/KvCacheTests.cs`
+    - `LlamaBrainRuntime/Tests/PlayMode/KvCachePerformanceTests.cs`
+  - **Files Modified**:
+    - `Source/Core/Inference/EphemeralWorkingMemory.cs` - Added formatted context retrieval methods
+    - `Source/Core/Inference/PromptAssembler.cs` - Added `KvCacheConfig` property and `AssembleWithCacheInfo()` method
+    - `Source/Core/Metrics/DialogueInteraction.cs` - Added cache tracking fields
+    - `Source/Core/StructuredOutput/StructuredPipelineMetrics.cs` - Added cache hit/miss tracking
+    - `Source/Core/BrainAgent.cs` - Added `EnableKvCaching` property and cache-aware API integration
+  - **Performance Impact**: Enables 200ms responses (cache hit) vs 1.5s responses (cache miss) for typical gameplay patterns
+  - **Documentation**:
+    - Added Feature 27 section to `ARCHITECTURE.md` with architecture diagram, component descriptions, and usage examples
+    - Added "KV Cache Optimization" section to `USAGE_GUIDE.md` with configuration guide, boundary options, best practices, and troubleshooting
+    - Added `KV_CACHE_BENCHMARKS.md` with comprehensive performance benchmarks, test descriptions, and metrics reference
+
+#### Changed
+- **Structured output: single json_schema path** (**BREAKING**)
+  - **Breaking:** `ChatCompletionRequest.json_schema` in `ApiContracts` is now `object?` (parsed JSON) instead of `string?` — callers or serializers that pass/expect a string must parse to an object (e.g. `JsonConvert.DeserializeObject(schemaJson)`).
+  - **Breaking:** Grammar and `response_format` code paths are removed; `StructuredOutputFormat.Grammar` and `StructuredOutputFormat.ResponseFormat` are effectively ignored — all structured output uses `json_schema` when a schema is provided.
+  - `ApiClient.SendStructuredPromptWithMetricsAsync` always sends `json_schema` when provided; optional format fields use `NullValueHandling.Ignore`.
+  - Completion content is trimmed when building metrics; structured request body is serialized with `Formatting.None` for consistency.
+  - Tests updated: `SendStructuredPromptWithMetricsAsync_GrammarFormat_*` and `*_ResponseFormatMode_*` now assert `json_schema` in the request (format parameter ignored).
+
+### Unity Runtime
+
+#### Added
+- **Feature 28: Unity Audit Recorder Integration** ✅
+  - **AuditRecorderBridge** - MonoBehaviour singleton for automatic interaction recording
+    - Auto-registers with all `LlamaBrainAgent` instances in scene
+    - Configurable buffer capacity per NPC (default: 50 records)
+    - Automatic recording of all interactions with state capture
+    - Export functionality for creating debug packages
+  - **RedRoomReplayController** - MonoBehaviour for replaying debug packages in Unity Editor
+    - Drag-and-drop debug package import
+    - Step-through debugging with visual progress
+    - Drift detection visualization
+    - Model compatibility validation before replay
+  - **ReplayProgressUI** - UI component for replay progress visualization
+    - Step-by-step progress display
+    - Drift indicators and mismatch highlighting
+    - Replay controls (play, pause, step, reset)
+  - **LlamaBrainAgent Integration**
+    - Automatic audit recording integration
+    - State capture at interaction time
+    - Export support for creating debug packages
+  - **Files Added**:
+    - `Runtime/RedRoom/Audit/AuditRecorderBridge.cs`
+    - `Runtime/RedRoom/Audit/RedRoomReplayController.cs`
+    - `Runtime/RedRoom/Audit/ReplayProgressUI.cs`
+  - **Files Modified**:
+    - `Runtime/Core/LlamaBrainAgent.cs` - Added audit recording integration
+- **ProcessJobManager** - Windows Job Objects for llama-server crash cleanup
+  - Added `ProcessJobManager` static class using `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` to ensure llama-server child processes are terminated when Unity exits or crashes
+  - `BrainServer` initializes job object on startup and assigns llama-server process via `AssignServerProcessToJob()`
+  - Prevents orphaned llama-server processes after Editor/Player crash
+- **Config Hot Reload Improvements**
+  - Added `ConfigSaveProcessor` (AssetModificationProcessor) to detect config asset saves before `OnPostprocessAllAssets` fires
+  - Added `UnityEditorConfigWatcher.NotifyPotentialChange()` for pre-save change notification
+  - Added `UnityEditorConfigWatcher.ForceProcessPendingChanges()` and `PendingChangeCount` for testing
+  - Added `ConfigHotReloadManager.CaptureInitialSnapshots()` for test setup (ensures baseline before config modifications)
+  - Fixed snapshot update timing: snapshots now updated inside `HandlePersonaConfigChanged`/`HandleBrainSettingsChanged` to prevent double-triggering from polling
+- **ConfigHotReloadIntegrationTests** - PlayMode integration tests for config hot reload during Editor Play Mode
+
+#### Fixed
+- Fixes an issue with the CI pipeline not firing properly.
+- **Audit Recorder Improvements**:
+  - Fixed `DebugPackage.ValidateIntegrity()` to use non-mutating hash computation (prevents state corruption during validation)
+  - Fixed `DebugPackageExporter.Export()` to validate NPC ID for null and whitespace (prevents invalid exports)
+  - Fixed `DriftDetector.Compare()` to correctly initialize `Success` property based on actual drift detection results
+  - Fixed `AuditRecorderBridge.Awake()` initialization order and error handling (prevents singleton corruption on initialization failure)
+  - Fixed `AuditRecorderBridge.ExportDebugPackageJson()` to pass `ModelFingerprint` parameter correctly to exporter
+  - Fixed `AuditRecorderBridge.SaveDebugPackage()` to create directory structure if missing (prevents file save failures)
+  - Fixed `RedRoomReplayController.ProcessQueue()` thread safety by releasing lock before executing work items (prevents deadlocks)
+  - Fixed typo in test method name: `Record_MultipleRecords_DifferentNpcs_CreatesSeperateBuffers` → `CreatesSeparateBuffers`
+- **Audit Recorder Enhancements**:
+  - Added `ReplayResult.IsExactMatch` convenience property for checking exact replay matches
+  - Improved `DebugPackage` integrity hash computation to order records consistently for deterministic hashing
+- **NpcDialogueTrigger**: Nullable annotation for cached response when calling `SpeakResponseAsync` (fixes nullable reference warning).
+- **LlamaBrainAgent**: Decode speed validation downgraded from `LogError` to `LogWarning` when below 50 tps (still functional, but degraded).
+
+#### Changed
+- Added session ID to audit log.
+- **AuditRecorderBridge**: Session-timestamped audit file prefix; `StartNewSession()` now runs before `InitializeRecorder()` so each application session gets unique rolling log files (e.g. `audit_20260128_143052_*.jsonl`).
+- **Documentation**: Unity version 6000.0.58f2 → 6000.3.10f1 LTS; model reference Qwen2.5-3B → Qwen3.5-9B in QUICK_START and THIRD_PARTY_PACKAGES.
+- **STRUCTURED_OUTPUT.md**: Removed "Pit of Success API Design" section.
+
+## [0.3.0-rc.2] 2026-01-07
 
 ### Unity Runtime
 
@@ -282,7 +469,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `Runtime/Persistence/SaveGameFreeSaveSystem.cs`
     - `Runtime/Persistence/LlamaBrainSaveManager.cs`
 
-## [0.3.0-rc.1] (Unreleased)
+## [0.3.0-rc.1] 2026-01-03
 
 ### Unity Runtime
 

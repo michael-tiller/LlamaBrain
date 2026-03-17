@@ -617,6 +617,12 @@ namespace LlamaBrain.Core
         argsList.Add("--cont-batching");
       }
 
+      // Flash Attention for faster inference on supported GPUs
+      if (_config.UseFlashAttention)
+      {
+        argsList.Add("--flash-attn on");
+      }
+
       var arguments = string.Join(" ", argsList);
 
       if (arguments.Length > MaxArgumentsLength)

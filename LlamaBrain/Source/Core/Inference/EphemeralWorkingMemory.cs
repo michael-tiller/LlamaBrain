@@ -451,6 +451,109 @@ namespace LlamaBrain.Core.Inference
     }
 
     /// <summary>
+    /// Gets only canonical facts as a formatted string.
+    /// Used for KV cache optimization - canonical facts are part of the static prefix.
+    /// </summary>
+    /// <returns>Formatted canonical facts string</returns>
+    public string GetFormattedCanonicalFacts()
+    {
+      if (CanonicalFacts.Count == 0) return "";
+
+      var parts = new List<string>();
+      foreach (var fact in CanonicalFacts)
+      {
+        parts.Add($"[Fact] {fact}");
+      }
+      return string.Join("\n", parts);
+    }
+
+    /// <summary>
+    /// Gets world state as a formatted string.
+    /// Used for KV cache optimization with AfterWorldState boundary.
+    /// </summary>
+    /// <returns>Formatted world state string</returns>
+    public string GetFormattedWorldState()
+    {
+      if (WorldState.Count == 0) return "";
+
+      var parts = new List<string>();
+      foreach (var state in WorldState)
+      {
+        parts.Add($"[State] {state}");
+      }
+      return string.Join("\n", parts);
+    }
+
+    /// <summary>
+    /// Gets context that comes after canonical facts (world state, episodic, beliefs).
+    /// Used for KV cache optimization - this is part of the dynamic suffix.
+    /// </summary>
+    /// <returns>Formatted context string excluding canonical facts</returns>
+    public string GetFormattedContextAfterFacts()
+    {
+      var parts = new List<string>();
+
+      // World state
+      if (WorldState.Count > 0)
+      {
+        foreach (var state in WorldState)
+        {
+          parts.Add($"[State] {state}");
+        }
+      }
+
+      // Episodic memories
+      if (EpisodicMemories.Count > 0)
+      {
+        foreach (var memory in EpisodicMemories)
+        {
+          parts.Add($"[Memory] {memory}");
+        }
+      }
+
+      // Beliefs
+      if (Beliefs.Count > 0)
+      {
+        foreach (var belief in Beliefs)
+        {
+          parts.Add(belief);
+        }
+      }
+
+      return string.Join("\n", parts);
+    }
+
+    /// <summary>
+    /// Gets context that comes after world state (episodic, beliefs).
+    /// Used for KV cache optimization with AfterWorldState boundary.
+    /// </summary>
+    /// <returns>Formatted context string excluding canonical facts and world state</returns>
+    public string GetFormattedContextAfterWorldState()
+    {
+      var parts = new List<string>();
+
+      // Episodic memories
+      if (EpisodicMemories.Count > 0)
+      {
+        foreach (var memory in EpisodicMemories)
+        {
+          parts.Add($"[Memory] {memory}");
+        }
+      }
+
+      // Beliefs
+      if (Beliefs.Count > 0)
+      {
+        foreach (var belief in Beliefs)
+        {
+          parts.Add(belief);
+        }
+      }
+
+      return string.Join("\n", parts);
+    }
+
+    /// <summary>
     /// Gets formatted dialogue history.
     /// </summary>
     /// <returns>Formatted dialogue string</returns>

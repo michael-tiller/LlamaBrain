@@ -19,6 +19,8 @@ namespace LlamaBrain.Core.StructuredOutput
         private int _totalRetries;
         private int _mutationsExecuted;
         private int _intentsEmitted;
+        private int _cacheHitCount;
+        private int _cacheMissCount;
 
         /// <summary>
         /// Total number of pipeline requests processed.
@@ -64,6 +66,30 @@ namespace LlamaBrain.Core.StructuredOutput
         /// Number of intents successfully emitted.
         /// </summary>
         public int IntentsEmitted => _intentsEmitted;
+
+        /// <summary>
+        /// Number of requests where KV cache was hit.
+        /// </summary>
+        public int CacheHitCount => _cacheHitCount;
+
+        /// <summary>
+        /// Number of requests where KV cache was missed.
+        /// </summary>
+        public int CacheMissCount => _cacheMissCount;
+
+        /// <summary>
+        /// KV cache hit rate as a percentage (0-100).
+        /// </summary>
+        public float CacheHitRate
+        {
+            get
+            {
+                var cacheAttempts = CacheHitCount + CacheMissCount;
+                return cacheAttempts > 0
+                    ? (float)CacheHitCount / cacheAttempts * 100f
+                    : 0f;
+            }
+        }
 
         /// <summary>
         /// Structured output success rate as a percentage (0-100).
@@ -177,6 +203,38 @@ namespace LlamaBrain.Core.StructuredOutput
         }
 
         /// <summary>
+        /// Records a KV cache hit.
+        /// </summary>
+        public void RecordCacheHit()
+        {
+            Interlocked.Increment(ref _cacheHitCount);
+        }
+
+        /// <summary>
+        /// Records a KV cache miss.
+        /// </summary>
+        public void RecordCacheMiss()
+        {
+            Interlocked.Increment(ref _cacheMissCount);
+        }
+
+        /// <summary>
+        /// Records a cache result based on cached token count.
+        /// </summary>
+        /// <param name="cachedTokenCount">Number of cached tokens (0 = miss, > 0 = hit)</param>
+        public void RecordCacheResult(int cachedTokenCount)
+        {
+            if (cachedTokenCount > 0)
+            {
+                RecordCacheHit();
+            }
+            else
+            {
+                RecordCacheMiss();
+            }
+        }
+
+        /// <summary>
         /// Resets all metrics to zero.
         /// </summary>
         public void Reset()
@@ -190,6 +248,8 @@ namespace LlamaBrain.Core.StructuredOutput
             Interlocked.Exchange(ref _totalRetries, 0);
             Interlocked.Exchange(ref _mutationsExecuted, 0);
             Interlocked.Exchange(ref _intentsEmitted, 0);
+            Interlocked.Exchange(ref _cacheHitCount, 0);
+            Interlocked.Exchange(ref _cacheMissCount, 0);
         }
 
         /// <inheritdoc/>
@@ -199,6 +259,7 @@ namespace LlamaBrain.Core.StructuredOutput
             return $"PipelineMetrics: {TotalRequests} requests, " +
                    $"Structured: {StructuredSuccessRate:F1}% success, " +
                    $"Fallback: {FallbackRate:F1}%, " +
+                   $"KvCache: {CacheHitRate:F1}% hit, " +
                    $"Mutations: {MutationsExecuted}, Intents: {IntentsEmitted}";
         }
     }

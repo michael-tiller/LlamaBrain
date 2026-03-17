@@ -49,7 +49,7 @@ LlamaBrain uses a local llama.cpp backend and is **model-agnostic**.
 Any **GGUF** model that can be run by llama.cpp and can produce text that conforms to LlamaBrain’s structured-output envelope.
 
 ### Recommended baseline (tested)
-- stablelm-zephyr-3b.Q4_0.gguf
+- Qwen3.5-9B-abliterated-Q4_K_M.gguf
 - Rationale: fast on consumer GPUs and sufficient for structured intent emission.
 
 ### Test Environment
@@ -60,7 +60,7 @@ Any **GGUF** model that can be run by llama.cpp and can produce text that confor
 - NVIDIA driver: 32.0.15.8129 (581.29)
 - llama.cpp: b7574, win-cuda-13.1-x64
 - CUDA: cudart-llama, win-cuda-13.1-x64
-- Model: stablelm-zephyr-3b.Q4_0.gguf
+- Model: Qwen3.5-9B-abliterated-Q4_K_M.gguf
 
 ### User-configurable parameters (affect quality, speed, and schema-pass rate):
 - ctx
@@ -189,6 +189,11 @@ LlamaBrain/
   - Main menu and pause menu UI
   - Save slot management with metadata
   - Integration with persona memory snapshots
+- **Bug Reproduction System**: Deterministic replay for debugging
+  - Automatic interaction recording (last 50 turns per NPC)
+  - Debug package export with compression
+  - Import and replay in RedRoom with drift detection
+  - Step-through debugging to pinpoint issues
 - **Editor Tools**: Custom inspectors and configuration tools
 - **Sample Scenes**: Complete examples for different use cases
 - **RedRoom Testing Suite**: Comprehensive in-game LLM testing framework
@@ -197,6 +202,7 @@ LlamaBrain/
   - Rolling file system for data management
   - NPC follower system with LLM dialogue
   - Player interaction system with visual feedback
+  - Debug package import and replay visualization
 
 ## Documentation
 
@@ -375,15 +381,29 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 **Core Architecture**: Complete and production-ready. The determinism boundary, validation gate, and authoritative memory system are fully implemented and tested.
 
-**Completed**: Structured Output (Features 12, 13) - Enhanced with schema versioning and complex parameters, Deterministic Seed (Feature 14) - Documentation complete, Structured Input (Feature 23) - Enhanced with relationships and partial context
+**Completed**: Structured Output (Features 12, 13) - Enhanced with schema versioning and complex parameters, Deterministic Seed (Feature 14) - Documentation complete, Structured Input (Feature 23) - Enhanced with relationships and partial context, Smart KV Cache (Feature 27) - Cache-aware prompt assembly, **Audit Recorder (Feature 28)** - Bug reproduction with deterministic replay
 
-**Current Focus**: KV Cache (Feature 27), Audit Recorder (Feature 28), Hot Reload (Feature 29)
+**Current Focus**: Hot Reload (Feature 29)
 
 **See [STATUS.md](Documentation/STATUS.md) for milestone progress.**
 
 ---
 
-### Recent Additions (0.3.0-rc.2)
+### Recent Additions (0.3.0-rc.3)
+- **"Black Box" Audit Recorder** (Feature 28 - ✅ Complete)
+  - Flight-recorder-style bug reproduction system
+  - Ring buffer recording last 50 interactions per NPC
+  - Debug package export with GZip compression (70-90% reduction)
+  - Deterministic replay with drift detection
+  - Model fingerprint validation before replay
+  - Unity integration: `AuditRecorderBridge`, `RedRoomReplayController`, `ReplayProgressUI`
+  - Step-through debugging for pinpointing divergence
+  - 277 tests covering all audit functionality
+- **Smart KV Cache Management** (Feature 27 - ✅ Complete)
+  - Cache-aware prompt assembly with static prefix optimization
+  - Thread-safe cache metrics tracking
+  - Prompt reuse scoring and efficiency calculation
+  - 42 tests for cache functionality
 - **Structured Output Enhancements** (Feature 12 & 13 - ✅ Complete)
   - Schema versioning system with migration support (`SchemaVersion.cs`)
   - Complex intent parameters with typed classes (`IntentParameters.cs`)
@@ -402,12 +422,14 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
   - Hardware determinism limitations and guarantees
   - Cross-device reproducibility expectations
   - Backward compatibility guide
-- **Voice Integration**: Microphone input and speech output for NPCs (Features 31-32 - ~70% Complete)
-  - NpcVoiceController for centralized voice management (440 lines)
-  - Whisper.unity integration for speech-to-text with VAD (Feature 31 - 338 lines)
-  - Piper.unity integration for text-to-speech with phonemization (Feature 32 - 498 lines)
+- **Voice Integration** (Features 31-32 - ✅ Complete)
+  - **Speech-to-Text**: Whisper.unity with VAD-gated batch transcription
+    - Silero VAD for speech detection, stereo-to-mono conversion
+    - Artifact filtering, repetition deduplication, error events
+  - **Text-to-Speech**: uPiper with Unity Sentis inference
+    - ONNX voice models, LRU audio caching, spatial audio
+    - Per-NPC voice configuration via NpcSpeechConfig
   - Full async/await implementation with events and error handling
-  - Configurable via NpcSpeechConfig ScriptableObject
 - **Game State Management UI**: Complete save/load UI system (Feature 16 Extension - ✅ Complete)
   - Main menu with continue/new game/load game (26 lines)
   - Load game browser with delete confirmation (133 lines)

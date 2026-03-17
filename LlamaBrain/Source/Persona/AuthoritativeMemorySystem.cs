@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text;
+using LlamaBrain.Core.Audit;
 using LlamaBrain.Persona.MemoryTypes;
 
 namespace LlamaBrain.Persona
@@ -614,6 +616,59 @@ namespace LlamaBrain.Persona
         BeliefCount = _beliefs.Count,
         ActiveBeliefCount = _beliefs.Values.Count(b => !b.IsContradicted)
       };
+    }
+
+    /// <summary>
+    /// Computes a deterministic SHA256 hash of the entire memory system state.
+    /// Used for audit recording and drift detection during replay.
+    /// </summary>
+    /// <remarks>
+    /// The hash includes:
+    /// - All canonical facts (ordered by SequenceNumber)
+    /// - All world state entries (ordered by SequenceNumber)
+    /// - All episodic memories (ordered by SequenceNumber)
+    /// - All beliefs (ordered by SequenceNumber)
+    /// - The NextSequenceNumber (ordering metadata)
+    ///
+    /// The hash explicitly EXCLUDES:
+    /// - LastAccessedAt timestamps (non-deterministic, changes on access)
+    ///
+    /// Ordering by SequenceNumber ensures deterministic hash regardless of
+    /// dictionary iteration order or insertion order.
+    /// </remarks>
+    /// <returns>Base64-encoded SHA256 hash of the memory state.</returns>
+    public string ComputeStateHash()
+    {
+      var sb = new StringBuilder();
+
+      // Header with sequence number for ordering guarantee
+      sb.AppendLine($"NextSequenceNumber:{_nextSequenceNumber}");
+
+      // Canonical facts (highest authority, ordered by sequence number)
+      foreach (var fact in _canonicalFacts.Values.OrderBy(f => f.SequenceNumber))
+      {
+        sb.AppendLine($"F|{fact.Id}|{fact.Content}|{fact.Domain ?? ""}|{fact.CreatedAtTicks}|{fact.SequenceNumber}");
+      }
+
+      // World state (ordered by sequence number)
+      foreach (var entry in _worldState.Values.OrderBy(e => e.SequenceNumber))
+      {
+        sb.AppendLine($"W|{entry.Key}|{entry.Value}|{(int)entry.Source}|{entry.CreatedAtTicks}|{entry.SequenceNumber}");
+      }
+
+      // Episodic memories (ordered by sequence number)
+      foreach (var memory in _episodicMemories.OrderBy(m => m.SequenceNumber))
+      {
+        sb.AppendLine($"E|{memory.Id}|{memory.Content}|{memory.Strength:F6}|{memory.IsActive}|{memory.CreatedAtTicks}|{memory.SequenceNumber}");
+      }
+
+      // Beliefs (ordered by sequence number)
+      foreach (var belief in _beliefs.Values.OrderBy(b => b.SequenceNumber))
+      {
+        sb.AppendLine($"B|{belief.Id}|{belief.Content}|{belief.Confidence:F6}|{belief.IsContradicted}|{belief.CreatedAtTicks}|{belief.SequenceNumber}");
+      }
+
+      return AuditHasher.ComputeSha256(sb.ToString());
     }
 
     #endregion
