@@ -46,6 +46,7 @@ namespace LlamaBrain.Core.StructuredOutput
             /// <summary>
             /// Creates an authorized result.
             /// </summary>
+            /// <returns>An AuthorityValidationResult indicating authorization was granted.</returns>
             public static AuthorityValidationResult Authorized() => new AuthorityValidationResult(true);
 
             /// <summary>
@@ -53,12 +54,14 @@ namespace LlamaBrain.Core.StructuredOutput
             /// </summary>
             /// <param name="errorMessage">The error message.</param>
             /// <param name="failedRule">The rule that failed.</param>
+            /// <returns>An AuthorityValidationResult indicating authorization was denied.</returns>
             public static AuthorityValidationResult Unauthorized(string errorMessage, string failedRule)
                 => new AuthorityValidationResult(false, errorMessage, failedRule);
 
             /// <summary>
             /// Returns a string representation of the result.
             /// </summary>
+            /// <returns>A formatted string describing the authorization result.</returns>
             public override string ToString()
                 => IsAuthorized ? "Authorized" : $"Unauthorized: {ErrorMessage} (rule: {FailedRule ?? "unknown"})";
         }
@@ -99,6 +102,7 @@ namespace LlamaBrain.Core.StructuredOutput
             /// Creates a config with the specified NPC ID.
             /// </summary>
             /// <param name="npcId">The NPC ID.</param>
+            /// <returns>An AuthorityConfig instance configured for the specified NPC.</returns>
             public static AuthorityConfig ForNpc(string npcId) => new AuthorityConfig { NpcId = npcId };
         }
 

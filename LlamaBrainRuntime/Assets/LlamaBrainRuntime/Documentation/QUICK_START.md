@@ -8,12 +8,12 @@ LlamaBrain for Unity brings local AI to your Unity projects with intelligent NPC
 
 Before you start, make sure you have:
 
-- **Unity 6000.0.58f2 LTS**
+- **Unity 6000.3.10f1 LTS**
 - **TextMeshPro package** (installed via Package Manager)
 - **UniTask**
 - **Newtonsoft.Json**
 - **llama.cpp server executable** (download from [llama.cpp releases](https://github.com/ggerganov/llama.cpp/releases))
-- **GGUF model file** (e.g., [Stability Zephyr 3B](https://huggingface.co/stabilityai/stablelm-zephyr-3b))
+- **GGUF model file** (e.g., [Qwen3.5-9B-abliterated-Q4_K_M-GGUF](https://huggingface.co/Triangle104/Qwen3.5-9B-abliterated-Q4_K_M-GGUF))
 
 ## ⚡ Quick Setup (5 Minutes)
 
@@ -28,7 +28,7 @@ Before you start, make sure you have:
 1. Right-click in Project window → **Create → LlamaBrain → BrainSettings**
 2. Configure the settings:
    - **Executable Path**: Path to your llama.cpp server (e.g., `C:\llama\server.exe`)
-   - **Model Path**: Path to your GGUF model file (e.g., `C:\models\zephyr-3b.gguf`)
+   - **Model Path**: Path to your GGUF model file (e.g., `C:\models\qwen3.5-9b-abliterated-q4_k_m.gguf`)
    - **Port**: `5000` (default)
    - **Context Size**: `2048` (adjust based on your model)
 
@@ -61,28 +61,38 @@ public class SimpleNPC : MonoBehaviour
 {
     [SerializeField] private BrainSettings brainSettings;
     [SerializeField] private PersonaConfig personaConfig;
-    
+
     private LlamaBrainAgent brainAgent;
     private BrainServer brainServer;
-    
-    async void Start()
+
+    void Start()
+    {
+        InitializeAsync().Forget();
+    }
+
+    private async UniTaskVoid InitializeAsync()
     {
         // Set up server
         var serverObj = new GameObject("BrainServer");
         brainServer = serverObj.AddComponent<BrainServer>();
         brainServer.Settings = brainSettings;
-        
+
         // Set up agent
         brainAgent = GetComponent<LlamaBrainAgent>();
         brainAgent.PersonaConfig = personaConfig;
-        
+
         // Initialize
         var client = brainServer.CreateClient();
         var memory = new PersonaMemoryFileStore();
         brainAgent.Initialize(client, memory);
     }
-    
-    public async void TalkToPlayer(string message)
+
+    public void TalkToPlayer(string message)
+    {
+        TalkToPlayerAsync(message).Forget();
+    }
+
+    private async UniTaskVoid TalkToPlayerAsync(string message)
     {
         string response = await brainAgent.SendPlayerInputAsync(message);
         Debug.Log($"NPC: {response}");

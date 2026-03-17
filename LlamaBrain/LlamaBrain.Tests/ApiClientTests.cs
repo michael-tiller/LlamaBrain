@@ -1970,9 +1970,10 @@ namespace LlamaBrain.Tests
     }
 
     [Test]
-    public async Task SendStructuredPromptWithMetricsAsync_GrammarFormat_IncludesGrammarInRequest()
+    public async Task SendStructuredPromptWithMetricsAsync_GrammarFormat_IncludesJsonSchemaInRequest()
     {
       // Arrange
+      // Note: The format parameter is now ignored - all structured output uses json_schema for consistency
       string? capturedBody = null;
       var handler = new MockHttpMessageHandler(req =>
       {
@@ -1991,13 +1992,14 @@ namespace LlamaBrain.Tests
 
       // Assert
       Assert.IsNotNull(capturedBody);
-      Assert.That(capturedBody, Does.Contain("grammar"));
+      Assert.That(capturedBody, Does.Contain("json_schema"));
     }
 
     [Test]
-    public async Task SendStructuredPromptWithMetricsAsync_ResponseFormatMode_IncludesResponseFormatInRequest()
+    public async Task SendStructuredPromptWithMetricsAsync_ResponseFormatMode_IncludesJsonSchemaInRequest()
     {
       // Arrange
+      // Note: The format parameter is now ignored - all structured output uses json_schema for consistency
       string? capturedBody = null;
       var handler = new MockHttpMessageHandler(req =>
       {
@@ -2016,7 +2018,7 @@ namespace LlamaBrain.Tests
 
       // Assert
       Assert.IsNotNull(capturedBody);
-      Assert.That(capturedBody, Does.Contain("response_format"));
+      Assert.That(capturedBody, Does.Contain("json_schema"));
     }
 
     [Test]

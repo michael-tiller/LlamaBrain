@@ -211,56 +211,96 @@ namespace LlamaBrain.Runtime.Demo.UI
     /// <summary>
     /// Check server health manually
     /// </summary>
-    public async void CheckServerHealth()
+    public void CheckServerHealth()
+    {
+      CheckServerHealthAsync().Forget();
+    }
+
+    private async UniTaskVoid CheckServerHealthAsync()
     {
       if (brainServer == null) return;
 
-      Debug.Log("[ClientManagerUI] Checking server health...");
-      await brainServer.IsServerRunningAsync();
-      UpdateUI();
+      try
+      {
+        Debug.Log("[ClientManagerUI] Checking server health...");
+        await brainServer.IsServerRunningAsync();
+        UpdateUI();
+      }
+      catch (System.Exception ex)
+      {
+        Debug.LogError($"[ClientManagerUI] Health check failed: {ex.Message}");
+      }
     }
 
     /// <summary>
     /// Restart the server
     /// </summary>
-    public async void RestartServer()
+    public void RestartServer()
+    {
+      RestartServerAsync().Forget();
+    }
+
+    private async UniTaskVoid RestartServerAsync()
     {
       if (brainServer == null) return;
 
-      Debug.Log("[ClientManagerUI] Restarting server...");
-      isWaitingForServer = true;
-      UpdateUI();
+      try
+      {
+        Debug.Log("[ClientManagerUI] Restarting server...");
+        isWaitingForServer = true;
+        UpdateUI();
 
-      brainServer.RestartServer();
+        brainServer.RestartServer();
 
-      // Wait a bit for the restart to complete
-      await UniTask.Delay(5000);
-      isWaitingForServer = false;
-      UpdateUI();
+        // Wait a bit for the restart to complete
+        await UniTask.Delay(5000);
+        isWaitingForServer = false;
+        UpdateUI();
+      }
+      catch (System.Exception ex)
+      {
+        Debug.LogError($"[ClientManagerUI] Restart failed: {ex.Message}");
+        isWaitingForServer = false;
+        UpdateUI();
+      }
     }
 
     /// <summary>
     /// Wait for server to be ready
     /// </summary>
-    public async void WaitForServer()
+    public void WaitForServer()
+    {
+      WaitForServerAsync().Forget();
+    }
+
+    private async UniTaskVoid WaitForServerAsync()
     {
       if (brainServer == null) return;
 
-      Debug.Log("[ClientManagerUI] Waiting for server...");
-      isWaitingForServer = true;
-      UpdateUI();
-
-      int timeout = 30;
-      if (timeoutInput != null && int.TryParse(timeoutInput.text, out int inputTimeout))
+      try
       {
-        timeout = Mathf.Clamp(inputTimeout, 5, 300);
+        Debug.Log("[ClientManagerUI] Waiting for server...");
+        isWaitingForServer = true;
+        UpdateUI();
+
+        int timeout = 30;
+        if (timeoutInput != null && int.TryParse(timeoutInput.text, out int inputTimeout))
+        {
+          timeout = Mathf.Clamp(inputTimeout, 5, 300);
+        }
+
+        var result = await brainServer.WaitForServerAsync(timeout);
+        Debug.Log($"[ClientManagerUI] Wait result: {result}");
+
+        isWaitingForServer = false;
+        UpdateUI();
       }
-
-      var result = await brainServer.WaitForServerAsync(timeout);
-      Debug.Log($"[ClientManagerUI] Wait result: {result}");
-
-      isWaitingForServer = false;
-      UpdateUI();
+      catch (System.Exception ex)
+      {
+        Debug.LogError($"[ClientManagerUI] Wait for server failed: {ex.Message}");
+        isWaitingForServer = false;
+        UpdateUI();
+      }
     }
 
     /// <summary>

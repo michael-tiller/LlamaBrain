@@ -45,6 +45,18 @@ namespace LlamaBrain.Core
     public bool cache_prompt { get; set; } = false;
 
     /// <summary>
+    /// Number of tokens to keep from the initial prompt during context shift.
+    /// Protects the static prefix (system prompt, canonical facts) from being evicted
+    /// when the context window fills up. Set to the token count of your static prefix.
+    /// -1 = keep all tokens, 0 = keep none, N = keep first N tokens.
+    /// null = omit from request (server default behavior). When null, the property is omitted
+    /// from the serialized payload due to NullValueHandling.Ignore and the server default applies.
+    /// This differs from explicitly sending -1, which instructs the server to keep all tokens.
+    /// </summary>
+    [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+    public int? n_keep { get; set; }
+
+    /// <summary>
     /// Random seed for deterministic generation.
     /// -1 = random (non-deterministic), 0+ = use this exact seed.
     /// null = omit from request (server default behavior).
@@ -58,14 +70,17 @@ namespace LlamaBrain.Core
     /// JSON schema to enforce structured output.
     /// When set, the LLM output will be constrained to match this schema.
     /// Maps to llama.cpp json_schema parameter.
+    /// Must be a parsed JSON object, not a string.
     /// </summary>
-    public string? json_schema { get; set; }
+    [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
+    public object? json_schema { get; set; }
 
     /// <summary>
     /// GBNF grammar to constrain output format.
     /// More flexible than json_schema, can enforce non-JSON formats.
     /// Maps to llama.cpp grammar parameter.
     /// </summary>
+    [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
     public string? grammar { get; set; }
 
     /// <summary>
@@ -73,6 +88,7 @@ namespace LlamaBrain.Core
     /// When set to json_object type, forces valid JSON output.
     /// Maps to llama.cpp response_format parameter.
     /// </summary>
+    [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
     public ResponseFormat? response_format { get; set; }
   }
 

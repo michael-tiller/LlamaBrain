@@ -41,25 +41,25 @@ MonoBehaviour:
   m_GameObject: {fileID: 1378350395881466228}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d9370225a2ca94276b870d5f87b0db55, type: 3}
+  m_Script: {fileID: 11500000, guid: b51e862952e07f346a809525ae1da981, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   logLevel: 1
-  modelPath: Whisper/ggml-small.bin
+  modelPath: Whisper/ggml-tiny.bin
   isModelPathInStreamingAssets: 1
   initOnAwake: 1
-  useGpu: 0
-  flashAttention: 0
+  useGpu: 1
+  flashAttention: 1
   language: en
   translateToEnglish: 0
   strategy: 0
   noContext: 1
   singleSegment: 0
   enableTokens: 0
-  initialPrompt: 
-  stepSec: 3
-  keepSec: 0.2
-  lengthSec: 10
+  initialPrompt:
+  stepSec: 1.5
+  keepSec: 0.1
+  lengthSec: 5
   updatePrompt: 1
   dropOldBuffer: 0
   useVad: 1

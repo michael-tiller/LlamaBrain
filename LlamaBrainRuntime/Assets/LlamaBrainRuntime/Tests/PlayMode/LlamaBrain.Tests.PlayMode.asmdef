@@ -3,7 +3,9 @@
     "rootNamespace": "",
     "references": [
         "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner",
         "Assembly-CSharp.LlamaBrain.Runtime",
+        "Assembly-CSharp.LlamaBrain.Editor",
         "Unity.TextMeshPro",
         "UniTask"
     ],

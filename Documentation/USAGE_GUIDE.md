@@ -2,7 +2,7 @@
 
 This guide provides practical examples and best practices for using LlamaBrain's deterministic NPC dialogue system across different game engines.
 
-**Last Updated**: January 3, 2026
+**Last Updated**: January 7, 2026
 
 ---
 
@@ -28,9 +28,19 @@ This guide focuses on the **core library** (engine-agnostic .NET Standard 2.1), 
 10. [Structured Input/Context](#structured-input)
 11. [Migrating to Structured Input/Context](#migrating-to-structured-input)
 12. [Function Calling](#function-calling)
-13. [Debugging & Monitoring](#debugging--monitoring)
-14. [Performance Optimization](#performance-optimization)
-15. [Save/Load Persistence](#save-load-persistence)
+13. [Text-to-Speech (TTS) Voice Output](#text-to-speech-tts-voice-output)
+    - [Voice Model Selection](#voice-model-selection)
+    - [Acquiring Voice Models from Hugging Face](#acquiring-voice-models-from-hugging-face)
+    - [Audio Caching](#audio-caching)
+14. [Debugging & Monitoring](#debugging--monitoring)
+    - [Bug Report Workflow (Feature 28)](#bug-report-workflow-feature-28)
+15. [Performance Optimization](#performance-optimization)
+16. [Save/Load Persistence](#save-load-persistence)
+17. [Hot Reload & A/B Testing](#hot-reload-ab-testing)
+    - [Hot Reload Overview](#hot-reload-overview)
+    - [Unity Hot Reload](#unity-hot-reload)
+    - [A/B Testing System](#ab-testing-system)
+    - [Metrics Tracking](#metrics-tracking)
 
 ---
 
@@ -1614,6 +1624,251 @@ controller.RegisterFunction(
 
 ---
 
+<a id="text-to-speech-tts-voice-output"></a>
+## Text-to-Speech (TTS) Voice Output
+
+LlamaBrain integrates with [Piper TTS](https://github.com/rhasspy/piper) via the uPiper Unity package for high-quality, local text-to-speech synthesis. This enables NPCs to speak their dialogue aloud using neural voice models.
+
+> **Note**: TTS is a Unity Runtime feature. It requires Unity Sentis (formerly Barracuda) for ONNX model inference.
+
+### Prerequisites
+
+1. **Unity Sentis**: Install via Package Manager (com.unity.ai.inference)
+2. **uPiper Package**: Add via Git URL or manual installation
+3. **Voice Models**: Download ONNX models from Hugging Face (see below)
+
+### Basic Setup
+
+1. Add `NpcVoiceOutput` component to your NPC GameObject
+2. Create an `NpcSpeechConfig` ScriptableObject (Right-click → Create → LlamaBrain → NPC Speech Config)
+3. Assign the config to the `NpcVoiceOutput` component
+4. The `NpcVoiceController` component orchestrates TTS with the dialogue system
+
+```csharp
+// Speaking text programmatically
+var voiceOutput = GetComponent<NpcVoiceOutput>();
+await voiceOutput.SpeakAsync("Hello, traveler! Welcome to my shop.");
+
+// Check if speaking
+if (voiceOutput.IsSpeaking)
+{
+    voiceOutput.Stop(); // Interrupt current speech
+}
+```
+
+<a id="voice-model-selection"></a>
+### Voice Model Selection
+
+LlamaBrain provides preset voice models and supports custom models:
+
+#### Built-in Presets
+
+| Preset | Model Name | Language | Quality | Use Case |
+|--------|------------|----------|---------|----------|
+| `EnglishLessacHigh` | en_US-lessac-high | English | High | Clear, professional American English |
+| `EnglishLjspeechHigh` | en_US-ljspeech-high | English | High | Neutral American English female voice |
+| `JapaneseTestMedium` | ja_JP-test-medium | Japanese | Medium | Japanese voice (test quality) |
+| `Custom` | User-defined | Any | Varies | Custom model path |
+
+#### Configuring Voice in Inspector
+
+1. Create `NpcSpeechConfig` asset: Right-click → Create → LlamaBrain → NPC Speech Config
+2. Select `Voice Preset` from dropdown
+3. Adjust prosody settings:
+   - **Length Scale** (0.5-2.0): Speech speed. Lower = slower/clearer. Default: 1.0
+   - **Noise Scale** (0.0-2.0): Voice variation. Lower = more consistent. Default: 0.667
+   - **Noise W** (0.0-2.0): Additional randomness. Default: 0.8
+4. Configure audio settings:
+   - **Normalize Audio**: Prevent clipping. Default: true
+   - **Volume** (0.0-2.0): Output volume multiplier. Default: 1.0
+
+#### Using Custom Models
+
+```csharp
+// In NpcSpeechConfig Inspector:
+// 1. Set Voice Preset to "Custom"
+// 2. Enter model name in Custom Model Path (without .onnx extension)
+
+// Or programmatically:
+var config = ScriptableObject.CreateInstance<NpcSpeechConfig>();
+config.VoicePreset = NpcSpeechConfig.VoiceModelPreset.Custom;
+config.CustomModelPath = "en_GB-alan-medium"; // Your custom model
+```
+
+<a id="acquiring-voice-models-from-hugging-face"></a>
+### Acquiring Voice Models from Hugging Face
+
+Piper voice models are available on Hugging Face. Here's how to download and install them:
+
+#### Step 1: Browse Available Models
+
+Visit the Piper voices repository:
+**https://huggingface.co/rhasspy/piper-voices**
+
+Models are organized by language code:
+- `en_US` - American English
+- `en_GB` - British English
+- `de_DE` - German
+- `fr_FR` - French
+- `ja_JP` - Japanese
+- And many more...
+
+#### Step 2: Download Model Files
+
+Each voice requires two files:
+1. **Model file**: `{voice_name}.onnx` - The neural network weights
+2. **Config file**: `{voice_name}.onnx.json` - Phoneme mappings and settings
+
+Example download URLs for `en_US-lessac-high`:
+```
+https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/high/en_US-lessac-high.onnx
+https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/high/en_US-lessac-high.onnx.json
+```
+
+#### Step 3: Install in Unity Project
+
+Place both files in one of these locations:
+
+**Option A: Resources folder (Recommended)**
+```
+Assets/Resources/uPiper/Models/
+├── en_US-lessac-high.onnx
+├── en_US-lessac-high.onnx.json
+├── en_GB-alan-medium.onnx
+└── en_GB-alan-medium.onnx.json
+```
+
+**Option B: StreamingAssets folder**
+```
+Assets/StreamingAssets/uPiper/Models/
+├── en_US-lessac-high.onnx
+└── en_US-lessac-high.onnx.json
+```
+
+Unity Sentis will automatically convert `.onnx` files to model assets on import.
+
+#### Step 4: Verify Installation
+
+```csharp
+// Test voice model loading
+var voiceOutput = GetComponent<NpcVoiceOutput>();
+await voiceOutput.SpeakAsync("Voice model test. One, two, three.");
+// Check console for "[NpcVoiceOutput] Model loaded successfully: en_US-lessac-high"
+```
+
+#### Recommended Models by Use Case
+
+| Use Case | Recommended Model | Size | Notes |
+|----------|------------------|------|-------|
+| **General NPCs** | en_US-lessac-high | ~60 MB | Clear, professional quality |
+| **Female NPCs** | en_US-ljspeech-high | ~60 MB | Natural female voice |
+| **British NPCs** | en_GB-alan-medium | ~40 MB | British accent |
+| **German NPCs** | de_DE-thorsten-high | ~60 MB | High-quality German |
+| **Low memory** | en_US-lessac-medium | ~25 MB | Good quality, smaller size |
+
+#### Model Quality Tiers
+
+- **x_low**: Smallest, fastest, lower quality
+- **low**: Small, good for mobile
+- **medium**: Balanced quality/size
+- **high**: Best quality, larger size
+
+### Prosody Tips
+
+Fine-tune voice characteristics for different NPC personalities:
+
+```csharp
+// Slow, thoughtful wizard
+config.LengthScale = 1.3f;  // Slower speech
+config.NoiseScale = 0.4f;   // More consistent tone
+
+// Fast, nervous merchant
+config.LengthScale = 0.8f;  // Faster speech
+config.NoiseScale = 0.9f;   // More variation
+
+// Deep, authoritative guard
+config.LengthScale = 1.1f;  // Slightly slower
+config.Volume = 1.3f;       // Louder
+```
+
+<a id="audio-caching"></a>
+### Audio Caching
+
+LlamaBrain caches generated audio to avoid redundant TTS inference for repeated phrases.
+
+#### Configuration
+
+```csharp
+// In NpcSpeechConfig Inspector or code:
+config.EnableAudioCaching = true;    // Enable caching (default: true)
+config.AudioCacheMaxSizeMB = 50;     // Cache size limit (default: 50 MB)
+```
+
+#### How It Works
+
+1. **Cache Key**: SHA256 hash of `text + modelName + prosody settings`
+2. **Storage**: In-memory LRU (Least Recently Used) cache
+3. **Eviction**: Oldest entries removed when cache exceeds size limit
+4. **Capacity**: 50 MB ≈ 10 minutes of audio at 22kHz mono
+
+#### Monitoring Cache Performance
+
+```csharp
+var stats = voiceOutput.GetCacheStatistics();
+if (stats.HasValue)
+{
+    Debug.Log($"Cache entries: {stats.Value.EntryCount}");
+    Debug.Log($"Hit rate: {stats.Value.HitRate:P1}");
+    Debug.Log($"Memory used: {stats.Value.CurrentSizeBytes / 1024 / 1024:F1} MB");
+}
+
+// Clear cache if needed
+voiceOutput.ClearCache();
+```
+
+#### Cache Benefits
+
+| Scenario | Without Cache | With Cache |
+|----------|--------------|------------|
+| Same greeting repeated | 500-2000ms per generation | <1ms (cache hit) |
+| Common phrases | Full inference each time | Single inference, reused |
+| Memory usage | Lower (no storage) | Up to 50 MB (configurable) |
+
+### Troubleshooting TTS
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| "Model not found" error | Model files not in correct location | Check Resources/uPiper/Models/ path |
+| Silent audio | GPU inference failed | Check console for fallback to CPU |
+| Garbled audio | Wrong phoneme mapping | Ensure .onnx.json matches model |
+| Slow first generation | Model loading | Consider preloading in scene Start() |
+| High memory usage | Cache too large | Reduce `AudioCacheMaxSizeMB` |
+
+### Events
+
+Subscribe to TTS events for UI integration:
+
+```csharp
+var voiceOutput = GetComponent<NpcVoiceOutput>();
+
+voiceOutput.OnSpeakingStarted.AddListener(() => {
+    // Show speaking indicator
+    speakingIcon.SetActive(true);
+});
+
+voiceOutput.OnSpeakingFinished.AddListener(() => {
+    // Hide speaking indicator
+    speakingIcon.SetActive(false);
+});
+
+voiceOutput.OnSpeakingFailed.AddListener((error) => {
+    Debug.LogWarning($"TTS failed: {error}");
+    // Fall back to text-only display
+});
+```
+
+---
+
 <a id="debugging--monitoring"></a>
 ## Debugging & Monitoring
 
@@ -1683,6 +1938,214 @@ validationGate.OnValidationComplete += (result) =>
 mutationController.OnWorldIntentEmitted += (intent) =>
     Console.WriteLine($"Intent emitted: {intent.IntentType} from {intent.SourceNpcId}");
 ```
+
+### Bug Report Workflow (Feature 28)
+
+The "Black Box" Audit Recorder enables deterministic bug reproduction by recording interaction state. When a player reports a bug, you can export a debug package and replay the exact sequence of interactions.
+
+#### Recording Interactions (Automatic)
+
+In Unity, add the `AuditRecorderBridge` component to your scene. It automatically records interactions from all `LlamaBrainAgent` components:
+
+```csharp
+// AuditRecorderBridge automatically records interactions
+// Configuration is done via Inspector or code:
+
+var bridge = AuditRecorderBridge.Instance;
+bridge.bufferCapacity = 50;  // Keep last 50 interactions per NPC
+bridge.autoRecord = true;    // Record automatically
+
+// Manually trigger recording if needed
+bridge.RecordInteraction(agent, playerInput, result);
+```
+
+#### Exporting Bug Reports
+
+When a bug is reported, export the debug package:
+
+```csharp
+// Quick export to file
+var bridge = AuditRecorderBridge.Instance;
+bridge.SaveDebugPackage(
+    "bug_report_20260107.json",
+    notes: "Player reported: NPC revealed secret when asked nicely");
+
+// Or get the JSON directly
+string json = bridge.ExportDebugPackageJson(notes: "Bug description");
+
+// For smaller files, use compression (70-90% reduction)
+var package = bridge.ExportDebugPackage(notes: "Bug description");
+var exporter = new DebugPackageExporter();
+byte[] compressed = exporter.ToCompressedBytes(package, compressionLevel: 6);
+File.WriteAllBytes("bug_report.lbpk", compressed);
+```
+
+#### Bug Report Workflow
+
+1. **Player reports bug**: "NPC revealed a secret when I asked nicely"
+
+2. **Export debug package**:
+   ```csharp
+   // In-game bug report button
+   public void OnBugReportClicked()
+   {
+       var notes = bugDescriptionInput.text;
+       var path = Path.Combine(
+           Application.persistentDataPath,
+           $"bug_{DateTime.Now:yyyyMMdd_HHmmss}.json");
+
+       AuditRecorderBridge.Instance.SaveDebugPackage(path, notes);
+       ShowMessage($"Bug report saved to: {path}");
+   }
+   ```
+
+3. **Developer imports and replays**:
+   ```csharp
+   var controller = RedRoomReplayController.Instance;
+   var result = controller.ImportFromFile("bug_report.json");
+
+   if (result.Success)
+   {
+       // Check model compatibility
+       var validation = controller.ValidateModelFingerprint(
+           controller.GetCurrentModelFingerprint()!);
+
+       if (!validation.IsCompatible)
+       {
+           Debug.LogWarning($"Warning: {validation.MismatchDescription}");
+       }
+
+       // Replay and find the drift
+       var replayResult = await controller.ReplayAsync(ctx =>
+       {
+           // Your actual generation logic here
+           return GenerateResponse(ctx);
+       });
+
+       // Analyze results
+       Debug.Log(controller.GetReplaySummary());
+   }
+   ```
+
+4. **Step-through debugging** for detailed analysis:
+   ```csharp
+   controller.ResetStepPosition();
+
+   while (controller.CurrentStepIndex < controller.CurrentPackage.Records.Count)
+   {
+       var stepResult = controller.ReplayStep(GenerateResponse);
+
+       if (stepResult.DriftType != DriftType.None)
+       {
+           var record = controller.CurrentPackage.Records[controller.CurrentStepIndex - 1];
+           Debug.Log($"Drift at turn {controller.CurrentStepIndex}:");
+           Debug.Log($"  NPC: {record.NpcId}");
+           Debug.Log($"  Input: {record.PlayerInput}");
+           Debug.Log($"  Expected: {record.DialogueText}");
+           Debug.Log($"  Got: {stepResult.ReplayedRecord.DialogueText}");
+           break;
+       }
+   }
+   ```
+
+#### Core Library Usage
+
+For non-Unity environments:
+
+```csharp
+using LlamaBrain.Core.Audit;
+
+// 1. Create recorder
+var recorder = new AuditRecorder(capacity: 50);
+
+// 2. Record interactions manually
+recorder.Record(new AuditRecordBuilder()
+    .WithNpcId("guard_001")
+    .WithInteractionCount(interactionCount)
+    .WithSeed(interactionCount)
+    .WithPlayerInput(playerInput)
+    .WithOutput(rawOutput, dialogueText)
+    .WithStateHashes(memoryHash, promptHash, constraintsHash)
+    .WithValidationOutcome(gateResult.Passed, gateResult.Failures.Count, mutations)
+    .Build());
+
+// 3. Export
+var exporter = new DebugPackageExporter();
+var package = exporter.Export(recorder, new ExportOptions
+{
+    GameVersion = Application.version,
+    SceneName = currentScene,
+    CreatorNotes = bugDescription,
+    UseCompression = true
+});
+
+// Save as compressed
+File.WriteAllBytes("bug.lbpk", exporter.ToCompressedBytes(package));
+
+// 4. Import and replay
+var importer = new DebugPackageImporter();
+var importResult = importer.FromFile("bug.lbpk", validateIntegrity: true);
+
+if (importResult.WasCompressed)
+{
+    Console.WriteLine($"Decompressed: {importResult.CompressionRatio:F1}x ratio");
+}
+
+var replayEngine = new ReplayEngine();
+var replayResult = replayEngine.Replay(
+    importResult.Package!,
+    GenerateResponse,
+    currentModelFingerprint,
+    new ReplayOptions { StopOnFirstDrift = true });
+
+Console.WriteLine(replayEngine.GetDriftSummary(replayResult));
+```
+
+#### Understanding Drift Types
+
+| Drift Type | What It Means | Action |
+|------------|---------------|--------|
+| `None` | Exact match | Bug not reproduced - different conditions |
+| `Output` | LLM gave different response | Check model version, sampling params |
+| `Memory` | Memory state differs | Check memory mutation logic |
+| `Validation` | Validation result differs | Check rule changes |
+| `Failure` | Replay failed | Check for missing dependencies |
+
+#### Troubleshooting Replay Issues
+
+**"Model fingerprint mismatch" warning**
+- The model file has changed since the bug report was created
+- Replay may still work, but outputs might differ
+- For exact reproduction, use the same model file/version
+
+**"Package integrity validation failed"**
+- The debug package file may be corrupted
+- Re-export from source if possible
+- Check for transmission errors if file was transferred
+
+**All records show drift**
+- Model has changed significantly
+- Temperature/sampling parameters differ
+- Code changes affected prompt assembly
+
+**Replay succeeds but bug not reproduced**
+- Bug may be timing-dependent or race condition
+- Check if bug requires specific game state not captured
+- Review the `CreatorNotes` for additional context
+
+**Compressed package won't load**
+- Verify file has `.lbpk` extension or starts with `LBPK` header
+- Try importing as uncompressed JSON if compression failed
+- Check file isn't truncated
+
+**Step-through shows no drift, but full replay does**
+- Timing differences in async operations
+- Check for non-deterministic elements in generation
+
+**Performance issues during replay**
+- Reduce `StopOnFirstDrift` to false for batch analysis
+- Use mock generator for validation testing before real generation
+- Compress large packages to reduce I/O
 
 ---
 
@@ -2048,6 +2511,297 @@ The persistence system preserves all determinism-critical fields:
 3. **Handle failures gracefully**: Always check `SaveResult.Success` before confirming to player
 4. **Test round-trips**: Verify that save → load produces identical behavior
 5. **Version your saves**: Use `SaveData.Version` for migration support
+
+---
+
+<a id="hot-reload-ab-testing"></a>
+## Hot Reload & A/B Testing
+
+LlamaBrain supports hot reload for configuration changes and A/B testing for prompt variants. This enables rapid iteration on NPC personality and behavior without restarting your game.
+
+<a id="hot-reload-overview"></a>
+### Hot Reload Overview
+
+Hot reload allows you to modify NPC configurations and LLM parameters while the game is running. Changes are applied immediately to the next interaction, preserving runtime state (memory, dialogue history, interaction count).
+
+**What Can Be Hot Reloaded**:
+- PersonaConfig: SystemPrompt, personality traits, metadata
+- BrainSettings (LLM params): Temperature, MaxTokens, TopP, TopK, RepeatPenalty
+- Prompt variants for A/B testing
+
+**What Requires Restart**:
+- BrainSettings (server params): Model path, GPU layers, context size, batch size
+
+<a id="unity-hot-reload"></a>
+### Unity Hot Reload
+
+#### Enabling Hot Reload
+
+Hot reload is enabled by default in the Unity Editor. It uses Unity's AssetDatabase to monitor ScriptableObject changes.
+
+```csharp
+// In LlamaBrainAgent Inspector:
+// - Auto Reload Config: Enabled (default)
+//
+// Or programmatically:
+agent.EnableAutoReload = true;
+```
+
+#### Hot Reloading PersonaConfig
+
+1. Open your PersonaConfig ScriptableObject in the Inspector
+2. Modify the SystemPrompt or other fields
+3. Save the asset (Ctrl+S)
+4. Changes apply automatically to the next interaction
+
+```csharp
+// Example: Modify PersonaConfig in play mode
+// 1. Edit SystemPrompt in Inspector
+// 2. Save asset
+// 3. Next interaction uses new prompt
+
+// Subscribe to reload events
+agent.OnPersonaConfigReloaded += (agent, oldProfile, newProfile) =>
+{
+    Debug.Log($"Config reloaded: {oldProfile.SystemPrompt} -> {newProfile.SystemPrompt}");
+};
+```
+
+#### Hot Reloading BrainSettings
+
+Modify LLM parameters in BrainSettings and save. Changes apply to all agents immediately.
+
+```csharp
+// Example: Adjust temperature in play mode
+// 1. Open BrainSettings ScriptableObject
+// 2. Change Temperature from 0.7 to 0.5
+// 3. Save asset
+// 4. Next generation uses new temperature
+
+// BrainServer logs when settings change:
+// [HotReload] BrainSettings reloaded: Temp=0.5, MaxTokens=64
+```
+
+**Server-Level Changes Warning**:
+If you change server-level settings (model path, GPU layers, etc.), you'll see a warning:
+```
+[HotReload] Server-level settings changed. Restart required.
+```
+
+#### Disabling Hot Reload
+
+For production builds, disable hot reload:
+
+```csharp
+#if !UNITY_EDITOR
+agent.EnableAutoReload = false;
+#endif
+```
+
+<a id="ab-testing-system"></a>
+### A/B Testing System
+
+LlamaBrain's A/B testing framework enables deterministic prompt variant testing with traffic splitting and metrics tracking.
+
+#### Setting Up Variants
+
+Create prompt variants in PersonaConfig:
+
+```csharp
+// In PersonaConfig Inspector:
+// 1. Expand "System Prompt Variants" section
+// 2. Add variant:
+//    - Name: "Friendly"
+//    - System Prompt: "You are a friendly shopkeeper..."
+//    - Traffic Percentage: 50%
+//    - Is Active: true
+// 3. Add another variant:
+//    - Name: "Grumpy"
+//    - System Prompt: "You are a grumpy shopkeeper..."
+//    - Traffic Percentage: 50%
+//    - Is Active: true
+```
+
+**Traffic Percentages**:
+- Must sum to 100% for active variants
+- Inactive variants are skipped
+- Example splits: 50/50, 10/90, 25/75
+
+#### Deterministic Variant Selection
+
+Variants are selected deterministically based on InteractionCount:
+
+```csharp
+// Same InteractionCount + PersonaId = Same variant
+// This ensures reproducibility and stable A/B testing
+
+// Variant selection is based on:
+// hash = HashCode.Combine(InteractionCount, PersonaId)
+// bucket = hash % 100
+// Select variant based on cumulative traffic percentage
+```
+
+**Why Deterministic**:
+- Reproducible results across sessions
+- Players always get same variant for same interaction
+- Enables fair comparison between variants
+- Facilitates bug reports (interaction N always uses variant X)
+
+#### Using Variants in Code
+
+```csharp
+// Variants are selected automatically during dialogue generation
+var response = await agent.SendPlayerInputAsync("Hello!");
+
+// Check which variant was used
+var variantName = agent.LastVariantName;
+Debug.Log($"Used variant: {variantName}");
+
+// Manually test specific variant
+var variants = agent.PersonaConfig.ToPromptVariants();
+var variantManager = new PromptVariantManager(variants);
+var selectedVariant = variantManager.SelectVariant(
+    seed: agent.InteractionCount,
+    personaId: agent.Profile.PersonaId
+);
+```
+
+#### Gradual Rollout Example
+
+Test a new prompt variant gradually:
+
+```csharp
+// Week 1: 10% new variant, 90% control
+Variants:
+- Name: "Control", SystemPrompt: "Original prompt...", Traffic: 90%
+- Name: "Experimental", SystemPrompt: "New prompt...", Traffic: 10%
+
+// Week 2: If metrics look good, increase to 50/50
+// Week 3: Roll out to 100%
+```
+
+<a id="metrics-tracking"></a>
+### Metrics Tracking
+
+Track metrics per variant to evaluate performance:
+
+```csharp
+// Get metrics from variant manager
+var metrics = agent.GetVariantMetrics();
+
+foreach (var kvp in metrics)
+{
+    var variantName = kvp.Key;
+    var variantMetrics = kvp.Value;
+
+    Debug.Log($"Variant: {variantName}");
+    Debug.Log($"  Selections: {variantMetrics.SelectionCount}");
+    Debug.Log($"  Success: {variantMetrics.SuccessCount}");
+    Debug.Log($"  Failures: {variantMetrics.ValidationFailureCount}");
+    Debug.Log($"  Avg Latency: {variantMetrics.AvgLatencyMs:F1}ms");
+    Debug.Log($"  Avg Tokens: {variantMetrics.AvgTokensGenerated:F1}");
+}
+```
+
+#### Generating A/B Test Reports
+
+Export metrics for analysis:
+
+```csharp
+// Generate report from BrainServer
+var report = BrainServer.Instance.GenerateABTestReport("MyABTest");
+
+// Export to JSON
+var json = report.ExportToJson();
+File.WriteAllText("ab_test_results.json", json);
+
+// Export to CSV
+var csv = report.ExportToCsv();
+File.WriteAllText("ab_test_results.csv", csv);
+
+// Get summary
+var summary = report.GetSummary();
+Debug.Log(summary);
+```
+
+**Report Contents**:
+- Test name and timestamp
+- Total interactions
+- Per-variant metrics:
+  - Selection count
+  - Success rate
+  - Validation failure rate
+  - Fallback rate
+  - Average latency
+  - Average tokens generated
+
+#### Example A/B Test Workflow
+
+```csharp
+// 1. Define hypothesis
+// "A more friendly prompt will reduce validation failures"
+
+// 2. Create variants in PersonaConfig
+// Variant A (Control): Original prompt, 50% traffic
+// Variant B (Experimental): Friendly prompt, 50% traffic
+
+// 3. Run for N interactions (e.g., 1000)
+// Let players interact with NPCs normally
+
+// 4. Export metrics
+var report = BrainServer.Instance.GenerateABTestReport("FriendlyPromptTest");
+var csv = report.ExportToCsv();
+File.WriteAllText("friendly_prompt_test.csv", csv);
+
+// 5. Analyze results
+// Compare validation failure rates:
+// - Variant A: 15% validation failures
+// - Variant B: 8% validation failures
+// Conclusion: Friendly prompt reduces failures by ~47%
+
+// 6. Roll out winner
+// Update PersonaConfig to use Variant B for 100% traffic
+```
+
+#### Best Practices
+
+| Practice | Description |
+|----------|-------------|
+| **Define hypothesis** | Clearly state what you're testing before starting |
+| **Sufficient sample size** | Run for at least 100 interactions per variant |
+| **Single variable** | Change only one thing at a time (e.g., only SystemPrompt) |
+| **Control group** | Always include original prompt as control |
+| **Measure multiple metrics** | Track success rate, latency, user feedback |
+| **Statistical significance** | Use proper statistical tests before declaring winner |
+
+#### Disabling Variants
+
+To stop A/B testing and use a single prompt:
+
+```csharp
+// Option 1: Clear variants in Inspector
+// - Remove all variants from SystemPromptVariants list
+// - NPC will use base SystemPrompt field
+
+// Option 2: Set single variant to 100%
+// - Set one variant to 100% traffic
+// - Mark all others as inactive
+
+// Option 3: Programmatically
+agent.PersonaConfig.SystemPromptVariants.Clear();
+```
+
+### Troubleshooting Hot Reload
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| Changes not applied | Auto reload disabled | Check `EnableAutoReload` in Inspector |
+| Validation errors | Invalid config | Check console for validation errors |
+| Server restart warning | Changed GPU/model settings | Restart Unity play mode |
+| Variants not working | Traffic doesn't sum to 100% | Adjust traffic percentages |
+| Same variant every time | Deterministic selection | This is expected behavior |
+
+For more details, see [CONFIG_HOT_RELOAD.md](CONFIG_HOT_RELOAD.md).
 
 ---
 
