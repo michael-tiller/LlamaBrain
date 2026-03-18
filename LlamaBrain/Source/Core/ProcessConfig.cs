@@ -60,6 +60,10 @@ namespace LlamaBrain.Core
     /// </summary>
     public bool UseFlashAttention { get; set; } = true;
     /// <summary>
+    /// Whether this server is for embeddings (adds --embedding flag)
+    /// </summary>
+    public bool EnableEmbedding { get; set; } = false;
+    /// <summary>
     /// The LLM configuration for generation parameters
     /// </summary>
     public LlmConfig LlmConfig { get; set; } = new LlmConfig();

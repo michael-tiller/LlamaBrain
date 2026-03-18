@@ -2,7 +2,7 @@
 
 This guide provides practical examples and best practices for using LlamaBrain's deterministic NPC dialogue system across different game engines.
 
-**Last Updated**: January 7, 2026
+**Last Updated**: March 17, 2026
 
 ---
 
@@ -19,24 +19,29 @@ This guide focuses on the **core library** (engine-agnostic .NET Standard 2.1), 
 1. [Core Library Quick Start](#core-library-quick-start)
 2. [Configuring NPCs](#configuring-npcs)
 3. [Memory System](#memory-system)
-4. [Few-Shot Prompting](#few-shot-prompting)
-5. [Validation Rules](#validation-rules)
-6. [Fallback System](#fallback-system)
-7. [World Intents](#world-intents)
-8. [Structured Output](#structured-output)
-9. [Migrating to Structured Output](#migrating-to-structured-output)
-10. [Structured Input/Context](#structured-input)
-11. [Migrating to Structured Input/Context](#migrating-to-structured-input)
-12. [Function Calling](#function-calling)
-13. [Text-to-Speech (TTS) Voice Output](#text-to-speech-tts-voice-output)
+4. [RAG-Based Memory Retrieval](#rag-based-memory-retrieval)
+    - [Embedding Configuration](#embedding-configuration)
+    - [Vector Store Setup](#vector-store-setup)
+    - [Hybrid Retrieval](#hybrid-retrieval)
+    - [Recognition Query Service](#recognition-query-service)
+5. [Few-Shot Prompting](#few-shot-prompting)
+6. [Validation Rules](#validation-rules)
+7. [Fallback System](#fallback-system)
+8. [World Intents](#world-intents)
+9. [Structured Output](#structured-output)
+10. [Migrating to Structured Output](#migrating-to-structured-output)
+11. [Structured Input/Context](#structured-input)
+12. [Migrating to Structured Input/Context](#migrating-to-structured-input)
+13. [Function Calling](#function-calling)
+14. [Text-to-Speech (TTS) Voice Output](#text-to-speech-tts-voice-output)
     - [Voice Model Selection](#voice-model-selection)
     - [Acquiring Voice Models from Hugging Face](#acquiring-voice-models-from-hugging-face)
     - [Audio Caching](#audio-caching)
-14. [Debugging & Monitoring](#debugging--monitoring)
+15. [Debugging & Monitoring](#debugging--monitoring)
     - [Bug Report Workflow (Feature 28)](#bug-report-workflow-feature-28)
-15. [Performance Optimization](#performance-optimization)
-16. [Save/Load Persistence](#save-load-persistence)
-17. [Hot Reload & A/B Testing](#hot-reload-ab-testing)
+16. [Performance Optimization](#performance-optimization)
+17. [Save/Load Persistence](#save-load-persistence)
+18. [Hot Reload & A/B Testing](#hot-reload-ab-testing)
     - [Hot Reload Overview](#hot-reload-overview)
     - [Unity Hot Reload](#unity-hot-reload)
     - [A/B Testing System](#ab-testing-system)
@@ -297,6 +302,248 @@ memorySystem.ApplyDecay(decayRate: 0.05f);
 // High-significance memories decay slower
 // Low-significance memories may be pruned entirely
 ```
+
+---
+
+<a id="rag-based-memory-retrieval"></a>
+## RAG-Based Memory Retrieval
+
+LlamaBrain supports Retrieval-Augmented Generation (RAG) for enhanced memory retrieval. This hybrid system combines noun-based keyword matching (deterministic) with semantic vector similarity search (using embeddings) for improved relevance.
+
+### Overview
+
+RAG enables:
+- **Semantic search**: Find relevant memories even when exact keywords don't match
+- **Hybrid retrieval**: Combine keyword matching with embedding-based similarity
+- **Recognition patterns**: Detect repeated locations, topics, and conversation patterns
+- **Memory proving**: Influence NPC responses based on recognized patterns
+
+<a id="embedding-configuration"></a>
+### Embedding Configuration
+
+Configure embedding generation for semantic search:
+
+```csharp
+using LlamaBrain.Core.Retrieval;
+
+// Use embedding config presets
+var config = EmbeddingConfig.ForLlamaCpp;  // Recommended for local llama.cpp
+// Other presets: KeywordOnly, Default, SemanticHeavy, Balanced
+
+// Or create custom configuration
+var config = new EmbeddingConfig
+{
+    ProviderType = EmbeddingProviderType.LlamaCpp,
+    EmbeddingDimension = 768,  // nomic-embed-text default
+    EndpointUrl = "http://localhost:8080/v1/embeddings",
+    ModelName = "nomic-embed-text-v1.5"
+};
+```
+
+**Embedding Provider Types**:
+| Provider | Use Case | Description |
+|----------|----------|-------------|
+| `LlamaCpp` | Local inference | Uses llama.cpp `/v1/embeddings` endpoint |
+| `Null` | Keyword-only | Graceful fallback when embeddings unavailable |
+
+<a id="vector-store-setup"></a>
+### Vector Store Setup
+
+Configure the in-memory vector store for embedding storage:
+
+```csharp
+using LlamaBrain.Core.Retrieval;
+
+// Create vector store
+var vectorStore = new InMemoryVectorStore();
+
+// Add memory embeddings
+var embedding = await embeddingProvider.GenerateEmbeddingAsync("Player asked about sword repair");
+vectorStore.Add(new VectorEntry
+{
+    MemoryId = "memory_001",
+    NpcId = "blacksmith_001",  // NPC-specific, or null for shared
+    Embedding = embedding,
+    SequenceNumber = 1
+});
+
+// Query by similarity
+var results = vectorStore.SearchSimilar(queryEmbedding, topK: 5, npcId: "blacksmith_001");
+```
+
+**Vector Store Persistence**:
+
+```csharp
+using LlamaBrain.Persistence;
+
+// Save to binary file (~60% smaller than JSON, ~10x faster)
+var serializer = new VectorStoreBinarySerializer();
+await serializer.SaveAsync(vectorStore, "vector_store.bin");
+
+// Load from file
+var loadedStore = await serializer.LoadAsync("vector_store.bin");
+```
+
+<a id="hybrid-retrieval"></a>
+### Hybrid Retrieval
+
+Configure the context retrieval layer for hybrid keyword + semantic search:
+
+```csharp
+using LlamaBrain.Core.Retrieval;
+using LlamaBrain.Core.Inference;
+
+// Create embedding provider
+var embeddingProvider = EmbeddingProviderFactory.Create(EmbeddingConfig.ForLlamaCpp);
+
+// Create retrieval layer with RAG support
+var retrievalConfig = new ContextRetrievalConfig
+{
+    MaxEpisodicMemories = 10,
+    RecencyWeight = 0.3f,
+    RelevanceWeight = 0.4f,
+    SignificanceWeight = 0.3f
+};
+
+var retrievalLayer = new ContextRetrievalLayer(
+    memorySystem,
+    retrievalConfig,
+    embeddingProvider,  // Optional: enables RAG
+    vectorStore         // Optional: stores embeddings
+);
+
+// Retrieve context with hybrid scoring
+var context = await retrievalLayer.RetrieveContextAsync("Tell me about sword repair");
+```
+
+**Hybrid Scoring**:
+- Keyword relevance: Noun-based matching (deterministic)
+- Semantic relevance: Cosine similarity from embeddings
+- Combined score with configurable weights
+
+**Graceful Fallback**: If embeddings are unavailable (no provider, generation fails), the system automatically falls back to keyword-only mode.
+
+<a id="recognition-query-service"></a>
+### Recognition Query Service
+
+Detect repeated patterns in NPC interactions:
+
+```csharp
+using LlamaBrain.Core.Retrieval;
+
+// Create recognition service
+var recognitionConfig = new RecognitionConfig
+{
+    TopicSimilarityThreshold = 0.6f,       // Topic recognition sensitivity
+    ConversationSimilarityThreshold = 0.7f, // Conversation pattern sensitivity
+    EnableKeywordFallback = true            // Fallback when embeddings unavailable
+};
+
+var recognitionService = new RecognitionQueryService(
+    memorySystem,
+    embeddingProvider,
+    vectorStore,
+    recognitionConfig
+);
+
+// Check for location recognition (requires 2+ visits)
+var locationResult = recognitionService.QueryLocationRecognition(
+    npcId: "guard_001",
+    locationId: "castle_entrance"
+);
+
+if (locationResult.Type == RecognitionType.Location && locationResult.RepeatCount >= 2)
+{
+    Console.WriteLine($"Location recognized! Visit #{locationResult.RepeatCount}");
+    Console.WriteLine($"Evidence: {locationResult.EvidenceSummary}");
+}
+
+// Check for topic recognition (semantic similarity)
+var topicResult = await recognitionService.QueryTopicRecognitionAsync(
+    npcId: "guard_001",
+    playerInput: "Tell me about the dragon sightings"
+);
+
+if (topicResult.Type == RecognitionType.Topic)
+{
+    Console.WriteLine($"Topic recognized! Mentioned {topicResult.RepeatCount} times");
+}
+```
+
+**Recognition Types**:
+| Type | Description | Trigger |
+|------|-------------|---------|
+| `Location` | NPC recognizes returning to a location | 2+ visits to same LocationId |
+| `Topic` | NPC recognizes repeated topic | Similar topic mentions (semantic) |
+| `Conversation` | NPC recognizes conversation pattern | Repeated interaction patterns |
+| `None` | No recognition | First encounter or low similarity |
+
+### Recognition Prompt Injection
+
+When recognition is detected, inject recognition blocks into prompts:
+
+```csharp
+using LlamaBrain.Core.Inference;
+
+// Assemble prompt with recognition
+var assembler = new PromptAssembler(config);
+var prompt = assembler.AssembleFromWorkingMemory(
+    workingMemory,
+    recognition: locationResult  // Inject recognition context
+);
+
+// The prompt includes a <RECOGNITION> block:
+// <RECOGNITION type="location" repeat_count="3">
+// You have been here before. This is your 3rd visit.
+// You MUST acknowledge familiarity with this location.
+// </RECOGNITION>
+```
+
+### Recognition Cue Validation
+
+Validate that NPC output includes appropriate recognition cues:
+
+```csharp
+using LlamaBrain.Core.Validation;
+
+var validator = new RecognitionCueValidator();
+var result = validator.Validate(
+    npcOutput: "Ah yes, I remember this place well...",
+    recognitionType: RecognitionType.Location
+);
+
+if (result.CueFound)
+{
+    Console.WriteLine($"Recognition cue found: '{result.MatchedCue}'");
+}
+else
+{
+    Console.WriteLine($"Warning: {result.Warning}");
+    // Soft warning - NPC should acknowledge but didn't
+}
+```
+
+**Location Cues**: "remember", "been here", "recognize", "familiar", "before", "again", "back to"
+**Topic Cues**: "already discussed", "talked about", "mentioned before"
+**Conversation Cues**: "you keep", "always ask", "every time"
+
+### Best Practices
+
+| Practice | Description |
+|----------|-------------|
+| **Start with presets** | Use `EmbeddingConfig.ForLlamaCpp` or `EmbeddingConfig.Default` |
+| **Enable fallback** | Set `EnableKeywordFallback = true` for graceful degradation |
+| **Tune thresholds** | Adjust similarity thresholds based on your use case |
+| **Persist embeddings** | Use `VectorStoreBinarySerializer` for efficient storage |
+| **Monitor performance** | Embedding generation should be <100ms per memory |
+
+### Performance Targets
+
+| Operation | Target | Typical |
+|-----------|--------|---------|
+| Embedding generation | <100ms | ~6ms |
+| Vector search (1000 items) | <10ms | ~5ms |
+| Overall retrieval | <150ms | <50ms |
 
 ---
 
@@ -2818,4 +3065,4 @@ For more details, see [CONFIG_HOT_RELOAD.md](CONFIG_HOT_RELOAD.md).
 
 ---
 
-**Version**: 0.3.0-rc.2
+**Version**: 0.3.0

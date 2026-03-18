@@ -1,6 +1,7 @@
 #nullable enable
 using UnityEngine;
 using LlamaBrain.Core;
+using LlamaBrain.Core.Retrieval;
 using LlamaBrain.Persona;
 using LlamaBrain.Config;
 using System;
@@ -32,6 +33,14 @@ namespace LlamaBrain.Runtime.Core
     /// The server manager for the LlamaBrain server.
     /// </summary>
     private ServerManager? serverManager;
+    /// <summary>
+    /// The server manager for the embedding server (RAG).
+    /// </summary>
+    private ServerManager? embeddingServerManager;
+    /// <summary>
+    /// The embedding provider for RAG retrieval.
+    /// </summary>
+    private LlamaCppEmbeddingProvider? embeddingProvider;
     /// <summary>
     /// The client manager for the LlamaBrain server.
     /// </summary>
@@ -97,6 +106,21 @@ namespace LlamaBrain.Runtime.Core
     public int TotalModelLayers { get; private set; } = -1;
 
     /// <summary>
+    /// Whether the embedding server is running
+    /// </summary>
+    public bool IsEmbeddingServerRunning { get; private set; }
+
+    /// <summary>
+    /// The embedding provider for RAG retrieval (null if embedding server not enabled/running)
+    /// </summary>
+    public IEmbeddingProvider? EmbeddingProvider => embeddingProvider;
+
+    /// <summary>
+    /// Embedding dimension configured in settings
+    /// </summary>
+    public int EmbeddingDimension => Settings?.EmbeddingDimension ?? 768;
+
+    /// <summary>
     /// Initializes the LlamaBrain server.
     /// </summary>
     public void Initialize()
@@ -147,6 +171,9 @@ namespace LlamaBrain.Runtime.Core
         serverManager.OnServerOutput += OnLlamaServerOutput;
         serverManager.OnServerError += OnLlamaServerStderrLine;
 
+        // Initialize embedding server if enabled
+        InitializeEmbeddingServer();
+
         _isInitialized = true;
         UnityEngine.Debug.Log("[LLM] LlamaBrainServer initialized successfully.");
       }
@@ -154,6 +181,185 @@ namespace LlamaBrain.Runtime.Core
       {
         UnityEngine.Debug.LogError($"[LLM] LlamaBrainServer.Initialize() failed: {ex.Message}\nStackTrace: {ex.StackTrace}");
       }
+    }
+
+    /// <summary>
+    /// Initializes the embedding server for RAG if enabled in settings.
+    /// </summary>
+    private void InitializeEmbeddingServer()
+    {
+      if (Settings == null || !Settings.EnableEmbeddingServer)
+      {
+        return;
+      }
+
+      var embeddingConfig = Settings.ToEmbeddingProcessConfig();
+      if (embeddingConfig == null)
+      {
+        UnityEngine.Debug.LogWarning("[LLM] Embedding server enabled but model path not configured.");
+        return;
+      }
+
+      try
+      {
+        // Validate embedding model path
+        var embeddingModelPath = Path.GetFullPath(embeddingConfig.Model);
+        if (!File.Exists(embeddingModelPath))
+        {
+          UnityEngine.Debug.LogWarning($"[LLM] Embedding model not found: {embeddingModelPath}. Embedding server will not start.");
+          return;
+        }
+
+        UnityEngine.Debug.Log($"[LLM] Initializing embedding server on port {embeddingConfig.Port}");
+        UnityEngine.Debug.Log($"[LLM] Embedding model: {embeddingModelPath}");
+
+        embeddingServerManager = new ServerManager(embeddingConfig);
+        embeddingServerManager.OnServerOutput += OnEmbeddingServerOutput;
+        embeddingServerManager.OnServerError += OnEmbeddingServerOutput;
+
+        // Create embedding provider (will connect once server is ready)
+        embeddingProvider = new LlamaCppEmbeddingProvider(
+          baseUrl: $"http://{embeddingConfig.Host}:{embeddingConfig.Port}",
+          embeddingDimension: Settings.EmbeddingDimension,
+          modelName: "embedding",
+          timeout: TimeSpan.FromSeconds(30));
+
+        UnityEngine.Debug.Log("[LLM] Embedding server manager initialized.");
+      }
+      catch (Exception ex)
+      {
+        UnityEngine.Debug.LogError($"[LLM] Failed to initialize embedding server: {ex.Message}");
+        embeddingServerManager = null;
+        embeddingProvider = null;
+      }
+    }
+
+    /// <summary>
+    /// Handler for embedding server output
+    /// </summary>
+    private void OnEmbeddingServerOutput(string message)
+    {
+      UnityEngine.Debug.Log($"[embedding-server] {message}");
+    }
+
+    /// <summary>
+    /// Starts the embedding server asynchronously.
+    /// Uses polling with timeout instead of fixed delay.
+    /// </summary>
+    private async Task StartEmbeddingServerAsync(CancellationToken token)
+    {
+      if (embeddingServerManager == null)
+      {
+        return; // Embedding server not configured
+      }
+
+      try
+      {
+        UnityEngine.Debug.Log("[LLM] Starting embedding server...");
+
+        // Start the embedding server process
+        embeddingServerManager.StartServer();
+
+        // Assign to job for crash cleanup
+        var processName = GetServerProcessName();
+        if (!string.IsNullOrEmpty(processName))
+        {
+          // Small delay then assign (there might be multiple llama-server processes now)
+          await Task.Delay(500, token);
+          ProcessJobManager.AssignProcessByName(processName, matchNewest: true);
+        }
+
+        // Wait for embedding server to be ready with polling
+        if (embeddingProvider != null)
+        {
+          var startTime = DateTime.UtcNow;
+          var timeout = TimeSpan.FromSeconds(30);
+          var pollInterval = TimeSpan.FromMilliseconds(500);
+          var isAvailable = false;
+
+          while (DateTime.UtcNow - startTime < timeout)
+          {
+            token.ThrowIfCancellationRequested();
+
+            try
+            {
+              isAvailable = await embeddingProvider.TestConnectionAsync();
+              if (isAvailable)
+              {
+                break;
+              }
+            }
+            catch (OperationCanceledException)
+            {
+              throw; // Re-throw cancellation
+            }
+            catch
+            {
+              // Server not ready yet, continue polling
+            }
+
+            await Task.Delay(pollInterval, token);
+          }
+
+          IsEmbeddingServerRunning = isAvailable;
+
+          if (isAvailable)
+          {
+            UnityEngine.Debug.Log($"[LLM] Embedding server ready on port {Settings?.EmbeddingServerPort}");
+          }
+          else
+          {
+            UnityEngine.Debug.LogWarning("[LLM] Embedding server started but not responding after 30s. RAG will be unavailable.");
+          }
+        }
+      }
+      catch (OperationCanceledException)
+      {
+        // Cancellation is expected during shutdown - don't log as error
+        IsEmbeddingServerRunning = false;
+      }
+      catch (Exception ex)
+      {
+        UnityEngine.Debug.LogError($"[LLM] Failed to start embedding server: {ex.Message}");
+        IsEmbeddingServerRunning = false;
+      }
+    }
+
+    /// <summary>
+    /// Waits for the embedding server to be ready.
+    /// </summary>
+    /// <param name="timeoutSeconds">Timeout in seconds</param>
+    /// <returns>True if embedding server is ready, false otherwise</returns>
+    public async Task<bool> WaitForEmbeddingServerAsync(int timeoutSeconds = 30)
+    {
+      if (embeddingProvider == null)
+      {
+        return false; // Not configured
+      }
+
+      var startTime = DateTime.UtcNow;
+      var timeout = TimeSpan.FromSeconds(timeoutSeconds);
+
+      while (DateTime.UtcNow - startTime < timeout)
+      {
+        try
+        {
+          var isAvailable = await embeddingProvider.TestConnectionAsync();
+          if (isAvailable)
+          {
+            IsEmbeddingServerRunning = true;
+            return true;
+          }
+        }
+        catch
+        {
+          // Not ready yet
+        }
+
+        await Task.Delay(500);
+      }
+
+      return false;
     }
 
     /// <summary>
@@ -233,12 +439,15 @@ namespace LlamaBrain.Runtime.Core
 
         // Wait for the server to be ready
         await clientManager.WaitForAsync(token);
-        
+
         // Re-check _isInitialized after await - StopServer() can flip it mid-flight
         if (!_isInitialized)
         {
           return; // StopServer() was called during wait
         }
+
+        // Start embedding server if configured
+        await StartEmbeddingServerAsync(token);
       }
       catch (OperationCanceledException)
       {
@@ -739,6 +948,16 @@ namespace LlamaBrain.Runtime.Core
         // StopServer() should be idempotent and non-throwing, but catch any edge cases
       }
 
+      // Stop embedding server
+      try
+      {
+        embeddingServerManager?.StopServer();
+      }
+      catch
+      {
+        // Ignore (idempotent)
+      }
+
       // Unsubscribe safely
       try
       {
@@ -751,6 +970,20 @@ namespace LlamaBrain.Runtime.Core
       catch
       {
         // Ignore unsubscribe errors (idempotent)
+      }
+
+      // Unsubscribe from embedding server
+      try
+      {
+        if (embeddingServerManager != null)
+        {
+          embeddingServerManager.OnServerOutput -= OnEmbeddingServerOutput;
+          embeddingServerManager.OnServerError -= OnEmbeddingServerOutput;
+        }
+      }
+      catch
+      {
+        // Ignore (idempotent)
       }
 
       // Dispose quietly (no error logging on normal shutdown paths)
@@ -781,6 +1014,25 @@ namespace LlamaBrain.Runtime.Core
         // Ignore disposal errors (idempotent)
       }
 
+      // Dispose embedding server
+      try
+      {
+        embeddingServerManager?.Dispose();
+      }
+      catch
+      {
+        // Ignore (idempotent)
+      }
+
+      try
+      {
+        embeddingProvider?.Dispose();
+      }
+      catch
+      {
+        // Ignore (idempotent)
+      }
+
       // Observe startup task to prevent unobserved Task exceptions
       if (_startupTask != null)
       {
@@ -803,9 +1055,12 @@ namespace LlamaBrain.Runtime.Core
       _cancellationTokenSource = null;
       clientManager = null;
       serverManager = null;
+      embeddingServerManager = null;
+      embeddingProvider = null;
       registeredAgents.Clear();
 
       IsServerRunning = false;
+      IsEmbeddingServerRunning = false;
       ConnectionStatus = "Stopped";
       LastErrorMessage = "";
       _isInitialized = false;

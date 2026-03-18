@@ -381,15 +381,24 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 **Core Architecture**: Complete and production-ready. The determinism boundary, validation gate, and authoritative memory system are fully implemented and tested.
 
-**Completed**: Structured Output (Features 12, 13) - Enhanced with schema versioning and complex parameters, Deterministic Seed (Feature 14) - Documentation complete, Structured Input (Feature 23) - Enhanced with relationships and partial context, Smart KV Cache (Feature 27) - Cache-aware prompt assembly, **Audit Recorder (Feature 28)** - Bug reproduction with deterministic replay
+**Completed**: Structured Output (Features 12, 13), Deterministic Seed (Feature 14), Structured Input (Feature 23), Smart KV Cache (Feature 27), Audit Recorder (Feature 28), Hot Reload (Feature 29), Voice Integration (Features 31-32), **RAG-Based Memory Retrieval (Feature 11)** - Embeddings, vector storage, hybrid retrieval, recognition query service, memory proving
 
-**Current Focus**: Hot Reload (Feature 29)
+**Current Focus**: Milestone 6 - Memory Update (Features 24, 20, 26)
 
 **See [STATUS.md](Documentation/STATUS.md) for milestone progress.**
 
 ---
 
-### Recent Additions (0.3.0-rc.3)
+### Recent Additions (0.3.0)
+- **RAG-Based Memory Retrieval** (Feature 11 - ✅ Complete)
+  - Embedding system with llama.cpp integration (LlamaCppEmbeddingProvider)
+  - In-memory vector store with NPC filtering and cosine similarity
+  - Hybrid retrieval combining keyword matching with semantic search
+  - Recognition query service for location, topic, and conversation patterns
+  - Memory proving through repetition recognition (2-visit location detection)
+  - Prompt injection with `<RECOGNITION>` blocks for recognized patterns
+  - RecognitionCueValidator for soft validation of recognition cues
+  - 100+ tests covering all RAG and memory proving components
 - **"Black Box" Audit Recorder** (Feature 28 - ✅ Complete)
   - Flight-recorder-style bug reproduction system
   - Ring buffer recording last 50 interactions per NPC
