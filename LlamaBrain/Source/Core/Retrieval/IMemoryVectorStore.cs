@@ -32,7 +32,7 @@ namespace LlamaBrain.Core.Retrieval
         /// <summary>The NPC that owns this memory, or null for shared memories.</summary>
         public string? NpcId { get; }
 
-        /// <summary>The cosine similarity score (0-1).</summary>
+        /// <summary>The cosine similarity score (-1 to 1).</summary>
         public float Similarity { get; }
 
         /// <summary>The sequence number for deterministic ordering.</summary>
@@ -169,7 +169,7 @@ namespace LlamaBrain.Core.Retrieval
         /// <param name="k">Maximum number of results to return.</param>
         /// <param name="npcId">Filter by NPC ID. Entries with matching NpcId OR NpcId=null (shared) are included.</param>
         /// <param name="memoryType">Optional filter by memory type.</param>
-        /// <param name="minSimilarity">Minimum similarity threshold (0-1). Entries below this are excluded.</param>
+        /// <param name="minSimilarity">Minimum similarity threshold (-1 to 1). Entries below this are excluded.</param>
         /// <returns>List of search results in deterministic order.</returns>
         IReadOnlyList<VectorSearchResult> FindSimilar(
             float[] queryEmbedding,

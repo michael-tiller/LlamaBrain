@@ -29,7 +29,15 @@ namespace LlamaBrain.Tests.PlayMode
 
         // Paths relative to project root
         private const string EmbeddingModelRelativePath = "Backend/model/nomic-embed-text-v1.5.f32.gguf";
-        private const string LlamaServerRelativePath = "Backend/llama-server.exe";
+
+        /// <summary>
+        /// Gets the platform-specific llama-server executable path.
+        /// </summary>
+        private static string LlamaServerRelativePath =>
+            System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(
+                System.Runtime.InteropServices.OSPlatform.Windows)
+                ? "Backend/llama-server.exe"
+                : "Backend/llama-server";
 
         // Shared server manager for all tests in this fixture
         private static ServerManager _embeddingServerManager;

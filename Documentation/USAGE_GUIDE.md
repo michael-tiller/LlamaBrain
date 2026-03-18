@@ -359,16 +359,16 @@ var vectorStore = new InMemoryVectorStore();
 
 // Add memory embeddings
 var embedding = await embeddingProvider.GenerateEmbeddingAsync("Player asked about sword repair");
-vectorStore.Add(new VectorEntry
-{
-    MemoryId = "memory_001",
-    NpcId = "blacksmith_001",  // NPC-specific, or null for shared
-    Embedding = embedding,
-    SequenceNumber = 1
-});
+vectorStore.Upsert(
+    memoryId: "memory_001",
+    npcId: "blacksmith_001",  // NPC-specific, or null for shared
+    memoryType: MemoryVectorType.Episodic,
+    embedding: embedding,
+    sequenceNumber: 1
+);
 
 // Query by similarity
-var results = vectorStore.SearchSimilar(queryEmbedding, topK: 5, npcId: "blacksmith_001");
+var results = vectorStore.FindSimilar(queryEmbedding, k: 5, npcId: "blacksmith_001");
 ```
 
 **Vector Store Persistence**:
@@ -452,7 +452,7 @@ var locationResult = recognitionService.QueryLocationRecognition(
     locationId: "castle_entrance"
 );
 
-if (locationResult.Type == RecognitionType.Location && locationResult.RepeatCount >= 2)
+if (locationResult.RecognitionType == RecognitionType.Location && locationResult.RepeatCount >= 2)
 {
     Console.WriteLine($"Location recognized! Visit #{locationResult.RepeatCount}");
     Console.WriteLine($"Evidence: {locationResult.EvidenceSummary}");
@@ -464,7 +464,7 @@ var topicResult = await recognitionService.QueryTopicRecognitionAsync(
     playerInput: "Tell me about the dragon sightings"
 );
 
-if (topicResult.Type == RecognitionType.Topic)
+if (topicResult.RecognitionType == RecognitionType.Topic)
 {
     Console.WriteLine($"Topic recognized! Mentioned {topicResult.RepeatCount} times");
 }
@@ -486,7 +486,7 @@ When recognition is detected, inject recognition blocks into prompts:
 using LlamaBrain.Core.Inference;
 
 // Assemble prompt with recognition
-var assembler = new PromptAssembler(config);
+var assembler = new PromptAssembler();  // Uses PromptAssemblerConfig.Default
 var prompt = assembler.AssembleFromWorkingMemory(
     workingMemory,
     recognition: locationResult  // Inject recognition context
@@ -505,18 +505,19 @@ Validate that NPC output includes appropriate recognition cues:
 
 ```csharp
 using LlamaBrain.Core.Validation;
+using LlamaBrain.Core.Retrieval;
 
-var validator = new RecognitionCueValidator();
-var result = validator.Validate(
-    npcOutput: "Ah yes, I remember this place well...",
-    recognitionType: RecognitionType.Location
+// Assuming locationResult is a RecognitionResult from RecognitionQueryService
+var result = RecognitionCueValidator.Validate(
+    outputText: "Ah yes, I remember this place well...",
+    recognition: locationResult  // Pass the RecognitionResult
 );
 
 if (result.CueFound)
 {
     Console.WriteLine($"Recognition cue found: '{result.MatchedCue}'");
 }
-else
+else if (result.CueExpected)
 {
     Console.WriteLine($"Warning: {result.Warning}");
     // Soft warning - NPC should acknowledge but didn't

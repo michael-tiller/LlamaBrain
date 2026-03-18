@@ -172,12 +172,12 @@ namespace LlamaBrain.Persona.MemoryTypes
     /// <returns>A new EpisodicMemoryEntry representing a location entry</returns>
     public static EpisodicMemoryEntry FromLocationEntry(string locationId, string description, float significance = 0.4f)
     {
-      if (string.IsNullOrEmpty(locationId))
-        throw new ArgumentNullException(nameof(locationId));
+      if (string.IsNullOrWhiteSpace(locationId))
+        throw new ArgumentException("Location ID cannot be null, empty, or whitespace.", nameof(locationId));
 
       return new EpisodicMemoryEntry(description, EpisodeType.LocationEntry)
       {
-        LocationId = locationId,
+        LocationId = locationId.Trim(),
         Significance = significance
       };
     }

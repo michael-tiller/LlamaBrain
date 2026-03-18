@@ -60,7 +60,7 @@ namespace LlamaBrain.Core.Retrieval
 
         /// <summary>
         /// Similarity score of the best match (for topic/semantic recognition).
-        /// Range 0-1, where 1 is exact match.
+        /// Range -1 to 1, where 1 is exact match.
         /// </summary>
         public float BestMatchSimilarity { get; }
 

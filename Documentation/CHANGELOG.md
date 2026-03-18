@@ -5,7 +5,7 @@ All notable changes to LlamaBrain will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.1] - (Unreleased)
+## [v0.3.1-rc1] - (Unreleased)
 
 ### Core Library
 
@@ -17,8 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Changed
 - **MemoryEmbeddingService**: Added `FlushAsync()` for deterministic test synchronization; replaced fire-and-forget `async void` with tracked pending tasks
 - **MemoryEmbeddingService**: Implemented `IAsyncDisposable` with `DisposeAsync()` for graceful shutdown; sync `Dispose()` waits up to 1s for in-flight work
+- **MemoryEmbeddingService**: `Dispose()` uses `WaitAsync(cts.Token)` for proper timeout handling when awaiting pending tasks
 - **ContextRetrievalLayer**: Documented that sync retrieval falls back to keyword-only when semantic retrieval is configured
 - **HybridRelevanceCalculator**: Extended word separators to include `:`, `;`, `-`, `"`, `'` for better tokenization
+- **IMemoryVectorStore, RecognitionResult**: Corrected cosine similarity range documentation (0–1 → -1 to 1)
+- **EpisodicMemory.FromLocationEntry**: Stricter validation (reject whitespace-only); trim `LocationId` before storage
 - **RecognitionQueryServiceTests**: Mock embedding uses FNV-1a stable hash instead of `GetHashCode()` for cross-version determinism; batch embeddings use proper async `Task.WhenAll`
 - **MemoryEmbeddingServiceTests**: Replaced `Task.Delay` with `await service.FlushAsync()` for deterministic synchronization
 
@@ -27,6 +30,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Changed
 - **BrainServer**: Embedding server startup uses polling (500ms interval, 30s timeout) instead of fixed 3s delay
 - **BrainServer**: Proper `OperationCanceledException` handling during shutdown (no error logging)
+- **EmbeddingIntegrationTests**: Platform-specific llama-server path (Windows `.exe` vs Unix)
+
+### Documentation
+
+#### Changed
+- **USAGE_GUIDE**: Updated API examples for `IMemoryVectorStore` (Upsert/FindSimilar), `RecognitionResult.RecognitionType`, `RecognitionCueValidator.Validate` signature
+- **ROADMAP**: Feature 11 status clarified (Core Complete, optional enhancements marked as future)
 
 ## [0.3.0] - March 17, 2026
 
@@ -1792,7 +1802,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Version History
 
 ### Current Version
-- **0.2.0-rc.2**: Feature 10 Complete - Deterministic Proof Gap Testing (Phase 10 COMPLETE), WorldIntentDispatcher Singleton Lifecycle (Requirement #5), Pipeline Proof Gaps (double-hook safety, policy boundary proof), Snapshot-time driven context retrieval for deterministic behavior, Comprehensive regression tests for memory serialization (1,000+ lines), Byte-level prompt text determinism tests (Test D complete), 353 total tests (exceeds original estimate), All 7 minimal proof suite tests complete, All 5 critical requirements implemented, Determinism proof now defensible at byte level for serialized state and prompt text assembly
+- **0.3.1** (Unreleased): RAG determinism fixes, embedding service lifecycle improvements, Unity deadlock avoidance, documentation updates
 
 ### Previous Versions
 - **0.2.0-rc.1**: Features 1-9 Complete - Determinism Layer (Expectancy Engine), Structured Memory System, State Snapshots & Context Retrieval, Ephemeral Working Memory (with Few-Shot Prompt Priming), Output Validation, Controlled Memory Mutation (MemoryMutationController & World Intent Dispatcher), Enhanced Fallback System, RedRoom Integration (with Memory Mutation Overlay and Validation Gate Overlay), Documentation & Polish (comprehensive documentation suite with 4 tutorials), Comprehensive Testing Infrastructure (92.37% coverage with integration tests), Testability Improvements (IFileSystem, IApiClient interfaces), Major Test Coverage Improvements (ApiClient 90.54%, ServerManager 74.55%), Full Pipeline Integration Tests, and Complete Documentation Suite (ARCHITECTURE.md, DETERMINISM_CONTRACT.md, PIPELINE_CONTRACT.md, MEMORY.md, VALIDATION_GATING.md, SAFEGUARDS.md, USAGE_GUIDE.md with tutorials, STATUS.md, ROADMAP.md, and more)

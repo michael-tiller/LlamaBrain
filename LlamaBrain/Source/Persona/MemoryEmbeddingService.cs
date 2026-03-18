@@ -156,7 +156,7 @@ namespace LlamaBrain.Persona
       using var cts = new CancellationTokenSource(effectiveTimeout);
       try
       {
-        await Task.WhenAll(snapshot).ConfigureAwait(false);
+        await Task.WhenAll(snapshot).WaitAsync(cts.Token).ConfigureAwait(false);
       }
       catch (OperationCanceledException)
       {

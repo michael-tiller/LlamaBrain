@@ -135,7 +135,7 @@ The following execution order is **strongly recommended** for v0.3.0 to avoid re
 ## Feature 11: RAG-Based Memory Retrieval & Memory Proving
 
 **Priority**: MEDIUM - Enhancement to existing retrieval system
-**Status**: ✅ Complete
+**Status**: ✅ Core Complete (MVP shipped; optional enhancements below unchecked)
 **Dependencies**: Feature 3 (Context Retrieval Layer), Feature 10 (Deterministic Proof Gap Testing)
 
 **Progress Summary** (March 2026):
@@ -159,21 +159,23 @@ Enhance the `ContextRetrievalLayer` to use a **hybrid approach** combining Retri
 
 ### Definition of Done
 
+> **Note**: Items marked with [ ] are optional enhancements for future releases. Core MVP functionality (marked with [x]) is complete and shipped in v0.3.0.
+
 #### 11.1 Embedding Generation System
 - [x] Create `IEmbeddingProvider` interface for embedding generation
 - [x] Implement embedding provider using local model (e.g., via llama.cpp embedding endpoint)
-- [ ] Implement embedding provider using external API (e.g., OpenAI, HuggingFace)
+- [ ] *(Future)* Implement embedding provider using external API (e.g., OpenAI, HuggingFace)
 - [x] Support configurable embedding dimensions (768-dim nomic-embed-text)
-- [ ] Add embedding caching to avoid redundant computations
-- [ ] Create `EmbeddingConfig` for provider selection and settings
+- [ ] *(Future)* Add embedding caching to avoid redundant computations
+- [x] Create `EmbeddingConfig` for provider selection and settings (via `EmbeddingProviderFactory`)
 
 #### 11.2 Vector Storage & Indexing
 - [x] Create `MemoryVectorStore` interface for vector storage (`IMemoryVectorStore`)
 - [x] Implement in-memory vector store (for small memory sets) (`InMemoryVectorStore`)
-- [ ] Implement persistent vector store (optional, for large memory sets)
-- [ ] Index episodic memories with embeddings (infrastructure ready)
-- [ ] Index beliefs with embeddings
-- [ ] Index canonical facts with embeddings (optional, for semantic search)
+- [ ] *(Future)* Implement persistent vector store (optional, for large memory sets)
+- [x] Index episodic memories with embeddings (via `MemoryEmbeddingService`)
+- [ ] *(Future)* Index beliefs with embeddings
+- [ ] *(Future)* Index canonical facts with embeddings (optional, for semantic search)
 - [x] Support incremental updates (add/remove/update vectors)
 
 #### 11.3 Hybrid Semantic Retrieval
@@ -181,23 +183,23 @@ Enhance the `ContextRetrievalLayer` to use a **hybrid approach** combining Retri
 - [x] Keep existing keyword-based `CalculateRelevance()` for deterministic noun-based checks
 - [x] Add vector similarity search using cosine similarity for semantic inference
 - [x] Combine both approaches: noun-based matching (safe, deterministic) + vector similarity (semantic relevance)
-- [ ] Support configurable weights for hybrid scoring (keyword vs semantic)
-- [ ] Add configurable similarity threshold for semantic matching
-- [ ] Update `ContextRetrievalConfig` with hybrid retrieval settings (keyword weights, semantic weights, thresholds)
+- [ ] *(Future)* Support configurable weights for hybrid scoring (keyword vs semantic)
+- [ ] *(Future)* Add configurable similarity threshold for semantic matching
+- [ ] *(Future)* Update `ContextRetrievalConfig` with hybrid retrieval settings (keyword weights, semantic weights, thresholds)
 
 #### 11.4 Integration
 - [x] Modify `ContextRetrievalLayer` to use embedding-based retrieval (`RetrieveContextAsync`)
-- [ ] Add embedding generation on memory mutation (episodic, beliefs)
+- [x] Add embedding generation on memory mutation (via `MemoryEmbeddingService`)
 - [x] Add batch embedding generation for existing memories (`GenerateBatchEmbeddingsAsync`)
-- [ ] Update `AuthoritativeMemorySystem` to trigger embedding updates
-- [ ] Add embedding statistics to memory statistics
+- [x] Update `AuthoritativeMemorySystem` with embedding service integration
+- [ ] *(Future)* Add embedding statistics to memory statistics
 
 #### 11.5 Performance & Optimization
 - [x] Benchmark embedding generation latency (avg 6.2ms in tests)
-- [ ] Benchmark vector search performance vs keyword search
+- [ ] *(Future)* Benchmark vector search performance vs keyword search
 - [x] Implement async embedding generation to avoid blocking (`GenerateEmbeddingAsync`)
 - [x] Add configurable batch size for embedding operations
-- [ ] Optimize vector search for large memory sets (consider approximate nearest neighbor)
+- [ ] *(Future)* Optimize vector search for large memory sets (consider approximate nearest neighbor)
 
 #### 11.6 Testing
 - [x] Unit tests for `IEmbeddingProvider` implementations (EmbeddingIntegrationTests: 12/12)
@@ -205,7 +207,7 @@ Enhance the `ContextRetrievalLayer` to use a **hybrid approach** combining Retri
 - [x] Unit tests for semantic retrieval scoring (RAGDeterminismTests: 5/5)
 - [x] Integration tests comparing RAG vs keyword retrieval quality
 - [x] Performance tests for embedding generation and vector search
-- [ ] All tests in `LlamaBrain.Tests/Retrieval/` passing
+- [x] All tests in `LlamaBrain.Tests/Retrieval/` passing
 
 #### 11.7 Memory Proving: Repetition Recognition
 - [x] Implement `RecognitionResult` DTO with `RecognitionType` enum (Location, Topic, Conversation)
