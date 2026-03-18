@@ -5,6 +5,7 @@ using LlamaBrain.Utilities;
 using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices;
 
 namespace LlamaBrain.Core
 {
@@ -13,6 +14,64 @@ namespace LlamaBrain.Core
   /// </summary>
   public sealed class ServerManager : IDisposable
   {
+    #region P/Invoke for IL2CPP fallback
+
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern bool CreateProcessW(
+        string lpApplicationName,
+        string lpCommandLine,
+        IntPtr lpProcessAttributes,
+        IntPtr lpThreadAttributes,
+        bool bInheritHandles,
+        uint dwCreationFlags,
+        IntPtr lpEnvironment,
+        string lpCurrentDirectory,
+        ref STARTUPINFO lpStartupInfo,
+        out PROCESS_INFORMATION lpProcessInformation);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    private static extern bool CloseHandle(IntPtr hObject);
+
+    [DllImport("kernel32.dll")]
+    private static extern int GetLastError();
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct STARTUPINFO
+    {
+      public int cb;
+      public string lpReserved;
+      public string lpDesktop;
+      public string lpTitle;
+      public int dwX;
+      public int dwY;
+      public int dwXSize;
+      public int dwYSize;
+      public int dwXCountChars;
+      public int dwYCountChars;
+      public int dwFillAttribute;
+      public int dwFlags;
+      public short wShowWindow;
+      public short cbReserved2;
+      public IntPtr lpReserved2;
+      public IntPtr hStdInput;
+      public IntPtr hStdOutput;
+      public IntPtr hStdError;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct PROCESS_INFORMATION
+    {
+      public IntPtr hProcess;
+      public IntPtr hThread;
+      public int dwProcessId;
+      public int dwThreadId;
+    }
+
+    private const uint CREATE_NO_WINDOW = 0x08000000;
+    private const uint CREATE_NEW_CONSOLE = 0x00000010;
+
+    #endregion
+
     /// <summary>
     /// The configuration for the process
     /// </summary>
@@ -124,59 +183,121 @@ namespace LlamaBrain.Core
         Logger.Info($"[Server] Starting llama-server: {exePath}");
         Logger.Info($"[Server] Arguments: {arguments}");
 
-        _process = new Process
-        {
-          StartInfo = new ProcessStartInfo
-          {
-            FileName = exePath,
-            Arguments = arguments,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-            WorkingDirectory = Path.GetDirectoryName(exePath)
-          }
-        };
+        var workingDir = Path.GetDirectoryName(exePath);
+        var startedWithRedirection = false;
 
-        // Set up output handlers
-        _process.OutputDataReceived += (sender, e) =>
+        // Try starting with output redirection first (allows log capture)
+        try
         {
-          if (!string.IsNullOrEmpty(e.Data))
+          _process = new Process
           {
-            var sanitizedOutput = SanitizeProcessOutput(e.Data);
-
-            // Filter out verbose/unnecessary messages
-            if (!ShouldFilterServerLog(sanitizedOutput))
+            StartInfo = new ProcessStartInfo
             {
-              Logger.Info($"[llama-server] {sanitizedOutput}");
-              // Fire event for external subscribers (e.g., Unity)
-              OnServerOutput?.Invoke(sanitizedOutput);
+              FileName = exePath,
+              Arguments = arguments,
+              UseShellExecute = false,
+              RedirectStandardOutput = true,
+              RedirectStandardError = true,
+              CreateNoWindow = true,
+              WorkingDirectory = workingDir
             }
-          }
-        };
+          };
 
-        _process.ErrorDataReceived += (sender, e) =>
-        {
-          if (!string.IsNullOrEmpty(e.Data))
+          // Set up output handlers
+          _process.OutputDataReceived += (sender, e) =>
           {
-            var sanitizedError = SanitizeProcessOutput(e.Data);
-
-            // Filter out verbose/unnecessary messages (errors are usually important, but some are just verbose)
-            if (!ShouldFilterServerLog(sanitizedError))
+            if (!string.IsNullOrEmpty(e.Data))
             {
-              Logger.Error($"[llama-server] {sanitizedError}");
-              // Fire event for external subscribers (e.g., Unity)
-              OnServerError?.Invoke(sanitizedError);
+              var sanitizedOutput = SanitizeProcessOutput(e.Data);
+              if (!ShouldFilterServerLog(sanitizedOutput))
+              {
+                Logger.Info($"[llama-server] {sanitizedOutput}");
+                OnServerOutput?.Invoke(sanitizedOutput);
+              }
             }
+          };
+
+          _process.ErrorDataReceived += (sender, e) =>
+          {
+            if (!string.IsNullOrEmpty(e.Data))
+            {
+              var sanitizedError = SanitizeProcessOutput(e.Data);
+              if (!ShouldFilterServerLog(sanitizedError))
+              {
+                Logger.Error($"[llama-server] {sanitizedError}");
+                OnServerError?.Invoke(sanitizedError);
+              }
+            }
+          };
+
+          _process.Start();
+          startedWithRedirection = true;
+
+          try
+          {
+            _process.BeginOutputReadLine();
+            _process.BeginErrorReadLine();
           }
-        };
+          catch (Exception outputEx)
+          {
+            Logger.Warn($"[Server] Async output redirection failed: {outputEx.Message}");
+          }
+        }
+        catch (Exception startEx)
+        {
+          // IL2CPP has issues with Process.Start - use direct P/Invoke as fallback
+          Logger.Warn($"[Server] Process.Start failed (IL2CPP?): {startEx.Message}");
+          Logger.Info("[Server] Retrying via direct CreateProcessW P/Invoke...");
 
-        // Start the process
-        _process.Start();
-        _process.BeginOutputReadLine();
-        _process.BeginErrorReadLine();
+          CleanupProcess();
 
-        Logger.Info($"[Server] llama-server started with PID: {_process.Id}");
+          // Use direct Win32 CreateProcessW to bypass broken .NET Process class in IL2CPP
+          var commandLine = $"\"{exePath}\" {arguments}";
+
+          var startupInfo = new STARTUPINFO();
+          startupInfo.cb = Marshal.SizeOf(startupInfo);
+
+          PROCESS_INFORMATION processInfo;
+
+          bool success = CreateProcessW(
+            null,                    // lpApplicationName (null = use command line)
+            commandLine,             // lpCommandLine
+            IntPtr.Zero,             // lpProcessAttributes
+            IntPtr.Zero,             // lpThreadAttributes
+            false,                   // bInheritHandles
+            CREATE_NO_WINDOW,        // dwCreationFlags
+            IntPtr.Zero,             // lpEnvironment
+            workingDir,              // lpCurrentDirectory
+            ref startupInfo,         // lpStartupInfo
+            out processInfo          // lpProcessInformation
+          );
+
+          if (!success)
+          {
+            var error = GetLastError();
+            throw new InvalidOperationException($"CreateProcessW failed with error code: {error}");
+          }
+
+          // Close the thread handle (we don't need it)
+          CloseHandle(processInfo.hThread);
+
+          // Get a Process object for the created process
+          try
+          {
+            _process = Process.GetProcessById(processInfo.dwProcessId);
+            Logger.Info($"[Server] Process created via P/Invoke with PID: {processInfo.dwProcessId}");
+          }
+          catch
+          {
+            // If we can't get the Process object, at least close the handle
+            CloseHandle(processInfo.hProcess);
+            throw new InvalidOperationException($"Process created (PID: {processInfo.dwProcessId}) but could not attach Process object");
+          }
+
+          startedWithRedirection = false;
+        }
+
+        Logger.Info($"[Server] llama-server started with PID: {_process.Id} (redirection: {startedWithRedirection})");
       }
       catch (Exception ex)
       {
