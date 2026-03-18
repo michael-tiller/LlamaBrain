@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using LlamaBrain.Core.Expectancy;
+using LlamaBrain.Core.Retrieval;
 using LlamaBrain.Core.StructuredInput;
 using LlamaBrain.Core.StructuredInput.Schemas;
 
@@ -177,13 +178,20 @@ namespace LlamaBrain.Core.Inference
     public EphemeralWorkingMemory? WorkingMemory { get; set; }
 
     /// <summary>
+    /// Recognition result if recognition was injected into this prompt.
+    /// Null if no recognition was performed or detected.
+    /// </summary>
+    public RecognitionResult? Recognition { get; set; }
+
+    /// <summary>
     /// Returns a string representation.
     /// </summary>
     /// <returns>A string representation of the assembled prompt</returns>
     public override string ToString()
     {
       var truncated = WasTruncated ? " (truncated)" : "";
-      return $"AssembledPrompt[{CharacterCount} chars, ~{EstimatedTokens} tokens{truncated}]";
+      var recognized = Recognition?.Recognized == true ? $", {Recognition.RecognitionType}" : "";
+      return $"AssembledPrompt[{CharacterCount} chars, ~{EstimatedTokens} tokens{truncated}{recognized}]";
     }
   }
 
@@ -204,6 +212,9 @@ namespace LlamaBrain.Core.Inference
     /// <summary>Characters used by retry feedback.</summary>
     public int RetryFeedback { get; set; }
 
+    /// <summary>Characters used by recognition block.</summary>
+    public int Recognition { get; set; }
+
     /// <summary>Characters used by few-shot examples.</summary>
     public int FewShotExamples { get; set; }
 
@@ -218,7 +229,7 @@ namespace LlamaBrain.Core.Inference
 
     /// <summary>Total characters.</summary>
     public int Total => SystemPrompt + Context + Constraints + RetryFeedback +
-                        FewShotExamples + DialogueHistory + PlayerInput + Formatting;
+                        Recognition + FewShotExamples + DialogueHistory + PlayerInput + Formatting;
   }
 
   /// <summary>
@@ -394,11 +405,13 @@ namespace LlamaBrain.Core.Inference
     /// <param name="workingMemory">The working memory</param>
     /// <param name="npcName">Optional NPC name for the response prompt</param>
     /// <param name="retryFeedback">Optional retry feedback from previous attempt</param>
+    /// <param name="recognition">Optional recognition result to inject as a constraint</param>
     /// <returns>The assembled prompt</returns>
     public AssembledPrompt AssembleFromWorkingMemory(
       EphemeralWorkingMemory workingMemory,
       string? npcName = null,
-      string? retryFeedback = null)
+      string? retryFeedback = null,
+      RecognitionResult? recognition = null)
     {
       if (workingMemory == null) throw new ArgumentNullException(nameof(workingMemory));
 
@@ -440,6 +453,14 @@ namespace LlamaBrain.Core.Inference
         builder.Append("\n");
         builder.Append(retryFeedback);
         breakdown.RetryFeedback = retryFeedback.Length + 1;
+      }
+
+      // 4.5. Recognition block (if repetition detected)
+      if (recognition?.Recognized == true)
+      {
+        var recognitionBlock = FormatRecognitionBlock(recognition);
+        builder.Append(recognitionBlock);
+        breakdown.Recognition = recognitionBlock.Length;
       }
 
       // 5. Few-shot examples (before actual dialogue)
@@ -497,12 +518,53 @@ namespace LlamaBrain.Core.Inference
         EstimatedTokens = estimatedTokens,
         WasTruncated = wasTruncated,
         Breakdown = breakdown,
-        WorkingMemory = workingMemory
+        WorkingMemory = workingMemory,
+        Recognition = recognition
       };
 
       OnLog?.Invoke($"[PromptAssembler] Assembled: {result}");
 
       return result;
+    }
+
+    /// <summary>
+    /// Formats a recognition result into a prompt injection block.
+    /// </summary>
+    /// <param name="recognition">The recognition result.</param>
+    /// <returns>Formatted recognition block for prompt injection.</returns>
+    private static string FormatRecognitionBlock(RecognitionResult recognition)
+    {
+      if (!recognition.Recognized)
+        return string.Empty;
+
+      var typeStr = recognition.RecognitionType.ToString().ToLowerInvariant();
+      var repeatCount = recognition.RepeatCount;
+
+      string constraint;
+      switch (recognition.RecognitionType)
+      {
+        case RecognitionType.Location:
+          constraint = repeatCount > 2
+            ? "You recognize this place well. Acknowledge your familiarity naturally - perhaps with mild weariness or fond recognition."
+            : "You recognize this place. Acknowledge that you've been here before in your response.";
+          break;
+
+        case RecognitionType.Topic:
+          constraint = repeatCount > 3
+            ? "The player keeps bringing up the same topic. Acknowledge this pattern - you might redirect or express that you've discussed this enough."
+            : "You've discussed this topic before. Reference your previous conversation naturally.";
+          break;
+
+        case RecognitionType.Conversation:
+          constraint = "This conversation pattern feels familiar. Acknowledge the repetition naturally.";
+          break;
+
+        default:
+          constraint = "Acknowledge familiarity with this context.";
+          break;
+      }
+
+      return $"\n<RECOGNITION type=\"{typeStr}\" repeat_count=\"{repeatCount}\">\n{recognition.EvidenceSummary}. {constraint}\n</RECOGNITION>\n";
     }
 
     /// <summary>

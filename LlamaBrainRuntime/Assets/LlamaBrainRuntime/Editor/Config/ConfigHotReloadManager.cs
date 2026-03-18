@@ -85,6 +85,10 @@ namespace LlamaBrain.Editor.Config
       public float TopP;
       public int TopK;
       public float RepeatPenalty;
+      public bool EnableEmbeddingServer;
+      public string EmbeddingModelPath;
+      public int EmbeddingServerPort;
+      public int EmbeddingDimension;
 
       public static BrainSettingsSnapshot From(BrainSettings settings) => new()
       {
@@ -95,7 +99,11 @@ namespace LlamaBrain.Editor.Config
         Temperature = settings.Temperature,
         TopP = settings.TopP,
         TopK = settings.TopK,
-        RepeatPenalty = settings.RepeatPenalty
+        RepeatPenalty = settings.RepeatPenalty,
+        EnableEmbeddingServer = settings.EnableEmbeddingServer,
+        EmbeddingModelPath = settings.EmbeddingModelPath ?? "",
+        EmbeddingServerPort = settings.EmbeddingServerPort,
+        EmbeddingDimension = settings.EmbeddingDimension
       };
 
       public bool Equals(BrainSettingsSnapshot other) =>
@@ -106,7 +114,11 @@ namespace LlamaBrain.Editor.Config
         Mathf.Approximately(Temperature, other.Temperature) &&
         Mathf.Approximately(TopP, other.TopP) &&
         TopK == other.TopK &&
-        Mathf.Approximately(RepeatPenalty, other.RepeatPenalty);
+        Mathf.Approximately(RepeatPenalty, other.RepeatPenalty) &&
+        EnableEmbeddingServer == other.EnableEmbeddingServer &&
+        EmbeddingModelPath == other.EmbeddingModelPath &&
+        EmbeddingServerPort == other.EmbeddingServerPort &&
+        EmbeddingDimension == other.EmbeddingDimension;
     }
 
     /// <summary>
@@ -153,7 +165,7 @@ namespace LlamaBrain.Editor.Config
       _lastPollTime = EditorApplication.timeSinceStartup;
 
       // Check PersonaConfigs in use by agents (same pattern as LairdGame)
-      var agents = Object.FindObjectsOfType<LlamaBrainAgent>();
+      var agents = Object.FindObjectsByType<LlamaBrainAgent>(FindObjectsSortMode.None);
       foreach (var agent in agents)
       {
         if (agent.PersonaConfig == null)
@@ -236,7 +248,7 @@ namespace LlamaBrain.Editor.Config
     public static void CaptureInitialSnapshots()
     {
       // Capture PersonaConfig snapshots
-      var agents = Object.FindObjectsOfType<LlamaBrainAgent>();
+      var agents = Object.FindObjectsByType<LlamaBrainAgent>(FindObjectsSortMode.None);
       foreach (var agent in agents)
       {
         if (agent.PersonaConfig != null && !_personaSnapshots.ContainsKey(agent.PersonaConfig))
@@ -359,7 +371,7 @@ namespace LlamaBrain.Editor.Config
       Debug.Log($"  BatchSize: {settings.BatchSize} | UBatchSize: {settings.UBatchSize} | RepeatPenalty: {settings.RepeatPenalty:F2}");
 
       // Find BrainServer in scene
-      var brainServer = Object.FindObjectOfType<BrainServer>();
+      var brainServer = Object.FindFirstObjectByType<BrainServer>();
       if (brainServer == null)
       {
         Debug.Log($"[ConfigHotReloadManager] No BrainServer in scene, skipping BrainSettings reload");
@@ -397,7 +409,7 @@ namespace LlamaBrain.Editor.Config
     /// </summary>
     private static List<LlamaBrainAgent> FindAgentsUsingConfig(PersonaConfig config)
     {
-      var allAgents = Object.FindObjectsOfType<LlamaBrainAgent>();
+      var allAgents = Object.FindObjectsByType<LlamaBrainAgent>(FindObjectsSortMode.None);
       var matchingAgents = new List<LlamaBrainAgent>();
 
       foreach (var agent in allAgents)
@@ -468,7 +480,7 @@ namespace LlamaBrain.Editor.Config
       Debug.Log("[ConfigHotReloadManager] Force reloading all LlamaBrain configs...");
 
       // Find and reload all PersonaConfigs in use
-      var agents = Object.FindObjectsOfType<LlamaBrainAgent>();
+      var agents = Object.FindObjectsByType<LlamaBrainAgent>(FindObjectsSortMode.None);
       var processedConfigs = new HashSet<PersonaConfig>();
       int agentReloads = 0;
 
@@ -483,7 +495,7 @@ namespace LlamaBrain.Editor.Config
       }
 
       // Find and reload BrainSettings
-      var brainServer = Object.FindObjectOfType<BrainServer>();
+      var brainServer = Object.FindFirstObjectByType<BrainServer>();
       if (brainServer != null && brainServer.Settings != null)
       {
         HandleBrainSettingsChanged(brainServer.Settings, AssetDatabase.GetAssetPath(brainServer.Settings));
