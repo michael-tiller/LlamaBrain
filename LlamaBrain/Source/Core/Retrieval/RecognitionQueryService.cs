@@ -80,9 +80,17 @@ namespace LlamaBrain.Core.Retrieval
             // Search episodic memories for location mentions
             foreach (var memory in _memorySystem.GetActiveEpisodicMemories())
             {
+                // Check explicit LocationId property first (exact match, case-insensitive)
+                if (!string.IsNullOrEmpty(memory.LocationId) &&
+                    memory.LocationId.Equals(locationId, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    matchedMemories.Add((memory.Id, memory.CreatedAtTicks));
+                    continue;
+                }
+
                 var descLower = memory.Description.ToLowerInvariant();
 
-                // Check for location in description
+                // Check for location in description (fallback for legacy memories)
                 if (descLower.Contains(locationLower) ||
                     ContainsLocationPattern(descLower, locationLower))
                 {
@@ -90,7 +98,8 @@ namespace LlamaBrain.Core.Retrieval
                 }
             }
 
-            if (matchedMemories.Count == 0)
+            // Recognition requires at least 2 visits (first visit = no recognition)
+            if (matchedMemories.Count < 2)
             {
                 return RecognitionResult.NotRecognized();
             }

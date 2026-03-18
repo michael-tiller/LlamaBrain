@@ -1613,27 +1613,70 @@ dotnet test --filter "Category=RequiresLlamaServer"
 - See `PHASE10_PROOF_GAPS.md` for detailed test backlog
 - Required for v1.0 release to claim "deterministically proven" architecture
 
-## Planned Features
+## Completed Features
 
-The following features are planned to enhance the architecture's capabilities and complete the deterministic state reconstruction pattern:
+The following features complete the memory proving and RAG infrastructure:
 
 ### Feature 11: RAG-Based Memory Retrieval & Memory Proving
 
-**Status**: 📋 Planned  
-**Priority**: MEDIUM  
+**Status**: ✅ **Complete** (March 2026)
+**Priority**: MEDIUM
 **Dependencies**: Feature 3 (Context Retrieval Layer), Feature 10 (Deterministic Proof Gap Testing)
 
-**Overview**: Enhance the `ContextRetrievalLayer` to use a **hybrid approach** combining Retrieval-Augmented Generation (RAG) techniques with existing keyword matching. This hybrid system will use both noun-based keyword matching (for safe, deterministic checks) and semantic inference via embeddings and vector similarity search (for improved relevance).
+**Overview**: Enhances `ContextRetrievalLayer` with **hybrid retrieval** combining RAG techniques with existing keyword matching. Uses both noun-based keyword matching (safe, deterministic) and semantic inference via embeddings and vector similarity search (improved relevance).
 
-**Key Components**:
-- **Embedding Generation System**: Interface for generating embeddings from local models (llama.cpp) or external APIs (OpenAI, HuggingFace)
-- **Vector Storage & Indexing**: In-memory and persistent vector stores for episodic memories, beliefs, and canonical facts
-- **Hybrid Retrieval System**: Combine noun-based keyword matching (deterministic) with semantic vector similarity search (inference-based)
-- **Memory Proving**: Implement deterministic repetition recognition system to prove retrieval influences generation
-  - Location repetition recognition (NPC gets tired of same tunnel)
-  - Topic/conversation repetition recognition (NPC gets tired of player obsessively talking about same topic)
+**Implemented Components** ✅:
 
-**Architectural Impact**: Improves memory retrieval quality through hybrid approach (noun-based + semantic) while maintaining determinism via noun-based checks. The repetition recognition system provides concrete proof that retrieval influences generation.
+- **Embedding Generation System** (`LlamaBrain.Core.Retrieval`)
+  - `IEmbeddingProvider` interface with async embedding generation
+  - `LlamaCppEmbeddingProvider` - Uses llama.cpp server's OpenAI-compatible `/v1/embeddings` endpoint
+  - `NullEmbeddingProvider` - Null implementation for keyword-only mode (graceful degradation)
+  - `EmbeddingProviderFactory` - Factory pattern with configuration validation
+  - Average latency: 6.2ms per embedding (nomic-embed-text-v1.5, 768 dimensions)
+
+- **Vector Storage & Indexing** (`LlamaBrain.Core.Retrieval`)
+  - `IMemoryVectorStore` interface for vector storage and search
+  - `InMemoryVectorStore` - Dictionary-based storage (<1000 entries), O(n) cosine similarity, NPC filtering
+  - `VectorStoreBinarySerializer` - Binary persistence format (LBVS), 60% smaller than JSON, 10x faster load
+  - Deterministic ordering: similarity desc → sequenceNumber asc → memoryId ordinal
+
+- **Hybrid Retrieval System** (`ContextRetrievalLayer`)
+  - `RetrieveContextAsync()` - Async retrieval combining keyword + semantic scores
+  - `ComputeSemanticScoresAsync()` - Non-blocking semantic scoring for Unity
+  - `HybridRelevanceCalculator` - Configurable weights (default: keyword 0.3, semantic 0.7)
+  - Graceful degradation to keyword-only when embeddings unavailable
+
+- **Memory Embedding Service** (`MemoryEmbeddingService`)
+  - Event-driven: subscribes to `AuthoritativeMemorySystem.MemoryMutated`
+  - Fire-and-forget async embedding generation
+  - Non-blocking memory mutations
+
+- **Recognition Query System** (`RecognitionQueryService`)
+  - Location recognition: `QueryLocationRecognition(npcId, locationId)`
+  - Topic recognition: `QueryTopicRecognitionAsync(npcId, playerInput)` with semantic + keyword fallback
+  - Conversation pattern recognition: `QueryConversationPatternAsync(npcId, playerInput)`
+  - `RecognitionResult` DTO with repeat count, similarity, evidence summary
+
+- **Recognition Prompt Injection** (`PromptAssembler`)
+  - `<RECOGNITION>` block injection when repetition detected
+  - Configurable constraints based on recognition type and repeat count
+  - `RecognitionCueValidator` for soft validation of recognition cues in output
+
+**Test Coverage**:
+- 17 Unity PlayMode tests (RAGDeterminismTests: 5/5, EmbeddingIntegrationTests: 12/12)
+- 82+ unit tests for recognition, vector store, embedding provider
+- 5 new tests for recognition prompt injection
+- `MemoryProvingIntegrationTests` - Full pipeline integration tests
+- `RecognitionCueValidatorTests` - Cue detection and validation
+
+**Completed Work** ✅:
+- ✅ End-to-end memory proving integration tests (`MemoryProvingIntegrationTests`)
+- ✅ Documentation in MEMORY.md, USAGE_GUIDE.md, CHANGELOG.md
+- ✅ 2-visit location recognition requirement for first visit vs return distinction
+- ✅ `EpisodicMemoryEntry.LocationId` and `FromLocationEntry()` factory
+- ✅ Episodic memory `EpisodeType.LocationEntry` (value 5)
+
+**Architectural Impact**: Improves memory retrieval quality while maintaining determinism via noun-based checks as fallback. Recognition system provides concrete proof that retrieval influences generation through RECOGNITION prompt blocks and validation. Memory proving demonstrates that RAG-enhanced retrieval detectably influences NPC responses.
 
 **See**: [ROADMAP.md](ROADMAP.md#feature-11-rag-based-memory-retrieval--memory-proving) for detailed implementation plan.
 

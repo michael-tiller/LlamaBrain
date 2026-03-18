@@ -8,15 +8,17 @@ namespace LlamaBrain.Persona.MemoryTypes
   public enum EpisodeType
   {
     /// <summary>Dialogue exchange with player.</summary>
-    Dialogue,
+    Dialogue = 0,
     /// <summary>Observation of player action.</summary>
-    Observation,
+    Observation = 1,
     /// <summary>Internal thought or reaction.</summary>
-    Thought,
+    Thought = 2,
     /// <summary>Significant event that occurred.</summary>
-    Event,
+    Event = 3,
     /// <summary>Information learned from conversation.</summary>
-    LearnedInfo
+    LearnedInfo = 4,
+    /// <summary>Entry into a location (for recognition tracking).</summary>
+    LocationEntry = 5
   }
 
   /// <summary>
@@ -57,6 +59,12 @@ namespace LlamaBrain.Persona.MemoryTypes
     /// Game time when this episode occurred (for chronological ordering).
     /// </summary>
     public float GameTime { get; set; }
+
+    /// <summary>
+    /// Location identifier for LocationEntry episodes.
+    /// Used for location repetition recognition.
+    /// </summary>
+    public string? LocationId { get; set; }
 
     /// <summary>
     /// Episodic memories have medium authority.
@@ -152,6 +160,26 @@ namespace LlamaBrain.Persona.MemoryTypes
       };
       if (source != null) entry.Participant = source;
       return entry;
+    }
+
+    /// <summary>
+    /// Creates an episodic memory for entering a location.
+    /// Used for location repetition recognition.
+    /// </summary>
+    /// <param name="locationId">Unique identifier for the location</param>
+    /// <param name="description">Description of the location entry (e.g., "Entered the Dark Tunnel")</param>
+    /// <param name="significance">The emotional significance (0.0 to 1.0)</param>
+    /// <returns>A new EpisodicMemoryEntry representing a location entry</returns>
+    public static EpisodicMemoryEntry FromLocationEntry(string locationId, string description, float significance = 0.4f)
+    {
+      if (string.IsNullOrEmpty(locationId))
+        throw new ArgumentNullException(nameof(locationId));
+
+      return new EpisodicMemoryEntry(description, EpisodeType.LocationEntry)
+      {
+        LocationId = locationId,
+        Significance = significance
+      };
     }
   }
 }

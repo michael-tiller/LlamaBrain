@@ -3,6 +3,7 @@ using System.Linq;
 using NUnit.Framework;
 using LlamaBrain.Core.Inference;
 using LlamaBrain.Core.Expectancy;
+using LlamaBrain.Core.Retrieval;
 
 namespace LlamaBrain.Tests.Inference
 {
@@ -663,6 +664,113 @@ namespace LlamaBrain.Tests.Inference
       // Assert
       Assert.That(logMessages.Count, Is.GreaterThan(0));
       Assert.That(logMessages, Has.Some.Contain("[PromptAssembler]"));
+    }
+
+    #endregion
+
+    #region Recognition Block Injection Tests
+
+    [Test]
+    public void AssembleFromWorkingMemory_WithLocationRecognition_InjectsRecognitionBlock()
+    {
+      // Arrange
+      var assembler = new PromptAssembler();
+      var config = new WorkingMemoryConfig();
+      var workingMemory = new EphemeralWorkingMemory(_defaultSnapshot, config);
+      var recognition = RecognitionResult.LocationRecognized(
+        repeatCount: 2,
+        lastVisitTicks: 12345,
+        matchedMemoryIds: new[] { "mem-1" });
+
+      // Act
+      var result = assembler.AssembleFromWorkingMemory(workingMemory, recognition: recognition);
+
+      // Assert
+      Assert.That(result.Text, Does.Contain("<RECOGNITION"));
+      Assert.That(result.Text, Does.Contain("type=\"location\""));
+      Assert.That(result.Text, Does.Contain("repeat_count=\"2\""));
+      Assert.That(result.Recognition, Is.Not.Null);
+      Assert.That(result.Recognition!.RecognitionType, Is.EqualTo(RecognitionType.Location));
+      Assert.That(result.Breakdown.Recognition, Is.GreaterThan(0));
+    }
+
+    [Test]
+    public void AssembleFromWorkingMemory_WithTopicRecognition_InjectsRecognitionBlock()
+    {
+      // Arrange
+      var assembler = new PromptAssembler();
+      var config = new WorkingMemoryConfig();
+      var workingMemory = new EphemeralWorkingMemory(_defaultSnapshot, config);
+      var recognition = RecognitionResult.TopicRecognized(
+        repeatCount: 3,
+        lastDiscussionTicks: 12345,
+        matchedMemoryIds: new[] { "mem-1", "mem-2" },
+        similarity: 0.85f,
+        topicSummary: "dragons");
+
+      // Act
+      var result = assembler.AssembleFromWorkingMemory(workingMemory, recognition: recognition);
+
+      // Assert
+      Assert.That(result.Text, Does.Contain("<RECOGNITION"));
+      Assert.That(result.Text, Does.Contain("type=\"topic\""));
+      Assert.That(result.Text, Does.Contain("repeat_count=\"3\""));
+      Assert.That(result.Text, Does.Contain("dragons"));
+      Assert.That(result.Recognition, Is.Not.Null);
+      Assert.That(result.Recognition!.RecognitionType, Is.EqualTo(RecognitionType.Topic));
+    }
+
+    [Test]
+    public void AssembleFromWorkingMemory_WithoutRecognition_NoRecognitionBlock()
+    {
+      // Arrange
+      var assembler = new PromptAssembler();
+      var config = new WorkingMemoryConfig();
+      var workingMemory = new EphemeralWorkingMemory(_defaultSnapshot, config);
+
+      // Act
+      var result = assembler.AssembleFromWorkingMemory(workingMemory, recognition: null);
+
+      // Assert
+      Assert.That(result.Text, Does.Not.Contain("<RECOGNITION"));
+      Assert.That(result.Recognition, Is.Null);
+      Assert.That(result.Breakdown.Recognition, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void AssembleFromWorkingMemory_WithNotRecognized_NoRecognitionBlock()
+    {
+      // Arrange
+      var assembler = new PromptAssembler();
+      var config = new WorkingMemoryConfig();
+      var workingMemory = new EphemeralWorkingMemory(_defaultSnapshot, config);
+      var recognition = RecognitionResult.NotRecognized();
+
+      // Act
+      var result = assembler.AssembleFromWorkingMemory(workingMemory, recognition: recognition);
+
+      // Assert
+      Assert.That(result.Text, Does.Not.Contain("<RECOGNITION"));
+      Assert.That(result.Breakdown.Recognition, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void AssembledPrompt_ToString_IncludesRecognitionType()
+    {
+      // Arrange
+      var assembler = new PromptAssembler();
+      var config = new WorkingMemoryConfig();
+      var workingMemory = new EphemeralWorkingMemory(_defaultSnapshot, config);
+      var recognition = RecognitionResult.LocationRecognized(
+        repeatCount: 2,
+        lastVisitTicks: 12345,
+        matchedMemoryIds: new[] { "mem-1" });
+
+      // Act
+      var result = assembler.AssembleFromWorkingMemory(workingMemory, recognition: recognition);
+
+      // Assert
+      Assert.That(result.ToString(), Does.Contain("Location"));
     }
 
     #endregion

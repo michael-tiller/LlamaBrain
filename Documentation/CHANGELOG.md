@@ -5,7 +5,7 @@ All notable changes to LlamaBrain will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.0-rc.3] (Unreleased)
+## [0.3.0] - March 17, 2026
 
 ### Core Library
 
@@ -30,34 +30,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Added `RecognitionQueryService` for location, topic, and conversation pattern recognition
     - Added `RecognitionResult` with recognition type, confidence, and matched memory IDs
     - Supports semantic search (RAG) with keyword fallback when embeddings unavailable
+    - Location recognition requires at least 2 visits (first visit = no recognition)
+    - Added `LocationId` exact-match check for episodic memories (with description fallback for legacy)
+  - **Recognition Prompt Injection & Validation**
+    - Extended `PromptAssembler.AssembleFromWorkingMemory()` with optional `recognition` parameter
+    - Injects `<RECOGNITION>` block when repetition detected (location, topic, conversation)
+    - Configurable constraints based on recognition type and repeat count
+    - Added `RecognitionCueValidator` for soft validation of recognition cues in LLM output
+    - Added `RecognitionCueValidationResult` with `CueFound`, `MatchedCue`, `Warning`
+  - **Episodic Memory Extensions**
+    - Added `EpisodeType.LocationEntry` (value 5) for location entry tracking
+    - Added `EpisodicMemoryEntry.LocationId` for explicit location identification
+    - Added `EpisodicMemoryEntry.FromLocationEntry()` factory for location entries
+  - **Memory Proving Integration Tests**
+    - Added `MemoryProvingIntegrationTests` - end-to-end pipeline: Memory → Recognition → Prompt → Validation
+    - Added `RecognitionCueValidatorTests` - cue detection, case insensitivity, missing-cue warnings
+    - Extended `PromptAssemblerTests` with 5 recognition block injection tests
+    - Updated `RecognitionQueryServiceTests` for 2-visit recognition requirement
   - **Memory Embedding Integration**
     - Added `MemoryEmbeddingService` for automatic embedding generation on memory creation
     - Extended `AuthoritativeMemorySystem` with embedding service integration
   - **Diagnostics**
     - Added `VectorStoreDiagnostics` for summary, JSON export, and binary file validation
-  - **Test Coverage**: 8 new test files
+  - **Test Coverage**: 11 test files (8 original + 3 new/updated)
     - `MemoryEmbeddingServiceTests.cs`, `EmbeddingProviderFactoryTests.cs`
     - `HybridRelevanceCalculatorTests.cs`, `InMemoryVectorStoreTests.cs`
     - `LlamaCppEmbeddingProviderTests.cs`, `RecognitionQueryServiceTests.cs`
     - `VectorStoreDiagnosticsTests.cs`, `VectorStorePersistenceTests.cs`
     - Extended `AuthoritativeMemorySystemTests.cs`
+    - `MemoryProvingIntegrationTests.cs` - full pipeline integration
+    - `RecognitionCueValidatorTests.cs` - cue validation
+    - Extended `PromptAssemblerTests.cs` - recognition block injection
   - **Files Added**:
     - `Source/Core/Retrieval/EmbeddingConfig.cs`, `EmbeddingProviderFactory.cs`
     - `Source/Core/Retrieval/IEmbeddingProvider.cs`, `LlamaCppEmbeddingProvider.cs`, `NullEmbeddingProvider.cs`
     - `Source/Core/Retrieval/IMemoryVectorStore.cs`, `InMemoryVectorStore.cs`
     - `Source/Core/Retrieval/HybridRelevanceCalculator.cs`
     - `Source/Core/Retrieval/RecognitionQueryService.cs`, `RecognitionResult.cs`
+    - `Source/Core/Validation/RecognitionCueValidator.cs`
     - `Source/Diagnostics/VectorStoreDiagnostics.cs`
     - `Source/Persistence/VectorStoreBinarySerializer.cs`
     - `Source/Persona/MemoryEmbeddingService.cs`
   - **Files Modified**:
     - `Source/Core/Inference/ContextRetrievalLayer.cs` - RAG integration
+    - `Source/Core/Inference/PromptAssembler.cs` - Recognition block injection
+    - `Source/Core/Retrieval/RecognitionQueryService.cs` - 2-visit requirement, LocationId check
     - `Source/Persona/AuthoritativeMemorySystem.cs` - Memory embedding service
+    - `Source/Persona/MemoryTypes/EpisodicMemory.cs` - LocationEntry, LocationId, FromLocationEntry
     - `Source/Core/ProcessConfig.cs`, `Source/Core/ServerManager.cs` - Embedding config support
   - **Documentation**:
     - Major update to `MEMORY.md` with hybrid retrieval, RAG setup, provider types, persistence, diagnostics
-    - Updated `ARCHITECTURE.md` with Feature 11 RAG section
-    - Updated `ROADMAP.md` phase status markers
+    - Updated `ARCHITECTURE.md` with Feature 11 RAG section, recognition prompt injection, implemented components
+    - Updated `ROADMAP.md` phase status markers, progress summary (March 2026)
 - **Feature 28: "Black Box" Audit Recorder - COMPLETE** ✅
   - **Ring Buffer Recording System**
     - Added `AuditRecorder` class with per-NPC ring buffer storage (default: 50 records per NPC)

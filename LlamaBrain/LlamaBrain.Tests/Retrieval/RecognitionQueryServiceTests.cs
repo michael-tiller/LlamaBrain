@@ -69,15 +69,19 @@ namespace LlamaBrain.Tests.Retrieval
         [Test]
         public void QueryLocationRecognition_WithMatchingMemory_ReturnsRecognized()
         {
+            // Recognition requires at least 2 visits
             _memorySystem.AddEpisodicMemory(
                 new EpisodicMemoryEntry("Entered the castle", EpisodeType.Event),
+                MutationSource.ValidatedOutput);
+            _memorySystem.AddEpisodicMemory(
+                new EpisodicMemoryEntry("Returned to the castle", EpisodeType.Event),
                 MutationSource.ValidatedOutput);
 
             var result = _service.QueryLocationRecognition("npc-1", "castle");
 
             Assert.That(result.Recognized, Is.True);
             Assert.That(result.RecognitionType, Is.EqualTo(RecognitionType.Location));
-            Assert.That(result.RepeatCount, Is.EqualTo(1));
+            Assert.That(result.RepeatCount, Is.EqualTo(2));
         }
 
         [Test]
@@ -101,8 +105,12 @@ namespace LlamaBrain.Tests.Retrieval
         [Test]
         public void QueryLocationRecognition_CaseInsensitive()
         {
+            // Recognition requires at least 2 visits
             _memorySystem.AddEpisodicMemory(
                 new EpisodicMemoryEntry("Entered the CASTLE", EpisodeType.Event),
+                MutationSource.ValidatedOutput);
+            _memorySystem.AddEpisodicMemory(
+                new EpisodicMemoryEntry("Left the castle", EpisodeType.Event),
                 MutationSource.ValidatedOutput);
 
             var result = _service.QueryLocationRecognition("npc-1", "castle");
@@ -113,8 +121,12 @@ namespace LlamaBrain.Tests.Retrieval
         [Test]
         public void QueryLocationRecognition_WithLocationPattern()
         {
+            // Recognition requires at least 2 visits
             _memorySystem.AddEpisodicMemory(
                 new EpisodicMemoryEntry("location: blacksmith_shop", EpisodeType.Event),
+                MutationSource.ValidatedOutput);
+            _memorySystem.AddEpisodicMemory(
+                new EpisodicMemoryEntry("visited blacksmith_shop again", EpisodeType.Event),
                 MutationSource.ValidatedOutput);
 
             var result = _service.QueryLocationRecognition("npc-1", "blacksmith_shop");
@@ -133,8 +145,12 @@ namespace LlamaBrain.Tests.Retrieval
         [Test]
         public void QueryLocationRecognition_ReturnsMatchedMemoryIds()
         {
+            // Recognition requires at least 2 visits
             _memorySystem.AddEpisodicMemory(
                 new EpisodicMemoryEntry("Visited forest", EpisodeType.Event),
+                MutationSource.ValidatedOutput);
+            _memorySystem.AddEpisodicMemory(
+                new EpisodicMemoryEntry("Returned to forest", EpisodeType.Event),
                 MutationSource.ValidatedOutput);
 
             var result = _service.QueryLocationRecognition("npc-1", "forest");
