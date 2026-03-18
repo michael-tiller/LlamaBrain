@@ -32,7 +32,7 @@ namespace LlamaBrain.Persona
     private readonly object _pendingLock = new object();
     private readonly List<Task> _pendingTasks = new List<Task>();
 
-    private bool _disposed;
+    private volatile bool _disposed;
 
     /// <summary>
     /// Creates a new MemoryEmbeddingService that automatically generates embeddings
@@ -79,7 +79,7 @@ namespace LlamaBrain.Persona
         // Check if embedding provider is available
         if (!_embeddingProvider.IsAvailable)
         {
-          _logger?.Invoke($"[MemoryEmbedding] Embedding provider unavailable, skipping: {e.MemoryId}");
+          SafeLog($"[MemoryEmbedding] Embedding provider unavailable, skipping: {e.MemoryId}");
           return;
         }
 
@@ -93,14 +93,14 @@ namespace LlamaBrain.Persona
         {
           // Add to vector store
           _vectorStore.Upsert(e.MemoryId, e.NpcId, e.MemoryType, embedding, e.SequenceNumber);
-          _logger?.Invoke($"[MemoryEmbedding] Generated embedding for {e.MemoryType} memory: {e.MemoryId}");
+          SafeLog($"[MemoryEmbedding] Generated embedding for {e.MemoryType} memory: {e.MemoryId}");
 
           // Notify memory system of successful embedding (for statistics)
           NotifyEmbeddingGenerated(e.MemoryId);
         }
         else
         {
-          _logger?.Invoke($"[MemoryEmbedding] Embedding generation returned null for {e.MemoryId}, falling back to keyword-only");
+          SafeLog($"[MemoryEmbedding] Embedding generation returned null for {e.MemoryId}, falling back to keyword-only");
         }
       }
       catch (OperationCanceledException)
@@ -110,7 +110,7 @@ namespace LlamaBrain.Persona
       catch (Exception ex)
       {
         // Swallow exception - graceful degradation to keyword-only retrieval
-        _logger?.Invoke($"[MemoryEmbedding] Error generating embedding for {e.MemoryId}: {ex.Message}");
+        SafeLog($"[MemoryEmbedding] Error generating embedding for {e.MemoryId}: {ex.Message}");
       }
     }
 
@@ -176,6 +176,26 @@ namespace LlamaBrain.Persona
       // Statistics tracking is done in AuthoritativeMemorySystem
       // This is called to update the embedded count
       _memorySystem.NotifyEmbeddingGenerated(memoryId);
+    }
+
+    /// <summary>
+    /// Safely invokes the logger callback, swallowing any exceptions to prevent
+    /// logger failures from breaking the embedding flow.
+    /// </summary>
+    /// <param name="message">The message to log.</param>
+    private void SafeLog(string message)
+    {
+      if (_logger == null)
+        return;
+
+      try
+      {
+        _logger.Invoke(message);
+      }
+      catch
+      {
+        // Swallow logger exceptions - logging failures should never break embedding
+      }
     }
 
     /// <summary>

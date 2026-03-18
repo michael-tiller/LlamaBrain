@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Core Library
 
 #### Fixed
+- **MemoryEmbeddingService**: Logger callback wrapped in `SafeLog()` to swallow exceptions; logger failures no longer break embedding flow
 - **MemoryEmbeddingService**: Sync `RetrieveContext` now skips semantic scoring to avoid deadlocks in Unity; use `RetrieveContextAsync` for full RAG support
 - **LlamaCppEmbeddingProvider**: Only disposes `HttpClient` when provider created it; external clients are not disposed
 - **VectorStoreBinarySerializer**: Consume reserved bytes when reading file info to keep stream position correct
@@ -21,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ContextRetrievalLayer**: Documented that sync retrieval falls back to keyword-only when semantic retrieval is configured
 - **HybridRelevanceCalculator**: Extended word separators to include `:`, `;`, `-`, `"`, `'` for better tokenization
 - **IMemoryVectorStore, RecognitionResult**: Corrected cosine similarity range documentation (0–1 → -1 to 1)
+- **IMemoryVectorStore**: Added constructor validation for `VectorSearchResult` (memoryId, npcId, similarity -1..1, sequenceNumber) and `VectorStoreStatistics` (all counts non-negative)
+- **RecognitionResult**: Added constructor validation for `repeatCount` and `bestMatchSimilarity` (-1 to 1)
+- **MemoryEmbeddingService**: `_disposed` made `volatile` for correct visibility across threads
 - **EpisodicMemory.FromLocationEntry**: Stricter validation (reject whitespace-only); trim `LocationId` before storage
 - **RecognitionQueryServiceTests**: Mock embedding uses FNV-1a stable hash instead of `GetHashCode()` for cross-version determinism; batch embeddings use proper async `Task.WhenAll`
 - **MemoryEmbeddingServiceTests**: Replaced `Task.Delay` with `await service.FlushAsync()` for deterministic synchronization
@@ -35,7 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Documentation
 
 #### Changed
-- **USAGE_GUIDE**: Updated API examples for `IMemoryVectorStore` (Upsert/FindSimilar), `RecognitionResult.RecognitionType`, `RecognitionCueValidator.Validate` signature
+- **USAGE_GUIDE**: Updated API examples for `IMemoryVectorStore` (Upsert/FindSimilar), `RecognitionResult.RecognitionType`, `RecognitionCueValidator.Validate` signature; added blank lines before markdown tables for readability
 - **ROADMAP**: Feature 11 status clarified (Core Complete, optional enhancements marked as future)
 
 ## [0.3.0] - March 17, 2026

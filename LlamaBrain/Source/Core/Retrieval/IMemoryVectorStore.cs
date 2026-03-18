@@ -43,6 +43,15 @@ namespace LlamaBrain.Core.Retrieval
 
         public VectorSearchResult(string memoryId, string? npcId, float similarity, long sequenceNumber, MemoryVectorType memoryType)
         {
+            if (string.IsNullOrEmpty(memoryId))
+                throw new ArgumentNullException(nameof(memoryId), "Memory ID cannot be null or empty.");
+            if (npcId != null && string.IsNullOrWhiteSpace(npcId))
+                throw new ArgumentException("NPC ID cannot be empty or whitespace when provided.", nameof(npcId));
+            if (similarity < -1f || similarity > 1f)
+                throw new ArgumentOutOfRangeException(nameof(similarity), similarity, "Similarity must be between -1 and 1.");
+            if (sequenceNumber < 0)
+                throw new ArgumentOutOfRangeException(nameof(sequenceNumber), sequenceNumber, "Sequence number cannot be negative.");
+
             MemoryId = memoryId;
             NpcId = npcId;
             Similarity = similarity;
@@ -76,6 +85,19 @@ namespace LlamaBrain.Core.Retrieval
 
         public VectorStoreStatistics(int totalVectors, int episodicVectors, int beliefVectors, int canonicalFactVectors, int worldStateVectors, int embeddingDimension)
         {
+            if (totalVectors < 0)
+                throw new ArgumentOutOfRangeException(nameof(totalVectors), totalVectors, "Total vectors cannot be negative.");
+            if (episodicVectors < 0)
+                throw new ArgumentOutOfRangeException(nameof(episodicVectors), episodicVectors, "Episodic vectors cannot be negative.");
+            if (beliefVectors < 0)
+                throw new ArgumentOutOfRangeException(nameof(beliefVectors), beliefVectors, "Belief vectors cannot be negative.");
+            if (canonicalFactVectors < 0)
+                throw new ArgumentOutOfRangeException(nameof(canonicalFactVectors), canonicalFactVectors, "Canonical fact vectors cannot be negative.");
+            if (worldStateVectors < 0)
+                throw new ArgumentOutOfRangeException(nameof(worldStateVectors), worldStateVectors, "World state vectors cannot be negative.");
+            if (embeddingDimension < 0)
+                throw new ArgumentOutOfRangeException(nameof(embeddingDimension), embeddingDimension, "Embedding dimension cannot be negative.");
+
             TotalVectors = totalVectors;
             EpisodicVectors = episodicVectors;
             BeliefVectors = beliefVectors;

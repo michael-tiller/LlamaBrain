@@ -76,6 +76,11 @@ namespace LlamaBrain.Core.Retrieval
             IReadOnlyList<string> matchedMemoryIds,
             float bestMatchSimilarity = 0f)
         {
+            if (repeatCount < 0)
+                throw new ArgumentOutOfRangeException(nameof(repeatCount), repeatCount, "Repeat count cannot be negative.");
+            if (bestMatchSimilarity < -1f || bestMatchSimilarity > 1f)
+                throw new ArgumentOutOfRangeException(nameof(bestMatchSimilarity), bestMatchSimilarity, "Best match similarity must be between -1 and 1.");
+
             Recognized = recognized;
             RecognitionType = recognitionType;
             RepeatCount = repeatCount;

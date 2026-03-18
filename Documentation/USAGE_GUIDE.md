@@ -341,6 +341,7 @@ var config = new EmbeddingConfig
 ```
 
 **Embedding Provider Types**:
+
 | Provider | Use Case | Description |
 |----------|----------|-------------|
 | `LlamaCpp` | Local inference | Uses llama.cpp `/v1/embeddings` endpoint |
@@ -471,6 +472,7 @@ if (topicResult.RecognitionType == RecognitionType.Topic)
 ```
 
 **Recognition Types**:
+
 | Type | Description | Trigger |
 |------|-------------|---------|
 | `Location` | NPC recognizes returning to a location | 2+ visits to same LocationId |
