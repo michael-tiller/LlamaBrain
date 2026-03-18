@@ -61,7 +61,7 @@
 The following execution order is **strongly recommended** for v0.3.0 to avoid rework and ensure architectural stability:
 
 ### Phase 1: Foundation (Do First)
-1. **Feature 12 & 13 (Structured Output)** - **DO THIS FIRST**
+1. **Feature 12 & 13 (Structured Output)** - ✅ **COMPLETE**
    - Fundamentally changes how data enters the pipeline
    - Don't build persistence for data structures that are about to change
    - Complete Feature 12, then immediately do Feature 13
@@ -75,7 +75,7 @@ The following execution order is **strongly recommended** for v0.3.0 to avoid re
    - 33 tests passing
 
 ### Phase 3: Determinism Completion
-3. **Feature 14 (Deterministic Generation Seed)** - **DO THIS THIRD**
+3. **Feature 14 (Deterministic Generation Seed)** - ✅ **COMPLETE**
    - Hook the persistence layer into the RNG to achieve cross-session determinism
    - Uses persisted `InteractionCount` from Feature 16
    - **Rationale**: This is the "Holy Grail" of AI consistency, but requires persistence to work

@@ -198,15 +198,21 @@ memorySystem.SetBelief("hero_opinion", belief, MutationSource.ValidatedOutput);
 **Context Retrieval**:
 - `ContextRetrievalLayer` retrieves relevant memories using:
   - **Recency**: More recent memories prioritized
-  - **Relevance**: Keyword matching against player input
+  - **Relevance**: Keyword matching against player input (or hybrid keyword+semantic)
   - **Significance**: Higher significance memories retained longer
   - **Confidence**: Beliefs filtered by confidence threshold
 - Configurable limits prevent token bloat
+- **Hybrid Retrieval** (optional): When configured with `IEmbeddingProvider` and `IMemoryVectorStore`:
+  - **Semantic Similarity**: Uses vector embeddings for semantic matching
+  - **Hybrid Scoring**: Combines keyword relevance with semantic similarity (configurable weights)
+  - **Graceful Degradation**: Falls back to keyword-only when embeddings unavailable
+  - See `EmbeddingConfig` for weight configuration
 - **Deterministic Ordering**: All retrievals are sorted using strict total ordering to ensure byte-stable prompt assembly:
   - Canonical facts: sorted by Id (ordinal)
   - World state: sorted by Key (ordinal)
   - Episodic memories: sorted by score desc, CreatedAtTicks desc, Id ordinal, SequenceNumber asc
   - Beliefs: sorted by score desc, Confidence desc, Id ordinal, SequenceNumber asc
+  - Vector search: sorted by similarity desc, SequenceNumber asc, MemoryId ordinal asc
 
 **Retry Support**:
 - `StateSnapshot.ForRetry()` creates new snapshot with merged constraints

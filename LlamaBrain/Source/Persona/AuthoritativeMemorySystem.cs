@@ -4,10 +4,61 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using LlamaBrain.Core.Audit;
+using LlamaBrain.Core.Retrieval;
 using LlamaBrain.Persona.MemoryTypes;
 
 namespace LlamaBrain.Persona
 {
+  /// <summary>
+  /// Event arguments for memory mutation events.
+  /// Contains the information needed to generate embeddings for the mutated memory.
+  /// </summary>
+  public sealed class MemoryMutatedEventArgs : EventArgs
+  {
+    /// <summary>
+    /// Creates a new MemoryMutatedEventArgs instance.
+    /// </summary>
+    /// <param name="memoryId">The unique identifier of the memory entry.</param>
+    /// <param name="content">The embeddable text content of the memory.</param>
+    /// <param name="npcId">The NPC that owns this memory, or null for shared memories.</param>
+    /// <param name="memoryType">The type of memory (for categorization in the vector store).</param>
+    /// <param name="sequenceNumber">The sequence number assigned to this memory entry.</param>
+    public MemoryMutatedEventArgs(string memoryId, string content, string? npcId, MemoryVectorType memoryType, long sequenceNumber)
+    {
+      MemoryId = memoryId ?? throw new ArgumentNullException(nameof(memoryId));
+      Content = content ?? throw new ArgumentNullException(nameof(content));
+      NpcId = npcId;
+      MemoryType = memoryType;
+      SequenceNumber = sequenceNumber;
+    }
+
+    /// <summary>
+    /// The unique identifier of the memory entry.
+    /// </summary>
+    public string MemoryId { get; }
+
+    /// <summary>
+    /// The embeddable text content of the memory.
+    /// </summary>
+    public string Content { get; }
+
+    /// <summary>
+    /// The NPC that owns this memory, or null for shared memories (canonical facts, world state).
+    /// </summary>
+    public string? NpcId { get; }
+
+    /// <summary>
+    /// The type of memory (for categorization in the vector store).
+    /// </summary>
+    public MemoryVectorType MemoryType { get; }
+
+    /// <summary>
+    /// The sequence number assigned to this memory entry.
+    /// Used for deterministic ordering in the vector store.
+    /// </summary>
+    public long SequenceNumber { get; }
+  }
+
   /// <summary>
   /// Manages all memory types with authority boundaries.
   /// Enforces that higher-authority memories cannot be overridden by lower-authority sources.
@@ -27,6 +78,16 @@ namespace LlamaBrain.Persona
     /// Persisted and restored on load to ensure ordering is preserved across sessions.
     /// </summary>
     private long _nextSequenceNumber = 1;
+
+    /// <summary>
+    /// Counter for total memories created (for embedding coverage calculation).
+    /// </summary>
+    private int _totalMemoriesCreated = 0;
+
+    /// <summary>
+    /// Counter for memories that have had embeddings successfully generated.
+    /// </summary>
+    private int _embeddedMemories = 0;
 
     /// <summary>
     /// Gets or sets the next sequence number to be assigned.
@@ -49,9 +110,35 @@ namespace LlamaBrain.Persona
     public float EpisodicDecayRate { get; set; } = 0.05f;
 
     /// <summary>
+    /// The NPC ID this memory system belongs to, or null for shared systems.
+    /// Used for NPC-specific memories (episodic, beliefs) when raising MemoryMutated events.
+    /// Canonical facts and world state always use null (shared across all NPCs).
+    /// </summary>
+    public string? NpcId { get; set; }
+
+    /// <summary>
     /// Optional logging callback.
     /// </summary>
     public Action<string>? OnLog { get; set; }
+
+    /// <summary>
+    /// Event fired when a memory is created or updated.
+    /// Subscribe to this event to auto-generate embeddings for RAG retrieval.
+    /// </summary>
+    public event EventHandler<MemoryMutatedEventArgs>? MemoryMutated;
+
+    /// <summary>
+    /// Raises the MemoryMutated event with the given arguments.
+    /// </summary>
+    /// <param name="memoryId">The unique ID of the mutated memory</param>
+    /// <param name="content">The embeddable text content</param>
+    /// <param name="npcId">The NPC that owns this memory, or null for shared memories</param>
+    /// <param name="memoryType">The type of memory</param>
+    /// <param name="sequenceNumber">The sequence number assigned to this memory</param>
+    private void RaiseMemoryMutated(string memoryId, string content, string? npcId, MemoryVectorType memoryType, long sequenceNumber)
+    {
+      MemoryMutated?.Invoke(this, new MemoryMutatedEventArgs(memoryId, content, npcId, memoryType, sequenceNumber));
+    }
 
     /// <summary>
     /// Creates a new authoritative memory system with default providers (system clock and GUID generator).
@@ -99,7 +186,11 @@ namespace LlamaBrain.Persona
       entry.SequenceNumber = _nextSequenceNumber++;
       
       _canonicalFacts[id] = entry;
+      _totalMemoriesCreated++;
       OnLog?.Invoke($"[Memory] Added canonical fact: {id} = '{fact}' (seq={entry.SequenceNumber})");
+
+      // Raise event for auto-embedding
+      RaiseMemoryMutated(entry.Id, entry.Fact, null, MemoryVectorType.CanonicalFact, entry.SequenceNumber);
 
       return MutationResult.Succeeded(entry);
     }
@@ -217,6 +308,8 @@ namespace LlamaBrain.Persona
         if (result.Success)
         {
           OnLog?.Invoke($"[Memory] Updated world state: {key} = '{value}'");
+          // Raise event for auto-embedding (update)
+          RaiseMemoryMutated(existing.Id, existing.Content, null, MemoryVectorType.WorldState, existing.SequenceNumber);
         }
         return result;
       }
@@ -239,7 +332,11 @@ namespace LlamaBrain.Persona
       }
       
       _worldState[key] = entry;
+      _totalMemoriesCreated++;
       OnLog?.Invoke($"[Memory] Added world state: {key} = '{value}' (seq={entry.SequenceNumber})");
+
+      // Raise event for auto-embedding
+      RaiseMemoryMutated(entry.Id, entry.Content, null, MemoryVectorType.WorldState, entry.SequenceNumber);
 
       return MutationResult.Succeeded(entry);
     }
@@ -302,7 +399,11 @@ namespace LlamaBrain.Persona
       // Assign monotonic sequence number for deterministic ordering
       entry.SequenceNumber = _nextSequenceNumber++;
       _episodicMemories.Add(entry);
+      _totalMemoriesCreated++;
       OnLog?.Invoke($"[Memory] Added episodic memory: '{entry.Description}' (seq={entry.SequenceNumber})");
+
+      // Raise event for auto-embedding (NPC-specific)
+      RaiseMemoryMutated(entry.Id, entry.Description, NpcId, MemoryVectorType.Episodic, entry.SequenceNumber);
 
       // Prune old memories if over limit
       PruneEpisodicMemories();
@@ -423,12 +524,20 @@ namespace LlamaBrain.Persona
       entry.CreatedAtTicks = _clock.UtcNowTicks;
       
       // Assign monotonic sequence number for deterministic ordering (only if new entry)
+      var isNewBelief = !_beliefs.ContainsKey(id);
       if (entry.SequenceNumber == 0)
       {
         entry.SequenceNumber = _nextSequenceNumber++;
       }
       _beliefs[id] = entry;
+      if (isNewBelief)
+      {
+        _totalMemoriesCreated++;
+      }
       OnLog?.Invoke($"[Memory] Set belief: {id} = '{entry.BeliefContent}' (seq={entry.SequenceNumber})");
+
+      // Raise event for auto-embedding (NPC-specific)
+      RaiseMemoryMutated(entry.Id, entry.BeliefContent, NpcId, MemoryVectorType.Belief, entry.SequenceNumber);
 
       return MutationResult.Succeeded(entry);
     }
@@ -544,6 +653,8 @@ namespace LlamaBrain.Persona
       _episodicMemories.Clear();
       _beliefs.Clear();
       _nextSequenceNumber = 1;
+      _totalMemoriesCreated = 0;
+      _embeddedMemories = 0;
       OnLog?.Invoke("[Memory] All memories cleared");
     }
 
@@ -614,8 +725,20 @@ namespace LlamaBrain.Persona
         EpisodicMemoryCount = _episodicMemories.Count,
         ActiveEpisodicCount = _episodicMemories.Count(m => m.IsActive),
         BeliefCount = _beliefs.Count,
-        ActiveBeliefCount = _beliefs.Values.Count(b => !b.IsContradicted)
+        ActiveBeliefCount = _beliefs.Values.Count(b => !b.IsContradicted),
+        TotalMemoriesCreated = _totalMemoriesCreated,
+        EmbeddedMemories = _embeddedMemories
       };
+    }
+
+    /// <summary>
+    /// Notifies the memory system that an embedding was successfully generated for a memory.
+    /// Called by MemoryEmbeddingService after successful embedding generation.
+    /// </summary>
+    /// <param name="memoryId">The ID of the memory that was embedded (for tracking).</param>
+    internal void NotifyEmbeddingGenerated(string memoryId)
+    {
+      _embeddedMemories++;
     }
 
     /// <summary>
@@ -801,13 +924,32 @@ namespace LlamaBrain.Persona
     public int ActiveBeliefCount { get; set; }
 
     /// <summary>
+    /// Total number of memories created (used for embedding coverage calculation).
+    /// </summary>
+    public int TotalMemoriesCreated { get; set; }
+
+    /// <summary>
+    /// Number of memories that have had embeddings successfully generated.
+    /// </summary>
+    public int EmbeddedMemories { get; set; }
+
+    /// <summary>
+    /// The percentage of memories that have embeddings (0.0 to 1.0).
+    /// A value of 1.0 means all memories have embeddings for RAG retrieval.
+    /// </summary>
+    public float EmbeddingCoverage => TotalMemoriesCreated > 0
+      ? (float)EmbeddedMemories / TotalMemoriesCreated
+      : 0f;
+
+    /// <summary>
     /// Returns a string representation of the memory statistics.
     /// </summary>
     /// <returns>A formatted string showing counts of different memory types</returns>
     public override string ToString()
     {
       return $"Memory Stats: {CanonicalFactCount} facts, {WorldStateCount} state, " +
-             $"{ActiveEpisodicCount}/{EpisodicMemoryCount} episodes, {ActiveBeliefCount}/{BeliefCount} beliefs";
+             $"{ActiveEpisodicCount}/{EpisodicMemoryCount} episodes, {ActiveBeliefCount}/{BeliefCount} beliefs, " +
+             $"embedding: {EmbeddingCoverage:P0} ({EmbeddedMemories}/{TotalMemoriesCreated})";
     }
   }
 }

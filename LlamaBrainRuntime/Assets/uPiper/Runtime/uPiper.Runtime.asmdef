@@ -3,7 +3,8 @@
     "rootNamespace": "uPiper",
     "references": [
         "Unity.InferenceEngine",
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "UniTask"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

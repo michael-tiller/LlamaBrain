@@ -10,6 +10,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Core Library
 
 #### Added
+- **Feature 11: RAG-Based Memory Retrieval - Infrastructure** ✅
+  - **Embedding System**
+    - Added `IEmbeddingProvider` interface for embedding generation with batch support
+    - Added `LlamaCppEmbeddingProvider` for local llama.cpp `/v1/embeddings` endpoint
+    - Added `NullEmbeddingProvider` for keyword-only fallback when embeddings unavailable
+    - Added `EmbeddingProviderFactory` for provider instantiation from config
+    - Added `EmbeddingConfig` with presets (KeywordOnly, Default, SemanticHeavy, Balanced, ForLlamaCpp)
+  - **Vector Store**
+    - Added `IMemoryVectorStore` interface for embedding storage and similarity search
+    - Added `InMemoryVectorStore` with brute-force cosine similarity (suitable for <1000 entries)
+    - Added `VectorStoreBinarySerializer` for efficient persistence (~60% smaller, ~10x faster than JSON)
+    - Shared store architecture: NPC-specific and shared (NpcId=null) entries with query filtering
+  - **Hybrid Retrieval**
+    - Added `HybridRelevanceCalculator` for configurable keyword + semantic weighted scoring
+    - Extended `ContextRetrievalLayer` with RAG support via optional embedding provider and vector store
+    - Deterministic ordering: similarity desc, sequence asc, memoryId asc
+  - **Recognition Query Service**
+    - Added `RecognitionQueryService` for location, topic, and conversation pattern recognition
+    - Added `RecognitionResult` with recognition type, confidence, and matched memory IDs
+    - Supports semantic search (RAG) with keyword fallback when embeddings unavailable
+  - **Memory Embedding Integration**
+    - Added `MemoryEmbeddingService` for automatic embedding generation on memory creation
+    - Extended `AuthoritativeMemorySystem` with embedding service integration
+  - **Diagnostics**
+    - Added `VectorStoreDiagnostics` for summary, JSON export, and binary file validation
+  - **Test Coverage**: 8 new test files
+    - `MemoryEmbeddingServiceTests.cs`, `EmbeddingProviderFactoryTests.cs`
+    - `HybridRelevanceCalculatorTests.cs`, `InMemoryVectorStoreTests.cs`
+    - `LlamaCppEmbeddingProviderTests.cs`, `RecognitionQueryServiceTests.cs`
+    - `VectorStoreDiagnosticsTests.cs`, `VectorStorePersistenceTests.cs`
+    - Extended `AuthoritativeMemorySystemTests.cs`
+  - **Files Added**:
+    - `Source/Core/Retrieval/EmbeddingConfig.cs`, `EmbeddingProviderFactory.cs`
+    - `Source/Core/Retrieval/IEmbeddingProvider.cs`, `LlamaCppEmbeddingProvider.cs`, `NullEmbeddingProvider.cs`
+    - `Source/Core/Retrieval/IMemoryVectorStore.cs`, `InMemoryVectorStore.cs`
+    - `Source/Core/Retrieval/HybridRelevanceCalculator.cs`
+    - `Source/Core/Retrieval/RecognitionQueryService.cs`, `RecognitionResult.cs`
+    - `Source/Diagnostics/VectorStoreDiagnostics.cs`
+    - `Source/Persistence/VectorStoreBinarySerializer.cs`
+    - `Source/Persona/MemoryEmbeddingService.cs`
+  - **Files Modified**:
+    - `Source/Core/Inference/ContextRetrievalLayer.cs` - RAG integration
+    - `Source/Persona/AuthoritativeMemorySystem.cs` - Memory embedding service
+    - `Source/Core/ProcessConfig.cs`, `Source/Core/ServerManager.cs` - Embedding config support
+  - **Documentation**:
+    - Major update to `MEMORY.md` with hybrid retrieval, RAG setup, provider types, persistence, diagnostics
+    - Updated `ARCHITECTURE.md` with Feature 11 RAG section
+    - Updated `ROADMAP.md` phase status markers
 - **Feature 28: "Black Box" Audit Recorder - COMPLETE** ✅
   - **Ring Buffer Recording System**
     - Added `AuditRecorder` class with per-NPC ring buffer storage (default: 50 records per NPC)
@@ -132,6 +180,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Unity Runtime
 
 #### Added
+- **Feature 11: Unity RAG Integration** ✅
+  - **BrainServer** - Embedding server lifecycle and health checks
+    - Optional embedding server URL configuration
+    - Embedding endpoint availability detection
+  - **BrainSettings** - Embedding configuration (provider type, URL, model, dimension)
+  - **EmbeddingIntegrationTests** - PlayMode tests for embedding provider and vector store wiring
+  - **RAGDeterminismTests** - PlayMode tests for RAG determinism guarantees
+  - **InitTestScene** - Test scene for RAG/embedding validation
+  - **BrainSettingsEditor** - Embedding config UI
+  - **ConfigHotReloadManager** - Embedding config hot reload support
 - **Feature 28: Unity Audit Recorder Integration** ✅
   - **AuditRecorderBridge** - MonoBehaviour singleton for automatic interaction recording
     - Auto-registers with all `LlamaBrainAgent` instances in scene

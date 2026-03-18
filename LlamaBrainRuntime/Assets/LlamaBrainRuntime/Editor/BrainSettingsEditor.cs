@@ -29,6 +29,10 @@ namespace LlamaBrain.Editor
         /// Whether to show the performance settings section
         /// </summary>
         private bool _showPerformanceSettings = true;
+        /// <summary>
+        /// Whether to show the embedding server section
+        /// </summary>
+        private bool _showEmbeddingServer = true;
 
         /// <summary>
         /// Draws the inspector GUI
@@ -106,6 +110,42 @@ namespace LlamaBrain.Editor
                     EditorGUILayout.HelpBox("Expected Performance: 5-10 tokens/sec (CPU only)\n14 tokens ≈ 1.4-2.8s", MessageType.Warning);
                 }
                 
+                EditorGUI.indentLevel--;
+                EditorGUILayout.Space();
+            }
+
+            // Embedding Server Section (RAG)
+            _showEmbeddingServer = EditorGUILayout.Foldout(_showEmbeddingServer, "Embedding Server (RAG)", true);
+            if (_showEmbeddingServer)
+            {
+                EditorGUI.indentLevel++;
+
+                EditorGUILayout.HelpBox("Configure the embedding server for semantic retrieval (RAG). Runs a separate llama-server instance with an embedding model.", MessageType.Info);
+
+                settings.EnableEmbeddingServer = EditorGUILayout.Toggle("Enable Embedding Server", settings.EnableEmbeddingServer);
+
+                if (settings.EnableEmbeddingServer)
+                {
+                    settings.EmbeddingModelPath = EditorGUILayout.TextField("Embedding Model Path", settings.EmbeddingModelPath);
+                    if (string.IsNullOrEmpty(settings.EmbeddingModelPath))
+                    {
+                        EditorGUILayout.HelpBox("Embedding model path is required. Recommended: nomic-embed-text-v1.5.f32.gguf", MessageType.Warning);
+                    }
+
+                    settings.EmbeddingServerPort = EditorGUILayout.IntField("Embedding Server Port", settings.EmbeddingServerPort);
+                    if (settings.EmbeddingServerPort == settings.Port)
+                    {
+                        EditorGUILayout.HelpBox("Embedding server port must be different from main LLM port!", MessageType.Error);
+                    }
+
+                    settings.EmbeddingDimension = EditorGUILayout.IntField("Embedding Dimension", settings.EmbeddingDimension);
+                    EditorGUILayout.HelpBox($"Dimension: {settings.EmbeddingDimension} (nomic-embed-text=768, all-MiniLM=384)", MessageType.None);
+                }
+                else
+                {
+                    EditorGUILayout.HelpBox("Embedding server disabled. RAG/semantic retrieval will not be available.", MessageType.None);
+                }
+
                 EditorGUI.indentLevel--;
                 EditorGUILayout.Space();
             }
@@ -258,6 +298,34 @@ namespace LlamaBrain.Editor
             {
                 warnings.Add("Batch Size is very low. Recommended: 512 for best performance.");
                 hasWarnings = true;
+            }
+
+            // Embedding server warnings
+            if (settings.EnableEmbeddingServer)
+            {
+                if (string.IsNullOrEmpty(settings.EmbeddingModelPath))
+                {
+                    warnings.Add("Embedding Server: Model path is not set");
+                    hasWarnings = true;
+                }
+
+                if (settings.EmbeddingServerPort == settings.Port)
+                {
+                    warnings.Add("Embedding Server: Port conflicts with main LLM server port");
+                    hasWarnings = true;
+                }
+
+                if (settings.EmbeddingServerPort <= 0 || settings.EmbeddingServerPort > 65535)
+                {
+                    warnings.Add("Embedding Server: Port must be between 1 and 65535");
+                    hasWarnings = true;
+                }
+
+                if (settings.EmbeddingDimension <= 0)
+                {
+                    warnings.Add("Embedding Server: Dimension must be greater than 0");
+                    hasWarnings = true;
+                }
             }
 
             if (hasWarnings)
