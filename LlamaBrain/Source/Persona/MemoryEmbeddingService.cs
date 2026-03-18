@@ -153,15 +153,17 @@ namespace LlamaBrain.Persona
       if (snapshot.Length == 0)
         return;
 
-      using var cts = new CancellationTokenSource(effectiveTimeout);
-      try
+      var allTasks = Task.WhenAll(snapshot);
+      var timeoutTask = Task.Delay(effectiveTimeout);
+
+      var completedTask = await Task.WhenAny(allTasks, timeoutTask).ConfigureAwait(false);
+
+      if (completedTask == allTasks)
       {
-        await Task.WhenAll(snapshot).WaitAsync(cts.Token).ConfigureAwait(false);
+        // All tasks completed before timeout - await to propagate any exceptions
+        await allTasks.ConfigureAwait(false);
       }
-      catch (OperationCanceledException)
-      {
-        // Timeout reached
-      }
+      // else: timeout reached, return without waiting further
     }
 
     /// <summary>
