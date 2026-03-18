@@ -329,7 +329,7 @@ namespace LlamaBrain.Tests.PlayMode
     private static string GetExecutablePath() => 
       Environment.GetEnvironmentVariable("LLAMABRAIN_EXECUTABLE_PATH") ?? "Backend/llama-server.exe";
     
-    private static string GetModelPath() => 
+    private static string GetModelPath() =>
       Environment.GetEnvironmentVariable("LLAMABRAIN_MODEL_PATH") ?? "Backend/model/qwen3.5-9b-abliterated-q4_k_m.gguf";
     
     private static int GetPort()

@@ -5,11 +5,120 @@ All notable changes to LlamaBrain will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.0-rc.3] (Unreleased)
+## [v0.3.1-rc1] - (Unreleased)
+
+### Core Library
+
+#### Fixed
+- **MemoryEmbeddingService**: Logger callback wrapped in `SafeLog()` to swallow exceptions; logger failures no longer break embedding flow
+- **MemoryEmbeddingService**: Sync `RetrieveContext` now skips semantic scoring to avoid deadlocks in Unity; use `RetrieveContextAsync` for full RAG support
+- **LlamaCppEmbeddingProvider**: Only disposes `HttpClient` when provider created it; external clients are not disposed
+- **VectorStoreBinarySerializer**: Consume reserved bytes when reading file info to keep stream position correct
+
+#### Changed
+- **MemoryEmbeddingService**: Added `FlushAsync()` for deterministic test synchronization; replaced fire-and-forget `async void` with tracked pending tasks
+- **MemoryEmbeddingService**: Implemented `IAsyncDisposable` with `DisposeAsync()` for graceful shutdown; sync `Dispose()` waits up to 1s for in-flight work
+- **MemoryEmbeddingService**: `Dispose()` uses `WaitAsync(cts.Token)` for proper timeout handling when awaiting pending tasks
+- **ContextRetrievalLayer**: Documented that sync retrieval falls back to keyword-only when semantic retrieval is configured
+- **HybridRelevanceCalculator**: Extended word separators to include `:`, `;`, `-`, `"`, `'` for better tokenization
+- **IMemoryVectorStore, RecognitionResult**: Corrected cosine similarity range documentation (0–1 → -1 to 1)
+- **IMemoryVectorStore**: Added constructor validation for `VectorSearchResult` (memoryId, npcId, similarity -1..1, sequenceNumber) and `VectorStoreStatistics` (all counts non-negative)
+- **RecognitionResult**: Added constructor validation for `repeatCount` and `bestMatchSimilarity` (-1 to 1)
+- **MemoryEmbeddingService**: `_disposed` made `volatile` for correct visibility across threads
+- **EpisodicMemory.FromLocationEntry**: Stricter validation (reject whitespace-only); trim `LocationId` before storage
+- **RecognitionQueryServiceTests**: Mock embedding uses FNV-1a stable hash instead of `GetHashCode()` for cross-version determinism; batch embeddings use proper async `Task.WhenAll`
+- **MemoryEmbeddingServiceTests**: Replaced `Task.Delay` with `await service.FlushAsync()` for deterministic synchronization
+
+### Unity Runtime
+
+#### Changed
+- **BrainServer**: Embedding server startup uses polling (500ms interval, 30s timeout) instead of fixed 3s delay
+- **BrainServer**: Proper `OperationCanceledException` handling during shutdown (no error logging)
+- **EmbeddingIntegrationTests**: Platform-specific llama-server path (Windows `.exe` vs Unix)
+
+### Documentation
+
+#### Changed
+- **USAGE_GUIDE**: Updated API examples for `IMemoryVectorStore` (Upsert/FindSimilar), `RecognitionResult.RecognitionType`, `RecognitionCueValidator.Validate` signature; added blank lines before markdown tables for readability
+- **ROADMAP**: Feature 11 status clarified (Core Complete, optional enhancements marked as future)
+
+## [0.3.0] - March 17, 2026
 
 ### Core Library
 
 #### Added
+- **Feature 11: RAG-Based Memory Retrieval - Infrastructure** ✅
+  - **Embedding System**
+    - Added `IEmbeddingProvider` interface for embedding generation with batch support
+    - Added `LlamaCppEmbeddingProvider` for local llama.cpp `/v1/embeddings` endpoint
+    - Added `NullEmbeddingProvider` for keyword-only fallback when embeddings unavailable
+    - Added `EmbeddingProviderFactory` for provider instantiation from config
+    - Added `EmbeddingConfig` with presets (KeywordOnly, Default, SemanticHeavy, Balanced, ForLlamaCpp)
+  - **Vector Store**
+    - Added `IMemoryVectorStore` interface for embedding storage and similarity search
+    - Added `InMemoryVectorStore` with brute-force cosine similarity (suitable for <1000 entries)
+    - Added `VectorStoreBinarySerializer` for efficient persistence (~60% smaller, ~10x faster than JSON)
+    - Shared store architecture: NPC-specific and shared (NpcId=null) entries with query filtering
+  - **Hybrid Retrieval**
+    - Added `HybridRelevanceCalculator` for configurable keyword + semantic weighted scoring
+    - Extended `ContextRetrievalLayer` with RAG support via optional embedding provider and vector store
+    - Deterministic ordering: similarity desc, sequence asc, memoryId asc
+  - **Recognition Query Service**
+    - Added `RecognitionQueryService` for location, topic, and conversation pattern recognition
+    - Added `RecognitionResult` with recognition type, confidence, and matched memory IDs
+    - Supports semantic search (RAG) with keyword fallback when embeddings unavailable
+    - Location recognition requires at least 2 visits (first visit = no recognition)
+    - Added `LocationId` exact-match check for episodic memories (with description fallback for legacy)
+  - **Recognition Prompt Injection & Validation**
+    - Extended `PromptAssembler.AssembleFromWorkingMemory()` with optional `recognition` parameter
+    - Injects `<RECOGNITION>` block when repetition detected (location, topic, conversation)
+    - Configurable constraints based on recognition type and repeat count
+    - Added `RecognitionCueValidator` for soft validation of recognition cues in LLM output
+    - Added `RecognitionCueValidationResult` with `CueFound`, `MatchedCue`, `Warning`
+  - **Episodic Memory Extensions**
+    - Added `EpisodeType.LocationEntry` (value 5) for location entry tracking
+    - Added `EpisodicMemoryEntry.LocationId` for explicit location identification
+    - Added `EpisodicMemoryEntry.FromLocationEntry()` factory for location entries
+  - **Memory Proving Integration Tests**
+    - Added `MemoryProvingIntegrationTests` - end-to-end pipeline: Memory → Recognition → Prompt → Validation
+    - Added `RecognitionCueValidatorTests` - cue detection, case insensitivity, missing-cue warnings
+    - Extended `PromptAssemblerTests` with 5 recognition block injection tests
+    - Updated `RecognitionQueryServiceTests` for 2-visit recognition requirement
+  - **Memory Embedding Integration**
+    - Added `MemoryEmbeddingService` for automatic embedding generation on memory creation
+    - Extended `AuthoritativeMemorySystem` with embedding service integration
+  - **Diagnostics**
+    - Added `VectorStoreDiagnostics` for summary, JSON export, and binary file validation
+  - **Test Coverage**: 11 test files (8 original + 3 new/updated)
+    - `MemoryEmbeddingServiceTests.cs`, `EmbeddingProviderFactoryTests.cs`
+    - `HybridRelevanceCalculatorTests.cs`, `InMemoryVectorStoreTests.cs`
+    - `LlamaCppEmbeddingProviderTests.cs`, `RecognitionQueryServiceTests.cs`
+    - `VectorStoreDiagnosticsTests.cs`, `VectorStorePersistenceTests.cs`
+    - Extended `AuthoritativeMemorySystemTests.cs`
+    - `MemoryProvingIntegrationTests.cs` - full pipeline integration
+    - `RecognitionCueValidatorTests.cs` - cue validation
+    - Extended `PromptAssemblerTests.cs` - recognition block injection
+  - **Files Added**:
+    - `Source/Core/Retrieval/EmbeddingConfig.cs`, `EmbeddingProviderFactory.cs`
+    - `Source/Core/Retrieval/IEmbeddingProvider.cs`, `LlamaCppEmbeddingProvider.cs`, `NullEmbeddingProvider.cs`
+    - `Source/Core/Retrieval/IMemoryVectorStore.cs`, `InMemoryVectorStore.cs`
+    - `Source/Core/Retrieval/HybridRelevanceCalculator.cs`
+    - `Source/Core/Retrieval/RecognitionQueryService.cs`, `RecognitionResult.cs`
+    - `Source/Core/Validation/RecognitionCueValidator.cs`
+    - `Source/Diagnostics/VectorStoreDiagnostics.cs`
+    - `Source/Persistence/VectorStoreBinarySerializer.cs`
+    - `Source/Persona/MemoryEmbeddingService.cs`
+  - **Files Modified**:
+    - `Source/Core/Inference/ContextRetrievalLayer.cs` - RAG integration
+    - `Source/Core/Inference/PromptAssembler.cs` - Recognition block injection
+    - `Source/Core/Retrieval/RecognitionQueryService.cs` - 2-visit requirement, LocationId check
+    - `Source/Persona/AuthoritativeMemorySystem.cs` - Memory embedding service
+    - `Source/Persona/MemoryTypes/EpisodicMemory.cs` - LocationEntry, LocationId, FromLocationEntry
+    - `Source/Core/ProcessConfig.cs`, `Source/Core/ServerManager.cs` - Embedding config support
+  - **Documentation**:
+    - Major update to `MEMORY.md` with hybrid retrieval, RAG setup, provider types, persistence, diagnostics
+    - Updated `ARCHITECTURE.md` with Feature 11 RAG section, recognition prompt injection, implemented components
+    - Updated `ROADMAP.md` phase status markers, progress summary (March 2026)
 - **Feature 28: "Black Box" Audit Recorder - COMPLETE** ✅
   - **Ring Buffer Recording System**
     - Added `AuditRecorder` class with per-NPC ring buffer storage (default: 50 records per NPC)
@@ -132,6 +241,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Unity Runtime
 
 #### Added
+- **Feature 11: Unity RAG Integration** ✅
+  - **BrainServer** - Embedding server lifecycle and health checks
+    - Optional embedding server URL configuration
+    - Embedding endpoint availability detection
+  - **BrainSettings** - Embedding configuration (provider type, URL, model, dimension)
+  - **EmbeddingIntegrationTests** - PlayMode tests for embedding provider and vector store wiring
+  - **RAGDeterminismTests** - PlayMode tests for RAG determinism guarantees
+  - **InitTestScene** - Test scene for RAG/embedding validation
+  - **BrainSettingsEditor** - Embedding config UI
+  - **ConfigHotReloadManager** - Embedding config hot reload support
 - **Feature 28: Unity Audit Recorder Integration** ✅
   - **AuditRecorderBridge** - MonoBehaviour singleton for automatic interaction recording
     - Auto-registers with all `LlamaBrainAgent` instances in scene
@@ -1687,7 +1806,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Version History
 
 ### Current Version
-- **0.2.0-rc.2**: Feature 10 Complete - Deterministic Proof Gap Testing (Phase 10 COMPLETE), WorldIntentDispatcher Singleton Lifecycle (Requirement #5), Pipeline Proof Gaps (double-hook safety, policy boundary proof), Snapshot-time driven context retrieval for deterministic behavior, Comprehensive regression tests for memory serialization (1,000+ lines), Byte-level prompt text determinism tests (Test D complete), 353 total tests (exceeds original estimate), All 7 minimal proof suite tests complete, All 5 critical requirements implemented, Determinism proof now defensible at byte level for serialized state and prompt text assembly
+- **0.3.1** (Unreleased): RAG determinism fixes, embedding service lifecycle improvements, Unity deadlock avoidance, documentation updates
 
 ### Previous Versions
 - **0.2.0-rc.1**: Features 1-9 Complete - Determinism Layer (Expectancy Engine), Structured Memory System, State Snapshots & Context Retrieval, Ephemeral Working Memory (with Few-Shot Prompt Priming), Output Validation, Controlled Memory Mutation (MemoryMutationController & World Intent Dispatcher), Enhanced Fallback System, RedRoom Integration (with Memory Mutation Overlay and Validation Gate Overlay), Documentation & Polish (comprehensive documentation suite with 4 tutorials), Comprehensive Testing Infrastructure (92.37% coverage with integration tests), Testability Improvements (IFileSystem, IApiClient interfaces), Major Test Coverage Improvements (ApiClient 90.54%, ServerManager 74.55%), Full Pipeline Integration Tests, and Complete Documentation Suite (ARCHITECTURE.md, DETERMINISM_CONTRACT.md, PIPELINE_CONTRACT.md, MEMORY.md, VALIDATION_GATING.md, SAFEGUARDS.md, USAGE_GUIDE.md with tutorials, STATUS.md, ROADMAP.md, and more)

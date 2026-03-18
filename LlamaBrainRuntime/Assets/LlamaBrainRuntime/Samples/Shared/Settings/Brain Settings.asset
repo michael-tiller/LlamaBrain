@@ -24,6 +24,10 @@ MonoBehaviour:
   ParallelSlots: 1
   UseContinuousBatching: 0
   UseFlashAttention: 1
+  EnableEmbeddingServer: 1
+  EmbeddingModelPath: Backend/model/nomic-embed-text-v1.5.f32.gguf
+  EmbeddingServerPort: 8081
+  EmbeddingDimension: 768
   MaxTokens: 128
   Temperature: 0
   TopP: 0.9

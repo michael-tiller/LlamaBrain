@@ -833,27 +833,374 @@ memorySystem.RecalculateNextSequenceNumber();
 - Increase `MinBeliefConfidence` to filter uncertain beliefs
 - Use topic filtering to retrieve only relevant memories
 
+## Hybrid Retrieval with Semantic Search (RAG)
+
+The memory system supports optional hybrid retrieval combining keyword matching with semantic vector similarity:
+
+### Overview
+
+When configured with `IEmbeddingProvider` and `IMemoryVectorStore`, the `ContextRetrievalLayer` can use:
+
+- **Keyword matching**: Traditional word overlap scoring
+- **Semantic similarity**: Vector embedding cosine similarity
+- **Hybrid scoring**: Configurable weighted combination of both
+
+### Components
+
+**IEmbeddingProvider**: Generates embeddings for text
+```csharp
+public interface IEmbeddingProvider
+{
+    Task<float[]?> GenerateEmbeddingAsync(string text, CancellationToken ct = default);
+    Task<float[]?[]> GenerateBatchEmbeddingsAsync(IReadOnlyList<string> texts, CancellationToken ct = default);
+    int EmbeddingDimension { get; }
+    bool IsAvailable { get; }
+}
+```
+
+**IMemoryVectorStore**: Stores and searches memory embeddings
+```csharp
+public interface IMemoryVectorStore
+{
+    void Upsert(string memoryId, string? npcId, MemoryVectorType type, float[] embedding, long sequenceNumber);
+    bool Remove(string memoryId);
+    IReadOnlyList<VectorSearchResult> FindSimilar(float[] queryEmbedding, int k, string? npcId, ...);
+    VectorStoreSnapshot CreateSnapshot();
+    void RestoreFromSnapshot(VectorStoreSnapshot snapshot);
+}
+```
+
+**InMemoryVectorStore**: Default in-memory implementation using Dictionary storage with brute-force cosine similarity search. Suitable for <1000 entries.
+
+### Configuration
+
+```csharp
+var embeddingConfig = new EmbeddingConfig
+{
+    ProviderType = EmbeddingProviderType.LlamaCpp,  // Provider selection
+    EnableSemanticRetrieval = true,
+    KeywordWeight = 0.3f,       // 30% keyword matching
+    SemanticWeight = 0.7f,       // 70% semantic similarity
+    MinSemanticSimilarity = 0.3f,
+    SemanticCandidateLimit = 50,
+    EmbeddingDimension = 768,   // nomic-embed-text uses 768
+    LlamaCppBaseUrl = "http://localhost:8081",  // Embedding server URL
+    LlamaCppModelName = "nomic-embed-text",
+    RequestTimeoutSeconds = 30
+};
+
+// Factory methods for common configurations
+EmbeddingConfig.KeywordOnly()     // Disables semantic retrieval (uses NullEmbeddingProvider)
+EmbeddingConfig.Default()         // 30% keyword, 70% semantic with LlamaCpp
+EmbeddingConfig.SemanticHeavy()   // 10% keyword, 90% semantic
+EmbeddingConfig.Balanced()        // 50% keyword, 50% semantic
+
+// Custom llama.cpp server configuration
+EmbeddingConfig.ForLlamaCpp(
+    baseUrl: "http://192.168.1.100:8081",
+    modelName: "nomic-embed-text",
+    embeddingDimension: 768,
+    timeoutSeconds: 60
+);
+```
+
+### Provider Types
+
+The system supports multiple embedding provider types via `EmbeddingProviderType`:
+
+| Provider | Description |
+|----------|-------------|
+| `Null` | Keyword-only mode (no embeddings) |
+| `LlamaCpp` | Local llama.cpp server with `/v1/embeddings` endpoint |
+| `OpenAI` | External OpenAI API (future) |
+
+### LlamaCpp Embedding Server Setup
+
+Start a dedicated embedding server (separate from the main LLM):
+
+```bash
+# Using llama.cpp server with embedding model
+./llama-server -m nomic-embed-text-v1.5.f32.gguf --embedding --port 8081
+
+# Verify endpoint works
+curl http://localhost:8081/v1/embeddings -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"input":"test","model":"nomic-embed-text"}'
+```
+
+Common embedding models:
+- **nomic-embed-text**: 768 dimensions, good general-purpose
+- **all-MiniLM-L6-v2**: 384 dimensions, fast and compact
+- **bge-small-en-v1.5**: 384 dimensions, high quality
+
+### Creating Providers with Factory
+
+Use `EmbeddingProviderFactory` for provider instantiation:
+
+```csharp
+// From configuration
+var config = EmbeddingConfig.Default();
+var provider = EmbeddingProviderFactory.Create(config);
+
+// Convenience methods
+var nullProvider = EmbeddingProviderFactory.CreateKeywordOnly();
+var llamaCppProvider = EmbeddingProviderFactory.CreateLlamaCpp(
+    baseUrl: "http://localhost:8081",
+    embeddingDimension: 768
+);
+
+// Safe creation with error handling
+if (EmbeddingProviderFactory.TryCreate(config, out var provider, out var error))
+{
+    // Use provider
+}
+else
+{
+    Debug.LogWarning($"Embedding provider creation failed: {error}");
+}
+```
+
+### Usage with ContextRetrievalLayer
+
+```csharp
+// Create dependencies
+var memorySystem = new AuthoritativeMemorySystem();
+var vectorStore = new InMemoryVectorStore(768);
+var embeddingConfig = EmbeddingConfig.ForLlamaCpp("http://localhost:8081", embeddingDimension: 768);
+var embeddingProvider = EmbeddingProviderFactory.Create(embeddingConfig);
+
+// Create retrieval layer with RAG support
+var config = new ContextRetrievalConfig
+{
+    EmbeddingConfig = embeddingConfig
+};
+var retrievalLayer = new ContextRetrievalLayer(
+    memorySystem,
+    config,
+    embeddingProvider,
+    vectorStore,
+    npcId: "wizard_001"
+);
+
+// Retrieve context - automatically uses hybrid scoring
+var context = retrievalLayer.RetrieveContext("Tell me about dragons");
+```
+
+### Shared Vector Store Architecture
+
+All NPCs share a single `IMemoryVectorStore` with NPC-based filtering:
+
+- **NpcId=null**: Shared entries (canonical facts, world state) accessible to all NPCs
+- **NpcId="wizard_001"**: NPC-specific entries
+- **Query filtering**: `FindSimilar()` with `npcId="wizard_001"` returns that NPC's entries plus all shared entries
+
+### Persistence
+
+Vector store data is persisted using binary format for efficiency:
+
+```csharp
+// Save
+var snapshot = vectorStore.CreateSnapshot();
+VectorStoreBinarySerializer.WriteToFile("vectors.bin", snapshot);
+
+// Load
+var restored = VectorStoreBinarySerializer.ReadFromFile("vectors.bin");
+vectorStore.RestoreFromSnapshot(restored);
+```
+
+**Binary format**: ~60% smaller and ~10x faster than JSON for float arrays.
+
+### Diagnostics
+
+Use `VectorStoreDiagnostics` for debugging:
+
+```csharp
+// Get summary
+var summary = VectorStoreDiagnostics.GetSummary(vectorStore);
+// Output: "VectorStore: 1,234 vectors (dim=384), Episodic: 800, Belief: 200, Shared: 234"
+
+// Export to JSON for inspection
+VectorStoreDiagnostics.ExportToJsonFile(vectorStore, "debug.json");
+
+// Validate binary file
+var report = VectorStoreDiagnostics.ValidateFile("vectors.bin");
+```
+
+### Graceful Degradation
+
+When embeddings are unavailable, the system automatically falls back to keyword-only retrieval:
+
+- `IEmbeddingProvider.IsAvailable` returns false → keyword-only
+- Embedding generation fails → keyword-only for that query
+- No vector store configured → keyword-only
+
+### Determinism
+
+Vector search maintains deterministic ordering:
+1. Similarity (descending)
+2. SequenceNumber (ascending) - older entries first for ties
+3. MemoryId (ordinal ascending) - final tie-breaker
+
+## Recognition Query Service
+
+The `RecognitionQueryService` enables NPCs to recognize repeated interactions:
+
+### Recognition Types
+
+- **Location**: Recognizes when entering a location previously visited
+- **Topic**: Recognizes when player discusses a previously discussed topic
+- **Conversation**: Recognizes repeated conversation patterns
+
+### Usage
+
+```csharp
+var recognitionService = new RecognitionQueryService(
+    memorySystem,
+    vectorStore,
+    embeddingProvider
+);
+
+// Location recognition (deterministic, keyword-based)
+var locationResult = recognitionService.QueryLocationRecognition("npc-1", "castle");
+if (locationResult.Recognized)
+{
+    Console.WriteLine($"Visited {locationResult.RepeatCount} times before");
+}
+
+// Topic recognition (semantic + keyword fallback)
+var topicResult = await recognitionService.QueryTopicRecognitionAsync("npc-1", "dragons");
+if (topicResult.Recognized)
+{
+    Console.WriteLine($"Topic discussed {topicResult.RepeatCount} times, similarity: {topicResult.BestMatchSimilarity}");
+}
+```
+
+## Automatic Embedding Generation
+
+When RAG is enabled, LlamaBrain can automatically generate embeddings for new memories as they're created using the `MemoryEmbeddingService`.
+
+### Overview
+
+The `MemoryEmbeddingService` subscribes to the `AuthoritativeMemorySystem.MemoryMutated` event and automatically:
+1. Generates embeddings for new memories using the configured `IEmbeddingProvider`
+2. Adds the embeddings to the `IMemoryVectorStore`
+3. Updates embedding statistics for monitoring coverage
+
+### Setup
+
+```csharp
+// Create memory system
+var memorySystem = new AuthoritativeMemorySystem { NpcId = "wizard_001" };
+
+// Configure embedding provider
+var embeddingConfig = EmbeddingConfig.ForLlamaCpp("http://localhost:8081", embeddingDimension: 768);
+var provider = EmbeddingProviderFactory.Create(embeddingConfig);
+
+// Create vector store
+var vectorStore = new InMemoryVectorStore(768);
+
+// Wire up auto-embedding
+var embeddingService = new MemoryEmbeddingService(
+    memorySystem,
+    provider,
+    vectorStore,
+    logger: Console.WriteLine // Optional logging
+);
+
+// Now all memory mutations automatically generate embeddings
+memorySystem.AddCanonicalFact("king_name", "The king's name is Arthur");
+memorySystem.AddDialogue("Player", "Hello, wizard!");
+memorySystem.SetBelief("player_trust",
+    BeliefMemoryEntry.CreateOpinion("Player", "is trustworthy"),
+    MutationSource.ValidatedOutput);
+
+// Embeddings are generated asynchronously and added to vector store
+```
+
+### How It Works
+
+```
+1. Memory is created/updated in AuthoritativeMemorySystem
+   ↓
+2. MemoryMutated event fires with memory content and metadata
+   ↓
+3. MemoryEmbeddingService receives the event
+   ↓
+4. Asynchronously generates embedding via IEmbeddingProvider
+   ↓
+5. If successful, upserts embedding into IMemoryVectorStore
+   ↓
+6. Updates embedding statistics in AuthoritativeMemorySystem
+```
+
+### Key Design Decisions
+
+- **Non-blocking**: Memory mutations return immediately; embedding generation happens asynchronously
+- **Fire-and-forget**: Uses `async void` event handler pattern for asynchronous processing
+- **Graceful degradation**: If embedding fails, memory is still stored (keyword-only retrieval fallback)
+- **IDisposable**: Properly unsubscribes from events when disposed
+
+### Monitoring Embedding Coverage
+
+Track how many memories have embeddings:
+
+```csharp
+var stats = memorySystem.GetStatistics();
+Console.WriteLine($"Embedding coverage: {stats.EmbeddingCoverage:P0}");
+Console.WriteLine($"{stats.EmbeddedMemories} / {stats.TotalMemoriesCreated} memories embedded");
+```
+
+**Output:**
+```
+Embedding coverage: 100%
+4 / 4 memories embedded
+```
+
+### Memory Type Behavior
+
+| Memory Type | NPC Scope | Event Content |
+|-------------|-----------|---------------|
+| Canonical Fact | Shared (null) | The fact text |
+| World State | Shared (null) | `key=value` format |
+| Episodic Memory | NPC-specific | Description text |
+| Belief | NPC-specific | Belief content |
+
+### Graceful Degradation
+
+When embeddings are unavailable, the system continues to function:
+
+- **Provider unavailable**: Event is skipped, memory still stored
+- **Embedding generation fails**: Error logged, memory still stored
+- **Provider throws exception**: Exception caught and logged, memory still stored
+- **Service disposed**: Events no longer processed
+
+The retrieval layer automatically falls back to keyword-only retrieval when embeddings are missing.
+
+### Performance
+
+- Embedding generation is asynchronous and non-blocking
+- Memory mutations return immediately
+- Typical embedding time: 50-100ms per memory (local llama.cpp server)
+- Consider batch generation for initial data loading scenarios
+
+### Cleanup
+
+Dispose the service when no longer needed:
+
+```csharp
+embeddingService.Dispose();
+```
+
+This unsubscribes from the `MemoryMutated` event and cancels any pending embedding operations.
+
 ## Future Enhancements
 
-### RAG-Based Memory Retrieval (Planned)
+### Planned Features
 
-The current retrieval uses simple keyword matching. Future enhancements will include:
-
-- **Embedding-based retrieval**: Use semantic similarity instead of keywords
-- **Vector storage**: Store memory embeddings for fast similarity search
-- **Improved relevance**: Better understanding of memory relevance to queries
-
-See `ROADMAP.md` for Feature 11: RAG-Based Memory Retrieval & Memory Proving.
-
-### Repetition Recognition (Planned)
-
-Deterministic recognition of repeated locations, topics, and conversations:
-
-- **Location repetition**: NPC recognizes when entering same location multiple times
-- **Topic repetition**: NPC recognizes when player obsessively talks about same topic
-- **Conversation repetition**: NPC recognizes repeated conversation patterns
-
-See `MEMORY_TODO.md` for detailed implementation plan.
+- **OpenAI Embedding Provider**: Integration with OpenAI's embedding API for hosted deployments
+- **Persistent vector indices**: More efficient search for large datasets (HNSW, IVF)
+- **Memory compression**: Reduce embedding storage requirements
+- **Automatic embedding migration**: Batch generation for existing memories
 
 ## Summary
 
@@ -866,6 +1213,8 @@ The LlamaBrain memory system provides:
 5. **Intelligent context retrieval** based on relevance
 6. **Mutation controller** for safe memory updates
 7. **Multi-persona support** through PersonaMemoryStore
+8. **Automatic embedding generation** for RAG-based retrieval
+9. **Embedding coverage monitoring** for system health tracking
 
 **Key Principle**: The LLM never directly modifies memory. All changes must pass through validation and mutation controllers, ensuring authoritative memory that cannot be corrupted by AI hallucinations.
 
@@ -882,5 +1231,5 @@ The LlamaBrain memory system provides:
 
 ---
 
-**Last Updated**: December 31, 2025  
-**Memory System Version**: 0.3.0-rc.1
+**Last Updated**: March 17, 2026
+**Memory System Version**: 0.4.0-rc.1

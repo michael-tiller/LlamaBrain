@@ -609,12 +609,112 @@
 
 ---
 
+<a id="feature-11"></a>
+## Feature 11: RAG-Based Memory Retrieval & Memory Proving ✅ **COMPLETE**
+
+**Priority**: MEDIUM - Enhancement to existing retrieval system
+**Status**: ✅ **Complete** (100% Complete)
+**Dependencies**: Feature 3 (Context Retrieval Layer), Feature 10 (Deterministic Proof Gap Testing)
+**Execution Order**: ✅ **COMPLETE** for Milestone 6. Memory proving infrastructure complete.
+
+### Overview
+
+RAG-Based Memory Retrieval combines Retrieval-Augmented Generation (RAG) techniques with existing keyword matching for hybrid memory retrieval. The system uses embeddings and vector similarity search for semantic relevance while maintaining deterministic noun-based keyword matching. Additionally implements repetition recognition to prove that retrieval influences generation.
+
+### Definition of Done Summary
+
+#### 11.1 Embedding Generation System ✅
+- [x] `IEmbeddingProvider` interface for embedding generation with batch support
+- [x] `LlamaCppEmbeddingProvider` for local llama.cpp `/v1/embeddings` endpoint
+- [x] `NullEmbeddingProvider` for keyword-only fallback
+- [x] `EmbeddingProviderFactory` for provider instantiation from config
+- [x] `EmbeddingConfig` with presets (KeywordOnly, Default, SemanticHeavy, Balanced, ForLlamaCpp)
+
+#### 11.2 Vector Storage & Indexing ✅
+- [x] `IMemoryVectorStore` interface for embedding storage and similarity search
+- [x] `InMemoryVectorStore` with brute-force cosine similarity (suitable for <1000 entries)
+- [x] `VectorStoreBinarySerializer` for efficient persistence (~60% smaller, ~10x faster than JSON)
+- [x] NPC-specific and shared (NpcId=null) entries with query filtering
+- [x] Deterministic ordering: similarity desc, sequence asc, memoryId asc
+
+#### 11.3 Hybrid Semantic Retrieval ✅
+- [x] `HybridRelevanceCalculator` for configurable keyword + semantic weighted scoring
+- [x] Extended `ContextRetrievalLayer` with RAG support via optional embedding provider
+- [x] Backward compatible (keyword-only fallback via NullEmbeddingProvider)
+- [x] Deterministic ordering guarantees maintained
+
+#### 11.4 Recognition Query Service ✅
+- [x] `RecognitionQueryService` for detecting location, topic, and conversation pattern recognition
+- [x] `RecognitionResult` with recognition type, repeat count, matched memory IDs, evidence summary
+- [x] Location recognition requires ≥2 visits (first visit = no recognition)
+- [x] Topic/conversation recognition via semantic similarity with configurable thresholds
+- [x] `RecognitionConfig` for threshold configuration
+
+#### 11.5 Recognition Prompt Injection ✅
+- [x] Extended `PromptAssembler.AssembleFromWorkingMemory()` with optional `recognition` parameter
+- [x] `<RECOGNITION>` block injection when repetition detected
+- [x] Type-specific cue constraints (location, topic, conversation)
+- [x] Repeat count affects constraint wording
+
+#### 11.6 Recognition Cue Validation ✅
+- [x] `RecognitionCueValidator` for soft validation of recognition cues in LLM output
+- [x] Case-insensitive phrase matching
+- [x] Type-specific cue sets (location: "remember", "been here"; topic: "already discussed")
+- [x] Returns warnings if cue expected but missing
+
+#### 11.7 Episodic Memory Extensions ✅
+- [x] `EpisodeType.LocationEntry` (value 5) for location entry tracking
+- [x] `EpisodicMemoryEntry.LocationId` property for explicit location identification
+- [x] `EpisodicMemoryEntry.FromLocationEntry()` factory method
+
+#### 11.8 Integration & Testing ✅
+- [x] `MemoryEmbeddingService` for automatic embedding generation on memory creation
+- [x] Extended `AuthoritativeMemorySystem` with embedding service integration
+- [x] `VectorStoreDiagnostics` for summary statistics, JSON export, health checks
+- [x] 11 test files, 100+ tests covering all components
+- [x] `MemoryProvingIntegrationTests` - full pipeline integration
+- [x] Unity PlayMode tests (RAGDeterminismTests, EmbeddingIntegrationTests)
+
+### Files Added
+- `Source/Core/Retrieval/EmbeddingConfig.cs`
+- `Source/Core/Retrieval/EmbeddingProviderFactory.cs`
+- `Source/Core/Retrieval/IEmbeddingProvider.cs`
+- `Source/Core/Retrieval/LlamaCppEmbeddingProvider.cs`
+- `Source/Core/Retrieval/NullEmbeddingProvider.cs`
+- `Source/Core/Retrieval/IMemoryVectorStore.cs`
+- `Source/Core/Retrieval/InMemoryVectorStore.cs`
+- `Source/Core/Retrieval/HybridRelevanceCalculator.cs`
+- `Source/Core/Retrieval/RecognitionQueryService.cs`
+- `Source/Core/Retrieval/RecognitionResult.cs`
+- `Source/Core/Validation/RecognitionCueValidator.cs`
+- `Source/Persona/MemoryEmbeddingService.cs`
+- `Source/Diagnostics/VectorStoreDiagnostics.cs`
+- `Source/Persistence/VectorStoreBinarySerializer.cs`
+
+### Files Modified
+- `Source/Core/Inference/ContextRetrievalLayer.cs` - RAG integration
+- `Source/Core/Inference/PromptAssembler.cs` - Recognition block injection
+- `Source/Persona/MemoryTypes/EpisodicMemory.cs` - LocationEntry, LocationId
+- `Source/Persona/AuthoritativeMemorySystem.cs` - Embedding service integration
+
+### Performance Results
+- Embedding generation: **6.2ms avg** (target: <100ms per memory)
+- Vector search: **<10ms** for typical memory sets (<1000 items)
+- Overall retrieval latency: **<150ms** (including embedding generation if needed)
+
+### Completion Summary
+Feature 11 completes the memory proving infrastructure, demonstrating that RAG-enhanced retrieval influences NPC generation. The system recognizes repeated locations, topics, and conversation patterns, injecting appropriate recognition cues into prompts and validating that NPCs acknowledge familiarity.
+
+**Estimated Effort**: Complete (March 2026)
+
+---
+
 <a id="feature-12"></a>
 ## Feature 12: Dedicated Structured Output
 
-**Priority**: HIGH - Improves reliability and determinism of output parsing  
-**Status**: ✅ **Complete** (100% Complete)  
-**Dependencies**: Feature 5 (Output Validation System), Feature 10 (Deterministic Proof Gap Testing)  
+**Priority**: HIGH - Improves reliability and determinism of output parsing
+**Status**: ✅ **Complete** (100% Complete)
+**Dependencies**: Feature 5 (Output Validation System), Feature 10 (Deterministic Proof Gap Testing)
 **Execution Order**: ✅ **COMPLETE** - Fundamentally changes how data enters the pipeline. Completed before Feature 16 (Save/Load).
 
 ### Overview

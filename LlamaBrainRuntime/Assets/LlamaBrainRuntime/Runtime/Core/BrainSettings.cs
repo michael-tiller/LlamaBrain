@@ -88,6 +88,31 @@ namespace LlamaBrain.Runtime.Core
     public bool UseFlashAttention = true;
 
     /// <summary>
+    /// Whether to enable the embedding server for RAG
+    /// </summary>
+    [Header("Embedding Server (RAG)")]
+    [Tooltip("Enable embedding server for semantic retrieval. Runs a separate llama-server instance with an embedding model.")]
+    public bool EnableEmbeddingServer = false;
+
+    /// <summary>
+    /// Path to the embedding model (e.g., nomic-embed-text-v1.5.f32.gguf)
+    /// </summary>
+    [Tooltip("Path to embedding model GGUF file. Recommended: nomic-embed-text-v1.5.f32.gguf")]
+    public string EmbeddingModelPath;
+
+    /// <summary>
+    /// Port for the embedding server (separate from main LLM server)
+    /// </summary>
+    [Tooltip("Port for embedding server. Must be different from main LLM port.")]
+    public int EmbeddingServerPort = 8081;
+
+    /// <summary>
+    /// Embedding dimension (must match the model)
+    /// </summary>
+    [Tooltip("Embedding dimension. nomic-embed-text=768, all-MiniLM=384")]
+    public int EmbeddingDimension = 768;
+
+    /// <summary>
     /// The maximum number of tokens to generate
     /// </summary>
     [Header("LLM Generation Settings")]
@@ -189,6 +214,37 @@ namespace LlamaBrain.Runtime.Core
         TopK = TopK,
         RepeatPenalty = RepeatPenalty,
         StopSequences = StopSequences
+      };
+    }
+
+    /// <summary>
+    /// Creates a ProcessConfig for the embedding server.
+    /// Returns null if embedding server is not enabled or not configured.
+    /// </summary>
+    /// <returns>ProcessConfig for embedding server, or null if not enabled</returns>
+    public ProcessConfig ToEmbeddingProcessConfig()
+    {
+      if (!EnableEmbeddingServer || string.IsNullOrEmpty(EmbeddingModelPath))
+      {
+        return null;
+      }
+
+      return new ProcessConfig
+      {
+        Host = "localhost",
+        Port = EmbeddingServerPort,
+        Model = EmbeddingModelPath,
+        ExecutablePath = ExecutablePath, // Same executable as main server
+        ContextSize = 512, // Embedding models need smaller context
+        GpuLayers = GpuLayers, // Use same GPU offload settings
+        Threads = Threads,
+        BatchSize = 512,
+        UBatchSize = 128,
+        UseMlock = UseMlock,
+        ParallelSlots = 1,
+        UseContinuousBatching = false,
+        UseFlashAttention = UseFlashAttention,
+        EnableEmbedding = true
       };
     }
   }
