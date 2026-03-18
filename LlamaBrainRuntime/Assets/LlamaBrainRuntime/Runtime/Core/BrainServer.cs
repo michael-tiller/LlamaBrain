@@ -244,6 +244,7 @@ namespace LlamaBrain.Runtime.Core
 
     /// <summary>
     /// Starts the embedding server asynchronously.
+    /// Uses polling with timeout instead of fixed delay.
     /// </summary>
     private async Task StartEmbeddingServerAsync(CancellationToken token)
     {
@@ -268,13 +269,38 @@ namespace LlamaBrain.Runtime.Core
           ProcessJobManager.AssignProcessByName(processName, matchNewest: true);
         }
 
-        // Wait for embedding server to be ready
-        await Task.Delay(3000, token); // Give embedding server time to load model
-
-        // Test connection
+        // Wait for embedding server to be ready with polling
         if (embeddingProvider != null)
         {
-          var isAvailable = await embeddingProvider.TestConnectionAsync();
+          var startTime = DateTime.UtcNow;
+          var timeout = TimeSpan.FromSeconds(30);
+          var pollInterval = TimeSpan.FromMilliseconds(500);
+          var isAvailable = false;
+
+          while (DateTime.UtcNow - startTime < timeout)
+          {
+            token.ThrowIfCancellationRequested();
+
+            try
+            {
+              isAvailable = await embeddingProvider.TestConnectionAsync();
+              if (isAvailable)
+              {
+                break;
+              }
+            }
+            catch (OperationCanceledException)
+            {
+              throw; // Re-throw cancellation
+            }
+            catch
+            {
+              // Server not ready yet, continue polling
+            }
+
+            await Task.Delay(pollInterval, token);
+          }
+
           IsEmbeddingServerRunning = isAvailable;
 
           if (isAvailable)
@@ -283,9 +309,14 @@ namespace LlamaBrain.Runtime.Core
           }
           else
           {
-            UnityEngine.Debug.LogWarning("[LLM] Embedding server started but not responding. RAG will be unavailable.");
+            UnityEngine.Debug.LogWarning("[LLM] Embedding server started but not responding after 30s. RAG will be unavailable.");
           }
         }
+      }
+      catch (OperationCanceledException)
+      {
+        // Cancellation is expected during shutdown - don't log as error
+        IsEmbeddingServerRunning = false;
       }
       catch (Exception ex)
       {

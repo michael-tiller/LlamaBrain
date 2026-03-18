@@ -22,6 +22,7 @@ namespace LlamaBrain.Core.Retrieval
     public sealed class LlamaCppEmbeddingProvider : IEmbeddingProvider, IDisposable
     {
         private readonly HttpClient _httpClient;
+        private readonly bool _ownsHttpClient;
         private readonly string _baseUrl;
         private readonly string _modelName;
         private readonly int _embeddingDimension;
@@ -79,11 +80,13 @@ namespace LlamaBrain.Core.Retrieval
             {
                 Timeout = _timeout
             };
+            _ownsHttpClient = true;
         }
 
         /// <summary>
         /// Creates a new llama.cpp embedding provider with custom HttpClient.
         /// Useful for testing with mocked clients.
+        /// Note: The provided HttpClient will NOT be disposed by this class.
         /// </summary>
         internal LlamaCppEmbeddingProvider(
             HttpClient httpClient,
@@ -96,6 +99,7 @@ namespace LlamaBrain.Core.Retrieval
             _embeddingDimension = embeddingDimension;
             _modelName = modelName ?? "nomic-embed-text";
             _timeout = httpClient.Timeout;
+            _ownsHttpClient = false; // External HttpClient - caller owns it
         }
 
         /// <inheritdoc />
@@ -274,7 +278,10 @@ namespace LlamaBrain.Core.Retrieval
         {
             if (!_disposed)
             {
-                _httpClient.Dispose();
+                if (_ownsHttpClient)
+                {
+                    _httpClient.Dispose();
+                }
                 _disposed = true;
             }
         }

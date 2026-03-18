@@ -449,8 +449,8 @@ namespace LlamaBrain.Tests.Retrieval
 
             public Task<float[]?> GenerateEmbeddingAsync(string text, System.Threading.CancellationToken cancellationToken = default)
             {
-                // Generate deterministic embedding from text hash
-                var hash = text.GetHashCode();
+                // Generate deterministic embedding using stable hash (FNV-1a)
+                var hash = StableStringHash(text);
                 var embedding = new float[EmbeddingDimension];
                 for (int i = 0; i < EmbeddingDimension; i++)
                 {
@@ -459,14 +459,31 @@ namespace LlamaBrain.Tests.Retrieval
                 return Task.FromResult<float[]?>(embedding);
             }
 
-            public Task<float[]?[]> GenerateBatchEmbeddingsAsync(IReadOnlyList<string> texts, System.Threading.CancellationToken cancellationToken = default)
+            public async Task<float[]?[]> GenerateBatchEmbeddingsAsync(IReadOnlyList<string> texts, System.Threading.CancellationToken cancellationToken = default)
             {
-                var results = new float[]?[texts.Count];
+                var tasks = new Task<float[]?>[texts.Count];
                 for (int i = 0; i < texts.Count; i++)
                 {
-                    results[i] = GenerateEmbeddingAsync(texts[i], cancellationToken).Result;
+                    tasks[i] = GenerateEmbeddingAsync(texts[i], cancellationToken);
                 }
-                return Task.FromResult(results);
+                return await Task.WhenAll(tasks);
+            }
+
+            /// <summary>
+            /// FNV-1a hash - deterministic across .NET versions and runs.
+            /// </summary>
+            private static uint StableStringHash(string text)
+            {
+                const uint fnvPrime = 16777619;
+                const uint offsetBasis = 2166136261;
+
+                uint hash = offsetBasis;
+                foreach (char c in text)
+                {
+                    hash ^= c;
+                    hash *= fnvPrime;
+                }
+                return hash;
             }
         }
 

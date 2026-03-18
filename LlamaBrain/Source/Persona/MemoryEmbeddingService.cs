@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using LlamaBrain.Core.Retrieval;
@@ -15,18 +16,21 @@ namespace LlamaBrain.Persona
   /// </summary>
   /// <remarks>
   /// Key design decisions:
-  /// - Async event handler (async void) for fire-and-forget embedding generation
+  /// - Pending task tracking for deterministic test synchronization via FlushAsync()
   /// - Non-blocking: Memory mutations return immediately, embeddings happen asynchronously
   /// - Graceful failure: If embedding fails, logs the error but doesn't throw
-  /// - IDisposable: Properly unsubscribes from events to prevent memory leaks
+  /// - IAsyncDisposable: Properly drains in-flight work and unsubscribes from events
+  /// - IDisposable: Synchronous disposal with timeout for in-flight work
   /// </remarks>
-  public sealed class MemoryEmbeddingService : IDisposable
+  public sealed class MemoryEmbeddingService : IDisposable, IAsyncDisposable
   {
     private readonly AuthoritativeMemorySystem _memorySystem;
     private readonly IEmbeddingProvider _embeddingProvider;
     private readonly IMemoryVectorStore _vectorStore;
     private readonly Action<string>? _logger;
     private readonly CancellationTokenSource _disposeCts = new CancellationTokenSource();
+    private readonly object _pendingLock = new object();
+    private readonly List<Task> _pendingTasks = new List<Task>();
 
     private bool _disposed;
 
@@ -54,14 +58,22 @@ namespace LlamaBrain.Persona
     }
 
     /// <summary>
-    /// Event handler for memory mutations. Generates embeddings asynchronously.
-    /// Uses async void pattern for fire-and-forget (acceptable for event handlers).
+    /// Event handler for memory mutations. Starts embedding generation as a tracked task.
     /// </summary>
-    private async void OnMemoryMutatedAsync(object? sender, MemoryMutatedEventArgs e)
+    private void OnMemoryMutatedAsync(object? sender, MemoryMutatedEventArgs e)
     {
       if (_disposed)
         return;
 
+      var task = ProcessEmbeddingAsync(e);
+      TrackPendingTask(task);
+    }
+
+    /// <summary>
+    /// Processes embedding generation for a memory mutation.
+    /// </summary>
+    private async Task ProcessEmbeddingAsync(MemoryMutatedEventArgs e)
+    {
       try
       {
         // Check if embedding provider is available
@@ -103,6 +115,56 @@ namespace LlamaBrain.Persona
     }
 
     /// <summary>
+    /// Tracks a pending task for later synchronization via FlushAsync.
+    /// </summary>
+    private void TrackPendingTask(Task task)
+    {
+      lock (_pendingLock)
+      {
+        _pendingTasks.Add(task);
+      }
+
+      // Clean up completed task when done
+      task.ContinueWith(_ =>
+      {
+        lock (_pendingLock)
+        {
+          _pendingTasks.Remove(task);
+        }
+      }, TaskContinuationOptions.ExecuteSynchronously);
+    }
+
+    /// <summary>
+    /// Waits for all pending embedding operations to complete.
+    /// Used for deterministic test synchronization.
+    /// </summary>
+    /// <param name="timeout">Maximum time to wait. Defaults to 5 seconds.</param>
+    /// <returns>A task that completes when all pending operations finish or timeout is reached.</returns>
+    public async Task FlushAsync(TimeSpan? timeout = null)
+    {
+      var effectiveTimeout = timeout ?? TimeSpan.FromSeconds(5);
+      Task[] snapshot;
+
+      lock (_pendingLock)
+      {
+        snapshot = _pendingTasks.ToArray();
+      }
+
+      if (snapshot.Length == 0)
+        return;
+
+      using var cts = new CancellationTokenSource(effectiveTimeout);
+      try
+      {
+        await Task.WhenAll(snapshot).ConfigureAwait(false);
+      }
+      catch (OperationCanceledException)
+      {
+        // Timeout reached
+      }
+    }
+
+    /// <summary>
     /// Notifies that an embedding was successfully generated.
     /// Called by OnMemoryMutatedAsync after successful embedding generation.
     /// </summary>
@@ -115,7 +177,8 @@ namespace LlamaBrain.Persona
     }
 
     /// <summary>
-    /// Disposes the service, unsubscribing from events and canceling pending operations.
+    /// Disposes the service synchronously, waiting up to 1 second for in-flight work to complete.
+    /// For graceful shutdown with full drain, use <see cref="DisposeAsync"/> instead.
     /// </summary>
     public void Dispose()
     {
@@ -123,8 +186,76 @@ namespace LlamaBrain.Persona
         return;
 
       _disposed = true;
-      _disposeCts.Cancel();
+
+      // Unsubscribe first to prevent new work
       _memorySystem.MemoryMutated -= OnMemoryMutatedAsync;
+
+      // Cancel in-flight work
+      _disposeCts.Cancel();
+
+      // Wait for pending tasks with timeout to avoid blocking forever
+      Task[] snapshot;
+      lock (_pendingLock)
+      {
+        snapshot = _pendingTasks.ToArray();
+      }
+
+      if (snapshot.Length > 0)
+      {
+        try
+        {
+          // Wait up to 1 second for in-flight work to complete
+          Task.WaitAll(snapshot, TimeSpan.FromSeconds(1));
+        }
+        catch (AggregateException)
+        {
+          // Tasks were cancelled or failed - expected during disposal
+        }
+      }
+
+      _disposeCts.Dispose();
+    }
+
+    /// <summary>
+    /// Asynchronously disposes the service, fully draining all in-flight embedding work.
+    /// This is the preferred disposal method for graceful shutdown.
+    /// </summary>
+    public async ValueTask DisposeAsync()
+    {
+      if (_disposed)
+        return;
+
+      _disposed = true;
+
+      // Unsubscribe first to prevent new work
+      _memorySystem.MemoryMutated -= OnMemoryMutatedAsync;
+
+      // Cancel in-flight work
+      _disposeCts.Cancel();
+
+      // Wait for all pending tasks to complete (they should exit quickly due to cancellation)
+      Task[] snapshot;
+      lock (_pendingLock)
+      {
+        snapshot = _pendingTasks.ToArray();
+      }
+
+      if (snapshot.Length > 0)
+      {
+        try
+        {
+          await Task.WhenAll(snapshot).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+          // Expected during disposal
+        }
+        catch (AggregateException)
+        {
+          // Tasks failed - expected during disposal
+        }
+      }
+
       _disposeCts.Dispose();
     }
   }

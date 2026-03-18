@@ -5,6 +5,29 @@ All notable changes to LlamaBrain will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - (Unreleased)
+
+### Core Library
+
+#### Fixed
+- **MemoryEmbeddingService**: Sync `RetrieveContext` now skips semantic scoring to avoid deadlocks in Unity; use `RetrieveContextAsync` for full RAG support
+- **LlamaCppEmbeddingProvider**: Only disposes `HttpClient` when provider created it; external clients are not disposed
+- **VectorStoreBinarySerializer**: Consume reserved bytes when reading file info to keep stream position correct
+
+#### Changed
+- **MemoryEmbeddingService**: Added `FlushAsync()` for deterministic test synchronization; replaced fire-and-forget `async void` with tracked pending tasks
+- **MemoryEmbeddingService**: Implemented `IAsyncDisposable` with `DisposeAsync()` for graceful shutdown; sync `Dispose()` waits up to 1s for in-flight work
+- **ContextRetrievalLayer**: Documented that sync retrieval falls back to keyword-only when semantic retrieval is configured
+- **HybridRelevanceCalculator**: Extended word separators to include `:`, `;`, `-`, `"`, `'` for better tokenization
+- **RecognitionQueryServiceTests**: Mock embedding uses FNV-1a stable hash instead of `GetHashCode()` for cross-version determinism; batch embeddings use proper async `Task.WhenAll`
+- **MemoryEmbeddingServiceTests**: Replaced `Task.Delay` with `await service.FlushAsync()` for deterministic synchronization
+
+### Unity Runtime
+
+#### Changed
+- **BrainServer**: Embedding server startup uses polling (500ms interval, 30s timeout) instead of fixed 3s delay
+- **BrainServer**: Proper `OperationCanceledException` handling during shutdown (no error logging)
+
 ## [0.3.0] - March 17, 2026
 
 ### Core Library

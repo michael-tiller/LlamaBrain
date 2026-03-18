@@ -37,9 +37,7 @@ namespace LlamaBrain.Tests.Memory
 
       // Act
       _memorySystem.AddCanonicalFact("fact_001", "The king's name is Arthur");
-
-      // Allow async handler to complete
-      await Task.Delay(100);
+      await service.FlushAsync();
 
       // Assert
       var stats = _vectorStore.GetStatistics();
@@ -57,8 +55,7 @@ namespace LlamaBrain.Tests.Memory
 
       // Act
       _memorySystem.AddCanonicalFact("fact_001", "Test fact");
-
-      await Task.Delay(100);
+      await service.FlushAsync();
 
       // Assert
       var stats = _vectorStore.GetStatistics();
@@ -78,8 +75,7 @@ namespace LlamaBrain.Tests.Memory
 
       // Act
       _memorySystem.AddCanonicalFact("fact_001", "Test fact");
-
-      await Task.Delay(100);
+      await service.FlushAsync();
 
       // Assert
       var stats = _vectorStore.GetStatistics();
@@ -97,8 +93,7 @@ namespace LlamaBrain.Tests.Memory
 
       // Act - should not throw
       _memorySystem.AddCanonicalFact("fact_001", "Test fact");
-
-      await Task.Delay(100);
+      await service.FlushAsync();
 
       // Assert
       var stats = _vectorStore.GetStatistics();
@@ -123,8 +118,7 @@ namespace LlamaBrain.Tests.Memory
       _memorySystem.SetWorldState("door_1", "open", MutationSource.GameSystem);
       _memorySystem.AddDialogue("Player", "Hello");
       _memorySystem.SetBelief("belief_001", BeliefMemoryEntry.CreateBelief("x", "y"), MutationSource.ValidatedOutput);
-
-      await Task.Delay(200);
+      await service.FlushAsync();
 
       // Assert
       var stats = _vectorStore.GetStatistics();
@@ -146,8 +140,7 @@ namespace LlamaBrain.Tests.Memory
 
       // Act
       _memorySystem.AddDialogue("Player", "Hello wizard!");
-
-      await Task.Delay(100);
+      await service.FlushAsync();
 
       // Assert - search for this NPC should find the memory
       var queryEmbedding = new float[768];
@@ -166,8 +159,7 @@ namespace LlamaBrain.Tests.Memory
 
       // Act
       _memorySystem.AddCanonicalFact("fact_001", "The sky is blue");
-
-      await Task.Delay(100);
+      await service.FlushAsync();
 
       // Assert - search for any NPC should find canonical facts (shared)
       var queryEmbedding = new float[768];
@@ -191,8 +183,7 @@ namespace LlamaBrain.Tests.Memory
       // Act
       service.Dispose();
       _memorySystem.AddCanonicalFact("fact_001", "Test fact");
-
-      await Task.Delay(100);
+      await service.FlushAsync();
 
       // Assert
       var stats = _vectorStore.GetStatistics();
@@ -230,7 +221,7 @@ namespace LlamaBrain.Tests.Memory
 
       // Act
       _memorySystem.AddCanonicalFact("fact_001", "Test fact");
-      await Task.Delay(100);
+      await service.FlushAsync();
 
       // Assert
       var stats = _memorySystem.GetStatistics();
@@ -252,7 +243,7 @@ namespace LlamaBrain.Tests.Memory
       _memorySystem.AddCanonicalFact("fact_002", "Second fact"); // Fails
       _memorySystem.AddCanonicalFact("fact_003", "Third fact");  // Succeeds
       _memorySystem.AddCanonicalFact("fact_004", "Fourth fact"); // Fails
-      await Task.Delay(200);
+      await service.FlushAsync();
 
       // Assert
       var stats = _memorySystem.GetStatistics();
@@ -284,7 +275,7 @@ namespace LlamaBrain.Tests.Memory
       var mockProvider = new MockEmbeddingProvider(new float[768]);
       using var service = new MemoryEmbeddingService(_memorySystem, mockProvider, _vectorStore);
       _memorySystem.AddCanonicalFact("fact_001", "Test fact");
-      await Task.Delay(100);
+      await service.FlushAsync();
 
       // Act
       _memorySystem.ClearAll();

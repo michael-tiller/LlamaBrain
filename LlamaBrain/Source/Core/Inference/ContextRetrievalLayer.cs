@@ -156,6 +156,11 @@ namespace LlamaBrain.Core.Inference
     /// Retrieves all relevant context for an interaction using snapshot time for deterministic recency calculations.
     /// This is the preferred method for deterministic behavior.
     /// </summary>
+    /// <remarks>
+    /// WARNING: When semantic retrieval is configured, this synchronous method will fall back to
+    /// keyword-only retrieval to avoid potential deadlocks. Use <see cref="RetrieveContextAsync"/>
+    /// for full semantic retrieval support.
+    /// </remarks>
     /// <param name="snapshot">The state snapshot containing player input and snapshot time</param>
     /// <param name="topics">Optional topics to filter by (for relevance)</param>
     /// <returns>Retrieved context ready for snapshot building</returns>
@@ -168,6 +173,11 @@ namespace LlamaBrain.Core.Inference
     /// Retrieves all relevant context for an interaction using explicit snapshot time for deterministic recency calculations.
     /// This is the preferred method when you have snapshot time but not yet a full snapshot.
     /// </summary>
+    /// <remarks>
+    /// WARNING: When semantic retrieval is configured, this synchronous method will fall back to
+    /// keyword-only retrieval to avoid potential deadlocks. Use <see cref="RetrieveContextAsync"/>
+    /// for full semantic retrieval support.
+    /// </remarks>
     /// <param name="playerInput">The player's input (used for relevance scoring)</param>
     /// <param name="snapshotTimeUtcTicks">The snapshot time in UTC ticks for deterministic recency calculations</param>
     /// <param name="topics">Optional topics to filter by (for relevance)</param>
@@ -183,6 +193,11 @@ namespace LlamaBrain.Core.Inference
     /// NOTE: This overload uses current wall-clock time, which is NOT deterministic.
     /// Use RetrieveContext(StateSnapshot, ...) for deterministic behavior.
     /// </summary>
+    /// <remarks>
+    /// WARNING: When semantic retrieval is configured, this synchronous method will fall back to
+    /// keyword-only retrieval to avoid potential deadlocks. Use <see cref="RetrieveContextAsync"/>
+    /// for full semantic retrieval support.
+    /// </remarks>
     /// <param name="playerInput">The player's input (used for relevance scoring).</param>
     /// <param name="topics">Optional topics to filter by (for relevance).</param>
     /// <returns>Retrieved context ready for snapshot building.</returns>
@@ -276,33 +291,17 @@ namespace LlamaBrain.Core.Inference
     }
 
     /// <summary>
-    /// Pre-computes semantic similarity scores for all memories via vector search.
-    /// Returns null if embedding generation fails (graceful degradation to keyword-only).
-    /// NOTE: This blocking version can deadlock in Unity. Use ComputeSemanticScoresAsync instead.
+    /// Sync path intentionally skips semantic scoring to avoid deadlocks.
+    /// Returns null to trigger keyword-only fallback.
+    /// Use RetrieveContextAsync for semantic retrieval support.
     /// </summary>
     private Dictionary<string, float>? ComputeSemanticScores(string playerInput)
     {
-      if (_vectorStore == null || _embeddingProvider == null)
-        return null;
-
-      try
-      {
-        // Generate query embedding - blocking call that can deadlock in Unity!
-        var queryEmbedding = _embeddingProvider.GenerateEmbeddingAsync(playerInput).GetAwaiter().GetResult();
-        if (queryEmbedding == null)
-        {
-          OnLog?.Invoke("[ContextRetrieval] Embedding generation failed, falling back to keyword-only");
-          return null;
-        }
-
-        return ComputeSemanticScoresFromEmbedding(queryEmbedding);
-      }
-      catch (Exception ex)
-      {
-        // Graceful degradation - fall back to keyword only
-        OnLog?.Invoke($"[ContextRetrieval] Semantic retrieval failed ({ex.Message}), falling back to keyword-only");
-        return null;
-      }
+      // Intentionally skip semantic scoring in sync path to avoid deadlock.
+      // Calling GetAwaiter().GetResult() on async embedding generation can deadlock
+      // in Unity's single-threaded synchronization context.
+      OnLog?.Invoke("[ContextRetrieval] Semantic scoring skipped in sync path (use RetrieveContextAsync for semantic retrieval)");
+      return null;
     }
 
     /// <summary>

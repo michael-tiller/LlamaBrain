@@ -11,7 +11,7 @@ namespace LlamaBrain.Core.Retrieval
     public sealed class HybridRelevanceCalculator
     {
         private readonly EmbeddingConfig _config;
-        private static readonly char[] WordSeparators = { ' ', '.', ',', '!', '?' };
+        private static readonly char[] WordSeparators = { ' ', '.', ',', '!', '?', ':', ';', '-', '"', '\'' };
 
         /// <summary>
         /// Creates a new hybrid relevance calculator.

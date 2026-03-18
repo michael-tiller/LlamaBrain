@@ -207,6 +207,7 @@ namespace LlamaBrain.Persistence
 
                 var embeddingDimension = reader.ReadUInt16();
                 var vectorCount = reader.ReadUInt32();
+                reader.ReadUInt32(); // Reserved bytes - must consume to leave stream at correct position
 
                 return new VectorStoreFileInfo(
                     isValid: true,
