@@ -513,5 +513,153 @@ namespace LlamaBrain.Tests.Memory
     }
 
     #endregion
+
+    #region MemoryMutated Event Tests
+
+    [Test]
+    [Category("RAG")]
+    public void AddCanonicalFact_RaisesMemoryMutatedEvent()
+    {
+      // Arrange
+      MemoryMutatedEventArgs? receivedArgs = null;
+      _system.MemoryMutated += (sender, args) => receivedArgs = args;
+
+      // Act
+      _system.AddCanonicalFact("king-name", "The king's name is Arthur", "lore");
+
+      // Assert
+      Assert.That(receivedArgs, Is.Not.Null);
+      Assert.That(receivedArgs!.MemoryId, Is.EqualTo("king-name"));
+      Assert.That(receivedArgs.Content, Is.EqualTo("The king's name is Arthur"));
+      Assert.That(receivedArgs.NpcId, Is.Null); // Canonical facts are shared
+      Assert.That(receivedArgs.MemoryType, Is.EqualTo(LlamaBrain.Core.Retrieval.MemoryVectorType.CanonicalFact));
+      Assert.That(receivedArgs.SequenceNumber, Is.GreaterThan(0));
+    }
+
+    [Test]
+    [Category("RAG")]
+    public void SetWorldState_NewKey_RaisesMemoryMutatedEvent()
+    {
+      // Arrange
+      MemoryMutatedEventArgs? receivedArgs = null;
+      _system.MemoryMutated += (sender, args) => receivedArgs = args;
+
+      // Act
+      _system.SetWorldState("door_castle", "open", MutationSource.GameSystem);
+
+      // Assert
+      Assert.That(receivedArgs, Is.Not.Null);
+      Assert.That(receivedArgs!.Content, Is.EqualTo("door_castle=open"));
+      Assert.That(receivedArgs.NpcId, Is.Null); // World state is shared
+      Assert.That(receivedArgs.MemoryType, Is.EqualTo(LlamaBrain.Core.Retrieval.MemoryVectorType.WorldState));
+    }
+
+    [Test]
+    [Category("RAG")]
+    public void SetWorldState_UpdateExisting_RaisesMemoryMutatedEvent()
+    {
+      // Arrange
+      _system.SetWorldState("door_castle", "open", MutationSource.GameSystem);
+      MemoryMutatedEventArgs? receivedArgs = null;
+      _system.MemoryMutated += (sender, args) => receivedArgs = args;
+
+      // Act
+      _system.SetWorldState("door_castle", "closed", MutationSource.GameSystem);
+
+      // Assert
+      Assert.That(receivedArgs, Is.Not.Null);
+      Assert.That(receivedArgs!.Content, Is.EqualTo("door_castle=closed"));
+      Assert.That(receivedArgs.MemoryType, Is.EqualTo(LlamaBrain.Core.Retrieval.MemoryVectorType.WorldState));
+    }
+
+    [Test]
+    [Category("RAG")]
+    public void AddEpisodicMemory_RaisesMemoryMutatedEvent()
+    {
+      // Arrange
+      _system.NpcId = "wizard_001";
+      MemoryMutatedEventArgs? receivedArgs = null;
+      _system.MemoryMutated += (sender, args) => receivedArgs = args;
+      var entry = new EpisodicMemoryEntry("Player said hello");
+
+      // Act
+      _system.AddEpisodicMemory(entry, MutationSource.ValidatedOutput);
+
+      // Assert
+      Assert.That(receivedArgs, Is.Not.Null);
+      Assert.That(receivedArgs!.Content, Is.EqualTo("Player said hello"));
+      Assert.That(receivedArgs.NpcId, Is.EqualTo("wizard_001")); // NPC-specific
+      Assert.That(receivedArgs.MemoryType, Is.EqualTo(LlamaBrain.Core.Retrieval.MemoryVectorType.Episodic));
+    }
+
+    [Test]
+    [Category("RAG")]
+    public void SetBelief_RaisesMemoryMutatedEvent()
+    {
+      // Arrange
+      _system.NpcId = "guard_001";
+      MemoryMutatedEventArgs? receivedArgs = null;
+      _system.MemoryMutated += (sender, args) => receivedArgs = args;
+      var belief = BeliefMemoryEntry.CreateOpinion("Player", "is trustworthy");
+
+      // Act
+      _system.SetBelief("player-trust", belief, MutationSource.ValidatedOutput);
+
+      // Assert
+      Assert.That(receivedArgs, Is.Not.Null);
+      Assert.That(receivedArgs!.Content, Is.EqualTo("is trustworthy"));
+      Assert.That(receivedArgs.NpcId, Is.EqualTo("guard_001")); // NPC-specific
+      Assert.That(receivedArgs.MemoryType, Is.EqualTo(LlamaBrain.Core.Retrieval.MemoryVectorType.Belief));
+    }
+
+    [Test]
+    [Category("RAG")]
+    public void MemoryMutated_NoSubscribers_DoesNotThrow()
+    {
+      // Act & Assert - should not throw even with no subscribers
+      Assert.DoesNotThrow(() => _system.AddCanonicalFact("f1", "Test fact"));
+      Assert.DoesNotThrow(() => _system.SetWorldState("key", "value", MutationSource.GameSystem));
+      Assert.DoesNotThrow(() => _system.AddDialogue("Player", "Hello"));
+      Assert.DoesNotThrow(() => _system.SetBelief("b1", BeliefMemoryEntry.CreateBelief("x", "y"), MutationSource.ValidatedOutput));
+    }
+
+    [Test]
+    [Category("RAG")]
+    public void MemoryMutated_FailedMutation_DoesNotRaiseEvent()
+    {
+      // Arrange
+      int eventCount = 0;
+      _system.MemoryMutated += (sender, args) => eventCount++;
+
+      // Act - try to add with insufficient authority
+      _system.SetWorldState("key", "value", MutationSource.LlmSuggestion);
+
+      // Assert
+      Assert.That(eventCount, Is.EqualTo(0), "Event should not fire for failed mutations");
+    }
+
+    [Test]
+    [Category("RAG")]
+    public void MemoryMutated_MultipleEvents_AllFire()
+    {
+      // Arrange
+      var events = new System.Collections.Generic.List<MemoryMutatedEventArgs>();
+      _system.MemoryMutated += (sender, args) => events.Add(args);
+
+      // Act
+      _system.AddCanonicalFact("f1", "Fact 1");
+      _system.SetWorldState("s1", "value1", MutationSource.GameSystem);
+      _system.AddDialogue("Player", "Hello");
+      _system.SetBelief("b1", BeliefMemoryEntry.CreateBelief("x", "y"), MutationSource.ValidatedOutput);
+
+      // Assert
+      Assert.That(events.Count, Is.EqualTo(4));
+      Assert.That(events[0].MemoryType, Is.EqualTo(LlamaBrain.Core.Retrieval.MemoryVectorType.CanonicalFact));
+      Assert.That(events[1].MemoryType, Is.EqualTo(LlamaBrain.Core.Retrieval.MemoryVectorType.WorldState));
+      Assert.That(events[2].MemoryType, Is.EqualTo(LlamaBrain.Core.Retrieval.MemoryVectorType.Episodic));
+      Assert.That(events[3].MemoryType, Is.EqualTo(LlamaBrain.Core.Retrieval.MemoryVectorType.Belief));
+    }
+
+    #endregion
   }
 }

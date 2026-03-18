@@ -623,6 +623,12 @@ namespace LlamaBrain.Core
         argsList.Add("--flash-attn on");
       }
 
+      // Embedding mode for RAG server
+      if (_config.EnableEmbedding)
+      {
+        argsList.Add("--embedding");
+      }
+
       var arguments = string.Join(" ", argsList);
 
       if (arguments.Length > MaxArgumentsLength)
