@@ -89,6 +89,10 @@ namespace LlamaBrain.Core
     /// </summary>
     private string _lastArguments = "";
     /// <summary>
+    /// The last started process ID (stored directly from CreateProcessW for IL2CPP reliability)
+    /// </summary>
+    private int _lastStartedProcessId = -1;
+    /// <summary>
     /// Maximum process startup timeout in seconds
     /// </summary>
     private const int MaxStartupTimeoutSeconds = 30;
@@ -113,6 +117,13 @@ namespace LlamaBrain.Core
     /// Gets the last arguments used to start the server
     /// </summary>
     public string LastStartupArguments => _lastArguments;
+
+    /// <summary>
+    /// Gets the last started process ID. More reliable than GetServerStatus().ProcessId in IL2CPP
+    /// because it's stored directly from CreateProcessW before any Process object is created.
+    /// Returns -1 if no process has been started.
+    /// </summary>
+    public int LastStartedProcessId => _lastStartedProcessId;
 
     /// <summary>
     /// Event fired when the server outputs a log message (stdout)
@@ -231,6 +242,7 @@ namespace LlamaBrain.Core
           };
 
           _process.Start();
+          _lastStartedProcessId = _process.Id; // Store PID immediately after start
           startedWithRedirection = true;
 
           try
@@ -280,6 +292,9 @@ namespace LlamaBrain.Core
 
           // Close the thread handle (we don't need it)
           CloseHandle(processInfo.hThread);
+
+          // Store PID immediately (most reliable for IL2CPP)
+          _lastStartedProcessId = processInfo.dwProcessId;
 
           // Get a Process object for the created process
           try
@@ -924,6 +939,7 @@ namespace LlamaBrain.Core
       {
         _process?.Dispose();
         _process = null;
+        _lastStartedProcessId = -1;
       }
       catch (Exception ex)
       {
