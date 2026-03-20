@@ -1162,11 +1162,11 @@ namespace LlamaBrain.Tests.Utilities
     [Platform("Win")]
     public void GetProcessInfo_ActualProcess_ReturnsCompleteInfo()
     {
-      // Arrange - Start a process
+      // Arrange - Start a process (use -n 60 to ensure it's still running on slow CI)
       var processInfo = new ProcessStartInfo
       {
         FileName = "cmd.exe",
-        Arguments = "/c ping -n 10 127.0.0.1",
+        Arguments = "/c ping -n 60 127.0.0.1",
         CreateNoWindow = true,
         UseShellExecute = false,
         RedirectStandardOutput = true
@@ -1211,11 +1211,11 @@ namespace LlamaBrain.Tests.Utilities
     [Platform("Win")]
     public void GetRunningProcesses_ActualProcess_ReturnsProcess()
     {
-      // Arrange - Start a process
+      // Arrange - Start a process (use -n 60 to ensure it's still running on slow CI)
       var processInfo = new ProcessStartInfo
       {
         FileName = "cmd.exe",
-        Arguments = "/c ping -n 10 127.0.0.1",
+        Arguments = "/c ping -n 60 127.0.0.1",
         CreateNoWindow = true,
         UseShellExecute = false,
         RedirectStandardOutput = true
